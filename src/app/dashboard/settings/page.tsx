@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import HospitalSettingsForm from '@/components/settings/HospitalSettingsForm'
+import { KeyIcon } from '@heroicons/react/24/outline'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -116,6 +118,29 @@ export default async function SettingsPage() {
           </div>
         </div>
       )}
+
+      {/* API Credentials Link */}
+      <Link
+        href="/dashboard/settings/api-credentials"
+        className="block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg shadow-md p-6 transition"
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="bg-white rounded-lg p-3">
+              <KeyIcon className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="text-white">
+              <h3 className="text-lg font-semibold">광고 플랫폼 API 연동 설정</h3>
+              <p className="text-sm text-blue-100 mt-1">
+                Meta Ads, Kakao Moment, Google Ads API 인증 정보 관리
+              </p>
+            </div>
+          </div>
+          <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </Link>
 
       {/* Hospital Settings */}
       <div className="bg-white shadow rounded-lg">

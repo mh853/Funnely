@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import type { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials } from '@/types/database.types'
 
 export async function GET(
   request: NextRequest,
@@ -33,20 +34,51 @@ export async function GET(
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    const platform = params.platform
+    const platform = params.platform as ApiPlatform
+
+    // Validate platform
+    if (!['meta', 'kakao', 'google'].includes(platform)) {
+      return NextResponse.json({ error: '지원하지 않는 플랫폼입니다.' }, { status: 400 })
+    }
+
+    // Load credentials from database
+    const { data: credentialData, error: credError } = await supabase
+      .from('api_credentials')
+      .select('credentials, is_active')
+      .eq('hospital_id', userProfile.hospital_id)
+      .eq('platform', platform)
+      .single()
+
+    if (credError || !credentialData) {
+      return NextResponse.json(
+        {
+          error: `${platform.toUpperCase()} API 인증 정보가 설정되지 않았습니다. 설정 페이지에서 먼저 API 인증 정보를 입력해주세요.`,
+          needsSetup: true,
+          setupUrl: '/dashboard/settings/api-credentials'
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!credentialData.is_active) {
+      return NextResponse.json(
+        { error: 'API 인증 정보가 비활성화되었습니다.' },
+        { status: 400 }
+      )
+    }
 
     // Generate OAuth URL based on platform
     let authUrl: string
 
     switch (platform) {
       case 'meta':
-        authUrl = generateMetaAuthUrl(request)
+        authUrl = generateMetaAuthUrl(request, credentialData.credentials as any)
         break
       case 'kakao':
-        authUrl = generateKakaoAuthUrl(request)
+        authUrl = generateKakaoAuthUrl(request, credentialData.credentials as any)
         break
       case 'google':
-        authUrl = generateGoogleAuthUrl(request)
+        authUrl = generateGoogleAuthUrl(request, credentialData.credentials as any)
         break
       default:
         return NextResponse.json({ error: '지원하지 않는 플랫폼입니다.' }, { status: 400 })
@@ -59,16 +91,14 @@ export async function GET(
   }
 }
 
-function generateMetaAuthUrl(request: NextRequest): string {
+function generateMetaAuthUrl(request: NextRequest, credentials: MetaCredentials): string {
   const baseUrl = new URL(request.url).origin
   const redirectUri = `${baseUrl}/auth/callback/meta`
 
-  // NOTE: These would come from environment variables in production
-  const clientId = process.env.META_APP_ID || 'YOUR_META_APP_ID'
   const scope = 'ads_management,ads_read'
 
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: credentials.app_id,
     redirect_uri: redirectUri,
     scope: scope,
     response_type: 'code',
@@ -77,15 +107,12 @@ function generateMetaAuthUrl(request: NextRequest): string {
   return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`
 }
 
-function generateKakaoAuthUrl(request: NextRequest): string {
+function generateKakaoAuthUrl(request: NextRequest, credentials: KakaoCredentials): string {
   const baseUrl = new URL(request.url).origin
   const redirectUri = `${baseUrl}/auth/callback/kakao`
 
-  // NOTE: These would come from environment variables in production
-  const clientId = process.env.KAKAO_REST_API_KEY || 'YOUR_KAKAO_REST_API_KEY'
-
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: credentials.rest_api_key,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'moment',
@@ -94,16 +121,14 @@ function generateKakaoAuthUrl(request: NextRequest): string {
   return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`
 }
 
-function generateGoogleAuthUrl(request: NextRequest): string {
+function generateGoogleAuthUrl(request: NextRequest, credentials: GoogleCredentials): string {
   const baseUrl = new URL(request.url).origin
   const redirectUri = `${baseUrl}/auth/callback/google`
 
-  // NOTE: These would come from environment variables in production
-  const clientId = process.env.GOOGLE_CLIENT_ID || 'YOUR_GOOGLE_CLIENT_ID'
   const scope = 'https://www.googleapis.com/auth/adwords'
 
   const params = new URLSearchParams({
-    client_id: clientId,
+    client_id: credentials.client_id,
     redirect_uri: redirectUri,
     response_type: 'code',
     scope: scope,

@@ -24,9 +24,64 @@ export type CampaignStatus = 'active' | 'paused' | 'ended' | 'draft'
 
 export type BudgetType = 'daily' | 'lifetime'
 
+export type ApiPlatform = 'meta' | 'kakao' | 'google'
+
+export interface MetaCredentials {
+  app_id: string
+  app_secret: string
+}
+
+export interface KakaoCredentials {
+  rest_api_key: string
+  javascript_key: string
+}
+
+export interface GoogleCredentials {
+  client_id: string
+  client_secret: string
+  developer_token: string
+}
+
+export type PlatformCredentials = MetaCredentials | KakaoCredentials | GoogleCredentials
+
 export interface Database {
   public: {
     Tables: {
+      api_credentials: {
+        Row: {
+          id: string
+          hospital_id: string
+          platform: ApiPlatform
+          credentials: Json
+          is_active: boolean
+          last_validated_at: string | null
+          validation_error: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          hospital_id: string
+          platform: ApiPlatform
+          credentials: Json
+          is_active?: boolean
+          last_validated_at?: string | null
+          validation_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          hospital_id?: string
+          platform?: ApiPlatform
+          credentials?: Json
+          is_active?: boolean
+          last_validated_at?: string | null
+          validation_error?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
       hospitals: {
         Row: {
           id: string

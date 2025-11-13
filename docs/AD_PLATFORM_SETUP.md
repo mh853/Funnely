@@ -185,42 +185,45 @@ GOOGLE_DEVELOPER_TOKEN=your_developer_token
 
 ---
 
-## 환경 변수 설정
+## UI를 통한 API 인증 정보 설정
 
-### .env.local 파일 생성
+### 설정 페이지 접속
 
-프로젝트 루트에 `.env.local` 파일을 생성하고 다음 내용을 추가하세요:
+MediSync는 각 병원별로 독립적인 API 인증 정보를 관리할 수 있도록 UI를 제공합니다.
 
-```env
-# Supabase (이미 설정되어 있음)
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+1. MediSync 대시보드 로그인
+2. **설정** 메뉴 클릭
+3. **광고 플랫폼 API 연동 설정** 카드 클릭
+4. 또는 직접 URL 접속: `/dashboard/settings/api-credentials`
 
-# Meta Ads
-META_APP_ID=your_meta_app_id
-META_APP_SECRET=your_meta_app_secret
+### 플랫폼별 인증 정보 입력
 
-# Kakao Moment
-KAKAO_REST_API_KEY=your_kakao_rest_api_key
-KAKAO_JAVASCRIPT_KEY=your_kakao_javascript_key
+각 플랫폼 카드를 클릭하여 확장한 후:
 
-# Google Ads
-GOOGLE_CLIENT_ID=your_google_client_id
-GOOGLE_CLIENT_SECRET=your_google_client_secret
-GOOGLE_DEVELOPER_TOKEN=your_google_developer_token
-```
+**Meta Ads 설정:**
+- App ID 입력
+- App Secret 입력
+- 저장 버튼 클릭
 
-### 환경 변수 검증
+**Kakao Moment 설정:**
+- REST API Key 입력
+- JavaScript Key 입력
+- 저장 버튼 클릭
 
-다음 명령어로 환경 변수가 제대로 설정되었는지 확인:
+**Google Ads 설정:**
+- Client ID 입력
+- Client Secret 입력
+- Developer Token 입력
+- 저장 버튼 클릭
 
-```bash
-# 개발 서버 재시작
-npm run dev
+### 보안 정보
 
-# 환경 변수 출력 (개발용)
-node -e "console.log(process.env.META_APP_ID)"
-```
+- 모든 API 인증 정보는 암호화되어 데이터베이스에 저장됩니다
+- 병원별로 독립적인 인증 정보를 관리합니다
+- 권한이 있는 사용자만 설정할 수 있습니다:
+  - 병원 관리자 (hospital_owner)
+  - 병원 어드민 (hospital_admin)
+  - 마케팅 매니저 (marketing_manager)
 
 ---
 
