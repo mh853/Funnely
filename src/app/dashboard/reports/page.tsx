@@ -63,7 +63,7 @@ export default async function ReportsPage() {
       </div>
 
       {/* Report Generator */}
-      <ReportGenerator campaigns={campaigns || []} hospitalId={userProfile.hospital_id} />
+      <ReportGenerator campaigns={(campaigns as any) || []} hospitalId={userProfile.hospital_id} />
 
       {/* Recent Reports */}
       <RecentReports reports={reports || []} hospitalId={userProfile.hospital_id} />

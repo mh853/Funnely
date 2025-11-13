@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       .insert({
         name: hospitalName || `${fullName}의 병원`,
         business_number: tempBusinessNumber,
-      } as Database['public']['Tables']['hospitals']['Insert'])
+      } as any)
       .select()
       .single()
 
@@ -94,16 +94,16 @@ export async function POST(request: Request) {
     // 3. Create user profile in public.users
     const { error: userError } = await supabase.from('users').insert({
       id: authData.user.id,
-      hospital_id: hospitalData.id,
+      hospital_id: (hospitalData as any).id,
       email,
       full_name: fullName,
       role: 'hospital_owner', // First user becomes hospital owner
-    })
+    } as any)
 
     if (userError) {
       console.error('User profile creation error:', userError)
       // Rollback: Delete hospital and auth user
-      await supabase.from('hospitals').delete().eq('id', hospitalData.id)
+      await supabase.from('hospitals').delete().eq('id', (hospitalData as any).id)
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
         { error: '사용자 프로필 생성에 실패했습니다.' },

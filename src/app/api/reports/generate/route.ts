@@ -149,13 +149,15 @@ export async function POST(request: NextRequest) {
       // Auto-fit columns
       worksheet.columns.forEach((column) => {
         let maxLength = 0
-        column.eachCell({ includeEmpty: true }, (cell) => {
+        column?.eachCell?.({ includeEmpty: true }, (cell) => {
           const columnLength = cell.value ? cell.value.toString().length : 10
           if (columnLength > maxLength) {
             maxLength = columnLength
           }
         })
-        column.width = maxLength < 10 ? 10 : maxLength + 2
+        if (column) {
+          column.width = maxLength < 10 ? 10 : maxLength + 2
+        }
       })
 
       // Generate buffer

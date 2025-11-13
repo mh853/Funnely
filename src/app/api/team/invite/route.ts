@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       email,
       full_name: fullName,
       role,
-    })
+    } as any)
 
     if (userError) {
       console.error('User profile creation error:', userError)

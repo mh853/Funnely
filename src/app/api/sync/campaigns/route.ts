@@ -87,8 +87,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: '동기화가 완료되었습니다.',
       ...syncResult,
+      message: '동기화가 완료되었습니다.',
     })
   } catch (error: any) {
     console.error('Campaign sync error:', error)
