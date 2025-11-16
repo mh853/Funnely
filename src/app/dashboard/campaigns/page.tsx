@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CampaignsList from '@/components/campaigns/CampaignsList'
 import CreateCampaignButton from '@/components/campaigns/CreateCampaignButton'
@@ -15,12 +15,8 @@ export default async function CampaignsPage() {
     redirect('/auth/login')
   }
 
-  // Get user profile
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select('hospital_id, role')
-    .eq('id', user.id)
-    .single()
+  // Get user profile (cached)
+  const userProfile = await getCachedUserProfile(user.id)
 
   if (!userProfile) {
     return (
@@ -30,31 +26,34 @@ export default async function CampaignsPage() {
     )
   }
 
-  // Get all campaigns for this hospital with ad account info
-  const { data: campaigns, error } = await supabase
-    .from('campaigns')
-    .select(`
-      *,
-      ad_accounts (
-        id,
-        platform,
-        account_name
-      )
-    `)
-    .eq('hospital_id', userProfile.hospital_id)
-    .order('created_at', { ascending: false })
-
   // Check if user can manage campaigns
   const canManage = ['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(
     userProfile.role
   )
 
-  // Get ad accounts for dropdown
-  const { data: adAccounts } = await supabase
-    .from('ad_accounts')
-    .select('id, platform, account_name, status')
-    .eq('hospital_id', userProfile.hospital_id)
-    .eq('status', 'active')
+  // Get campaigns and ad accounts in parallel
+  const [
+    { data: campaigns, error },
+    { data: adAccounts }
+  ] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select(`
+        *,
+        ad_accounts (
+          id,
+          platform,
+          account_name
+        )
+      `)
+      .eq('hospital_id', userProfile.hospital_id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('ad_accounts')
+      .select('id, platform, account_name, status')
+      .eq('hospital_id', userProfile.hospital_id)
+      .eq('status', 'active')
+  ])
 
   return (
     <div className="space-y-6">

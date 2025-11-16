@@ -5,6 +5,7 @@
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { cache } from 'react'
 import { Database } from '@/types/database.types'
 
 export async function createClient() {
@@ -40,3 +41,29 @@ export async function createClient() {
     }
   )
 }
+
+/**
+ * Cached function to get user profile with hospital info
+ * Reduces duplicate queries across layout and pages
+ */
+export const getCachedUserProfile = cache(async (userId: string) => {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('users')
+    .select(`
+      *,
+      hospitals (
+        id,
+        name,
+        business_number,
+        address,
+        phone
+      )
+    `)
+    .eq('id', userId)
+    .single()
+
+  if (error) throw error
+  return data
+})

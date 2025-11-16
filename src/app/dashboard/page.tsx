@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -20,31 +20,24 @@ export default async function DashboardPage() {
     redirect('/auth/login')
   }
 
-  // Get user profile with hospital
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select(`
-      *,
-      hospitals (
-        id,
-        name,
-        business_number
-      )
-    `)
-    .eq('id', user.id)
-    .single()
+  // Get user profile with hospital (cached to avoid duplicate query with layout)
+  const userProfile = await getCachedUserProfile(user.id)
 
-  // Get statistics
-  const { count: adAccountCount } = await supabase
-    .from('ad_accounts')
-    .select('*', { count: 'exact', head: true })
-    .eq('hospital_id', userProfile?.hospital_id)
-
-  const { count: campaignCount } = await supabase
-    .from('campaigns')
-    .select('*', { count: 'exact', head: true })
-    .eq('hospital_id', userProfile?.hospital_id)
-    .eq('status', 'active')
+  // Get statistics in parallel
+  const [
+    { count: adAccountCount },
+    { count: campaignCount }
+  ] = await Promise.all([
+    supabase
+      .from('ad_accounts')
+      .select('*', { count: 'exact', head: true })
+      .eq('hospital_id', userProfile?.hospital_id),
+    supabase
+      .from('campaigns')
+      .select('*', { count: 'exact', head: true })
+      .eq('hospital_id', userProfile?.hospital_id)
+      .eq('status', 'active')
+  ])
 
   // Check onboarding status
   const hasBusinessNumber = userProfile?.hospitals?.business_number &&
@@ -83,6 +76,7 @@ export default async function DashboardPage() {
               <div className="mt-4">
                 <Link
                   href="/dashboard/settings"
+                  prefetch={true}
                   className="text-sm font-medium text-yellow-800 hover:text-yellow-900 underline"
                 >
                   설정으로 이동 →
@@ -111,7 +105,7 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="bg-gray-50 px-5 py-3">
-            <Link href="/dashboard/ad-accounts" className="text-sm font-medium text-blue-600 hover:text-blue-500">
+            <Link href="/dashboard/ad-accounts" prefetch={true} className="text-sm font-medium text-blue-600 hover:text-blue-500">
               계정 연동하기 →
             </Link>
           </div>
@@ -133,7 +127,7 @@ export default async function DashboardPage() {
             </div>
           </div>
           <div className="bg-gray-50 px-5 py-3">
-            <Link href="/dashboard/campaigns" className="text-sm font-medium text-green-600 hover:text-green-500">
+            <Link href="/dashboard/campaigns" prefetch={true} className="text-sm font-medium text-green-600 hover:text-green-500">
               캠페인 보기 →
             </Link>
           </div>
@@ -215,6 +209,7 @@ export default async function DashboardPage() {
 
             <Link
               href="/dashboard/reports"
+              prefetch={true}
               className="relative rounded-lg border border-gray-300 bg-white px-6 py-5 shadow-sm flex items-center space-x-3 hover:border-purple-400 hover:shadow-md transition-all"
             >
               <div className="flex-shrink-0">

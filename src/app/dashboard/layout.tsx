@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/dashboard/Sidebar'
 import Header from '@/components/dashboard/Header'
@@ -18,21 +18,8 @@ export default async function DashboardLayout({
     redirect('/auth/login')
   }
 
-  // Get user profile with hospital info
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select(`
-      *,
-      hospitals (
-        id,
-        name,
-        business_number,
-        address,
-        phone
-      )
-    `)
-    .eq('id', user.id)
-    .single()
+  // Get user profile with hospital info (cached)
+  const userProfile = await getCachedUserProfile(user.id)
 
   return (
     <div className="min-h-screen bg-gray-50">

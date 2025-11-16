@@ -8,7 +8,11 @@ import {
   CogIcon,
   UsersIcon,
   MegaphoneIcon,
-  DocumentTextIcon
+  DocumentTextIcon,
+  GlobeAltIcon,
+  PhoneIcon,
+  CalendarIcon,
+  PresentationChartLineIcon,
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -19,6 +23,10 @@ const navigation = [
   { name: '대시보드', href: '/dashboard', icon: HomeIcon },
   { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
+  { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon },
+  { name: '리드 관리', href: '/dashboard/leads', icon: PhoneIcon },
+  { name: '캘린더', href: '/dashboard/calendar', icon: CalendarIcon },
+  { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
   { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
   { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
   { name: '설정', href: '/dashboard/settings', icon: CogIcon },
@@ -56,6 +64,7 @@ export default function Sidebar({ userProfile }: SidebarProps) {
                     <li key={item.name}>
                       <Link
                         href={item.href}
+                        prefetch={true}
                         className={`
                           group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold
                           ${

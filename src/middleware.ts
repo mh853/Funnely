@@ -59,9 +59,6 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Refresh session if expired
-  await supabase.auth.getUser()
-
   // Protected routes
   const protectedPaths = ['/dashboard']
   const isProtectedPath = protectedPaths.some(path =>
@@ -69,6 +66,7 @@ export async function middleware(request: NextRequest) {
   )
 
   if (isProtectedPath) {
+    // Refresh session and check authentication in one call
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
@@ -77,6 +75,9 @@ export async function middleware(request: NextRequest) {
       redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
+  } else {
+    // For non-protected routes, just refresh session if expired
+    await supabase.auth.getUser()
   }
 
   return response

@@ -1,0 +1,105 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+
+// PUT /api/leads/update - Update lead status, priority, and assignment
+export async function PUT(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { id, status, priority, assigned_to } = body
+
+    // Validate required fields
+    if (!id) {
+      return NextResponse.json({ error: { message: 'Missing lead ID' } }, { status: 400 })
+    }
+
+    // Get user's hospital
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('hospital_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile) {
+      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
+    }
+
+    // Verify lead belongs to user's hospital
+    const { data: lead } = await supabase
+      .from('leads')
+      .select('id, hospital_id, status')
+      .eq('id', id)
+      .eq('hospital_id', userProfile.hospital_id)
+      .single()
+
+    if (!lead) {
+      return NextResponse.json({ error: { message: 'Lead not found' } }, { status: 404 })
+    }
+
+    // Build update object
+    const updateData: any = {
+      updated_at: new Date().toISOString(),
+    }
+
+    if (status !== undefined) {
+      updateData.status = status
+
+      // Update timestamps based on status changes
+      if (status === 'contacting' && lead.status === 'new') {
+        updateData.first_contact_at = new Date().toISOString()
+      }
+
+      if (status === 'completed') {
+        updateData.completed_at = new Date().toISOString()
+      }
+
+      // Always update last contact time when status changes
+      if (status !== lead.status) {
+        updateData.last_contact_at = new Date().toISOString()
+      }
+    }
+
+    if (priority !== undefined) {
+      updateData.priority = priority
+    }
+
+    if (assigned_to !== undefined) {
+      updateData.assigned_to = assigned_to
+
+      // If assigning for first time and status is 'new', change to 'assigned'
+      if (assigned_to && lead.status === 'new') {
+        updateData.status = 'assigned'
+      }
+    }
+
+    // Update lead
+    const { data: updatedLead, error: updateError } = await supabase
+      .from('leads')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+
+    if (updateError) throw updateError
+
+    return NextResponse.json({
+      success: true,
+      data: updatedLead,
+    })
+  } catch (error: any) {
+    console.error('Lead update error:', error)
+    return NextResponse.json(
+      { success: false, error: { message: error.message || 'Update failed' } },
+      { status: 500 }
+    )
+  }
+}

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReportGenerator from '@/components/reports/ReportGenerator'
 import RecentReports from '@/components/reports/RecentReports'
@@ -14,12 +14,8 @@ export default async function ReportsPage() {
     redirect('/auth/login')
   }
 
-  // Get user profile
-  const { data: userProfile } = await supabase
-    .from('users')
-    .select('hospital_id, role')
-    .eq('id', user.id)
-    .single()
+  // Get user profile (cached)
+  const userProfile = await getCachedUserProfile(user.id)
 
   if (!userProfile) {
     return (
@@ -29,28 +25,31 @@ export default async function ReportsPage() {
     )
   }
 
-  // Get campaigns for report generation
-  const { data: campaigns } = await supabase
-    .from('campaigns')
-    .select(`
-      id,
-      campaign_name,
-      status,
-      ad_accounts (
-        platform,
-        account_name
-      )
-    `)
-    .eq('hospital_id', userProfile.hospital_id)
-    .order('created_at', { ascending: false })
-
-  // Get recent reports
-  const { data: reports } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  // Get campaigns and reports in parallel
+  const [
+    { data: campaigns },
+    { data: reports }
+  ] = await Promise.all([
+    supabase
+      .from('campaigns')
+      .select(`
+        id,
+        campaign_name,
+        status,
+        ad_accounts (
+          platform,
+          account_name
+        )
+      `)
+      .eq('hospital_id', userProfile.hospital_id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('reports')
+      .select('*')
+      .eq('hospital_id', userProfile.hospital_id)
+      .order('created_at', { ascending: false })
+      .limit(10)
+  ])
 
   return (
     <div className="space-y-6">
