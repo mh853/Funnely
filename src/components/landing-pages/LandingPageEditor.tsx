@@ -194,6 +194,7 @@ export default function LandingPageEditor({
                 <SectionEditor
                   sections={formData.sections}
                   onChange={(sections) => setFormData({ ...formData, sections })}
+                  themeColors={formData.theme.colors}
                 />
               </div>
             </div>

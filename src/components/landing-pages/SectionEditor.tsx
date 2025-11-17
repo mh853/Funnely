@@ -9,11 +9,17 @@ import {
   ArrowDownIcon,
   ChevronDownIcon,
   ChevronUpIcon,
+  EyeIcon,
 } from '@heroicons/react/24/outline'
+import SectionPreview from './SectionPreview'
 
 interface SectionEditorProps {
   sections: Section[]
   onChange: (sections: Section[]) => void
+  themeColors?: {
+    primary: string
+    secondary: string
+  }
 }
 
 const SECTION_TEMPLATES: Record<
@@ -124,8 +130,9 @@ const SECTION_TEMPLATES: Record<
   },
 }
 
-export default function SectionEditor({ sections, onChange }: SectionEditorProps) {
+export default function SectionEditor({ sections, onChange, themeColors }: SectionEditorProps) {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set())
+  const [previewSections, setPreviewSections] = useState<Set<string>>(new Set())
   const [showAddMenu, setShowAddMenu] = useState(false)
 
   const addSection = (type: SectionType) => {
@@ -177,6 +184,16 @@ export default function SectionEditor({ sections, onChange }: SectionEditorProps
     setExpandedSections(newExpanded)
   }
 
+  const togglePreview = (sectionId: string) => {
+    const newPreview = new Set(previewSections)
+    if (newPreview.has(sectionId)) {
+      newPreview.delete(sectionId)
+    } else {
+      newPreview.add(sectionId)
+    }
+    setPreviewSections(newPreview)
+  }
+
   return (
     <div className="space-y-4">
       {/* Section List */}
@@ -191,6 +208,7 @@ export default function SectionEditor({ sections, onChange }: SectionEditorProps
           sections.map((section, index) => {
             const template = SECTION_TEMPLATES[section.type]
             const isExpanded = expandedSections.has(section.id)
+            const isPreview = previewSections.has(section.id)
 
             return (
               <div
@@ -222,6 +240,18 @@ export default function SectionEditor({ sections, onChange }: SectionEditorProps
                   </button>
 
                   <div className="flex items-center space-x-2">
+                    <button
+                      type="button"
+                      onClick={() => togglePreview(section.id)}
+                      className={`p-1 ${
+                        isPreview
+                          ? 'text-blue-600 hover:text-blue-700'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                      title="미리보기"
+                    >
+                      <EyeIcon className="h-5 w-5" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => moveSection(index, 'up')}
@@ -261,6 +291,24 @@ export default function SectionEditor({ sections, onChange }: SectionEditorProps
                     </button>
                   </div>
                 </div>
+
+                {/* Section Preview */}
+                {isPreview && (
+                  <div className="border-t border-gray-200">
+                    <div className="p-2 bg-gray-100 text-xs text-gray-600 flex items-center justify-between">
+                      <span className="flex items-center">
+                        <EyeIcon className="h-4 w-4 mr-1" />
+                        미리보기
+                      </span>
+                      <span className="text-gray-500">
+                        실제 랜딩 페이지에서 보이는 모습입니다
+                      </span>
+                    </div>
+                    <div className="overflow-hidden">
+                      <SectionPreview section={section} themeColors={themeColors} />
+                    </div>
+                  </div>
+                )}
 
                 {/* Section Content (Expanded) */}
                 {isExpanded && (
