@@ -1,7 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { generateSlug, validateSlug, getSlugValidationError } from '@/lib/utils/slug'
+import { SparklesIcon } from '@heroicons/react/24/outline'
 
 interface LandingPageFormProps {
   hospitalId: string
@@ -17,6 +19,8 @@ export default function LandingPageForm({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [slugError, setSlugError] = useState<string | null>(null)
+  const [slugTouched, setSlugTouched] = useState(false)
 
   const [formData, setFormData] = useState({
     title: initialData?.title || '',
@@ -26,8 +30,29 @@ export default function LandingPageForm({
     template_id: initialData?.template_id || 'basic',
   })
 
+  // Validate slug in real-time
+  useEffect(() => {
+    if (slugTouched && formData.slug) {
+      const validationError = getSlugValidationError(formData.slug)
+      setSlugError(validationError)
+    } else if (!formData.slug && slugTouched) {
+      setSlugError('URL 슬러그를 입력해주세요')
+    } else {
+      setSlugError(null)
+    }
+  }, [formData.slug, slugTouched])
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Final validation
+    const validationError = getSlugValidationError(formData.slug)
+    if (validationError) {
+      setSlugError(validationError)
+      setSlugTouched(true)
+      return
+    }
+
     setLoading(true)
     setError(null)
 
@@ -58,12 +83,15 @@ export default function LandingPageForm({
     }
   }
 
-  const generateSlug = () => {
-    const slug = formData.title
-      .toLowerCase()
-      .replace(/[^a-z0-9가-힣]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-    setFormData({ ...formData, slug })
+  const handleAutoGenerateSlug = () => {
+    if (!formData.title) {
+      setSlugError('먼저 페이지 제목을 입력해주세요')
+      return
+    }
+
+    const generatedSlug = generateSlug(formData.title)
+    setFormData({ ...formData, slug: generatedSlug })
+    setSlugTouched(true)
   }
 
   return (
@@ -85,7 +113,6 @@ export default function LandingPageForm({
             required
             value={formData.title}
             onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-            onBlur={generateSlug}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
             placeholder="예: 무료 건강검진 신청"
           />
@@ -95,24 +122,78 @@ export default function LandingPageForm({
           <label htmlFor="slug" className="block text-sm font-medium text-gray-700">
             URL 슬러그 *
           </label>
-          <div className="mt-1 flex rounded-md shadow-sm">
-            <input
-              type="text"
-              id="slug"
-              required
-              value={formData.slug}
-              onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-              className="block w-full rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-              placeholder="health-check"
-              pattern="[a-z0-9-]+"
-            />
-            <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
-              .medisync.kr
-            </span>
+          <div className="mt-1 space-y-2">
+            <div className="flex gap-2">
+              <div className="flex-1 flex rounded-md shadow-sm">
+                <input
+                  type="text"
+                  id="slug"
+                  required
+                  value={formData.slug}
+                  onChange={(e) => {
+                    setFormData({ ...formData, slug: e.target.value })
+                    setSlugTouched(true)
+                  }}
+                  onBlur={() => setSlugTouched(true)}
+                  className={`block w-full rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                    slugError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
+                  }`}
+                  placeholder="health-check"
+                />
+                <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
+                  .medisync.kr
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleAutoGenerateSlug}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                title="제목으로부터 자동 생성"
+              >
+                <SparklesIcon className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Real-time validation feedback */}
+            {slugError && slugTouched && (
+              <p className="text-xs text-red-600 flex items-start">
+                <svg
+                  className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                {slugError}
+              </p>
+            )}
+
+            {/* Success feedback */}
+            {!slugError && slugTouched && formData.slug && validateSlug(formData.slug) && (
+              <p className="text-xs text-green-600 flex items-start">
+                <svg
+                  className="h-4 w-4 mr-1 mt-0.5 flex-shrink-0"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+                사용 가능한 URL 슬러그입니다
+              </p>
+            )}
+
+            <p className="text-xs text-gray-500">
+              ✨ 자동 생성: 한글 제목을 영문으로 변환 | 수동 입력: 영문 소문자, 숫자, 하이픈(-)만 사용
+            </p>
           </div>
-          <p className="mt-1 text-xs text-gray-500">
-            영문 소문자, 숫자, 하이픈(-)만 사용 가능
-          </p>
         </div>
 
         <div>
