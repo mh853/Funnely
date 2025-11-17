@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LandingPage } from '@/types/landing-page.types'
 import SectionEditor from './SectionEditor'
+import { getLandingPageUrl } from '@/lib/config'
 
 interface LandingPageEditorProps {
   landingPage: LandingPage
@@ -217,22 +218,18 @@ export default function LandingPageEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700">URL</label>
-              <div className="mt-1 flex rounded-md shadow-sm">
-                <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
-                  https://
-                </span>
+              <label className="block text-sm font-medium text-gray-700">공개 URL</label>
+              <div className="mt-1">
                 <input
                   type="text"
-                  value={landingPage.slug}
+                  value={getLandingPageUrl(landingPage.slug)}
                   disabled
-                  className="block w-full rounded-none border-gray-300 bg-gray-50 text-gray-500 sm:text-sm"
+                  className="block w-full rounded-md border-gray-300 bg-gray-50 text-gray-500 sm:text-sm"
                 />
-                <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
-                  .medisync.kr
-                </span>
               </div>
-              <p className="mt-1 text-xs text-gray-500">URL은 생성 후 변경할 수 없습니다.</p>
+              <p className="mt-1 text-xs text-gray-500">
+                공개 URL은 생성 후 변경할 수 없습니다. 도메인은 환경 설정에서 변경 가능합니다.
+              </p>
             </div>
 
             <div>

@@ -1,0 +1,128 @@
+import { createClient } from '@/lib/supabase/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { FormSubmission } from '@/types/landing-page.types'
+import crypto from 'crypto'
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const body: FormSubmission = await request.json()
+
+    const { landing_page_id, form_data, utm_params, metadata } = body
+
+    // Validate required fields
+    if (!landing_page_id || !form_data) {
+      return NextResponse.json(
+        { error: { message: '필수 정보가 누락되었습니다' } },
+        { status: 400 }
+      )
+    }
+
+    // Get landing page to retrieve hospital_id
+    const { data: landingPage, error: lpError } = await supabase
+      .from('landing_pages')
+      .select('hospital_id, status')
+      .eq('id', landing_page_id)
+      .single()
+
+    if (lpError || !landingPage) {
+      return NextResponse.json(
+        { error: { message: '랜딩 페이지를 찾을 수 없습니다' } },
+        { status: 404 }
+      )
+    }
+
+    if (landingPage.status !== 'published') {
+      return NextResponse.json(
+        { error: { message: '게시되지 않은 페이지입니다' } },
+        { status: 403 }
+      )
+    }
+
+    // Extract contact information
+    const name = form_data.name || form_data.이름 || ''
+    const phone = form_data.phone || form_data.전화번호 || ''
+    const email = form_data.email || form_data.이메일 || undefined
+
+    if (!name || !phone) {
+      return NextResponse.json(
+        { error: { message: '이름과 전화번호는 필수입니다' } },
+        { status: 400 }
+      )
+    }
+
+    // Hash phone number for duplicate detection
+    const phoneHash = crypto
+      .createHash('sha256')
+      .update(phone.replace(/\D/g, ''))
+      .digest('hex')
+
+    // Create lead record
+    const { data: lead, error: leadError } = await supabase
+      .from('leads')
+      .insert({
+        hospital_id: landingPage.hospital_id,
+        landing_page_id,
+        name,
+        phone, // Note: In production, this should be encrypted
+        phone_hash: phoneHash,
+        email,
+        message: form_data.message || form_data.메시지 || undefined,
+        consultation_items: form_data.consultation_items || undefined,
+        preferred_date: form_data.preferred_date || undefined,
+        preferred_time: form_data.preferred_time || undefined,
+        status: 'new',
+        priority: 'medium',
+        tags: [],
+        utm_source: utm_params?.utm_source,
+        utm_medium: utm_params?.utm_medium,
+        utm_campaign: utm_params?.utm_campaign,
+        utm_content: utm_params?.utm_content,
+        utm_term: utm_params?.utm_term,
+        referrer: metadata?.referrer,
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        user_agent: metadata?.user_agent,
+      })
+      .select()
+      .single()
+
+    if (leadError) {
+      console.error('Lead creation error:', leadError)
+      return NextResponse.json(
+        { error: { message: '신청 처리 중 오류가 발생했습니다' } },
+        { status: 500 }
+      )
+    }
+
+    // Increment submissions count
+    const { data: currentPage } = await supabase
+      .from('landing_pages')
+      .select('submissions_count')
+      .eq('id', landing_page_id)
+      .single()
+
+    await supabase
+      .from('landing_pages')
+      .update({
+        submissions_count: (currentPage?.submissions_count || 0) + 1
+      })
+      .eq('id', landing_page_id)
+
+    // TODO: Send notification to assigned staff
+    // TODO: Send confirmation email/SMS to customer
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        lead_id: lead.id,
+        message: '신청이 완료되었습니다',
+      },
+    })
+  } catch (error: any) {
+    console.error('Form submission error:', error)
+    return NextResponse.json(
+      { error: { message: '서버 오류가 발생했습니다' } },
+      { status: 500 }
+    )
+  }
+}
