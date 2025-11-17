@@ -35,11 +35,12 @@ export type FormFieldType =
   | 'email'
   | 'tel'
   | 'textarea'
+  | 'number'
+  | 'date'
+  | 'time'
   | 'select'
   | 'checkbox'
-  | 'radio'
-  | 'date'
-  | 'time';
+  | 'radio';
 
 export interface FormField {
   id: string;

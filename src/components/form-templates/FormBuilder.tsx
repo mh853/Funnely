@@ -64,7 +64,7 @@ export default function FormBuilder({ hospitalId, initialData }: FormBuilderProp
   }
 
   const removeField = (index: number) => {
-    const newFields = formData.fields.filter((_, i) => i !== index)
+    const newFields = formData.fields.filter((_field: FormField, i: number) => i !== index)
     setFormData({ ...formData, fields: newFields })
   }
 
@@ -166,7 +166,7 @@ export default function FormBuilder({ hospitalId, initialData }: FormBuilderProp
         </div>
 
         <div className="space-y-4">
-          {formData.fields.map((field, index) => (
+          {formData.fields.map((field: FormField, index: number) => (
             <div
               key={field.id}
               className="border border-gray-200 rounded-lg p-4 space-y-4 hover:border-blue-300 transition"
