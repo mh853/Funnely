@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LandingPage } from '@/types/landing-page.types'
+import SectionEditor from './SectionEditor'
 
 interface LandingPageEditorProps {
   landingPage: LandingPage
@@ -188,15 +189,12 @@ export default function LandingPageEditor({
                 </div>
               </div>
 
-              {/* Placeholder for drag-and-drop editor */}
-              <div className="mt-6 border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
-                <p className="text-gray-500">
-                  섹션 에디터 구현 예정
-                  <br />
-                  <span className="text-xs">
-                    (히어로, 기능, 후기, CTA, 폼 등의 섹션을 추가할 수 있습니다)
-                  </span>
-                </p>
+              {/* Section Editor */}
+              <div className="mt-6">
+                <SectionEditor
+                  sections={formData.sections}
+                  onChange={(sections) => setFormData({ ...formData, sections })}
+                />
               </div>
             </div>
           </div>
