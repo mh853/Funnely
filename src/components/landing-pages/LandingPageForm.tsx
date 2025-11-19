@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { generateSlug, validateSlug, getSlugValidationError } from '@/lib/utils/slug'
 import { SparklesIcon } from '@heroicons/react/24/outline'
+import { config } from '@/lib/config'
 
 interface LandingPageFormProps {
   hospitalId: string
@@ -125,6 +126,9 @@ export default function LandingPageForm({
           <div className="mt-1 space-y-2">
             <div className="flex gap-2">
               <div className="flex-1 flex rounded-md shadow-sm">
+                <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
+                  {config.app.domain.replace('https://', '')}/landing/
+                </span>
                 <input
                   type="text"
                   id="slug"
@@ -135,14 +139,11 @@ export default function LandingPageForm({
                     setSlugTouched(true)
                   }}
                   onBlur={() => setSlugTouched(true)}
-                  className={`block w-full rounded-l-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
+                  className={`block w-full rounded-r-md border-gray-300 focus:border-blue-500 focus:ring-blue-500 sm:text-sm ${
                     slugError ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''
                   }`}
                   placeholder="health-check"
                 />
-                <span className="inline-flex items-center rounded-r-md border border-l-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm">
-                  .medisync.kr
-                </span>
               </div>
               <button
                 type="button"
