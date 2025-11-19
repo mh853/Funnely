@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { GlobeAltIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { TrashIcon } from '@heroicons/react/24/outline'
 import { getLandingPageUrl } from '@/lib/config'
 
 interface LandingPageCardProps {
@@ -48,7 +48,7 @@ export default function LandingPageCard({ page }: LandingPageCardProps) {
     <div className="relative block bg-white rounded-lg shadow hover:shadow-md transition-shadow overflow-hidden">
       <Link href={`/dashboard/landing-pages/${page.id}`} className="block">
         <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="mb-4">
             <span
               className={`px-2 py-1 text-xs font-medium rounded-full ${
                 page.status === 'published'
@@ -64,7 +64,6 @@ export default function LandingPageCard({ page }: LandingPageCardProps) {
                 ? '초안'
                 : '보관됨'}
             </span>
-            <GlobeAltIcon className="h-5 w-5 text-gray-400" />
           </div>
 
           <h3 className="text-lg font-medium text-gray-900 mb-2">{page.title}</h3>
