@@ -92,17 +92,47 @@ export type SectionType =
   | 'cta'
   | 'timer'
   | 'faq'
-  | 'pricing';
+  | 'pricing'
+  | 'media'      // 🆕 미디어 섹션 (이미지, GIF, 비디오)
+  | 'gallery';   // 🆕 갤러리 섹션
 
 export interface SectionProps {
   [key: string]: any;
+}
+
+// 🆕 섹션 스타일 정의
+export interface SectionStyles {
+  layout?: {
+    container: 'full-width' | 'contained' | 'narrow';
+    maxWidth?: string;
+    columns?: number;
+    gap?: string;
+  };
+  spacing?: {
+    paddingTop: string;
+    paddingBottom: string;
+    paddingLeft?: string;
+    paddingRight?: string;
+  };
+  background?: {
+    type: 'color' | 'gradient' | 'image';
+    value: string;
+    opacity?: number;
+  };
+  border?: {
+    width?: string;
+    color?: string;
+    radius?: string;
+  };
+  shadow?: 'none' | 'sm' | 'md' | 'lg' | 'xl';
 }
 
 export interface Section {
   id: string;
   type: SectionType;
   props: SectionProps;
-  styles?: React.CSSProperties;
+  styles?: SectionStyles;  // 🆕 확장된 스타일 시스템
+  order?: number;          // 🆕 섹션 순서
 }
 
 export interface Theme {

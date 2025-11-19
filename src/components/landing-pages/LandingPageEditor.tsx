@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { LandingPage } from '@/types/landing-page.types'
-import SectionEditor from './SectionEditor'
+import VisualEditor from './editor/VisualEditor'
 import { getLandingPageUrl } from '@/lib/config'
 
 interface LandingPageEditorProps {
@@ -140,65 +140,52 @@ export default function LandingPageEditor({
         )}
 
         {activeTab === 'design' && (
-          <div className="space-y-6">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900 mb-4">페이지 디자인</h3>
-              <p className="text-sm text-gray-500 mb-4">
-                드래그 앤 드롭으로 섹션을 추가하고 편집하세요.
-              </p>
-
-              {/* Theme Colors */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    주요 색상
-                  </label>
-                  <input
-                    type="color"
-                    value={formData.theme.colors.primary}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        theme: {
-                          ...formData.theme,
-                          colors: { ...formData.theme.colors, primary: e.target.value },
-                        },
-                      })
-                    }
-                    className="mt-1 block w-20 h-10 rounded-md border-gray-300 shadow-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    보조 색상
-                  </label>
-                  <input
-                    type="color"
-                    value={formData.theme.colors.secondary}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        theme: {
-                          ...formData.theme,
-                          colors: { ...formData.theme.colors, secondary: e.target.value },
-                        },
-                      })
-                    }
-                    className="mt-1 block w-20 h-10 rounded-md border-gray-300 shadow-sm"
-                  />
-                </div>
+          <div className="h-[calc(100vh-300px)]">
+            {/* Theme Colors - Compact */}
+            <div className="flex items-center gap-6 p-4 bg-gray-50 border-b border-gray-200">
+              <h3 className="text-sm font-medium text-gray-900">테마 색상:</h3>
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-700">주요</label>
+                <input
+                  type="color"
+                  value={formData.theme.colors.primary}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      theme: {
+                        ...formData.theme,
+                        colors: { ...formData.theme.colors, primary: e.target.value },
+                      },
+                    })
+                  }
+                  className="w-10 h-8 rounded border-gray-300"
+                />
               </div>
-
-              {/* Section Editor */}
-              <div className="mt-6">
-                <SectionEditor
-                  sections={formData.sections}
-                  onChange={(sections) => setFormData({ ...formData, sections })}
-                  themeColors={formData.theme.colors}
+              <div className="flex items-center gap-2">
+                <label className="text-xs font-medium text-gray-700">보조</label>
+                <input
+                  type="color"
+                  value={formData.theme.colors.secondary}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      theme: {
+                        ...formData.theme,
+                        colors: { ...formData.theme.colors, secondary: e.target.value },
+                      },
+                    })
+                  }
+                  className="w-10 h-8 rounded border-gray-300"
                 />
               </div>
             </div>
+
+            {/* Visual Editor - Full Height */}
+            <VisualEditor
+              sections={formData.sections}
+              onChange={(sections) => setFormData({ ...formData, sections })}
+              themeColors={formData.theme.colors}
+            />
           </div>
         )}
 
