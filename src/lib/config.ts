@@ -6,7 +6,7 @@
 export const config = {
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'MediSync',
-    domain: process.env.NEXT_PUBLIC_APP_DOMAIN || 'https://medisync.kr',
+    domain: process.env.NEXT_PUBLIC_URL || 'https://medisync.kr',
   },
   features: {
     analytics: Boolean(process.env.NEXT_PUBLIC_GA_ID),
