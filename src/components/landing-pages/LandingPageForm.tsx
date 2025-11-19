@@ -85,14 +85,20 @@ export default function LandingPageForm({
   }
 
   const handleAutoGenerateSlug = () => {
+    console.log('Auto-generate button clicked', { title: formData.title })
+
     if (!formData.title) {
       setSlugError('먼저 페이지 제목을 입력해주세요')
+      setSlugTouched(true)
       return
     }
 
     const generatedSlug = generateSlug(formData.title)
+    console.log('Generated slug:', generatedSlug)
+
     setFormData({ ...formData, slug: generatedSlug })
     setSlugTouched(true)
+    setSlugError(null) // Clear any previous errors
   }
 
   return (
