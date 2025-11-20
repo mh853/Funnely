@@ -190,7 +190,7 @@ export default function LandingPageEditor({
         )}
 
         {activeTab === 'settings' && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-20">
             <div>
               <label htmlFor="title" className="block text-sm font-medium text-gray-700">
                 페이지 제목
@@ -240,7 +240,7 @@ export default function LandingPageEditor({
         )}
 
         {activeTab === 'seo' && (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-20">
             <div>
               <label htmlFor="meta_title" className="block text-sm font-medium text-gray-700">
                 SEO 제목
@@ -280,20 +280,20 @@ export default function LandingPageEditor({
       </div>
 
       {/* Actions */}
-      <div className="bg-gray-50 px-6 py-4 flex justify-between rounded-b-lg">
+      <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between gap-4 rounded-b-lg sticky bottom-0">
         <button
           type="button"
           onClick={() => router.back()}
-          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+          className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
         >
           취소
         </button>
-        <div className="flex space-x-3">
+        <div className="flex items-center gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={loading}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2.5 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? '저장 중...' : '저장'}
           </button>
@@ -302,7 +302,7 @@ export default function LandingPageEditor({
               type="button"
               onClick={handlePublish}
               disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-6 py-2.5 text-sm font-semibold text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow transition-all"
             >
               {loading ? '발행 중...' : '발행'}
             </button>

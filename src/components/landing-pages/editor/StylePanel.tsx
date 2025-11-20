@@ -304,6 +304,381 @@ function ContentEditor({
         </div>
       )
 
+    case 'gallery':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              레이아웃
+            </label>
+            <select
+              value={section.props.layout || 'grid-3'}
+              onChange={(e) => updateProp('layout', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            >
+              <option value="grid-2">2열 그리드</option>
+              <option value="grid-3">3열 그리드</option>
+              <option value="grid-4">4열 그리드</option>
+              <option value="masonry">메이슨리</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              이미지 목록
+            </label>
+            {(section.props.images || []).map((image: string, idx: number) => (
+              <div key={idx} className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  value={image}
+                  onChange={(e) => {
+                    const newImages = [...(section.props.images || [])]
+                    newImages[idx] = e.target.value
+                    updateProp('images', newImages)
+                  }}
+                  placeholder="이미지 URL"
+                  className="flex-1 px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+                <button
+                  onClick={() => {
+                    const newImages = section.props.images.filter((_: any, i: number) => i !== idx)
+                    updateProp('images', newImages)
+                  }}
+                  className="px-2 py-1 text-red-600 hover:bg-red-50 rounded text-sm"
+                >
+                  삭제
+                </button>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const newImages = [...(section.props.images || []), '']
+                updateProp('images', newImages)
+              }}
+              className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+            >
+              + 이미지 추가
+            </button>
+          </div>
+        </div>
+      )
+
+    case 'testimonials':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              섹션 제목
+            </label>
+            <input
+              type="text"
+              value={section.props.title || ''}
+              onChange={(e) => updateProp('title', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              고객 후기 목록
+            </label>
+            {(section.props.items || []).map((item: any, idx: number) => (
+              <div key={idx} className="p-3 border border-gray-200 rounded-md mb-3 space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">후기 {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      const newItems = section.props.items.filter((_: any, i: number) => i !== idx)
+                      updateProp('items', newItems)
+                    }}
+                    className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={item.name || ''}
+                  onChange={(e) => {
+                    const newItems = [...section.props.items]
+                    newItems[idx] = { ...item, name: e.target.value }
+                    updateProp('items', newItems)
+                  }}
+                  placeholder="고객 이름"
+                  className="w-full px-2 py-1 mb-2 border border-gray-300 rounded text-sm"
+                />
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">평점 (1-5)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="5"
+                    value={item.rating || 5}
+                    onChange={(e) => {
+                      const newItems = [...section.props.items]
+                      newItems[idx] = { ...item, rating: parseInt(e.target.value) }
+                      updateProp('items', newItems)
+                    }}
+                    className="w-full px-2 py-1 mb-2 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+                <textarea
+                  value={item.comment || ''}
+                  onChange={(e) => {
+                    const newItems = [...section.props.items]
+                    newItems[idx] = { ...item, comment: e.target.value }
+                    updateProp('items', newItems)
+                  }}
+                  placeholder="후기 내용"
+                  rows={3}
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const newItems = [...(section.props.items || []), { name: '', rating: 5, comment: '' }]
+                updateProp('items', newItems)
+              }}
+              className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+            >
+              + 후기 추가
+            </button>
+          </div>
+        </div>
+      )
+
+    case 'faq':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              섹션 제목
+            </label>
+            <input
+              type="text"
+              value={section.props.title || ''}
+              onChange={(e) => updateProp('title', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              질문과 답변
+            </label>
+            {(section.props.items || []).map((item: any, idx: number) => (
+              <div key={idx} className="p-3 border border-gray-200 rounded-md mb-3 space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">FAQ {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      const newItems = section.props.items.filter((_: any, i: number) => i !== idx)
+                      updateProp('items', newItems)
+                    }}
+                    className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={item.question || ''}
+                  onChange={(e) => {
+                    const newItems = [...section.props.items]
+                    newItems[idx] = { ...item, question: e.target.value }
+                    updateProp('items', newItems)
+                  }}
+                  placeholder="질문"
+                  className="w-full px-2 py-1 mb-2 border border-gray-300 rounded text-sm"
+                />
+                <textarea
+                  value={item.answer || ''}
+                  onChange={(e) => {
+                    const newItems = [...section.props.items]
+                    newItems[idx] = { ...item, answer: e.target.value }
+                    updateProp('items', newItems)
+                  }}
+                  placeholder="답변"
+                  rows={3}
+                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                />
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const newItems = [...(section.props.items || []), { question: '', answer: '' }]
+                updateProp('items', newItems)
+              }}
+              className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+            >
+              + FAQ 추가
+            </button>
+          </div>
+        </div>
+      )
+
+    case 'pricing':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              섹션 제목
+            </label>
+            <input
+              type="text"
+              value={section.props.title || ''}
+              onChange={(e) => updateProp('title', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              요금제 목록
+            </label>
+            {(section.props.plans || []).map((plan: any, idx: number) => (
+              <div key={idx} className="p-3 border border-gray-200 rounded-md mb-3 space-y-2">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium text-gray-700">요금제 {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      const newPlans = section.props.plans.filter((_: any, i: number) => i !== idx)
+                      updateProp('plans', newPlans)
+                    }}
+                    className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded"
+                  >
+                    삭제
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  value={plan.name || ''}
+                  onChange={(e) => {
+                    const newPlans = [...section.props.plans]
+                    newPlans[idx] = { ...plan, name: e.target.value }
+                    updateProp('plans', newPlans)
+                  }}
+                  placeholder="요금제 이름"
+                  className="w-full px-2 py-1 mb-2 border border-gray-300 rounded text-sm"
+                />
+                <input
+                  type="text"
+                  value={plan.price || ''}
+                  onChange={(e) => {
+                    const newPlans = [...section.props.plans]
+                    newPlans[idx] = { ...plan, price: e.target.value }
+                    updateProp('plans', newPlans)
+                  }}
+                  placeholder="가격 (예: 월 10,000원)"
+                  className="w-full px-2 py-1 mb-2 border border-gray-300 rounded text-sm"
+                />
+                <div className="flex items-center gap-2 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={plan.highlighted || false}
+                    onChange={(e) => {
+                      const newPlans = [...section.props.plans]
+                      newPlans[idx] = { ...plan, highlighted: e.target.checked }
+                      updateProp('plans', newPlans)
+                    }}
+                    className="rounded"
+                  />
+                  <label className="text-sm text-gray-700">강조 표시</label>
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">포함 기능 (한 줄에 하나씩)</label>
+                  <textarea
+                    value={(plan.features || []).join('\n')}
+                    onChange={(e) => {
+                      const newPlans = [...section.props.plans]
+                      newPlans[idx] = { ...plan, features: e.target.value.split('\n').filter(f => f.trim()) }
+                      updateProp('plans', newPlans)
+                    }}
+                    placeholder="기능 1&#10;기능 2&#10;기능 3"
+                    rows={4}
+                    className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const newPlans = [...(section.props.plans || []), { name: '', price: '', features: [], highlighted: false }]
+                updateProp('plans', newPlans)
+              }}
+              className="w-full px-3 py-2 text-sm text-blue-600 border border-blue-300 rounded hover:bg-blue-50"
+            >
+              + 요금제 추가
+            </button>
+          </div>
+        </div>
+      )
+
+    case 'timer':
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              제목
+            </label>
+            <input
+              type="text"
+              value={section.props.title || ''}
+              onChange={(e) => updateProp('title', e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              마감 시간
+            </label>
+            <input
+              type="datetime-local"
+              value={section.props.deadline ? new Date(section.props.deadline).toISOString().slice(0, 16) : ''}
+              onChange={(e) => updateProp('deadline', new Date(e.target.value).toISOString())}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700">표시 항목</label>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={section.props.showDays !== false}
+                onChange={(e) => updateProp('showDays', e.target.checked)}
+                className="rounded"
+              />
+              <label className="text-sm text-gray-700">일</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={section.props.showHours !== false}
+                onChange={(e) => updateProp('showHours', e.target.checked)}
+                className="rounded"
+              />
+              <label className="text-sm text-gray-700">시간</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={section.props.showMinutes !== false}
+                onChange={(e) => updateProp('showMinutes', e.target.checked)}
+                className="rounded"
+              />
+              <label className="text-sm text-gray-700">분</label>
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={section.props.showSeconds !== false}
+                onChange={(e) => updateProp('showSeconds', e.target.checked)}
+                className="rounded"
+              />
+              <label className="text-sm text-gray-700">초</label>
+            </div>
+          </div>
+        </div>
+      )
+
     default:
       return (
         <div className="text-sm text-gray-500 text-center py-8">

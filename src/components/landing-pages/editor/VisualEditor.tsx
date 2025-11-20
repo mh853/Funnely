@@ -99,8 +99,13 @@ export default function VisualEditor({ sections, onChange, themeColors }: Visual
       <SectionList onAddSection={handleAddSection} />
 
       {/* 중앙: 캔버스 */}
-      <div className="flex-1 bg-gray-50 overflow-y-auto">
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <div className="flex-1 bg-gray-50 overflow-y-auto pb-20">
+        <DndContext
+          id="landing-page-dnd"
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
           <SortableContext items={sections.map(s => s.id)} strategy={verticalListSortingStrategy}>
             <SectionCanvas
               sections={sections}

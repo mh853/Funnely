@@ -34,13 +34,13 @@ export async function DELETE(
     }
 
     // Verify user belongs to the same hospital
-    const { data: userProfile } = await supabase
-      .from('profiles')
+    const { data: userData } = await supabase
+      .from('users')
       .select('hospital_id')
       .eq('id', user.id)
       .single()
 
-    if (userProfile?.hospital_id !== landingPage.hospital_id) {
+    if (userData?.hospital_id !== landingPage.hospital_id) {
       return NextResponse.json(
         { error: { message: '권한이 없습니다' } },
         { status: 403 }
