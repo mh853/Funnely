@@ -106,9 +106,9 @@ export default function LandingPageNewForm({
   const [sections, setSections] = useState<Section[]>([
     { id: '1', type: 'hero_image', label: '히어로 이미지', enabled: true },
     { id: '3', type: 'description', label: '설명', enabled: true },
-    { id: '4', type: 'form', label: 'DB 수집 폼', enabled: true },
-    { id: '5', type: 'realtime_status', label: '실시간 현황', enabled: true },
     { id: '6', type: 'timer', label: '타이머', enabled: true },
+    { id: '5', type: 'realtime_status', label: '실시간 현황', enabled: true },
+    { id: '4', type: 'form', label: 'DB 수집 폼', enabled: true },
     { id: '7', type: 'cta_button', label: 'CTA 버튼', enabled: true },
     { id: '8', type: 'call_button', label: '전화 연결', enabled: true },
   ])
