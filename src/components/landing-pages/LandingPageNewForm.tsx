@@ -310,10 +310,9 @@ export default function LandingPageNewForm({
 
   // Get preview content for each section (Mobile)
   const getPreviewContent = (section: Section) => {
-    // External mode filtering: hide form, realtime_status, privacy_consent (keep call_button)
+    // External mode filtering: hide form and privacy_consent only (keep realtime_status)
     if (collectionMode === 'external') {
-      if (section.type === 'form' || section.type === 'realtime_status' ||
-          section.type === 'privacy_consent') {
+      if (section.type === 'form' || section.type === 'privacy_consent') {
         return null
       }
     }
@@ -497,10 +496,9 @@ export default function LandingPageNewForm({
 
   // Get desktop preview content for each section (Desktop - larger, better quality)
   const getDesktopPreviewContent = (section: Section) => {
-    // External mode filtering: hide form, realtime_status, privacy_consent (keep call_button)
+    // External mode filtering: hide form and privacy_consent only (keep realtime_status)
     if (collectionMode === 'external') {
-      if (section.type === 'form' || section.type === 'realtime_status' ||
-          section.type === 'privacy_consent') {
+      if (section.type === 'form' || section.type === 'privacy_consent') {
         return null
       }
     }
@@ -699,12 +697,17 @@ export default function LandingPageNewForm({
       )
     }
 
-    // CTA Button (external mode only)
-    if (collectionMode === 'external' && ctaEnabled && collectData && ctaStickyPosition === position) {
+    // CTA Button (both modes - different behavior)
+    if (ctaEnabled && collectData && ctaStickyPosition === position) {
       buttons.push(
         <button
           key="cta"
-          onClick={() => setShowExternalFormModal(true)}
+          onClick={() => {
+            if (collectionMode === 'external') {
+              setShowExternalFormModal(true)
+            }
+            // inline mode: default button behavior (scrolls to form in page)
+          }}
           className={`w-full ${isDesktop ? 'py-4 text-base' : 'py-3 text-sm'} rounded-lg font-bold text-white shadow-lg`}
           style={{ backgroundColor: ctaColor }}
         >
