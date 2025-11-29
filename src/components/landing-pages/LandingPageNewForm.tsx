@@ -104,6 +104,13 @@ export default function LandingPageNewForm({
   // Sticky button positions
   const [ctaStickyPosition, setCtaStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
   const [callButtonStickyPosition, setCallButtonStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
+  const [timerStickyPosition, setTimerStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
+
+  // Collection mode (inline vs external)
+  const [collectionMode, setCollectionMode] = useState<'inline' | 'external'>('inline')
+
+  // External form modal state
+  const [showExternalFormModal, setShowExternalFormModal] = useState(false)
 
   // Privacy consent state
   const [requirePrivacyConsent, setRequirePrivacyConsent] = useState(true)
@@ -303,6 +310,14 @@ export default function LandingPageNewForm({
 
   // Get preview content for each section (Mobile)
   const getPreviewContent = (section: Section) => {
+    // External mode filtering: hide form, realtime_status, privacy_consent (keep call_button)
+    if (collectionMode === 'external') {
+      if (section.type === 'form' || section.type === 'realtime_status' ||
+          section.type === 'privacy_consent') {
+        return null
+      }
+    }
+
     switch (section.type) {
       case 'hero_image':
         return images.length > 0 ? (
@@ -401,6 +416,11 @@ export default function LandingPageNewForm({
         return (
           <div className="flex justify-center">
             <button
+              onClick={() => {
+                if (collectionMode === 'external') {
+                  setShowExternalFormModal(true)
+                }
+              }}
               className="w-full py-3 rounded-lg text-sm font-bold text-white shadow-lg"
               style={{ backgroundColor: ctaColor }}
             >
@@ -477,6 +497,14 @@ export default function LandingPageNewForm({
 
   // Get desktop preview content for each section (Desktop - larger, better quality)
   const getDesktopPreviewContent = (section: Section) => {
+    // External mode filtering: hide form, realtime_status, privacy_consent (keep call_button)
+    if (collectionMode === 'external') {
+      if (section.type === 'form' || section.type === 'realtime_status' ||
+          section.type === 'privacy_consent') {
+        return null
+      }
+    }
+
     switch (section.type) {
       case 'hero_image':
         return images.length > 0 ? (
@@ -575,6 +603,11 @@ export default function LandingPageNewForm({
         return (
           <div className="flex justify-center">
             <button
+              onClick={() => {
+                if (collectionMode === 'external') {
+                  setShowExternalFormModal(true)
+                }
+              }}
               className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow"
               style={{ backgroundColor: ctaColor }}
             >
@@ -653,11 +686,25 @@ export default function LandingPageNewForm({
   const renderStickyButtons = (position: 'top' | 'bottom', isDesktop: boolean = false) => {
     const buttons = []
 
-    // CTA Button
-    if (ctaEnabled && collectData && ctaStickyPosition === position) {
+    // Timer (available for both modes)
+    if (timerEnabled && timerStickyPosition === position && timerDeadline) {
+      buttons.push(
+        <div
+          key="timer"
+          className={`w-full ${isDesktop ? 'py-4 text-lg' : 'py-3 text-base'} rounded-lg font-bold text-white shadow-lg text-center`}
+          style={{ backgroundColor: timerColor }}
+        >
+          ⏰ {timerCountdown}
+        </div>
+      )
+    }
+
+    // CTA Button (external mode only)
+    if (collectionMode === 'external' && ctaEnabled && collectData && ctaStickyPosition === position) {
       buttons.push(
         <button
           key="cta"
+          onClick={() => setShowExternalFormModal(true)}
           className={`w-full ${isDesktop ? 'py-4 text-base' : 'py-3 text-sm'} rounded-lg font-bold text-white shadow-lg`}
           style={{ backgroundColor: ctaColor }}
         >
@@ -666,8 +713,8 @@ export default function LandingPageNewForm({
       )
     }
 
-    // Call Button
-    if (callButtonEnabled && callButtonStickyPosition === position) {
+    // Call Button (inline mode only)
+    if (collectionMode === 'inline' && callButtonEnabled && callButtonStickyPosition === position) {
       buttons.push(
         <button
           key="call"
@@ -689,6 +736,159 @@ export default function LandingPageNewForm({
         className={`${position === 'top' ? 'sticky top-0' : 'sticky bottom-0'} z-10 bg-white ${isDesktop ? 'p-4' : 'p-3'} border-${position === 'top' ? 'b' : 't'} border-gray-200 shadow-md space-y-${isDesktop ? '3' : '2'}`}
       >
         {buttons}
+      </div>
+    )
+  }
+
+  // Render external form modal (preview only)
+  const renderExternalFormModal = () => {
+    if (!showExternalFormModal) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto shadow-2xl">
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between rounded-t-2xl">
+            <h3 className="text-xl font-bold text-gray-900">상세 정보 입력</h3>
+            <button
+              onClick={() => setShowExternalFormModal(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          {/* Description */}
+          <div className="p-4 bg-indigo-50 border-b border-indigo-100">
+            <p className="text-sm text-indigo-900">
+              💡 상담을 위해 아래 정보를 입력해주세요
+            </p>
+          </div>
+
+          {/* Form Content */}
+          <div className="p-6 space-y-4">
+            {/* Basic Fields */}
+            {collectName && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  이름 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  placeholder="홍길동"
+                  disabled
+                />
+              </div>
+            )}
+
+            {collectPhone && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  전화번호 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  placeholder="010-1234-5678"
+                  disabled
+                />
+              </div>
+            )}
+
+            {/* Custom Fields */}
+            {customFields.map((field, index) => (
+              <div key={field.id}>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {field.question || `${index + 3}. 항목추가`}
+                </label>
+                {field.type === 'short_answer' ? (
+                  <input
+                    type="text"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    placeholder="답변을 입력해주세요"
+                    disabled
+                  />
+                ) : (
+                  <select
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    disabled
+                  >
+                    <option>선택해주세요</option>
+                    {field.options?.map((option, idx) => (
+                      <option key={idx}>{option}</option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            ))}
+
+            {/* Privacy Consent */}
+            <div className="space-y-3 pt-4 border-t border-gray-200">
+              {requirePrivacyConsent && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-5 h-5 rounded border-gray-300"
+                    disabled
+                  />
+                  <span className="text-sm text-gray-600">
+                    개인정보 수집 및 이용 동의 (필수)
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowPrivacyModal(true)
+                      }}
+                      className="ml-2 text-indigo-600 underline font-medium"
+                    >
+                      [보기]
+                    </button>
+                  </span>
+                </label>
+              )}
+              {requireMarketingConsent && (
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-5 h-5 rounded border-gray-300"
+                    disabled
+                  />
+                  <span className="text-sm text-gray-600">
+                    마케팅 활용 동의 (선택)
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setShowMarketingModal(true)
+                      }}
+                      className="ml-2 text-indigo-600 underline font-medium"
+                    >
+                      [보기]
+                    </button>
+                  </span>
+                </label>
+              )}
+            </div>
+
+            {/* Submit Button */}
+            <button
+              onClick={() => {
+                alert('미리보기 모드입니다')
+              }}
+              className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl"
+              style={{ backgroundColor: ctaColor }}
+            >
+              {ctaText || '상담 신청하기'}
+            </button>
+
+            <p className="text-xs text-center text-gray-500">
+              💡 이것은 미리보기입니다. 실제 수집 페이지에서는 정보가 저장됩니다.
+            </p>
+          </div>
+        </div>
       </div>
     )
   }
@@ -722,12 +922,14 @@ export default function LandingPageNewForm({
           images,
           collect_data: collectData,
           collect_fields: collectFields,
+          collection_mode: collectionMode,
           realtime_enabled: realtimeEnabled,
           cta_enabled: ctaEnabled,
           cta_text: ctaText,
           cta_color: ctaColor,
           cta_sticky_position: ctaStickyPosition,
           timer_enabled: timerEnabled,
+          timer_sticky_position: timerStickyPosition,
           call_button_enabled: callButtonEnabled,
           call_button_sticky_position: callButtonStickyPosition,
           is_active: true,
@@ -890,30 +1092,76 @@ export default function LandingPageNewForm({
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">DB 수집 항목</h2>
           <div className="space-y-4">
-            {/* Enable/Disable Toggle */}
-            <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={collectData}
-                  onChange={() => setCollectData(true)}
-                  className="w-5 h-5 text-indigo-600"
-                />
-                <span className="font-semibold text-gray-900">사용함</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={!collectData}
-                  onChange={() => setCollectData(false)}
-                  className="w-5 h-5 text-gray-400"
-                />
-                <span className="font-semibold text-gray-600">사용 안함</span>
-              </label>
+            {/* Collection Mode Selection */}
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-4">
+              <h3 className="text-sm font-bold text-gray-900 mb-3">수집 방식 선택</h3>
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={collectionMode === 'inline'}
+                    onChange={() => setCollectionMode('inline')}
+                    className="w-5 h-5 text-indigo-600"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-900">옵션1: 페이지 내 수집</span>
+                    <p className="text-xs text-gray-600">랜딩 페이지에서 바로 정보 수집</p>
+                  </div>
+                </label>
+                <label className="flex items-center gap-3 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={collectionMode === 'external'}
+                    onChange={() => setCollectionMode('external')}
+                    className="w-5 h-5 text-purple-600"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-900">옵션2: 외부 페이지 수집</span>
+                    <p className="text-xs text-gray-600">별도 페이지에서 상세 정보 수집</p>
+                  </div>
+                </label>
+              </div>
             </div>
 
-            {/* Fixed Fields + Custom Fields */}
-            {collectData && (
+            {/* External Page Info (Option 2 only) */}
+            {collectionMode === 'external' && (
+              <div className="bg-purple-50 rounded-xl p-4 mb-4">
+                <p className="text-sm text-purple-900">
+                  💡 외부 수집 페이지 URL: <span className="font-semibold">https://funnely.co.kr/landing/{slug || '[페이지-주소]'}/collect-detail</span>
+                </p>
+                <p className="text-xs text-purple-700 mt-2">
+                  옵션2를 선택하면 위 URL로 별도의 수집 페이지가 생성됩니다. 아래에서 수집할 항목을 설정해주세요.
+                </p>
+              </div>
+            )}
+
+            {/* Collection Settings (Common for both options) */}
+            {collectionMode && (
+              <>
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={collectData}
+                      onChange={() => setCollectData(true)}
+                      className="w-5 h-5 text-indigo-600"
+                    />
+                    <span className="font-semibold text-gray-900">사용함</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input
+                      type="radio"
+                      checked={!collectData}
+                      onChange={() => setCollectData(false)}
+                      className="w-5 h-5 text-gray-400"
+                    />
+                    <span className="font-semibold text-gray-600">사용 안함</span>
+                  </label>
+                </div>
+
+                {/* Fixed Fields + Custom Fields */}
+                {collectData && (
               <div className="space-y-4">
                 {/* Fixed Fields: Name and Phone */}
                 <div className="grid grid-cols-2 gap-4">
@@ -1030,6 +1278,8 @@ export default function LandingPageNewForm({
                   )}
                 </div>
               </div>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -1323,6 +1573,45 @@ export default function LandingPageNewForm({
                       placeholder="#ef4444"
                     />
                   </div>
+                </div>
+
+                {/* Timer Sticky Position Settings */}
+                <div className="space-y-2 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700">
+                    화면 고정 위치
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={timerStickyPosition === 'none'}
+                        onChange={() => setTimerStickyPosition('none')}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="text-sm text-gray-700">고정 안함</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={timerStickyPosition === 'top'}
+                        onChange={() => setTimerStickyPosition('top')}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="text-sm text-gray-700">상단 고정</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={timerStickyPosition === 'bottom'}
+                        onChange={() => setTimerStickyPosition('bottom')}
+                        className="w-4 h-4 text-red-600"
+                      />
+                      <span className="text-sm text-gray-700">하단 고정</span>
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    💡 타이머를 화면 상단 또는 하단에 고정하여 스크롤 시에도 항상 표시되도록 설정할 수 있습니다
+                  </p>
                 </div>
               </div>
             )}
@@ -1890,6 +2179,9 @@ export default function LandingPageNewForm({
           </div>
         </div>
       )}
+
+      {/* External Form Modal */}
+      {renderExternalFormModal()}
     </div>
   )
 }
