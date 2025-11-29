@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Menu } from '@headlessui/react'
@@ -10,11 +9,12 @@ import NotificationBell from './NotificationBell'
 interface HeaderProps {
   user: any
   userProfile: any
+  mobileMenuOpen: boolean
+  setMobileMenuOpen: (open: boolean) => void
 }
 
-export default function Header({ user, userProfile }: HeaderProps) {
+export default function Header({ user, userProfile, mobileMenuOpen, setMobileMenuOpen }: HeaderProps) {
   const router = useRouter()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleLogout = async () => {
     const supabase = createClient()

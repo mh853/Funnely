@@ -1,7 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import Sidebar from '@/components/dashboard/Sidebar'
-import Header from '@/components/dashboard/Header'
+import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 
 export default async function DashboardLayout({
   children,
@@ -22,16 +21,8 @@ export default async function DashboardLayout({
   const userProfile = await getCachedUserProfile(user.id)
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Sidebar userProfile={userProfile} />
-      <div className="lg:pl-64">
-        <Header user={user} userProfile={userProfile} />
-        <main className="py-6">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            {children}
-          </div>
-        </main>
-      </div>
-    </div>
+    <DashboardLayoutClient user={user} userProfile={userProfile}>
+      {children}
+    </DashboardLayoutClient>
   )
 }
