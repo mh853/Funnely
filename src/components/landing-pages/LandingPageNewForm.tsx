@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import {
   CheckIcon,
@@ -55,6 +56,7 @@ type SectionType =
   | 'timer'
   | 'cta_button'
   | 'call_button'
+  | 'privacy_consent'
 
 interface Section {
   id: string
@@ -99,6 +101,18 @@ export default function LandingPageNewForm({
   const [callButtonPhone, setCallButtonPhone] = useState('')
   const [callButtonColor, setCallButtonColor] = useState('#10b981')
 
+  // Sticky button positions
+  const [ctaStickyPosition, setCtaStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
+  const [callButtonStickyPosition, setCallButtonStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
+
+  // Privacy consent state
+  const [requirePrivacyConsent, setRequirePrivacyConsent] = useState(true)
+  const [requireMarketingConsent, setRequireMarketingConsent] = useState(false)
+  const [privacyContent, setPrivacyContent] = useState('')
+  const [marketingContent, setMarketingContent] = useState('')
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false)
+  const [showMarketingModal, setShowMarketingModal] = useState(false)
+
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -109,6 +123,7 @@ export default function LandingPageNewForm({
     { id: '6', type: 'timer', label: '타이머', enabled: true },
     { id: '5', type: 'realtime_status', label: '실시간 현황', enabled: true },
     { id: '4', type: 'form', label: 'DB 수집 폼', enabled: true },
+    { id: '9', type: 'privacy_consent', label: '개인정보 동의', enabled: true },
     { id: '7', type: 'cta_button', label: 'CTA 버튼', enabled: true },
     { id: '8', type: 'call_button', label: '전화 연결', enabled: true },
   ])
@@ -156,6 +171,39 @@ export default function LandingPageNewForm({
 
     return () => clearInterval(interval)
   }, [timerEnabled, timerDeadline])
+
+  // Load privacy policy content
+  useEffect(() => {
+    async function loadPrivacyPolicy() {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('company_id')
+          .eq('user_id', user.id)
+          .single()
+
+        if (!profile) return
+
+        const { data: policy } = await supabase
+          .from('privacy_policies')
+          .select('*')
+          .eq('company_id', profile.company_id)
+          .single()
+
+        if (policy) {
+          setPrivacyContent(policy.privacy_consent_content)
+          setMarketingContent(policy.marketing_consent_content)
+        }
+      } catch (err) {
+        console.error('Error loading privacy policy:', err)
+      }
+    }
+
+    loadPrivacyPolicy()
+  }, [])
 
   // Format phone number with auto-hyphen
   const formatPhoneNumber = (value: string) => {
@@ -377,6 +425,51 @@ export default function LandingPageNewForm({
           </div>
         )
 
+      case 'privacy_consent':
+        if (!collectData) return null
+        return (
+          <div className="space-y-3 border-t border-gray-200 pt-3">
+            {requirePrivacyConsent && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 w-4 h-4 rounded border-gray-300"
+                  disabled
+                />
+                <span className="text-xs text-gray-700">
+                  개인정보 수집·이용 동의 (필수)
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacyModal(true)}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    [보기]
+                  </button>
+                </span>
+              </label>
+            )}
+            {requireMarketingConsent && (
+              <label className="flex items-start gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 w-4 h-4 rounded border-gray-300"
+                  disabled
+                />
+                <span className="text-xs text-gray-600">
+                  마케팅 활용 동의 (선택)
+                  <button
+                    type="button"
+                    onClick={() => setShowMarketingModal(true)}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    [보기]
+                  </button>
+                </span>
+              </label>
+            )}
+          </div>
+        )
+
       default:
         return null
     }
@@ -506,9 +599,98 @@ export default function LandingPageNewForm({
           </div>
         )
 
+      case 'privacy_consent':
+        if (!collectData) return null
+        return (
+          <div className="space-y-4 border-t-2 border-gray-200 pt-6">
+            {requirePrivacyConsent && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 w-5 h-5 rounded border-gray-300"
+                  disabled
+                />
+                <span className="text-base text-gray-700">
+                  개인정보 수집·이용 동의 (필수)
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacyModal(true)}
+                    className="ml-2 text-indigo-600 underline font-medium"
+                  >
+                    [보기]
+                  </button>
+                </span>
+              </label>
+            )}
+            {requireMarketingConsent && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 w-5 h-5 rounded border-gray-300"
+                  disabled
+                />
+                <span className="text-base text-gray-600">
+                  마케팅 활용 동의 (선택)
+                  <button
+                    type="button"
+                    onClick={() => setShowMarketingModal(true)}
+                    className="ml-2 text-indigo-600 underline font-medium"
+                  >
+                    [보기]
+                  </button>
+                </span>
+              </label>
+            )}
+          </div>
+        )
+
       default:
         return null
     }
+  }
+
+  // Render sticky buttons based on position
+  const renderStickyButtons = (position: 'top' | 'bottom', isDesktop: boolean = false) => {
+    const buttons = []
+
+    // CTA Button
+    if (ctaEnabled && collectData && ctaStickyPosition === position) {
+      buttons.push(
+        <button
+          key="cta"
+          className={`w-full ${isDesktop ? 'py-4 text-base' : 'py-3 text-sm'} rounded-lg font-bold text-white shadow-lg`}
+          style={{ backgroundColor: ctaColor }}
+        >
+          {ctaText || '상담 신청하기'}
+        </button>
+      )
+    }
+
+    // Call Button
+    if (callButtonEnabled && callButtonStickyPosition === position) {
+      buttons.push(
+        <button
+          key="call"
+          className={`w-full ${isDesktop ? 'py-4 text-base' : 'py-3 text-sm'} text-white rounded-lg font-bold shadow-lg flex items-center justify-center gap-2`}
+          style={{ backgroundColor: callButtonColor }}
+        >
+          <svg className={`${isDesktop ? 'h-5 w-5' : 'h-4 w-4'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+          {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
+        </button>
+      )
+    }
+
+    if (buttons.length === 0) return null
+
+    return (
+      <div
+        className={`${position === 'top' ? 'sticky top-0' : 'sticky bottom-0'} z-10 bg-white ${isDesktop ? 'p-4' : 'p-3'} border-${position === 'top' ? 'b' : 't'} border-gray-200 shadow-md space-y-${isDesktop ? '3' : '2'}`}
+      >
+        {buttons}
+      </div>
+    )
   }
 
   const handleSave = async () => {
@@ -544,8 +726,10 @@ export default function LandingPageNewForm({
           cta_enabled: ctaEnabled,
           cta_text: ctaText,
           cta_color: ctaColor,
+          cta_sticky_position: ctaStickyPosition,
           timer_enabled: timerEnabled,
           call_button_enabled: callButtonEnabled,
+          call_button_sticky_position: callButtonStickyPosition,
           is_active: true,
         })
 
@@ -1032,6 +1216,51 @@ export default function LandingPageNewForm({
                     />
                   </div>
                 </div>
+
+                {/* Sticky Position Settings */}
+                <div className="space-y-2 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700">
+                    화면 고정 위치
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={ctaStickyPosition === 'none'}
+                        onChange={() => setCtaStickyPosition('none')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">고정 안함</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={ctaStickyPosition === 'top'}
+                        onChange={() => setCtaStickyPosition('top')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">상단 고정</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={ctaStickyPosition === 'bottom'}
+                        onChange={() => setCtaStickyPosition('bottom')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">하단 고정</span>
+                    </label>
+                  </div>
+
+                  {/* Info message */}
+                  {ctaStickyPosition !== 'none' && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-800">
+                        💡 화면 고정 시 스크롤해도 항상 {ctaStickyPosition === 'top' ? '상단' : '하단'}에 버튼이 표시됩니다.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -1160,8 +1389,141 @@ export default function LandingPageNewForm({
                     />
                   </div>
                 </div>
+
+                {/* Sticky Position Settings */}
+                <div className="space-y-2 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700">
+                    화면 고정 위치
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={callButtonStickyPosition === 'none'}
+                        onChange={() => setCallButtonStickyPosition('none')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">고정 안함</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={callButtonStickyPosition === 'top'}
+                        onChange={() => setCallButtonStickyPosition('top')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">상단 고정</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="radio"
+                        checked={callButtonStickyPosition === 'bottom'}
+                        onChange={() => setCallButtonStickyPosition('bottom')}
+                        className="w-4 h-4 text-indigo-600"
+                      />
+                      <span className="text-sm text-gray-700">하단 고정</span>
+                    </label>
+                  </div>
+
+                  {/* Info message */}
+                  {callButtonStickyPosition !== 'none' && (
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <p className="text-xs text-blue-800">
+                        💡 화면 고정 시 스크롤해도 항상 {callButtonStickyPosition === 'top' ? '상단' : '하단'}에 버튼이 표시됩니다.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Privacy Consent Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">개인정보 동의</h2>
+            <Link
+              href="/dashboard/settings/privacy-policy"
+              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+              동의 내용 수정
+            </Link>
+          </div>
+
+          {/* Conditional Notice */}
+          {!collectData && (
+            <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+              <p className="text-sm text-yellow-800 flex items-center gap-2">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                DB 수집 항목을 사용해야 개인정보 동의를 사용할 수 있습니다.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* 개인정보 수집·이용 동의 */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={requirePrivacyConsent}
+                  onChange={(e) => setRequirePrivacyConsent(e.target.checked)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50"
+                />
+                <div>
+                  <span className="font-semibold text-gray-900">개인정보 수집·이용 동의</span>
+                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">필수</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowPrivacyModal(true)}
+                className="text-sm text-indigo-600 underline"
+              >
+                내용 미리보기
+              </button>
+            </div>
+
+            {/* 마케팅 활용 동의 */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={requireMarketingConsent}
+                  onChange={(e) => setRequireMarketingConsent(e.target.checked)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50"
+                />
+                <div>
+                  <span className="font-semibold text-gray-900">마케팅 활용 동의</span>
+                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">선택</span>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMarketingModal(true)}
+                className="text-sm text-indigo-600 underline"
+              >
+                내용 미리보기
+              </button>
+            </div>
+
+            <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+              <p className="text-sm text-blue-800 flex items-start gap-2">
+                <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span>
+                  동의 내용은 <strong>설정 {'>'} 개인정보 처리 방침</strong>에서 수정할 수 있습니다.
+                  DB 수집 시 자동으로 동의 여부가 함께 저장됩니다.
+                </span>
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1249,14 +1611,25 @@ export default function LandingPageNewForm({
             </div>
 
             {/* Preview Content - Scrollable */}
-            <div className="h-[600px] overflow-y-auto bg-white p-4 space-y-4">
-              {sections
-                .filter(section => {
-                  // Filter out disabled sections
-                  const content = getPreviewContent(section)
-                  return content !== null
-                })
-                .map((section, index) => {
+            <div className="h-[600px] overflow-y-auto bg-white relative">
+              {/* Sticky Top Buttons */}
+              {renderStickyButtons('top', false)}
+
+              {/* Scrollable Content */}
+              <div className="p-4 space-y-4">
+                {sections
+                  .filter(section => {
+                    // Filter out disabled sections
+                    const content = getPreviewContent(section)
+                    if (content === null) return false
+
+                    // Filter out sticky buttons
+                    if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
+                    if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
+
+                    return true
+                  })
+                  .map((section, index) => {
                   const content = getPreviewContent(section)
                   if (!content) return null
 
@@ -1293,17 +1666,21 @@ export default function LandingPageNewForm({
                   )
                 })}
 
-              {/* Empty State */}
-              {sections.every(section => getPreviewContent(section) === null) && (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <PhotoIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">
-                      항목을 추가하여<br />미리보기를 확인하세요
-                    </p>
+                {/* Empty State */}
+                {sections.every(section => getPreviewContent(section) === null) && (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="text-center">
+                      <PhotoIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                      <p className="text-sm text-gray-400">
+                        항목을 추가하여<br />미리보기를 확인하세요
+                      </p>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
+
+              {/* Sticky Bottom Buttons */}
+              {renderStickyButtons('bottom', false)}
             </div>
           </div>
           </div>
@@ -1365,13 +1742,24 @@ export default function LandingPageNewForm({
                   </div>
 
                   {/* Desktop Content - Scrollable */}
-                  <div className="h-[600px] overflow-y-auto bg-white">
+                  <div className="h-[600px] overflow-y-auto bg-white relative">
+                    {/* Sticky Top Buttons */}
+                    <div className="w-[800px] mx-auto">
+                      {renderStickyButtons('top', true)}
+                    </div>
+
                     {/* Desktop Layout - Fixed 800px width */}
                     <div className="w-[800px] mx-auto p-12 space-y-8">
                       {sections
                         .filter(section => {
                           const content = getDesktopPreviewContent(section)
-                          return content !== null
+                          if (content === null) return false
+
+                          // Filter out sticky buttons
+                          if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
+                          if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
+
+                          return true
                         })
                         .map((section, index) => {
                           const content = getDesktopPreviewContent(section)
@@ -1422,9 +1810,82 @@ export default function LandingPageNewForm({
                         </div>
                       )}
                     </div>
+
+                    {/* Sticky Bottom Buttons */}
+                    <div className="w-[800px] mx-auto">
+                      {renderStickyButtons('bottom', true)}
+                    </div>
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Privacy Consent Modal */}
+      {showPrivacyModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">개인정보 수집·이용 동의 (필수)</h3>
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="prose prose-sm max-w-none">
+                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
+                  {privacyContent || '개인정보 수집·이용 동의 내용이 설정되지 않았습니다.\n설정 페이지에서 내용을 입력해주세요.'}
+                </pre>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end">
+              <button
+                onClick={() => setShowPrivacyModal(false)}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Marketing Consent Modal */}
+      {showMarketingModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-6 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">마케팅 활용 동의 (선택)</h3>
+              <button
+                onClick={() => setShowMarketingModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="prose prose-sm max-w-none">
+                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
+                  {marketingContent || '마케팅 활용 동의 내용이 설정되지 않았습니다.\n설정 페이지에서 내용을 입력해주세요.'}
+                </pre>
+              </div>
+            </div>
+            <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end">
+              <button
+                onClick={() => setShowMarketingModal(false)}
+                className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              >
+                확인
+              </button>
             </div>
           </div>
         </div>
