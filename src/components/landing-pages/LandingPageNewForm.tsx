@@ -13,6 +13,27 @@ import {
   EyeIcon,
 } from '@heroicons/react/24/outline'
 
+// Timer calculation utility
+const calculateTimeRemaining = (deadline: string): string => {
+  if (!deadline) return '00:00:00'
+
+  const now = new Date().getTime()
+  const target = new Date(deadline).getTime()
+  const diff = target - now
+
+  if (diff <= 0) return '00:00:00'
+
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
+  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+  const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+
+  if (days > 0) {
+    return `${days}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  }
+  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+}
+
 interface LandingPageNewFormProps {
   companyId: string
   userId: string
@@ -52,6 +73,7 @@ export default function LandingPageNewForm({
   // Form state
   const [slug, setSlug] = useState('')
   const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
   const [images, setImages] = useState<string[]>([])
   const [collectData, setCollectData] = useState(true)
   const [collectName, setCollectName] = useState(true)
@@ -61,6 +83,7 @@ export default function LandingPageNewForm({
   const [customFields, setCustomFields] = useState<CustomField[]>([])
   const [showFieldTypeModal, setShowFieldTypeModal] = useState(false)
 
+  const [descriptionEnabled, setDescriptionEnabled] = useState(true)
   const [realtimeEnabled, setRealtimeEnabled] = useState(true)
   const [realtimeTemplate, setRealtimeTemplate] = useState('{name}님이 {location}에서 상담 신청했습니다')
   const [realtimeSpeed, setRealtimeSpeed] = useState(5)
@@ -69,7 +92,12 @@ export default function LandingPageNewForm({
   const [ctaText, setCtaText] = useState('')
   const [ctaColor, setCtaColor] = useState('#6366f1')
   const [timerEnabled, setTimerEnabled] = useState(true)
+  const [timerDeadline, setTimerDeadline] = useState('')
+  const [timerColor, setTimerColor] = useState('#ef4444')
+  const [timerCountdown, setTimerCountdown] = useState('00:00:00')
   const [callButtonEnabled, setCallButtonEnabled] = useState(true)
+  const [callButtonPhone, setCallButtonPhone] = useState('')
+  const [callButtonColor, setCallButtonColor] = useState('#10b981')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -77,7 +105,6 @@ export default function LandingPageNewForm({
   // Section ordering for preview
   const [sections, setSections] = useState<Section[]>([
     { id: '1', type: 'hero_image', label: '히어로 이미지', enabled: true },
-    { id: '2', type: 'title', label: '제목', enabled: true },
     { id: '3', type: 'description', label: '설명', enabled: true },
     { id: '4', type: 'form', label: 'DB 수집 폼', enabled: true },
     { id: '5', type: 'realtime_status', label: '실시간 현황', enabled: true },
@@ -111,6 +138,42 @@ export default function LandingPageNewForm({
 
     return () => clearInterval(interval)
   }, [realtimeEnabled, collectData, realtimeSpeed, demoRealtimeData.length])
+
+  // Timer countdown effect
+  useEffect(() => {
+    if (!timerEnabled || !timerDeadline) {
+      setTimerCountdown('00:00:00')
+      return
+    }
+
+    // Update immediately
+    setTimerCountdown(calculateTimeRemaining(timerDeadline))
+
+    // Then update every second
+    const interval = setInterval(() => {
+      setTimerCountdown(calculateTimeRemaining(timerDeadline))
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [timerEnabled, timerDeadline])
+
+  // Format phone number with auto-hyphen
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-numeric characters
+    const numbers = value.replace(/[^\d]/g, '')
+
+    // Apply formatting based on length
+    if (numbers.length <= 3) {
+      return numbers
+    } else if (numbers.length <= 7) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3)}`
+    } else if (numbers.length <= 11) {
+      return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7)}`
+    }
+
+    // Limit to 11 digits
+    return `${numbers.slice(0, 3)}-${numbers.slice(3, 7)}-${numbers.slice(7, 11)}`
+  }
 
   // Add new custom field
   const addCustomField = (type: 'short_answer' | 'multiple_choice') => {
@@ -190,22 +253,21 @@ export default function LandingPageNewForm({
     setDraggedIndex(null)
   }
 
-  // Get preview content for each section
+  // Get preview content for each section (Mobile)
   const getPreviewContent = (section: Section) => {
     switch (section.type) {
       case 'hero_image':
         return images.length > 0 ? (
-          <div className="relative rounded-lg overflow-hidden">
-            <img
-              src={images[0]}
-              alt="Hero"
-              className="w-full h-48 object-cover"
-            />
-            {images.length > 1 && (
-              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
-                +{images.length - 1} more
+          <div>
+            {images.map((image, idx) => (
+              <div key={idx} className="overflow-hidden">
+                <img
+                  src={image}
+                  alt={`Hero ${idx + 1}`}
+                  className="w-full h-48 object-cover"
+                />
               </div>
-            )}
+            ))}
           </div>
         ) : (
           <div className="bg-gray-100 rounded-lg p-8 flex items-center justify-center">
@@ -223,10 +285,11 @@ export default function LandingPageNewForm({
         )
 
       case 'description':
+        if (!descriptionEnabled) return null
         return (
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              랜딩 페이지 설명 영역입니다.
+              {description || '랜딩 페이지 설명을 입력하세요'}
             </p>
           </div>
         )
@@ -275,18 +338,18 @@ export default function LandingPageNewForm({
       case 'timer':
         if (!timerEnabled) return null
         return (
-          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-3 border border-red-200">
+          <div className="rounded-lg p-3 border-2" style={{ borderColor: timerColor, backgroundColor: `${timerColor}10` }}>
             <div className="flex items-center justify-center gap-2">
-              <ClockIcon className="h-4 w-4 text-red-600" />
-              <span className="text-xs font-bold text-red-900">
-                00:29:59
+              <ClockIcon className="h-4 w-4" style={{ color: timerColor }} />
+              <span className="text-xs font-bold" style={{ color: timerColor }}>
+                {timerCountdown}
               </span>
             </div>
           </div>
         )
 
       case 'cta_button':
-        if (!ctaEnabled) return null
+        if (!ctaEnabled || !collectData) return null
         return (
           <div className="flex justify-center">
             <button
@@ -302,11 +365,143 @@ export default function LandingPageNewForm({
         if (!callButtonEnabled) return null
         return (
           <div className="flex justify-center">
-            <button className="w-full py-3 bg-green-500 text-white rounded-lg text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+            <button
+              className="w-full py-3 text-white rounded-lg text-sm font-bold shadow-lg flex items-center justify-center gap-2"
+              style={{ backgroundColor: callButtonColor }}
+            >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              전화 상담 받기
+              {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
+            </button>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  // Get desktop preview content for each section (Desktop - larger, better quality)
+  const getDesktopPreviewContent = (section: Section) => {
+    switch (section.type) {
+      case 'hero_image':
+        return images.length > 0 ? (
+          <div className="space-y-0">
+            {images.map((image, idx) => (
+              <div key={idx} className="overflow-hidden">
+                <img
+                  src={image}
+                  alt={`Hero ${idx + 1}`}
+                  className="w-full object-contain"
+                  style={{ maxHeight: '600px' }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-gray-100 rounded-xl p-16 flex items-center justify-center">
+            <PhotoIcon className="h-24 w-24 text-gray-400" />
+          </div>
+        )
+
+      case 'title':
+        return (
+          <div className="text-center">
+            <h1 className="text-5xl font-bold text-gray-900">
+              {title || '랜딩 페이지 제목'}
+            </h1>
+          </div>
+        )
+
+      case 'description':
+        if (!descriptionEnabled) return null
+        return (
+          <div className="text-center">
+            <p className="text-lg text-gray-600 leading-relaxed">
+              {description || '랜딩 페이지 설명을 입력하세요'}
+            </p>
+          </div>
+        )
+
+      case 'form':
+        if (!collectData) return null
+        const formFields = []
+        if (collectName) formFields.push('이름')
+        if (collectPhone) formFields.push('연락처')
+        customFields.forEach((field, idx) => {
+          formFields.push(`${idx + 3}. ${field.question || '질문'}`)
+        })
+
+        return (
+          <div className="space-y-4">
+            <div className="text-base font-semibold text-gray-700 mb-4">DB 수집 폼</div>
+            {formFields.map((field, idx) => (
+              <div key={idx} className="bg-white rounded-xl p-4 border-2 border-gray-200">
+                <div className="text-base text-gray-600">{field}</div>
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'realtime_status':
+        if (!realtimeEnabled || !collectData) return null
+
+        const currentData = demoRealtimeData[currentRealtimeIndex]
+        const displayMessage = realtimeTemplate
+          .replace('{name}', currentData.name)
+          .replace('{location}', currentData.location)
+
+        return (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 overflow-hidden">
+            <div className="text-base font-semibold text-blue-900 mb-3">실시간 현황</div>
+            <div className="flex items-center gap-3 text-base text-blue-700">
+              <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+              <div key={currentRealtimeIndex} className="animate-in fade-in duration-500">
+                {displayMessage}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'timer':
+        if (!timerEnabled) return null
+        return (
+          <div className="rounded-xl p-6 border-2" style={{ borderColor: timerColor, backgroundColor: `${timerColor}10` }}>
+            <div className="flex items-center justify-center gap-3">
+              <ClockIcon className="h-6 w-6" style={{ color: timerColor }} />
+              <span className="text-lg font-bold" style={{ color: timerColor }}>
+                {timerCountdown}
+              </span>
+            </div>
+          </div>
+        )
+
+      case 'cta_button':
+        if (!ctaEnabled || !collectData) return null
+        return (
+          <div className="flex justify-center">
+            <button
+              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow"
+              style={{ backgroundColor: ctaColor }}
+            >
+              {ctaText || '상담 신청하기'}
+            </button>
+          </div>
+        )
+
+      case 'call_button':
+        if (!callButtonEnabled) return null
+        return (
+          <div className="flex justify-center">
+            <button
+              className="w-full py-4 text-white rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow flex items-center justify-center gap-3"
+              style={{ backgroundColor: callButtonColor }}
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
             </button>
           </div>
         )
@@ -423,6 +618,46 @@ export default function LandingPageNewForm({
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
             placeholder="랜딩페이지 제목 입력"
           />
+        </div>
+
+        {/* Description Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            랜딩페이지 설명
+          </h2>
+
+          {/* Radio Buttons */}
+          <div className="flex items-center gap-4 mb-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={descriptionEnabled}
+                onChange={() => setDescriptionEnabled(true)}
+                className="w-5 h-5 text-indigo-600"
+              />
+              <span className="font-semibold text-gray-900">사용함</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={!descriptionEnabled}
+                onChange={() => setDescriptionEnabled(false)}
+                className="w-5 h-5 text-gray-400"
+              />
+              <span className="font-semibold text-gray-600">사용 안함</span>
+            </label>
+          </div>
+
+          {/* Textarea (conditional) */}
+          {descriptionEnabled && (
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none"
+              placeholder="랜딩페이지 설명을 입력하세요"
+              rows={4}
+            />
+          )}
         </div>
 
         {/* Images Section */}
@@ -725,30 +960,46 @@ export default function LandingPageNewForm({
         {/* CTA Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">하단 CTA 버튼</h2>
+
+          {/* Conditional Notice */}
+          {!collectData && (
+            <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+              <p className="text-sm text-yellow-800 flex items-center gap-2">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                DB 수집 항목을 사용해야 하단 CTA 버튼을 사용할 수 있습니다.
+              </p>
+            </div>
+          )}
+
           <div className="space-y-4">
             <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
                   checked={ctaEnabled}
-                  onChange={() => setCtaEnabled(true)}
-                  className="w-5 h-5 text-indigo-600"
+                  onChange={() => collectData && setCtaEnabled(true)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="font-semibold text-gray-900">사용함</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
                   checked={!ctaEnabled}
-                  onChange={() => setCtaEnabled(false)}
-                  className="w-5 h-5 text-gray-400"
+                  onChange={() => collectData && setCtaEnabled(false)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
                 <span className="font-semibold text-gray-600">사용 안함</span>
               </label>
             </div>
 
-            {ctaEnabled && (
-              <div className="space-y-4">
+            {/* CTA Settings (only when enabled and collectData is true) */}
+            {ctaEnabled && collectData && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex items-center gap-4">
                   <label className="text-sm font-medium text-gray-700 w-20">
                     버튼명
@@ -760,12 +1011,26 @@ export default function LandingPageNewForm({
                     className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                     placeholder="상담 신청하기"
                   />
-                  <button
-                    type="button"
-                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
-                  >
-                    색상 변경
-                  </button>
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-20">
+                    버튼 색상
+                  </label>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="color"
+                      value={ctaColor}
+                      onChange={(e) => setCtaColor(e.target.value)}
+                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={ctaColor}
+                      onChange={(e) => setCtaColor(e.target.value)}
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      placeholder="#6366f1"
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -775,50 +1040,128 @@ export default function LandingPageNewForm({
         {/* Timer Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">타이머 사용</h2>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={timerEnabled}
-                onChange={() => setTimerEnabled(true)}
-                className="w-5 h-5 text-indigo-600"
-              />
-              <span className="font-semibold text-gray-900">사용함</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={!timerEnabled}
-                onChange={() => setTimerEnabled(false)}
-                className="w-5 h-5 text-gray-400"
-              />
-              <span className="font-semibold text-gray-600">사용 안함</span>
-            </label>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={timerEnabled}
+                  onChange={() => setTimerEnabled(true)}
+                  className="w-5 h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900">사용함</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!timerEnabled}
+                  onChange={() => setTimerEnabled(false)}
+                  className="w-5 h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600">사용 안함</span>
+              </label>
+            </div>
+
+            {timerEnabled && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-24">
+                    마감 날짜/시간
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={timerDeadline}
+                    onChange={(e) => setTimerDeadline(e.target.value)}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-24">
+                    타이머 색상
+                  </label>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="color"
+                      value={timerColor}
+                      onChange={(e) => setTimerColor(e.target.value)}
+                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={timerColor}
+                      onChange={(e) => setTimerColor(e.target.value)}
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      placeholder="#ef4444"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Call Button Section */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6">전화 연결 버튼</h2>
-          <div className="flex items-center gap-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={callButtonEnabled}
-                onChange={() => setCallButtonEnabled(true)}
-                className="w-5 h-5 text-indigo-600"
-              />
-              <span className="font-semibold text-gray-900">사용함</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={!callButtonEnabled}
-                onChange={() => setCallButtonEnabled(false)}
-                className="w-5 h-5 text-gray-400"
-              />
-              <span className="font-semibold text-gray-600">사용 안함</span>
-            </label>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={callButtonEnabled}
+                  onChange={() => setCallButtonEnabled(true)}
+                  className="w-5 h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900">사용함</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!callButtonEnabled}
+                  onChange={() => setCallButtonEnabled(false)}
+                  className="w-5 h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600">사용 안함</span>
+              </label>
+            </div>
+
+            {callButtonEnabled && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-24">
+                    전화번호
+                  </label>
+                  <input
+                    type="tel"
+                    value={callButtonPhone}
+                    onChange={(e) => setCallButtonPhone(formatPhoneNumber(e.target.value))}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    placeholder="01012345678"
+                    maxLength={13}
+                  />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-24">
+                    버튼 색상
+                  </label>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="color"
+                      value={callButtonColor}
+                      onChange={(e) => setCallButtonColor(e.target.value)}
+                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                    />
+                    <input
+                      type="text"
+                      value={callButtonColor}
+                      onChange={(e) => setCallButtonColor(e.target.value)}
+                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      placeholder="#10b981"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -1023,15 +1366,15 @@ export default function LandingPageNewForm({
 
                   {/* Desktop Content - Scrollable */}
                   <div className="h-[600px] overflow-y-auto bg-white">
-                    {/* Desktop Layout - Centered with max-width */}
-                    <div className="max-w-4xl mx-auto p-8 space-y-6">
+                    {/* Desktop Layout - Fixed 800px width */}
+                    <div className="w-[800px] mx-auto p-12 space-y-8">
                       {sections
                         .filter(section => {
-                          const content = getPreviewContent(section)
+                          const content = getDesktopPreviewContent(section)
                           return content !== null
                         })
                         .map((section, index) => {
-                          const content = getPreviewContent(section)
+                          const content = getDesktopPreviewContent(section)
                           if (!content) return null
 
                           return (
@@ -1068,7 +1411,7 @@ export default function LandingPageNewForm({
                         })}
 
                       {/* Empty State */}
-                      {sections.every(section => getPreviewContent(section) === null) && (
+                      {sections.every(section => getDesktopPreviewContent(section) === null) && (
                         <div className="h-full flex items-center justify-center py-20">
                           <div className="text-center">
                             <PhotoIcon className="h-16 w-16 text-gray-300 mx-auto mb-3" />
