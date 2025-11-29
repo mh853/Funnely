@@ -54,19 +54,25 @@ export default async function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">캘린더</h1>
-          <p className="mt-1 text-sm text-gray-600">업무 일정과 상담 약속을 관리합니다.</p>
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">DB 스케줄</h1>
+            <p className="mt-2 text-indigo-100">
+              DB 상담 일정과 약속을 관리합니다
+            </p>
+          </div>
         </div>
       </div>
 
       {/* Calendar */}
-      <CalendarView
-        events={events || []}
-        teamMembers={teamMembers || []}
-        currentUserId={user.id}
-      />
+      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+        <CalendarView
+          events={events || []}
+          teamMembers={teamMembers || []}
+          currentUserId={user.id}
+        />
+      </div>
     </div>
   )
 }

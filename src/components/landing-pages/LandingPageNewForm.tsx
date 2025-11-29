@@ -1,0 +1,1091 @@
+'use client'
+
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/lib/supabase/client'
+import {
+  CheckIcon,
+  XMarkIcon,
+  PhotoIcon,
+  ClockIcon,
+  PlusIcon,
+  Bars3Icon,
+  EyeIcon,
+} from '@heroicons/react/24/outline'
+
+interface LandingPageNewFormProps {
+  companyId: string
+  userId: string
+}
+
+interface CustomField {
+  id: string
+  type: 'short_answer' | 'multiple_choice'
+  question: string
+  options?: string[]
+}
+
+type SectionType =
+  | 'hero_image'
+  | 'title'
+  | 'description'
+  | 'form'
+  | 'realtime_status'
+  | 'timer'
+  | 'cta_button'
+  | 'call_button'
+
+interface Section {
+  id: string
+  type: SectionType
+  label: string
+  enabled: boolean
+}
+
+export default function LandingPageNewForm({
+  companyId,
+  userId,
+}: LandingPageNewFormProps) {
+  const router = useRouter()
+  const supabase = createClient()
+
+  // Form state
+  const [slug, setSlug] = useState('')
+  const [title, setTitle] = useState('')
+  const [images, setImages] = useState<string[]>([])
+  const [collectData, setCollectData] = useState(true)
+  const [collectName, setCollectName] = useState(true)
+  const [collectPhone, setCollectPhone] = useState(true)
+
+  // Dynamic custom fields
+  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [showFieldTypeModal, setShowFieldTypeModal] = useState(false)
+
+  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
+  const [realtimeTemplate, setRealtimeTemplate] = useState('{name}님이 {location}에서 상담 신청했습니다')
+  const [realtimeSpeed, setRealtimeSpeed] = useState(5)
+  const [realtimeCount, setRealtimeCount] = useState(10)
+  const [ctaEnabled, setCtaEnabled] = useState(true)
+  const [ctaText, setCtaText] = useState('')
+  const [ctaColor, setCtaColor] = useState('#6366f1')
+  const [timerEnabled, setTimerEnabled] = useState(true)
+  const [callButtonEnabled, setCallButtonEnabled] = useState(true)
+
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  // Section ordering for preview
+  const [sections, setSections] = useState<Section[]>([
+    { id: '1', type: 'hero_image', label: '히어로 이미지', enabled: true },
+    { id: '2', type: 'title', label: '제목', enabled: true },
+    { id: '3', type: 'description', label: '설명', enabled: true },
+    { id: '4', type: 'form', label: 'DB 수집 폼', enabled: true },
+    { id: '5', type: 'realtime_status', label: '실시간 현황', enabled: true },
+    { id: '6', type: 'timer', label: '타이머', enabled: true },
+    { id: '7', type: 'cta_button', label: 'CTA 버튼', enabled: true },
+    { id: '8', type: 'call_button', label: '전화 연결', enabled: true },
+  ])
+
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
+  const [showDesktopPreview, setShowDesktopPreview] = useState(false)
+
+  // Realtime rolling state
+  const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
+
+  // Demo realtime data (will be replaced with actual DB data)
+  const demoRealtimeData = [
+    { name: '김민수', location: '서울 강남구' },
+    { name: '이지은', location: '경기 성남시' },
+    { name: '박준영', location: '인천 남동구' },
+    { name: '최서연', location: '부산 해운대구' },
+    { name: '정현우', location: '대전 유성구' },
+  ]
+
+  // Rolling animation effect
+  useEffect(() => {
+    if (!realtimeEnabled || !collectData) return
+
+    const interval = setInterval(() => {
+      setCurrentRealtimeIndex((prev) => (prev + 1) % demoRealtimeData.length)
+    }, realtimeSpeed * 1000)
+
+    return () => clearInterval(interval)
+  }, [realtimeEnabled, collectData, realtimeSpeed, demoRealtimeData.length])
+
+  // Add new custom field
+  const addCustomField = (type: 'short_answer' | 'multiple_choice') => {
+    const newField: CustomField = {
+      id: Date.now().toString(),
+      type,
+      question: '',
+      options: type === 'multiple_choice' ? [''] : undefined,
+    }
+    setCustomFields([...customFields, newField])
+    setShowFieldTypeModal(false)
+  }
+
+  // Remove custom field
+  const removeCustomField = (id: string) => {
+    setCustomFields(customFields.filter(field => field.id !== id))
+  }
+
+  // Update field question
+  const updateFieldQuestion = (id: string, question: string) => {
+    setCustomFields(customFields.map(field =>
+      field.id === id ? { ...field, question } : field
+    ))
+  }
+
+  // Add option to multiple choice field
+  const addOption = (fieldId: string) => {
+    setCustomFields(customFields.map(field => {
+      if (field.id === fieldId && field.options) {
+        return { ...field, options: [...field.options, ''] }
+      }
+      return field
+    }))
+  }
+
+  // Update option
+  const updateOption = (fieldId: string, optionIndex: number, value: string) => {
+    setCustomFields(customFields.map(field => {
+      if (field.id === fieldId && field.options) {
+        const newOptions = [...field.options]
+        newOptions[optionIndex] = value
+        return { ...field, options: newOptions }
+      }
+      return field
+    }))
+  }
+
+  // Remove option
+  const removeOption = (fieldId: string, optionIndex: number) => {
+    setCustomFields(customFields.map(field => {
+      if (field.id === fieldId && field.options && field.options.length > 1) {
+        return { ...field, options: field.options.filter((_, i) => i !== optionIndex) }
+      }
+      return field
+    }))
+  }
+
+  // Drag and drop handlers
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index)
+  }
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault()
+    if (draggedIndex === null || draggedIndex === index) return
+
+    const newSections = [...sections]
+    const draggedSection = newSections[draggedIndex]
+    newSections.splice(draggedIndex, 1)
+    newSections.splice(index, 0, draggedSection)
+
+    setSections(newSections)
+    setDraggedIndex(index)
+  }
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null)
+  }
+
+  // Get preview content for each section
+  const getPreviewContent = (section: Section) => {
+    switch (section.type) {
+      case 'hero_image':
+        return images.length > 0 ? (
+          <div className="relative rounded-lg overflow-hidden">
+            <img
+              src={images[0]}
+              alt="Hero"
+              className="w-full h-48 object-cover"
+            />
+            {images.length > 1 && (
+              <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                +{images.length - 1} more
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-gray-100 rounded-lg p-8 flex items-center justify-center">
+            <PhotoIcon className="h-12 w-12 text-gray-400" />
+          </div>
+        )
+
+      case 'title':
+        return (
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900">
+              {title || '랜딩 페이지 제목'}
+            </h1>
+          </div>
+        )
+
+      case 'description':
+        return (
+          <div className="text-center">
+            <p className="text-sm text-gray-600">
+              랜딩 페이지 설명 영역입니다.
+            </p>
+          </div>
+        )
+
+      case 'form':
+        if (!collectData) return null
+        const formFields = []
+        if (collectName) formFields.push('이름')
+        if (collectPhone) formFields.push('연락처')
+        customFields.forEach((field, idx) => {
+          formFields.push(`${idx + 3}. ${field.question || '질문'}`)
+        })
+
+        return (
+          <div className="space-y-3">
+            <div className="text-xs font-semibold text-gray-700 mb-2">DB 수집 폼</div>
+            {formFields.map((field, idx) => (
+              <div key={idx} className="bg-white rounded-lg p-2 border border-gray-200">
+                <div className="text-xs text-gray-600">{field}</div>
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'realtime_status':
+        if (!realtimeEnabled || !collectData) return null
+
+        // Replace template placeholders with actual data
+        const currentData = demoRealtimeData[currentRealtimeIndex]
+        const displayMessage = realtimeTemplate
+          .replace('{name}', currentData.name)
+          .replace('{location}', currentData.location)
+
+        return (
+          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200 overflow-hidden">
+            <div className="text-xs font-semibold text-blue-900 mb-2">실시간 현황</div>
+            <div className="flex items-center gap-2 text-xs text-blue-700">
+              <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+              <div key={currentRealtimeIndex} className="animate-in fade-in duration-500">
+                {displayMessage}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'timer':
+        if (!timerEnabled) return null
+        return (
+          <div className="bg-gradient-to-r from-red-50 to-orange-50 rounded-lg p-3 border border-red-200">
+            <div className="flex items-center justify-center gap-2">
+              <ClockIcon className="h-4 w-4 text-red-600" />
+              <span className="text-xs font-bold text-red-900">
+                00:29:59
+              </span>
+            </div>
+          </div>
+        )
+
+      case 'cta_button':
+        if (!ctaEnabled) return null
+        return (
+          <div className="flex justify-center">
+            <button
+              className="w-full py-3 rounded-lg text-sm font-bold text-white shadow-lg"
+              style={{ backgroundColor: ctaColor }}
+            >
+              {ctaText || '상담 신청하기'}
+            </button>
+          </div>
+        )
+
+      case 'call_button':
+        if (!callButtonEnabled) return null
+        return (
+          <div className="flex justify-center">
+            <button className="w-full py-3 bg-green-500 text-white rounded-lg text-sm font-bold shadow-lg flex items-center justify-center gap-2">
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              전화 상담 받기
+            </button>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    setError('')
+
+    try {
+      // Build collect_fields array
+      const collectFields = []
+      if (collectName) collectFields.push({ type: 'name', required: true })
+      if (collectPhone) collectFields.push({ type: 'phone', required: true })
+
+      // Add custom fields
+      customFields.forEach(field => {
+        collectFields.push({
+          type: field.type,
+          question: field.question,
+          options: field.options,
+        })
+      })
+
+      const { error: insertError } = await supabase
+        .from('landing_pages')
+        .insert({
+          company_id: companyId,
+          created_by: userId,
+          slug,
+          title,
+          images,
+          collect_data: collectData,
+          collect_fields: collectFields,
+          realtime_enabled: realtimeEnabled,
+          cta_enabled: ctaEnabled,
+          cta_text: ctaText,
+          cta_color: ctaColor,
+          timer_enabled: timerEnabled,
+          call_button_enabled: callButtonEnabled,
+          is_active: true,
+        })
+
+      if (insertError) throw insertError
+
+      router.push('/dashboard/landing-pages')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || '저장에 실패했습니다')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
+    setImages([...images, ...newImages])
+  }
+
+  const removeImage = (index: number) => {
+    setImages(images.filter((_, i) => i !== index))
+  }
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Form */}
+      <div className="lg:col-span-2 space-y-6">
+        {/* URL Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            랜딩페이지 주소
+          </h2>
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-gray-600">
+                https://funnely.co.kr/landing/
+              </span>
+              <input
+                type="text"
+                value={slug}
+                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                placeholder="페이지-주소"
+              />
+            </div>
+            {slug && !/^[a-z0-9-]+$/.test(slug) && (
+              <p className="text-sm text-red-600 flex items-center gap-1">
+                <XMarkIcon className="h-4 w-4" />
+                URL 슬러그는 영문 소문자, 숫자, 하이픈(-)만 사용
+              </p>
+            )}
+            <p className="text-xs text-gray-500">
+              💡 자동 생성: 한글 제목을 영문으로 변환 | 수동 입력: 영문 소문자, 숫자, 하이픈(-) 사용
+            </p>
+          </div>
+        </div>
+
+        {/* Title Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            랜딩페이지 이름
+          </h2>
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+            placeholder="랜딩페이지 제목 입력"
+          />
+        </div>
+
+        {/* Images Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">
+            이미지/영상 등록
+          </h2>
+          <div className="space-y-4">
+            <label className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2">
+              <PhotoIcon className="h-5 w-5" />
+              파일 업로드
+              <input
+                type="file"
+                multiple
+                accept="image/*,video/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+            </label>
+
+            {images.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+                {images.map((image, index) => (
+                  <div
+                    key={index}
+                    className="relative group bg-gray-50 rounded-xl p-3 border-2 border-gray-200"
+                  >
+                    <button
+                      onClick={() => removeImage(index)}
+                      className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <XMarkIcon className="h-4 w-4" />
+                    </button>
+                    <PhotoIcon className="h-8 w-8 text-gray-400 mx-auto" />
+                    <p className="text-xs text-gray-600 text-center mt-2 truncate">
+                      이미지 {index + 1}.png
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* DB Collection Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">DB 수집 항목</h2>
+          <div className="space-y-4">
+            {/* Enable/Disable Toggle */}
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={collectData}
+                  onChange={() => setCollectData(true)}
+                  className="w-5 h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900">사용함</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!collectData}
+                  onChange={() => setCollectData(false)}
+                  className="w-5 h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600">사용 안함</span>
+              </label>
+            </div>
+
+            {/* Fixed Fields + Custom Fields */}
+            {collectData && (
+              <div className="space-y-4">
+                {/* Fixed Fields: Name and Phone */}
+                <div className="grid grid-cols-2 gap-4">
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={collectName}
+                      onChange={(e) => setCollectName(e.target.checked)}
+                      className="w-5 h-5 text-indigo-600 rounded"
+                    />
+                    <span className="font-medium text-gray-900">1. 이름</span>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={collectPhone}
+                      onChange={(e) => setCollectPhone(e.target.checked)}
+                      className="w-5 h-5 text-indigo-600 rounded"
+                    />
+                    <span className="font-medium text-gray-900">2. 연락처</span>
+                  </label>
+                </div>
+
+                {/* Custom Fields */}
+                {customFields.map((field, index) => (
+                  <div key={field.id} className="border-2 border-gray-200 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold text-gray-900">
+                        {field.type === 'short_answer' ? '단답형 항목 추가' : '선택형 항목 추가'}
+                      </h3>
+                      <button
+                        onClick={() => removeCustomField(field.id)}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <XMarkIcon className="h-5 w-5 text-gray-500" />
+                      </button>
+                    </div>
+
+                    {/* Question Input */}
+                    <div className="flex items-center gap-3">
+                      <label className="text-sm font-medium text-gray-700 w-16">질문</label>
+                      <input
+                        type="text"
+                        value={field.question}
+                        onChange={(e) => updateFieldQuestion(field.id, e.target.value)}
+                        className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        placeholder={`${index + 3}. 항목추가 질문`}
+                      />
+                    </div>
+
+                    {/* Multiple Choice Options */}
+                    {field.type === 'multiple_choice' && field.options && (
+                      <div className="space-y-2 pl-20">
+                        {field.options.map((option, optionIndex) => (
+                          <div key={optionIndex} className="flex items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700 w-20">선택항목</label>
+                            <input
+                              type="text"
+                              value={option}
+                              onChange={(e) => updateOption(field.id, optionIndex, e.target.value)}
+                              className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                              placeholder="선택항목 입력"
+                            />
+                            {field.options!.length > 1 && (
+                              <button
+                                onClick={() => removeOption(field.id, optionIndex)}
+                                className="p-2 hover:bg-gray-100 rounded-full"
+                              >
+                                <XMarkIcon className="h-4 w-4 text-gray-500" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => addOption(field.id)}
+                          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-medium hover:bg-gray-200 transition-colors gap-2 ml-20"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                          선택항목 추가
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+
+                {/* Add Field Dropdown */}
+                <div className="relative">
+                  <button
+                    onClick={() => setShowFieldTypeModal(!showFieldTypeModal)}
+                    className="w-full px-4 py-3 bg-gray-100 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-left font-medium text-indigo-600 hover:bg-gray-50 transition-colors flex items-center justify-between"
+                  >
+                    <span>항목 추가</span>
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+
+                  {showFieldTypeModal && (
+                    <div className="absolute z-10 mt-2 w-full bg-white border-2 border-gray-200 rounded-xl shadow-lg">
+                      <button
+                        onClick={() => addCustomField('short_answer')}
+                        className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors font-medium text-gray-900 border-b border-gray-200"
+                      >
+                        단답형
+                      </button>
+                      <button
+                        onClick={() => addCustomField('multiple_choice')}
+                        className="w-full px-4 py-3 text-left hover:bg-indigo-50 transition-colors font-medium text-indigo-600"
+                      >
+                        선택형
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Realtime Status Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">실시간 현황 사용</h2>
+
+          {/* Conditional Notice */}
+          {!collectData && (
+            <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
+              <p className="text-sm text-yellow-800 flex items-center gap-2">
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                DB 수집 항목을 사용해야 실시간 현황을 사용할 수 있습니다.
+              </p>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {/* Radio Buttons */}
+            <div className="flex items-center gap-4">
+              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <input
+                  type="radio"
+                  checked={realtimeEnabled}
+                  onChange={() => collectData && setRealtimeEnabled(true)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="font-semibold text-gray-900">사용함</span>
+              </label>
+              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <input
+                  type="radio"
+                  checked={!realtimeEnabled}
+                  onChange={() => collectData && setRealtimeEnabled(false)}
+                  disabled={!collectData}
+                  className="w-5 h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="font-semibold text-gray-600">사용 안함</span>
+              </label>
+            </div>
+
+            {/* Realtime Settings (only when enabled and collectData is true) */}
+            {realtimeEnabled && collectData && (
+              <div className="space-y-4 pt-4 border-t border-gray-200">
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700">
+                    롤링 메시지 템플릿
+                  </label>
+                  <p className="text-xs text-gray-500">
+                    {'{name}'}과 {'{location}'}은 실제 DB 데이터로 자동 치환됩니다
+                  </p>
+                  <input
+                    type="text"
+                    value={realtimeTemplate}
+                    onChange={(e) => setRealtimeTemplate(e.target.value)}
+                    placeholder="예: {name}님이 {location}에서 상담 신청했습니다"
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      롤링 속도 (초)
+                    </label>
+                    <input
+                      type="number"
+                      min="3"
+                      max="10"
+                      value={realtimeSpeed}
+                      onChange={(e) => setRealtimeSpeed(parseInt(e.target.value))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      표시할 최근 DB 개수
+                    </label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="50"
+                      value={realtimeCount}
+                      onChange={(e) => setRealtimeCount(parseInt(e.target.value))}
+                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
+                  <p className="text-sm text-blue-800 flex items-start gap-2">
+                    <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span>
+                      <strong>실시간 DB 연동 필요:</strong><br />
+                      실제 유입된 DB를 표시하려면 백엔드에서 Supabase Realtime 구독 설정이 필요합니다.
+                      현재는 미리보기용 데모 메시지가 표시됩니다.
+                    </span>
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* CTA Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">하단 CTA 버튼</h2>
+          <div className="space-y-4">
+            <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={ctaEnabled}
+                  onChange={() => setCtaEnabled(true)}
+                  className="w-5 h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900">사용함</span>
+              </label>
+              <label className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!ctaEnabled}
+                  onChange={() => setCtaEnabled(false)}
+                  className="w-5 h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600">사용 안함</span>
+              </label>
+            </div>
+
+            {ctaEnabled && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <label className="text-sm font-medium text-gray-700 w-20">
+                    버튼명
+                  </label>
+                  <input
+                    type="text"
+                    value={ctaText}
+                    onChange={(e) => setCtaText(e.target.value)}
+                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    placeholder="상담 신청하기"
+                  />
+                  <button
+                    type="button"
+                    className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors"
+                  >
+                    색상 변경
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Timer Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">타이머 사용</h2>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={timerEnabled}
+                onChange={() => setTimerEnabled(true)}
+                className="w-5 h-5 text-indigo-600"
+              />
+              <span className="font-semibold text-gray-900">사용함</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={!timerEnabled}
+                onChange={() => setTimerEnabled(false)}
+                className="w-5 h-5 text-gray-400"
+              />
+              <span className="font-semibold text-gray-600">사용 안함</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Call Button Section */}
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          <h2 className="text-xl font-bold text-gray-900 mb-6">전화 연결 버튼</h2>
+          <div className="flex items-center gap-4">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={callButtonEnabled}
+                onChange={() => setCallButtonEnabled(true)}
+                className="w-5 h-5 text-indigo-600"
+              />
+              <span className="font-semibold text-gray-900">사용함</span>
+            </label>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input
+                type="radio"
+                checked={!callButtonEnabled}
+                onChange={() => setCallButtonEnabled(false)}
+                className="w-5 h-5 text-gray-400"
+              />
+              <span className="font-semibold text-gray-600">사용 안함</span>
+            </label>
+          </div>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
+            <p className="text-sm text-red-600">{error}</p>
+          </div>
+        )}
+
+        {/* Action Buttons */}
+        <div className="flex gap-4">
+          <button
+            onClick={() => router.push('/dashboard/landing-pages')}
+            className="flex-1 px-6 py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+          >
+            취소
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving || !slug || !title}
+            className="flex-1 px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          >
+            {saving ? (
+              <>
+                <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                    fill="none"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  />
+                </svg>
+                생성 중...
+              </>
+            ) : (
+              <>
+                <CheckIcon className="h-5 w-5" />
+                생성하기
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Interactive Preview Sidebar */}
+      <div className="lg:col-span-1">
+        <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+              <EyeIcon className="h-6 w-6 text-indigo-600" />
+              미리보기
+            </h2>
+
+            {/* Desktop Preview Button */}
+            <button
+              onClick={() => setShowDesktopPreview(true)}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+              데스크탑 미리보기
+            </button>
+          </div>
+
+          {/* Mobile Phone Preview Frame */}
+          <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl">
+            <div className="bg-white rounded-2xl overflow-hidden">
+              {/* Phone Status Bar */}
+              <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
+              <span className="text-xs font-medium text-gray-600">9:41</span>
+              <div className="flex items-center gap-1">
+                <div className="w-4 h-3 border border-gray-400 rounded-sm"></div>
+                <div className="w-1 h-3 bg-gray-400 rounded-sm"></div>
+              </div>
+            </div>
+
+            {/* Preview Content - Scrollable */}
+            <div className="h-[600px] overflow-y-auto bg-white p-4 space-y-4">
+              {sections
+                .filter(section => {
+                  // Filter out disabled sections
+                  const content = getPreviewContent(section)
+                  return content !== null
+                })
+                .map((section, index) => {
+                  const content = getPreviewContent(section)
+                  if (!content) return null
+
+                  return (
+                    <div
+                      key={section.id}
+                      draggable
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      className={`group relative cursor-move transition-all duration-200 ${
+                        draggedIndex === index
+                          ? 'opacity-50 scale-95'
+                          : 'opacity-100 scale-100'
+                      } hover:ring-2 hover:ring-indigo-400 rounded-lg`}
+                    >
+                      {/* Drag Handle */}
+                      <div className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg">
+                          <Bars3Icon className="h-4 w-4" />
+                        </div>
+                      </div>
+
+                      {/* Section Label Badge */}
+                      <div className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                        <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+                          {section.label}
+                        </span>
+                      </div>
+
+                      {/* Section Content */}
+                      <div className="relative">{content}</div>
+                    </div>
+                  )
+                })}
+
+              {/* Empty State */}
+              {sections.every(section => getPreviewContent(section) === null) && (
+                <div className="h-full flex items-center justify-center">
+                  <div className="text-center">
+                    <PhotoIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">
+                      항목을 추가하여<br />미리보기를 확인하세요
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+          </div>
+
+          {/* Preview Help Text */}
+          <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
+            <div className="flex items-start gap-2">
+              <svg className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-xs text-indigo-900">
+                <p className="font-semibold mb-1">미리보기 사용법</p>
+                <ul className="space-y-1 text-indigo-700">
+                  <li>• 모바일 화면으로 미리보기 중</li>
+                  <li>• 섹션에 마우스를 올려 드래그 핸들 표시</li>
+                  <li>• 드래그하여 섹션 순서 변경</li>
+                  <li>• 실시간으로 변경사항 반영</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Desktop Preview Modal */}
+      {showDesktopPreview && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                <svg className="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+                데스크탑 미리보기
+              </h3>
+              <button
+                onClick={() => setShowDesktopPreview(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <XMarkIcon className="h-6 w-6 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-88px)]">
+              <div className="bg-gray-100 rounded-xl p-4 shadow-xl">
+                <div className="bg-white rounded-lg overflow-hidden border-2 border-gray-300">
+                  {/* Browser Chrome */}
+                  <div className="bg-gray-200 px-4 py-2 flex items-center gap-2 border-b border-gray-300">
+                    <div className="flex gap-1.5">
+                      <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    </div>
+                    <div className="flex-1 bg-white rounded px-3 py-1 text-xs text-gray-600 ml-2">
+                      https://funnely.co.kr/landing/{slug || 'your-page'}
+                    </div>
+                  </div>
+
+                  {/* Desktop Content - Scrollable */}
+                  <div className="h-[600px] overflow-y-auto bg-white">
+                    {/* Desktop Layout - Centered with max-width */}
+                    <div className="max-w-4xl mx-auto p-8 space-y-6">
+                      {sections
+                        .filter(section => {
+                          const content = getPreviewContent(section)
+                          return content !== null
+                        })
+                        .map((section, index) => {
+                          const content = getPreviewContent(section)
+                          if (!content) return null
+
+                          return (
+                            <div
+                              key={section.id}
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragOver={(e) => handleDragOver(e, index)}
+                              onDragEnd={handleDragEnd}
+                              className={`group relative cursor-move transition-all duration-200 ${
+                                draggedIndex === index
+                                  ? 'opacity-50 scale-95'
+                                  : 'opacity-100 scale-100'
+                              } hover:ring-2 hover:ring-indigo-400 rounded-lg`}
+                            >
+                              {/* Drag Handle */}
+                              <div className="absolute -left-6 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg">
+                                  <Bars3Icon className="h-4 w-4" />
+                                </div>
+                              </div>
+
+                              {/* Section Label Badge */}
+                              <div className="absolute -top-3 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+                                  {section.label}
+                                </span>
+                              </div>
+
+                              {/* Section Content */}
+                              <div className="relative">{content}</div>
+                            </div>
+                          )
+                        })}
+
+                      {/* Empty State */}
+                      {sections.every(section => getPreviewContent(section) === null) && (
+                        <div className="h-full flex items-center justify-center py-20">
+                          <div className="text-center">
+                            <PhotoIcon className="h-16 w-16 text-gray-300 mx-auto mb-3" />
+                            <p className="text-gray-400">
+                              항목을 추가하여 미리보기를 확인하세요
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}

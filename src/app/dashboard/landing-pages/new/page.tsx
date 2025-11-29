@@ -1,6 +1,8 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import LandingPageForm from '@/components/landing-pages/LandingPageForm'
+import LandingPageNewForm from '@/components/landing-pages/LandingPageNewForm'
+import Link from 'next/link'
+import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
 export default async function NewLandingPagePage() {
   const supabase = await createClient()
@@ -24,15 +26,32 @@ export default async function NewLandingPagePage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">새 랜딩 페이지 만들기</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          DB 수집을 위한 랜딩 페이지를 만들어보세요.
-        </p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Link
+              href="/dashboard/landing-pages"
+              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+            >
+              <ArrowLeftIcon className="h-6 w-6" />
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold">랜딩페이지 만들기</h1>
+              <p className="mt-2 text-indigo-100">
+                DB 수집을 위한 랜딩페이지를 만들어보세요
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <LandingPageForm companyId={userProfile.company_id} userId={user.id} />
+      {/* New Form */}
+      <LandingPageNewForm
+        companyId={userProfile.company_id}
+        userId={user.id}
+      />
     </div>
   )
 }

@@ -21,11 +21,12 @@ interface SidebarProps {
 
 const navigation = [
   { name: '대시보드', href: '/dashboard', icon: HomeIcon },
+  { name: 'DB 현황', href: '/dashboard/leads', icon: PhoneIcon },
+  { name: 'DB 스케줄', href: '/dashboard/calendar', icon: CalendarIcon },
+  { name: '예약 스케줄', href: '/dashboard/reservations', icon: CalendarIcon },
+  { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon },
   { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
-  { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon },
-  { name: '리드 관리', href: '/dashboard/leads', icon: PhoneIcon },
-  { name: '캘린더', href: '/dashboard/calendar', icon: CalendarIcon },
   { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
   { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
   { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
