@@ -32,7 +32,7 @@ export default async function NewLandingPagePage() {
         </p>
       </div>
 
-      <LandingPageForm hospitalId={userProfile.hospital_id} userId={user.id} />
+      <LandingPageForm companyId={userProfile.company_id} userId={user.id} />
     </div>
   )
 }

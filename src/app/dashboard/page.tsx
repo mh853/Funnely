@@ -31,17 +31,17 @@ export default async function DashboardPage() {
     supabase
       .from('ad_accounts')
       .select('*', { count: 'exact', head: true })
-      .eq('hospital_id', userProfile?.hospital_id),
+      .eq('company_id', userProfile?.company_id),
     supabase
       .from('campaigns')
       .select('*', { count: 'exact', head: true })
-      .eq('hospital_id', userProfile?.hospital_id)
+      .eq('company_id', userProfile?.company_id)
       .eq('status', 'active')
   ])
 
   // Check onboarding status
-  const hasBusinessNumber = userProfile?.hospitals?.business_number &&
-    !userProfile.hospitals.business_number.startsWith('TEMP-')
+  const hasBusinessNumber = userProfile?.companies?.business_number &&
+    !userProfile.companies.business_number.startsWith('TEMP-')
 
   return (
     <>
@@ -51,7 +51,7 @@ export default async function DashboardPage() {
           안녕하세요, {userProfile?.full_name || user.email}님! 👋
         </h1>
         <p className="mt-1 text-sm text-gray-600">
-          {userProfile?.hospitals?.name || '병원'} 대시보드
+          {userProfile?.companies?.name || '회사'} 대시보드
         </p>
       </div>
 
@@ -66,11 +66,11 @@ export default async function DashboardPage() {
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-yellow-800">
-                병원 정보를 완성하세요
+                회사 정보를 완성하세요
               </h3>
               <div className="mt-2 text-sm text-yellow-700">
                 <p>
-                  사업자번호 등 병원 정보를 등록하면 광고 플랫폼 연동을 시작할 수 있습니다.
+                  사업자번호 등 회사 정보를 등록하면 광고 플랫폼 연동을 시작할 수 있습니다.
                 </p>
               </div>
               <div className="mt-4">

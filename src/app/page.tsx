@@ -5,10 +5,10 @@ export default function Home() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
       <div className="max-w-4xl mx-auto px-4 py-16 text-center">
         <h1 className="text-5xl font-bold text-gray-900 mb-6">
-          메디씽크
+          Funnely
         </h1>
         <p className="text-xl text-gray-600 mb-8">
-          병원 마케팅 담당자를 위한 통합 광고 관리 플랫폼
+          회사 마케팅 담당자를 위한 통합 광고 관리 플랫폼
         </p>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-12">
           <div className="bg-white p-6 rounded-lg shadow-md">
@@ -29,7 +29,7 @@ export default function Home() {
             <div className="text-3xl mb-4">🔒</div>
             <h3 className="text-lg font-semibold mb-2">안전한 관리</h3>
             <p className="text-gray-600 text-sm">
-              병원별 데이터 격리와 권한 관리
+              회사별 데이터 격리와 권한 관리
             </p>
           </div>
         </div>

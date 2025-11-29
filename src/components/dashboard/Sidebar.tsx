@@ -40,15 +40,15 @@ export default function Sidebar({ userProfile }: SidebarProps) {
       <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
         {/* Logo */}
         <div className="flex h-16 shrink-0 items-center">
-          <h1 className="text-2xl font-bold text-blue-600">메디씽크</h1>
+          <h1 className="text-2xl font-bold text-blue-600">Funnely</h1>
         </div>
 
         {/* Hospital Info */}
-        {userProfile?.hospitals && (
+        {userProfile?.companies && (
           <div className="rounded-lg bg-blue-50 p-3">
-            <p className="text-xs text-gray-600">병원</p>
+            <p className="text-xs text-gray-600">회사</p>
             <p className="font-medium text-gray-900 truncate">
-              {userProfile.hospitals.name}
+              {userProfile.companies.name}
             </p>
           </div>
         )}

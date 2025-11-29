@@ -73,9 +73,9 @@ export async function POST(request: Request) {
     const tempBusinessNumber = businessNumber || `TEMP-${Date.now()}-${Math.random().toString(36).substring(7)}`
 
     const { data: hospitalData, error: hospitalError } = await supabase
-      .from('hospitals')
+      .from('companies')
       .insert({
-        name: hospitalName || `${fullName}의 병원`,
+        name: hospitalName || `${fullName}의 회사`,
         business_number: tempBusinessNumber,
       } as any)
       .select()
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
       // Rollback: Delete auth user
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
-        { error: '병원 정보 생성에 실패했습니다.' },
+        { error: '회사 정보 생성에 실패했습니다.' },
         { status: 500 }
       )
     }
@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     // 3. Create user profile in public.users
     const { error: userError } = await supabase.from('users').insert({
       id: authData.user.id,
-      hospital_id: (hospitalData as any).id,
+      company_id: (hospitalData as any).id,
       email,
       full_name: fullName,
       role: 'hospital_owner', // First user becomes hospital owner
@@ -103,7 +103,7 @@ export async function POST(request: Request) {
     if (userError) {
       console.error('User profile creation error:', userError)
       // Rollback: Delete hospital and auth user
-      await supabase.from('hospitals').delete().eq('id', (hospitalData as any).id)
+      await supabase.from('companies').delete().eq('id', (hospitalData as any).id)
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
         { error: '사용자 프로필 생성에 실패했습니다.' },

@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: landingPages, error } = await supabase
       .from('landing_pages')
       .select('*')
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -56,11 +56,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { hospital_id, title, slug, meta_title, meta_description, template_id, created_by } =
+    const { company_id, title, slug, meta_title, meta_description, template_id, created_by } =
       body
 
     // Validate required fields
-    if (!hospital_id || !title || !slug) {
+    if (!company_id || !title || !slug) {
       return NextResponse.json(
         { error: { message: 'Missing required fields' } },
         { status: 400 }
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     const { data: landingPage, error } = await supabase
       .from('landing_pages')
       .insert({
-        hospital_id,
+        company_id,
         title,
         slug,
         meta_title,

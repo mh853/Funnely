@@ -41,12 +41,12 @@ export default async function ReportsPage() {
           account_name
         )
       `)
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false }),
     supabase
       .from('reports')
       .select('*')
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
       .limit(10)
   ])
@@ -62,10 +62,10 @@ export default async function ReportsPage() {
       </div>
 
       {/* Report Generator */}
-      <ReportGenerator campaigns={(campaigns as any) || []} hospitalId={userProfile.hospital_id} />
+      <ReportGenerator campaigns={(campaigns as any) || []} companyId={userProfile.company_id} />
 
       {/* Recent Reports */}
-      <RecentReports reports={reports || []} hospitalId={userProfile.hospital_id} />
+      <RecentReports reports={reports || []} companyId={userProfile.company_id} />
     </div>
   )
 }

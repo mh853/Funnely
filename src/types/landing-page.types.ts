@@ -59,7 +59,7 @@ export interface FormField {
 
 export interface FormTemplate {
   id: string;
-  hospital_id: string;
+  company_id: string;
   name: string;
   description?: string;
   fields: FormField[];
@@ -150,7 +150,7 @@ export interface Theme {
 
 export interface LandingPage {
   id: string;
-  hospital_id: string;
+  company_id: string;
   title: string;
   slug: string;
   status: LandingPageStatus;
@@ -177,7 +177,7 @@ export interface LandingPage {
 
 export interface Lead {
   id: string;
-  hospital_id: string;
+  company_id: string;
   landing_page_id?: string;
 
   // 개인정보
@@ -252,7 +252,7 @@ export interface LeadNote {
 
 export interface CalendarEvent {
   id: string;
-  hospital_id: string;
+  company_id: string;
   lead_id?: string;
   title: string;
   description?: string;

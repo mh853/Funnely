@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const { data: templates, error } = await supabase
       .from('form_templates')
       .select('*')
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
 
     if (error) throw error
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json()
     const {
-      hospital_id,
+      company_id,
       name,
       description,
       fields,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!hospital_id || !name || !fields || !Array.isArray(fields)) {
+    if (!company_id || !name || !fields || !Array.isArray(fields)) {
       return NextResponse.json(
         { error: { message: 'Missing required fields' } },
         { status: 400 }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
     const { data: template, error } = await supabase
       .from('form_templates')
       .insert({
-        hospital_id,
+        company_id,
         name,
         description,
         fields,

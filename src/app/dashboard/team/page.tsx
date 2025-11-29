@@ -36,7 +36,7 @@ export default async function TeamPage() {
   const { data: teamMembers } = await supabase
     .from('users')
     .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   return (
@@ -50,7 +50,7 @@ export default async function TeamPage() {
           </p>
         </div>
         {canManage && (
-          <InviteMemberButton hospitalId={userProfile.hospital_id} />
+          <InviteMemberButton companyId={userProfile.company_id} />
         )}
       </div>
 

@@ -56,7 +56,7 @@ export default function SignupPage() {
           email: formData.email,
           password: formData.password,
           fullName: formData.fullName,
-          hospitalName: null, // Will default to "{fullName}의 병원"
+          hospitalName: null, // Will default to "{fullName}의 회사"
           businessNumber: null,
         }),
       })
@@ -96,7 +96,7 @@ export default function SignupPage() {
               회원가입
             </h1>
             <p className="text-gray-600">
-              메디씽크 계정을 만들어보세요
+              Funnely 계정을 만들어보세요
             </p>
           </div>
 

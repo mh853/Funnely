@@ -16,7 +16,7 @@ export default async function NotificationsPage() {
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('hospital_id, role')
+    .select('company_id, role')
     .eq('id', user.id)
     .single()
 
@@ -37,7 +37,7 @@ export default async function NotificationsPage() {
         campaign_name
       )
     `)
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   const getTypeLabel = (type: string) => {

@@ -8,13 +8,13 @@ import { getLandingPageUrl } from '@/lib/config'
 
 interface LandingPageEditorProps {
   landingPage: LandingPage
-  hospitalId: string
+  companyId: string
   userId: string
 }
 
 export default function LandingPageEditor({
   landingPage,
-  hospitalId,
+  companyId,
   userId,
 }: LandingPageEditorProps) {
   const router = useRouter()

@@ -27,7 +27,7 @@ export default async function AnalyticsPage() {
   const { data: landingPages } = await supabase
     .from('landing_pages')
     .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   // Get all leads with UTM data
@@ -43,7 +43,7 @@ export default async function AnalyticsPage() {
       )
     `
     )
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   // Calculate overall statistics

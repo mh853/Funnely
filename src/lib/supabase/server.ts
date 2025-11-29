@@ -53,7 +53,7 @@ export const getCachedUserProfile = cache(async (userId: string) => {
     .from('users')
     .select(`
       *,
-      hospitals (
+      companies (
         id,
         name,
         business_number,

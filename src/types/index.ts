@@ -1,5 +1,5 @@
 /**
- * Common types for MediSync application
+ * Common types for Funnely application
  */
 
 export * from './database.types'

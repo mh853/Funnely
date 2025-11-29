@@ -21,7 +21,7 @@ export async function GET(
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -45,7 +45,7 @@ export async function GET(
     const { data: credentialData, error: credError } = await supabase
       .from('api_credentials')
       .select('credentials, is_active')
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .eq('platform', platform)
       .single()
 

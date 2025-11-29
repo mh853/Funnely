@@ -23,11 +23,11 @@ export async function GET() {
     // Get hospital info if user profile exists
     let hospital = null
     let hospitalError = null
-    if (userProfile && userProfile.hospital_id) {
+    if (userProfile && userProfile.company_id) {
       const result = await supabase
-        .from('hospitals')
+        .from('companies')
         .select('*')
-        .eq('id', userProfile.hospital_id)
+        .eq('id', userProfile.company_id)
         .single()
       hospital = result.data
       hospitalError = result.error

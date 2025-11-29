@@ -29,7 +29,7 @@ export default async function LandingPagesPage() {
   const { data: landingPages } = await supabase
     .from('landing_pages')
     .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   return (

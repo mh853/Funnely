@@ -1,5 +1,5 @@
 /**
- * Database Types for MediSync
+ * Database Types for Funnely
  * Auto-generated from Supabase schema
  */
 
@@ -50,7 +50,7 @@ export interface Database {
       api_credentials: {
         Row: {
           id: string
-          hospital_id: string
+          company_id: string
           platform: ApiPlatform
           credentials: Json
           is_active: boolean
@@ -61,7 +61,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          hospital_id: string
+          company_id: string
           platform: ApiPlatform
           credentials: Json
           is_active?: boolean
@@ -72,7 +72,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          hospital_id?: string
+          company_id?: string
           platform?: ApiPlatform
           credentials?: Json
           is_active?: boolean
@@ -82,7 +82,7 @@ export interface Database {
           updated_at?: string
         }
       }
-      hospitals: {
+      companies: {
         Row: {
           id: string
           name: string
@@ -117,7 +117,7 @@ export interface Database {
       users: {
         Row: {
           id: string
-          hospital_id: string
+          company_id: string
           email: string
           full_name: string
           role: UserRole
@@ -129,7 +129,7 @@ export interface Database {
         }
         Insert: {
           id: string
-          hospital_id: string
+          company_id: string
           email: string
           full_name: string
           role?: UserRole
@@ -141,7 +141,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          hospital_id?: string
+          company_id?: string
           email?: string
           full_name?: string
           role?: UserRole
@@ -155,7 +155,7 @@ export interface Database {
       ad_accounts: {
         Row: {
           id: string
-          hospital_id: string
+          company_id: string
           platform: AdPlatform
           account_id: string
           account_name: string
@@ -170,7 +170,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          hospital_id: string
+          company_id: string
           platform: AdPlatform
           account_id: string
           account_name: string
@@ -185,7 +185,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          hospital_id?: string
+          company_id?: string
           platform?: AdPlatform
           account_id?: string
           account_name?: string
@@ -308,7 +308,7 @@ export interface Database {
       audit_logs: {
         Row: {
           id: string
-          hospital_id: string
+          company_id: string
           user_id: string | null
           action: string
           resource_type: string
@@ -320,7 +320,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          hospital_id: string
+          company_id: string
           user_id?: string | null
           action: string
           resource_type: string
@@ -332,7 +332,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          hospital_id?: string
+          company_id?: string
           user_id?: string | null
           action?: string
           resource_type?: string
@@ -346,7 +346,7 @@ export interface Database {
       saved_reports: {
         Row: {
           id: string
-          hospital_id: string
+          company_id: string
           created_by: string
           name: string
           description: string | null
@@ -358,7 +358,7 @@ export interface Database {
         }
         Insert: {
           id?: string
-          hospital_id: string
+          company_id: string
           created_by: string
           name: string
           description?: string | null
@@ -370,7 +370,7 @@ export interface Database {
         }
         Update: {
           id?: string
-          hospital_id?: string
+          company_id?: string
           created_by?: string
           name?: string
           description?: string | null

@@ -137,7 +137,7 @@ export default function UsersList({ users, currentUserId, canManage }: UsersList
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
-    hospital_owner: '병원 관리자',
+    hospital_owner: '회사 관리자',
     hospital_admin: '어드민',
     marketing_manager: '매니저',
     marketing_staff: '스태프',

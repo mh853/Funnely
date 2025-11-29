@@ -129,8 +129,8 @@ export default function EditUserModal({ user, onClose }: EditUserModalProps) {
               >
                 <option value="marketing_staff">마케팅 스태프</option>
                 <option value="marketing_manager">마케팅 매니저</option>
-                <option value="hospital_admin">병원 어드민</option>
-                <option value="hospital_owner">병원 관리자</option>
+                <option value="hospital_admin">회사 어드민</option>
+                <option value="hospital_owner">회사 관리자</option>
                 <option value="viewer">뷰어 (읽기 전용)</option>
               </select>
             </div>

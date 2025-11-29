@@ -19,7 +19,7 @@ export async function DELETE(
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -36,7 +36,7 @@ export async function DELETE(
     // Get report to verify ownership
     const { data: report } = await supabase
       .from('reports')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', params.id)
       .single()
 
@@ -44,7 +44,7 @@ export async function DELETE(
       return NextResponse.json({ error: '리포트를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    if (report.hospital_id !== userProfile.hospital_id) {
+    if (report.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

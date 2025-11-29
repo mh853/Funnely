@@ -17,14 +17,14 @@ export default async function UsersPage() {
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('*, hospitals(id, name)')
+    .select('*, companies(id, name)')
     .eq('id', user.id)
     .single()
 
-  if (!userProfile || !userProfile.hospitals) {
+  if (!userProfile || !userProfile.companies) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">병원 정보를 불러올 수 없습니다.</p>
+        <p className="text-gray-500">회사 정보를 불러올 수 없습니다.</p>
       </div>
     )
   }
@@ -33,7 +33,7 @@ export default async function UsersPage() {
   const { data: hospitalUsers, error } = await supabase
     .from('users')
     .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   if (error) {
@@ -50,12 +50,12 @@ export default async function UsersPage() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">팀원 관리</h1>
           <p className="mt-1 text-sm text-gray-600">
-            {userProfile.hospitals.name}의 팀원을 관리합니다.
+            {userProfile.companies.name}의 팀원을 관리합니다.
           </p>
         </div>
         {canManage && (
           <div className="mt-4 sm:mt-0">
-            <InviteUserButton hospitalId={userProfile.hospital_id} />
+            <InviteUserButton companyId={userProfile.company_id} />
           </div>
         )}
       </div>
@@ -71,7 +71,7 @@ export default async function UsersPage() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                팀원을 관리하려면 병원 관리자 권한이 필요합니다.
+                팀원을 관리하려면 회사 관리자 권한이 필요합니다.
               </p>
             </div>
           </div>

@@ -40,14 +40,14 @@ export default async function CalendarPage() {
       )
     `
     )
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('start_time', { ascending: true })
 
   // Get team members for event assignment
   const { data: teamMembers } = await supabase
     .from('users')
     .select('id, name, email, role')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .eq('is_active', true)
     .order('name')
 

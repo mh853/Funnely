@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -92,7 +92,7 @@ export async function GET(request: NextRequest) {
       const expiresAt = new Date(Date.now() + expires_in * 1000).toISOString()
 
       await supabase.from('ad_accounts').upsert({
-        hospital_id: userProfile.hospital_id,
+        company_id: userProfile.company_id,
         platform: 'meta',
         account_id: account.id,
         account_name: account.name,

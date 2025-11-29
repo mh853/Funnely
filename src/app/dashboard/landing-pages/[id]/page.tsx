@@ -42,7 +42,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
     .from('landing_pages')
     .select('*')
     .eq('id', params.id)
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .single()
 
   if (error || !landingPage) {
@@ -166,7 +166,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
       {/* Editor */}
       <LandingPageEditor
         landingPage={landingPage}
-        hospitalId={userProfile.hospital_id}
+        companyId={userProfile.company_id}
         userId={user.id}
       />
     </div>

@@ -22,7 +22,7 @@ export async function DELETE(
     // Check if landing page exists and belongs to user's hospital
     const { data: landingPage, error: fetchError } = await supabase
       .from('landing_pages')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', id)
       .single()
 
@@ -36,11 +36,11 @@ export async function DELETE(
     // Verify user belongs to the same hospital
     const { data: userData } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
-    if (userData?.hospital_id !== landingPage.hospital_id) {
+    if (userData?.company_id !== landingPage.company_id) {
       return NextResponse.json(
         { error: { message: '권한이 없습니다' } },
         { status: 403 }

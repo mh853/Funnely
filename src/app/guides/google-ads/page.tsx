@@ -23,7 +23,7 @@ export default function GoogleAdsSetupGuide() {
             <h1 className="ml-4 text-3xl font-bold text-gray-900">Google Ads API 설정 가이드</h1>
           </div>
           <p className="text-gray-600">
-            Google 검색 광고 및 디스플레이 네트워크를 MediSync에 연동하기 위한 Google Cloud 및 Google Ads 설정 방법을 안내합니다.
+            Google 검색 광고 및 디스플레이 네트워크를 Funnely에 연동하기 위한 Google Cloud 및 Google Ads 설정 방법을 안내합니다.
           </p>
         </div>
 
@@ -73,7 +73,7 @@ export default function GoogleAdsSetupGuide() {
                 <li><strong>&quot;새 프로젝트&quot;</strong> 클릭</li>
                 <li>프로젝트 정보 입력:
                   <ul className="ml-6 mt-2 space-y-1">
-                    <li>• 프로젝트 이름: &quot;MediSync Ads&quot; (또는 원하는 이름)</li>
+                    <li>• 프로젝트 이름: &quot;Funnely Ads&quot; (또는 원하는 이름)</li>
                     <li>• 조직: 선택 (없으면 &quot;조직 없음&quot;)</li>
                   </ul>
                 </li>
@@ -145,8 +145,8 @@ export default function GoogleAdsSetupGuide() {
                 <li><strong>&quot;만들기&quot;</strong> 클릭</li>
                 <li>앱 정보 입력:
                   <ul className="ml-6 mt-2 space-y-1">
-                    <li>• 앱 이름: &quot;MediSync&quot;</li>
-                    <li>• 사용자 지원 이메일: 병원 담당자 이메일</li>
+                    <li>• 앱 이름: &quot;Funnely&quot;</li>
+                    <li>• 사용자 지원 이메일: 회사 담당자 이메일</li>
                     <li>• 개발자 연락처 정보: 개발자 이메일</li>
                   </ul>
                 </li>
@@ -168,7 +168,7 @@ export default function GoogleAdsSetupGuide() {
                 <li>좌측 메뉴에서 <strong>&quot;사용자 인증 정보&quot;</strong> 클릭</li>
                 <li>상단의 <strong>&quot;+ 사용자 인증 정보 만들기&quot;</strong> → <strong>&quot;OAuth 클라이언트 ID&quot;</strong> 클릭</li>
                 <li>애플리케이션 유형: <strong>&quot;웹 애플리케이션&quot;</strong> 선택</li>
-                <li>이름: &quot;MediSync Web Client&quot;</li>
+                <li>이름: &quot;Funnely Web Client&quot;</li>
                 <li><strong>&quot;승인된 리디렉션 URI&quot;</strong>에 다음 추가:
                   <div className="mt-2 bg-gray-100 p-3 rounded font-mono text-sm">
                     {typeof window !== 'undefined' ? `${window.location.origin}/auth/callback/google` : 'https://your-domain.com/auth/callback/google'}
@@ -264,7 +264,7 @@ export default function GoogleAdsSetupGuide() {
                   <li>다른 사용자의 광고 계정에도 접근 가능</li>
                   <li>일일 API 호출 한도: 무제한</li>
                   <li>Google 검토 및 승인 필요 (수 주 소요)</li>
-                  <li>병원 자체 광고만 관리한다면 테스트 수준으로 충분</li>
+                  <li>회사 자체 광고만 관리한다면 테스트 수준으로 충분</li>
                 </ul>
               </div>
             </div>
@@ -274,7 +274,7 @@ export default function GoogleAdsSetupGuide() {
                 <ExclamationTriangleIcon className="h-5 w-5 text-yellow-400 flex-shrink-0" />
                 <div className="ml-3">
                   <p className="text-sm text-yellow-700">
-                    <strong>참고:</strong> 대부분의 병원은 테스트 수준 Developer Token으로 충분합니다.
+                    <strong>참고:</strong> 대부분의 회사은 테스트 수준 Developer Token으로 충분합니다.
                     자신의 광고 계정만 관리하므로 프로덕션 승인이 불필요합니다.
                   </p>
                 </div>
@@ -326,19 +326,19 @@ export default function GoogleAdsSetupGuide() {
           </div>
         </div>
 
-        {/* Step 6: Enter in MediSync */}
+        {/* Step 6: Enter in Funnely */}
         <div className="bg-white shadow rounded-lg p-8 mb-6">
           <div className="flex items-start mb-4">
             <div className="flex-shrink-0 h-8 w-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
               6
             </div>
-            <h2 className="ml-3 text-2xl font-bold text-gray-900">MediSync에 인증 정보 입력</h2>
+            <h2 className="ml-3 text-2xl font-bold text-gray-900">Funnely에 인증 정보 입력</h2>
           </div>
 
           <div className="ml-11 space-y-4">
             <div>
               <p className="text-gray-600 mb-4">
-                Google Cloud 및 Google Ads에서 확인한 정보를 MediSync에 입력합니다.
+                Google Cloud 및 Google Ads에서 확인한 정보를 Funnely에 입력합니다.
               </p>
 
               <div className="bg-red-50 p-6 rounded-lg space-y-4">
@@ -376,7 +376,7 @@ export default function GoogleAdsSetupGuide() {
                   className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium"
                 >
                   <CheckCircleIcon className="h-5 w-5 inline mr-2" />
-                  MediSync에 인증 정보 입력하기
+                  Funnely에 인증 정보 입력하기
                 </Link>
               </div>
             </div>

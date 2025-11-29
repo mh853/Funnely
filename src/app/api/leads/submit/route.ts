@@ -27,10 +27,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get landing page to verify it exists and get hospital_id
+    // Get landing page to verify it exists and get company_id
     const { data: landingPage, error: lpError } = await supabase
       .from('landing_pages')
-      .select('id, hospital_id, status')
+      .select('id, company_id, status')
       .eq('id', landing_page_id)
       .single()
 
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
     const { data: existingLead } = await supabase
       .from('leads')
       .select('id')
-      .eq('hospital_id', landingPage.hospital_id)
+      .eq('company_id', landingPage.company_id)
       .eq('phone_hash', phoneHash)
       .single()
 
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
-        hospital_id: landingPage.hospital_id,
+        company_id: landingPage.company_id,
         landing_page_id,
         name,
         phone: encryptedPhone,

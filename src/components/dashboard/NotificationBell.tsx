@@ -15,7 +15,7 @@ interface Notification {
   created_at: string
 }
 
-export default function NotificationBell({ hospitalId }: { hospitalId: string }) {
+export default function NotificationBell({ companyId }: { companyId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -33,7 +33,7 @@ export default function NotificationBell({ hospitalId }: { hospitalId: string })
           event: 'INSERT',
           schema: 'public',
           table: 'notifications',
-          filter: `hospital_id=eq.${hospitalId}`,
+          filter: `company_id=eq.${companyId}`,
         },
         (payload) => {
           setNotifications((prev) => [payload.new as Notification, ...prev])
@@ -44,7 +44,7 @@ export default function NotificationBell({ hospitalId }: { hospitalId: string })
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [hospitalId])
+  }, [companyId])
 
   const fetchNotifications = async () => {
     try {
@@ -52,7 +52,7 @@ export default function NotificationBell({ hospitalId }: { hospitalId: string })
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('hospital_id', hospitalId)
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -88,7 +88,7 @@ export default function NotificationBell({ hospitalId }: { hospitalId: string })
       await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('hospital_id', hospitalId)
+        .eq('company_id', companyId)
         .eq('is_read', false)
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))

@@ -16,10 +16,10 @@ interface Campaign {
 
 interface ReportGeneratorProps {
   campaigns: Campaign[]
-  hospitalId: string
+  companyId: string
 }
 
-export default function ReportGenerator({ campaigns, hospitalId }: ReportGeneratorProps) {
+export default function ReportGenerator({ campaigns, companyId }: ReportGeneratorProps) {
   const router = useRouter()
   const [generating, setGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +84,7 @@ export default function ReportGenerator({ campaigns, hospitalId }: ReportGenerat
         },
         body: JSON.stringify({
           ...formData,
-          hospitalId,
+          companyId,
         }),
       })
 

@@ -109,10 +109,10 @@ export default function LoginPage() {
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              메디씽크
+              Funnely
             </h1>
             <p className="text-gray-600">
-              병원 광고 통합 관리 플랫폼
+              회사 광고 통합 관리 플랫폼
             </p>
           </div>
 

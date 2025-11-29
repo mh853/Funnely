@@ -7,13 +7,13 @@ import { SparklesIcon } from '@heroicons/react/24/outline'
 import { config } from '@/lib/config'
 
 interface LandingPageFormProps {
-  hospitalId: string
+  companyId: string
   userId: string
   initialData?: any
 }
 
 export default function LandingPageForm({
-  hospitalId,
+  companyId,
   userId,
   initialData,
 }: LandingPageFormProps) {
@@ -65,7 +65,7 @@ export default function LandingPageForm({
         },
         body: JSON.stringify({
           ...formData,
-          hospital_id: hospitalId,
+          company_id: companyId,
           created_by: userId,
           id: initialData?.id,
         }),

@@ -23,7 +23,7 @@ export default function KakaoMomentSetupGuide() {
             <h1 className="ml-4 text-3xl font-bold text-gray-900">Kakao Moment API 설정 가이드</h1>
           </div>
           <p className="text-gray-600">
-            카카오 모먼트 광고를 MediSync에 연동하기 위한 Kakao Developers 설정 방법을 안내합니다.
+            카카오 모먼트 광고를 Funnely에 연동하기 위한 Kakao Developers 설정 방법을 안내합니다.
           </p>
         </div>
 
@@ -72,8 +72,8 @@ export default function KakaoMomentSetupGuide() {
                 <li><strong>&quot;애플리케이션 추가하기&quot;</strong> 버튼 클릭</li>
                 <li>앱 정보 입력:
                   <ul className="ml-6 mt-2 space-y-1">
-                    <li>• 앱 이름: &quot;MediSync 광고 연동&quot; (또는 원하는 이름)</li>
-                    <li>• 사업자명: 병원 이름 또는 사업자명</li>
+                    <li>• 앱 이름: &quot;Funnely 광고 연동&quot; (또는 원하는 이름)</li>
+                    <li>• 사업자명: 회사 이름 또는 사업자명</li>
                   </ul>
                 </li>
                 <li><strong>&quot;저장&quot;</strong> 클릭</li>
@@ -281,7 +281,7 @@ export default function KakaoMomentSetupGuide() {
                 <li><strong>&quot;광고 계정 만들기&quot;</strong> 클릭</li>
                 <li>광고 계정 정보 입력:
                   <ul className="ml-6 mt-2 space-y-1">
-                    <li>• 광고주명: 병원 이름</li>
+                    <li>• 광고주명: 회사 이름</li>
                     <li>• 사업자 정보: 사업자 등록 정보</li>
                     <li>• 업종: 의료/건강</li>
                   </ul>
@@ -304,19 +304,19 @@ export default function KakaoMomentSetupGuide() {
           </div>
         </div>
 
-        {/* Step 7: Enter in MediSync */}
+        {/* Step 7: Enter in Funnely */}
         <div className="bg-white shadow rounded-lg p-8 mb-6">
           <div className="flex items-start mb-4">
             <div className="flex-shrink-0 h-8 w-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
               7
             </div>
-            <h2 className="ml-3 text-2xl font-bold text-gray-900">MediSync에 인증 정보 입력</h2>
+            <h2 className="ml-3 text-2xl font-bold text-gray-900">Funnely에 인증 정보 입력</h2>
           </div>
 
           <div className="ml-11 space-y-4">
             <div>
               <p className="text-gray-600 mb-4">
-                Kakao Developers에서 확인한 정보를 MediSync에 입력합니다.
+                Kakao Developers에서 확인한 정보를 Funnely에 입력합니다.
               </p>
 
               <div className="bg-yellow-50 p-6 rounded-lg space-y-4">
@@ -345,7 +345,7 @@ export default function KakaoMomentSetupGuide() {
                   className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium"
                 >
                   <CheckCircleIcon className="h-5 w-5 inline mr-2" />
-                  MediSync에 인증 정보 입력하기
+                  Funnely에 인증 정보 입력하기
                 </Link>
               </div>
             </div>

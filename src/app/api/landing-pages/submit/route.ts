@@ -18,10 +18,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get landing page to retrieve hospital_id
+    // Get landing page to retrieve company_id
     const { data: landingPage, error: lpError } = await supabase
       .from('landing_pages')
-      .select('hospital_id, status')
+      .select('company_id, status')
       .eq('id', landing_page_id)
       .single()
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .insert({
-        hospital_id: landingPage.hospital_id,
+        company_id: landingPage.company_id,
         landing_page_id,
         name,
         phone, // Note: In production, this should be encrypted

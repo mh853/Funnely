@@ -13,7 +13,7 @@ interface PlatformState {
 interface AppState {
   loading: boolean
   saving: boolean
-  hospitalId: string | null
+  companyId: string | null
   message: { type: 'success' | 'error'; text: string } | null
   expandedPlatform: ApiPlatform | null
   platforms: {
@@ -26,7 +26,7 @@ interface AppState {
 const initialState: AppState = {
   loading: true,
   saving: false,
-  hospitalId: null,
+  companyId: null,
   message: null,
   expandedPlatform: null,
   platforms: {
@@ -78,7 +78,7 @@ export default function ApiCredentialsPage() {
 
       const { data: userProfile } = await supabase
         .from('users')
-        .select('hospital_id, role')
+        .select('company_id, role')
         .eq('id', user.id)
         .single()
 
@@ -88,12 +88,12 @@ export default function ApiCredentialsPage() {
       const { data: credentials, error } = await supabase
         .from('api_credentials')
         .select('*')
-        .eq('hospital_id', userProfile.hospital_id)
+        .eq('company_id', userProfile.company_id)
 
       if (error) throw error
 
       // Update state with loaded credentials
-      const updates: Partial<AppState> = { hospitalId: userProfile.hospital_id }
+      const updates: Partial<AppState> = { companyId: userProfile.company_id }
 
       credentials?.forEach((cred: any) => {
         const platform = cred.platform as ApiPlatform
@@ -115,7 +115,7 @@ export default function ApiCredentialsPage() {
   }, [supabase, updateState, state.platforms])
 
   const saveCredentials = useCallback(async (platform: ApiPlatform) => {
-    if (!state.hospitalId) return
+    if (!state.companyId) return
 
     try {
       updateState({ saving: true, message: null })
@@ -125,12 +125,12 @@ export default function ApiCredentialsPage() {
       const { error } = await supabase
         .from('api_credentials')
         .upsert({
-          hospital_id: state.hospitalId,
+          company_id: state.companyId,
           platform,
           credentials,
           is_active: true,
         } as any, {
-          onConflict: 'hospital_id,platform'
+          onConflict: 'company_id,platform'
         })
 
       if (error) throw error
@@ -153,7 +153,7 @@ export default function ApiCredentialsPage() {
     } finally {
       updateState({ saving: false })
     }
-  }, [state.hospitalId, state.platforms, supabase, updateState])
+  }, [state.companyId, state.platforms, supabase, updateState])
 
   useEffect(() => {
     loadCredentials()

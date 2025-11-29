@@ -23,7 +23,7 @@ export default function MetaAdsSetupGuide() {
             <h1 className="ml-4 text-3xl font-bold text-gray-900">Meta Ads API 설정 가이드</h1>
           </div>
           <p className="text-gray-600">
-            Facebook과 Instagram 광고를 MediSync에 연동하기 위한 Meta for Developers 설정 방법을 안내합니다.
+            Facebook과 Instagram 광고를 Funnely에 연동하기 위한 Meta for Developers 설정 방법을 안내합니다.
           </p>
         </div>
 
@@ -73,8 +73,8 @@ export default function MetaAdsSetupGuide() {
                 <li>앱 유형 선택: <strong>&quot;비즈니스&quot;</strong> 선택</li>
                 <li>앱 정보 입력:
                   <ul className="ml-6 mt-2 space-y-1">
-                    <li>• 앱 이름: &quot;MediSync 광고 연동&quot; (또는 원하는 이름)</li>
-                    <li>• 앱 연락처 이메일: 병원 담당자 이메일</li>
+                    <li>• 앱 이름: &quot;Funnely 광고 연동&quot; (또는 원하는 이름)</li>
+                    <li>• 앱 연락처 이메일: 회사 담당자 이메일</li>
                   </ul>
                 </li>
                 <li><strong>&quot;앱 만들기&quot;</strong> 클릭</li>
@@ -239,19 +239,19 @@ export default function MetaAdsSetupGuide() {
           </div>
         </div>
 
-        {/* Step 6: Enter in MediSync */}
+        {/* Step 6: Enter in Funnely */}
         <div className="bg-white shadow rounded-lg p-8 mb-6">
           <div className="flex items-start mb-4">
             <div className="flex-shrink-0 h-8 w-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold">
               6
             </div>
-            <h2 className="ml-3 text-2xl font-bold text-gray-900">MediSync에 인증 정보 입력</h2>
+            <h2 className="ml-3 text-2xl font-bold text-gray-900">Funnely에 인증 정보 입력</h2>
           </div>
 
           <div className="ml-11 space-y-4">
             <div>
               <p className="text-gray-600 mb-4">
-                Meta for Developers에서 확인한 정보를 MediSync에 입력합니다.
+                Meta for Developers에서 확인한 정보를 Funnely에 입력합니다.
               </p>
 
               <div className="bg-blue-50 p-6 rounded-lg space-y-4">
@@ -280,7 +280,7 @@ export default function MetaAdsSetupGuide() {
                   className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium"
                 >
                   <CheckCircleIcon className="h-5 w-5 inline mr-2" />
-                  MediSync에 인증 정보 입력하기
+                  Funnely에 인증 정보 입력하기
                 </Link>
               </div>
             </div>

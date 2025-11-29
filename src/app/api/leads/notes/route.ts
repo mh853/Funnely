@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
     // Get user's hospital
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -39,9 +39,9 @@ export async function POST(request: NextRequest) {
     // Verify lead belongs to user's hospital
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, hospital_id')
+      .select('id, company_id')
       .eq('id', lead_id)
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .single()
 
     if (!lead) {

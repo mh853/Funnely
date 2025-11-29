@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
     // Get user's hospital
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
     const { data: event, error: eventError } = await supabase
       .from('calendar_events')
       .insert({
-        hospital_id: userProfile.hospital_id,
+        company_id: userProfile.company_id,
         title,
         description: description || null,
         event_type,

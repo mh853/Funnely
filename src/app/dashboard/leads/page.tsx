@@ -42,7 +42,7 @@ export default async function LeadsPage() {
       )
     `
     )
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
     .limit(50)
 

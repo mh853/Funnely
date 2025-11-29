@@ -6,11 +6,11 @@ import { Dialog } from '@headlessui/react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 
 interface InviteUserModalProps {
-  hospitalId: string
+  companyId: string
   onClose: () => void
 }
 
-export default function InviteUserModal({ hospitalId, onClose }: InviteUserModalProps) {
+export default function InviteUserModal({ companyId, onClose }: InviteUserModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -43,7 +43,7 @@ export default function InviteUserModal({ hospitalId, onClose }: InviteUserModal
         },
         body: JSON.stringify({
           ...formData,
-          hospitalId,
+          companyId,
         }),
       })
 
@@ -132,11 +132,11 @@ export default function InviteUserModal({ hospitalId, onClose }: InviteUserModal
               >
                 <option value="marketing_staff">마케팅 스태프</option>
                 <option value="marketing_manager">마케팅 매니저</option>
-                <option value="hospital_admin">병원 어드민</option>
+                <option value="hospital_admin">회사 어드민</option>
                 <option value="viewer">뷰어 (읽기 전용)</option>
               </select>
               <p className="mt-1 text-xs text-gray-500">
-                병원 관리자 권한은 부여할 수 없습니다.
+                회사 관리자 권한은 부여할 수 없습니다.
               </p>
             </div>
 

@@ -5,10 +5,10 @@ import { PlusIcon } from '@heroicons/react/24/outline'
 import InviteUserModal from './InviteUserModal'
 
 interface InviteUserButtonProps {
-  hospitalId: string
+  companyId: string
 }
 
-export default function InviteUserButton({ hospitalId }: InviteUserButtonProps) {
+export default function InviteUserButton({ companyId }: InviteUserButtonProps) {
   const [showModal, setShowModal] = useState(false)
 
   return (
@@ -23,7 +23,7 @@ export default function InviteUserButton({ hospitalId }: InviteUserButtonProps) 
 
       {showModal && (
         <InviteUserModal
-          hospitalId={hospitalId}
+          companyId={companyId}
           onClose={() => setShowModal(false)}
         />
       )}

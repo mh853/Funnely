@@ -53,9 +53,9 @@ export default async function SettingsPage() {
 
   // Get hospital info
   const { data: hospital, error: hospitalError } = await supabase
-    .from('hospitals')
+    .from('companies')
     .select('*')
-    .eq('id', userProfile.hospital_id)
+    .eq('id', userProfile.company_id)
     .single()
 
   if (hospitalError) {
@@ -73,9 +73,9 @@ export default async function SettingsPage() {
               </svg>
             </div>
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-yellow-800">병원 정보를 찾을 수 없습니다</h3>
+              <h3 className="text-sm font-medium text-yellow-800">회사 정보를 찾을 수 없습니다</h3>
               <div className="mt-2 text-sm text-yellow-700">
-                <p>병원 정보가 설정되지 않았습니다.</p>
+                <p>회사 정보가 설정되지 않았습니다.</p>
                 {hospitalError && (
                   <p className="mt-1 text-xs">오류: {hospitalError.message}</p>
                 )}
@@ -97,7 +97,7 @@ export default async function SettingsPage() {
       <div>
         <h1 className="text-2xl font-bold text-gray-900">설정</h1>
         <p className="mt-1 text-sm text-gray-600">
-          병원 정보 및 계정 설정을 관리합니다.
+          회사 정보 및 계정 설정을 관리합니다.
         </p>
       </div>
 
@@ -112,7 +112,7 @@ export default async function SettingsPage() {
             </div>
             <div className="ml-3">
               <p className="text-sm text-yellow-700">
-                병원 정보를 수정하려면 병원 관리자 권한이 필요합니다.
+                회사 정보를 수정하려면 회사 관리자 권한이 필요합니다.
               </p>
             </div>
           </div>
@@ -145,7 +145,7 @@ export default async function SettingsPage() {
       {/* Hospital Settings */}
       <div className="bg-white shadow rounded-lg">
         <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-6">병원 정보</h2>
+          <h2 className="text-lg font-medium text-gray-900 mb-6">회사 정보</h2>
           <HospitalSettingsForm hospital={hospital} canEdit={canEdit} />
         </div>
       </div>
@@ -184,8 +184,8 @@ export default async function SettingsPage() {
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
-    hospital_owner: '병원 관리자',
-    hospital_admin: '병원 어드민',
+    hospital_owner: '회사 관리자',
+    hospital_admin: '회사 어드민',
     marketing_manager: '마케팅 매니저',
     marketing_staff: '마케팅 스태프',
     viewer: '뷰어',

@@ -20,7 +20,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('hospital_id, role')
+    .select('company_id, role')
     .eq('id', user.id)
     .single()
 
@@ -47,7 +47,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   // Verify same hospital
-  if (campaign.hospital_id !== userProfile.hospital_id) {
+  if (campaign.company_id !== userProfile.company_id) {
     redirect('/dashboard/campaigns')
   }
 

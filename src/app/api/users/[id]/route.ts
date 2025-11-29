@@ -20,7 +20,7 @@ export async function PATCH(
     // Get current user's profile to check permissions
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -36,7 +36,7 @@ export async function PATCH(
     // Get target user to verify they're in the same hospital
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', params.id)
       .single()
 
@@ -45,7 +45,7 @@ export async function PATCH(
     }
 
     // Verify same hospital
-    if (targetUser.hospital_id !== currentUserProfile.hospital_id) {
+    if (targetUser.company_id !== currentUserProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -66,7 +66,7 @@ export async function PATCH(
 
     // Prevent hospital_admin from changing hospital_owner role
     if (targetUser.role === 'hospital_owner' && currentUserProfile.role !== 'hospital_owner') {
-      return NextResponse.json({ error: '병원 관리자의 권한을 변경할 수 없습니다.' }, { status: 403 })
+      return NextResponse.json({ error: '회사 관리자의 권한을 변경할 수 없습니다.' }, { status: 403 })
     }
 
     // Update user profile
@@ -117,7 +117,7 @@ export async function DELETE(
     // Get current user's profile to check permissions
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -133,7 +133,7 @@ export async function DELETE(
     // Get target user to verify they're in the same hospital
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', params.id)
       .single()
 
@@ -142,13 +142,13 @@ export async function DELETE(
     }
 
     // Verify same hospital
-    if (targetUser.hospital_id !== currentUserProfile.hospital_id) {
+    if (targetUser.company_id !== currentUserProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
     // Prevent hospital_admin from deleting hospital_owner
     if (targetUser.role === 'hospital_owner' && currentUserProfile.role !== 'hospital_owner') {
-      return NextResponse.json({ error: '병원 관리자를 삭제할 수 없습니다.' }, { status: 403 })
+      return NextResponse.json({ error: '회사 관리자를 삭제할 수 없습니다.' }, { status: 403 })
     }
 
     // Delete user profile from public.users

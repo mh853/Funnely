@@ -86,8 +86,8 @@ export default function TeamMembersList({
 
   const getRoleLabel = (role: string): string => {
     const labels: Record<string, string> = {
-      hospital_owner: '병원 관리자',
-      hospital_admin: '병원 어드민',
+      hospital_owner: '회사 관리자',
+      hospital_admin: '회사 어드민',
       marketing_manager: '마케팅 매니저',
       marketing_staff: '마케팅 스태프',
       viewer: '뷰어',
@@ -175,7 +175,7 @@ export default function TeamMembersList({
                           disabled={loading}
                         >
                           <option value="">선택</option>
-                          <option value="hospital_admin">병원 어드민</option>
+                          <option value="hospital_admin">회사 어드민</option>
                           <option value="marketing_manager">마케팅 매니저</option>
                           <option value="marketing_staff">마케팅 스태프</option>
                           <option value="viewer">뷰어</option>

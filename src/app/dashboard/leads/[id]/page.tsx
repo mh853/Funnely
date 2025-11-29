@@ -49,7 +49,7 @@ export default async function LeadDetailPage({ params }: Props) {
     `
     )
     .eq('id', params.id)
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .single()
 
   if (error || !lead) {
@@ -86,7 +86,7 @@ export default async function LeadDetailPage({ params }: Props) {
   const { data: teamMembers } = await supabase
     .from('users')
     .select('id, name, role')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .eq('is_active', true)
     .in('role', ['marketing_staff', 'marketing_manager', 'hospital_admin'])
     .order('name')

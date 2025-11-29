@@ -23,7 +23,7 @@ export default function LandingPagePreview({ landingPage }: LandingPagePreviewPr
               <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
             </div>
-            <span className="text-xs text-gray-500">{landingPage.slug}.medisync.kr</span>
+            <span className="text-xs text-gray-500">{landingPage.slug}.funnely.kr</span>
           </div>
           <span className="text-xs text-gray-500">미리보기</span>
         </div>

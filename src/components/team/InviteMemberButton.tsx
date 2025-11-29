@@ -5,10 +5,10 @@ import { Dialog, Transition } from '@headlessui/react'
 import { UserPlusIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 interface InviteMemberButtonProps {
-  hospitalId: string
+  companyId: string
 }
 
-export default function InviteMemberButton({ hospitalId }: InviteMemberButtonProps) {
+export default function InviteMemberButton({ companyId }: InviteMemberButtonProps) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -29,7 +29,7 @@ export default function InviteMemberButton({ hospitalId }: InviteMemberButtonPro
       const response = await fetch('/api/team/invite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...formData, hospitalId }),
+        body: JSON.stringify({ ...formData, companyId }),
       })
 
       const data = await response.json()
@@ -216,7 +216,7 @@ export default function InviteMemberButton({ hospitalId }: InviteMemberButtonPro
                               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
                               disabled={loading}
                             >
-                              <option value="hospital_admin">병원 어드민</option>
+                              <option value="hospital_admin">회사 어드민</option>
                               <option value="marketing_manager">마케팅 매니저</option>
                               <option value="marketing_staff">마케팅 스태프</option>
                               <option value="viewer">뷰어</option>

@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -34,11 +34,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { reportType, format, campaignIds, startDate, endDate, includedMetrics, hospitalId } =
+    const { reportType, format, campaignIds, startDate, endDate, includedMetrics, companyId } =
       body
 
     // Validate hospital ID
-    if (hospitalId !== userProfile.hospital_id) {
+    if (companyId !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
         )
       `)
       .in('id', campaignIds)
-      .eq('hospital_id', hospitalId)
+      .eq('company_id', companyId)
 
     if (!campaigns || campaigns.length === 0) {
       return NextResponse.json({ error: '캠페인을 찾을 수 없습니다.' }, { status: 404 })
@@ -167,7 +167,7 @@ export async function POST(request: NextRequest) {
       const { data: report } = await supabase
         .from('reports')
         .insert({
-          hospital_id: hospitalId,
+          company_id: companyId,
           report_type: reportType,
           format,
           start_date: startDate || null,
@@ -255,7 +255,7 @@ export async function POST(request: NextRequest) {
 
       // Save report record
       await supabase.from('reports').insert({
-        hospital_id: hospitalId,
+        company_id: companyId,
         report_type: reportType,
         format,
         start_date: startDate || null,

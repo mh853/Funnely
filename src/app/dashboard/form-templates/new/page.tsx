@@ -32,7 +32,7 @@ export default async function NewFormTemplatePage() {
         </p>
       </div>
 
-      <FormBuilder hospitalId={userProfile.hospital_id} />
+      <FormBuilder companyId={userProfile.company_id} />
     </div>
   )
 }

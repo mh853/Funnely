@@ -53,7 +53,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
 
       // Update hospital info
       const { error: updateError } = await supabase
-        .from('hospitals')
+        .from('companies')
         .update({
           name: formData.name,
           business_number: formData.business_number || null,
@@ -102,7 +102,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
       {/* Hospital Name */}
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
-          병원명 <span className="text-red-500">*</span>
+          회사명 <span className="text-red-500">*</span>
         </label>
         <input
           type="text"
@@ -113,7 +113,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
           value={formData.name}
           onChange={handleChange}
           className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed sm:text-sm"
-          placeholder="예: 서울대학교병원"
+          placeholder="예: 서울대학교회사"
         />
       </div>
 

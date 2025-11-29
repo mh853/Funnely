@@ -17,7 +17,7 @@ export default async function AdAccountsPage() {
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('hospital_id, role')
+    .select('company_id, role')
     .eq('id', user.id)
     .single()
 
@@ -33,7 +33,7 @@ export default async function AdAccountsPage() {
   const { data: adAccounts, error } = await supabase
     .from('ad_accounts')
     .select('*')
-    .eq('hospital_id', userProfile.hospital_id)
+    .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
   // Check if user can manage ad accounts

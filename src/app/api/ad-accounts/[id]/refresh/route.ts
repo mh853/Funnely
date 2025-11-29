@@ -20,7 +20,7 @@ export async function POST(
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -45,7 +45,7 @@ export async function POST(
     }
 
     // Verify same hospital
-    if (adAccount.hospital_id !== userProfile.hospital_id) {
+    if (adAccount.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

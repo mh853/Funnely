@@ -25,7 +25,7 @@ export async function DELETE(request: NextRequest) {
     // Get user's hospital
     const { data: userProfile } = await supabase
       .from('users')
-      .select('hospital_id')
+      .select('company_id')
       .eq('id', user.id)
       .single()
 
@@ -36,9 +36,9 @@ export async function DELETE(request: NextRequest) {
     // Verify event belongs to user's hospital
     const { data: event } = await supabase
       .from('calendar_events')
-      .select('id, hospital_id')
+      .select('id, company_id')
       .eq('id', id)
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .single()
 
     if (!event) {

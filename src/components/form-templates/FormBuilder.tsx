@@ -6,7 +6,7 @@ import { FormField, FormFieldType } from '@/types/landing-page.types'
 import { PlusIcon, TrashIcon, ArrowUpIcon, ArrowDownIcon } from '@heroicons/react/24/outline'
 
 interface FormBuilderProps {
-  hospitalId: string
+  companyId: string
   initialData?: any
 }
 
@@ -23,7 +23,7 @@ const FIELD_TYPES: { value: FormFieldType; label: string }[] = [
   { value: 'checkbox', label: '체크박스' },
 ]
 
-export default function FormBuilder({ hospitalId, initialData }: FormBuilderProps) {
+export default function FormBuilder({ companyId, initialData }: FormBuilderProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,7 +91,7 @@ export default function FormBuilder({ hospitalId, initialData }: FormBuilderProp
         },
         body: JSON.stringify({
           ...formData,
-          hospital_id: hospitalId,
+          company_id: companyId,
           id: initialData?.id,
         }),
       })

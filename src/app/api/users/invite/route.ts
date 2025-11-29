@@ -14,10 +14,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
     }
 
-    // Get current user's profile to check permissions and hospital_id
+    // Get current user's profile to check permissions and company_id
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('users')
-      .select('hospital_id, role')
+      .select('company_id, role')
       .eq('id', user.id)
       .single()
 
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       email,
       full_name: fullName,
       role,
-      hospital_id: currentUserProfile.hospital_id,
+      company_id: currentUserProfile.company_id,
     })
 
     if (userError) {

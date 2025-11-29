@@ -46,12 +46,12 @@ export default async function CampaignsPage() {
           account_name
         )
       `)
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false }),
     supabase
       .from('ad_accounts')
       .select('id, platform, account_name, status')
-      .eq('hospital_id', userProfile.hospital_id)
+      .eq('company_id', userProfile.company_id)
       .eq('status', 'active')
   ])
 

@@ -19,10 +19,10 @@ function createAdminClient() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { email, fullName, password, role, hospitalId } = body
+    const { email, fullName, password, role, companyId } = body
 
     // Validation
-    if (!email || !fullName || !password || !role || !hospitalId) {
+    if (!email || !fullName || !password || !role || !companyId) {
       return NextResponse.json({ error: '모든 필드를 입력해주세요.' }, { status: 400 })
     }
 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     // Create user profile
     const { error: userError } = await supabase.from('users').insert({
       id: authData.user.id,
-      hospital_id: hospitalId,
+      company_id: companyId,
       email,
       full_name: fullName,
       role,

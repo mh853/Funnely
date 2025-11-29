@@ -16,7 +16,7 @@ interface Report {
 
 interface RecentReportsProps {
   reports: Report[]
-  hospitalId: string
+  companyId: string
 }
 
 const reportTypeLabels: Record<string, string> = {
@@ -26,7 +26,7 @@ const reportTypeLabels: Record<string, string> = {
   conversion_report: '전환 리포트',
 }
 
-export default function RecentReports({ reports, hospitalId }: RecentReportsProps) {
+export default function RecentReports({ reports, companyId }: RecentReportsProps) {
   const [deleting, setDeleting] = useState<string | null>(null)
 
   const handleDelete = async (reportId: string) => {

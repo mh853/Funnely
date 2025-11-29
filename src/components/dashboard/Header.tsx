@@ -45,8 +45,8 @@ export default function Header({ user, userProfile }: HeaderProps) {
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           {/* Notification Bell */}
-          {userProfile?.hospital_id && (
-            <NotificationBell hospitalId={userProfile.hospital_id} />
+          {userProfile?.company_id && (
+            <NotificationBell companyId={userProfile.company_id} />
           )}
 
           {/* Separator */}
@@ -111,8 +111,8 @@ export default function Header({ user, userProfile }: HeaderProps) {
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
-    hospital_owner: '병원 관리자',
-    hospital_admin: '병원 어드민',
+    hospital_owner: '회사 관리자',
+    hospital_admin: '회사 어드민',
     marketing_manager: '마케팅 매니저',
     marketing_staff: '마케팅 스태프',
     viewer: '뷰어',
