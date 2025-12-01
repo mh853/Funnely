@@ -8,6 +8,9 @@ import {
   DocumentTextIcon,
 } from '@heroicons/react/24/outline'
 
+// ISR: Revalidate every 30 seconds for real-time dashboard updates
+export const revalidate = 30
+
 export default async function DashboardPage() {
   const supabase = await createClient()
 
@@ -22,7 +25,7 @@ export default async function DashboardPage() {
   // Get user profile with company (cached to avoid duplicate query with layout)
   const userProfile = await getCachedUserProfile(user.id)
 
-  // Get statistics for today, yesterday, this week, this month
+  // Calculate date boundaries
   const now = new Date()
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const yesterday = new Date(today)
@@ -33,91 +36,66 @@ export default async function DashboardPage() {
 
   const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
-  const [
-    { count: todayCount },
-    { count: yesterdayCount },
-    { count: thisWeekCount },
-    { count: thisMonthCount },
-  ] = await Promise.all([
-    // Today's leads
-    supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile?.company_id)
-      .gte('created_at', today.toISOString()),
-    // Yesterday's leads
-    supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile?.company_id)
-      .gte('created_at', yesterday.toISOString())
-      .lt('created_at', today.toISOString()),
-    // This week's leads
-    supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile?.company_id)
-      .gte('created_at', thisWeekStart.toISOString()),
-    // This month's leads
-    supabase
-      .from('leads')
-      .select('*', { count: 'exact', head: true })
-      .eq('company_id', userProfile?.company_id)
-      .gte('created_at', thisMonthStart.toISOString()),
-  ])
-
-  // Get daily data for chart (last 30 days)
   const thirtyDaysAgo = new Date(today)
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
-  const { data: dailyLeads } = await supabase
+  // Optimized: Single query to fetch all leads data (instead of 5 separate queries)
+  const { data: allLeads } = await supabase
     .from('leads')
-    .select('created_at')
+    .select('id, created_at, status')
     .eq('company_id', userProfile?.company_id)
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: true })
 
-  // Process daily data for chart
+  // Client-side aggregation for statistics
+  let todayCount = 0
+  let yesterdayCount = 0
+  let thisWeekCount = 0
+  let thisMonthCount = 0
+
   const dailyStats: { [key: string]: number } = {}
-  dailyLeads?.forEach(lead => {
-    const date = new Date(lead.created_at)
-    const dateKey = `${date.getMonth() + 1}/${date.getDate()}`
-    dailyStats[dateKey] = (dailyStats[dateKey] || 0) + 1
-  })
-
-  // Get recent results grouped by date
-  const { data: recentResults } = await supabase
-    .from('leads')
-    .select('*')
-    .eq('company_id', userProfile?.company_id)
-    .gte('created_at', thisMonthStart.toISOString())
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  // Group by date and status
   const resultsByDate: { [key: string]: any } = {}
-  recentResults?.forEach(lead => {
-    const date = new Date(lead.created_at).toISOString().split('T')[0]
-    if (!resultsByDate[date]) {
-      resultsByDate[date] = {
-        date,
-        total: 0,
-        pending: 0,
-        rejected: 0,
-        inProgress: 0,
-        completed: 0,
-        needsFollowUp: 0,
+
+  allLeads?.forEach(lead => {
+    const leadDate = new Date(lead.created_at)
+    const leadTime = leadDate.getTime()
+
+    // Count statistics
+    if (leadTime >= today.getTime()) todayCount++
+    if (leadTime >= yesterday.getTime() && leadTime < today.getTime()) yesterdayCount++
+    if (leadTime >= thisWeekStart.getTime()) thisWeekCount++
+    if (leadTime >= thisMonthStart.getTime()) thisMonthCount++
+
+    // Daily chart data
+    const dateKey = `${leadDate.getMonth() + 1}/${leadDate.getDate()}`
+    dailyStats[dateKey] = (dailyStats[dateKey] || 0) + 1
+
+    // Results table data (last 10 days)
+    if (leadTime >= thisMonthStart.getTime()) {
+      const dateStr = leadDate.toISOString().split('T')[0]
+      if (!resultsByDate[dateStr]) {
+        resultsByDate[dateStr] = {
+          date: dateStr,
+          total: 0,
+          pending: 0,
+          rejected: 0,
+          inProgress: 0,
+          completed: 0,
+          needsFollowUp: 0,
+        }
       }
+      resultsByDate[dateStr].total++
+      const status = lead.status || 'pending'
+      if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
+      else if (status === 'rejected') resultsByDate[dateStr].rejected++
+      else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
+      else if (status === 'converted') resultsByDate[dateStr].completed++
     }
-    resultsByDate[date].total++
-    const status = lead.status || 'pending'
-    if (status === 'new' || status === 'pending') resultsByDate[date].pending++
-    else if (status === 'rejected') resultsByDate[date].rejected++
-    else if (status === 'contacted' || status === 'qualified') resultsByDate[date].inProgress++
-    else if (status === 'converted') resultsByDate[date].completed++
   })
 
-  const resultRows = Object.values(resultsByDate).slice(0, 5)
+  const resultRows = Object.values(resultsByDate)
+    .sort((a: any, b: any) => b.date.localeCompare(a.date))
+    .slice(0, 5)
 
   return (
     <div className="space-y-8">
