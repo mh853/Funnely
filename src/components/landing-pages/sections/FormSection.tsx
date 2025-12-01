@@ -16,7 +16,11 @@ export default function FormSection({ section, themeColors, landingPageId }: For
   const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const fields = section.props.fields || ['name', 'phone', 'email']
+  // Normalize fields to always be string array
+  const rawFields = section.props?.fields || ['name', 'phone', 'email']
+  const fields = Array.isArray(rawFields)
+    ? rawFields.map((f: any) => (typeof f === 'string' ? f : f.name || f.type || 'field'))
+    : ['name', 'phone', 'email']
 
   const getFieldLabel = (field: string) => {
     const labels: Record<string, string> = {
@@ -86,7 +90,7 @@ export default function FormSection({ section, themeColors, landingPageId }: For
           <div className="text-6xl mb-4">✅</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">신청 완료!</h2>
           <p className="text-gray-600">
-            {section.props.successMessage || '신청이 완료되었습니다. 빠른 시일 내에 연락드리겠습니다.'}
+            {section.props?.successMessage || '신청이 완료되었습니다. 빠른 시일 내에 연락드리겠습니다.'}
           </p>
         </div>
       </section>
@@ -97,9 +101,9 @@ export default function FormSection({ section, themeColors, landingPageId }: For
     <section className="py-16 px-6 bg-gray-50">
       <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {section.props.title || '신청하기'}
+          {section.props?.title || '신청하기'}
         </h2>
-        <p className="text-gray-600 mb-6">{section.props.description || '양식을 작성해주세요'}</p>
+        <p className="text-gray-600 mb-6">{section.props?.description || '양식을 작성해주세요'}</p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
@@ -112,13 +116,13 @@ export default function FormSection({ section, themeColors, landingPageId }: For
             <div key={index}>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 {getFieldLabel(field)}
-                {section.props.requiredFields?.includes(field) && (
+                {section.props?.requiredFields?.includes(field) && (
                   <span className="text-red-500 ml-1">*</span>
                 )}
               </label>
               <input
                 type={getFieldType(field)}
-                required={section.props.requiredFields?.includes(field)}
+                required={section.props?.requiredFields?.includes(field)}
                 value={formData[field] || ''}
                 onChange={(e) =>
                   setFormData({ ...formData, [field]: e.target.value })
@@ -138,7 +142,7 @@ export default function FormSection({ section, themeColors, landingPageId }: For
           >
             {loading
               ? '제출 중...'
-              : section.props.submitButtonText || '제출'}
+              : section.props?.submitButtonText || '제출'}
           </button>
         </form>
       </div>

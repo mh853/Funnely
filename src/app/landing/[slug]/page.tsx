@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .from('landing_pages')
     .select('title, meta_title, meta_description, meta_image')
     .eq('slug', params.slug)
-    .eq('status', 'published')
+    .eq('is_active', true)
     .single()
 
   if (!landingPage) {
@@ -58,12 +58,20 @@ export default async function LandingPage({ params }: Props) {
     .from('landing_pages')
     .select('*')
     .eq('slug', params.slug)
-    .eq('status', 'published')
+    .eq('is_active', true)
     .single()
 
   if (error || !landingPage) {
     notFound()
   }
+
+  // Debug: Log collect_fields to understand its structure
+  console.log('🔍 Landing Page Data:', {
+    slug: landingPage.slug,
+    collect_fields: landingPage.collect_fields,
+    collect_fields_type: typeof landingPage.collect_fields,
+    collect_fields_isArray: Array.isArray(landingPage.collect_fields),
+  })
 
   // Increment view count (fire-and-forget)
   supabase

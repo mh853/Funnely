@@ -1,6 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import LandingPageEditForm from '@/components/landing-pages/LandingPageEditForm'
+import LandingPageNewForm from '@/components/landing-pages/LandingPageNewForm'
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 
@@ -97,7 +97,7 @@ export default async function LandingPageEditPage({ params }: Props) {
       </div>
 
       {/* Edit Form */}
-      <LandingPageEditForm
+      <LandingPageNewForm
         landingPage={landingPage}
         companyId={userProfile.company_id}
         userId={user.id}

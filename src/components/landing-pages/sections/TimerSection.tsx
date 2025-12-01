@@ -26,8 +26,8 @@ export default function TimerSection({ section, themeColors }: TimerSectionProps
   useEffect(() => {
     // Calculate time left until deadline
     const calculateTimeLeft = () => {
-      const deadline = section.props.deadline
-        ? new Date(section.props.deadline)
+      const deadline = section.props?.deadline
+        ? new Date(section.props?.deadline)
         : new Date(Date.now() + 24 * 60 * 60 * 1000) // Default: 24 hours from now
 
       const difference = deadline.getTime() - Date.now()
@@ -51,24 +51,24 @@ export default function TimerSection({ section, themeColors }: TimerSectionProps
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [section.props.deadline])
+  }, [section.props?.deadline])
 
   return (
     <section className="py-16 px-6 bg-gray-900 text-white">
       <h2 className="text-3xl font-bold text-center mb-8">
-        {section.props.title || '특별 할인 마감까지'}
+        {section.props?.title || '특별 할인 마감까지'}
       </h2>
       <div className="flex justify-center gap-4 flex-wrap">
-        {section.props.showDays !== false && (
+        {section.props?.showDays !== false && (
           <TimerUnit label="일" value={String(timeLeft.days).padStart(2, '0')} />
         )}
-        {section.props.showHours !== false && (
+        {section.props?.showHours !== false && (
           <TimerUnit label="시" value={String(timeLeft.hours).padStart(2, '0')} />
         )}
-        {section.props.showMinutes !== false && (
+        {section.props?.showMinutes !== false && (
           <TimerUnit label="분" value={String(timeLeft.minutes).padStart(2, '0')} />
         )}
-        {section.props.showSeconds !== false && (
+        {section.props?.showSeconds !== false && (
           <TimerUnit label="초" value={String(timeLeft.seconds).padStart(2, '0')} />
         )}
       </div>

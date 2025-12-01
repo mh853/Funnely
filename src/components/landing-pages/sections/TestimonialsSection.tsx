@@ -11,10 +11,10 @@ export default function TestimonialsSection({ section, themeColors }: Testimonia
   return (
     <section className="py-16 px-6 bg-white">
       <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-        {section.props.title || '고객 후기'}
+        {section.props?.title || '고객 후기'}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        {(section.props.items || []).map((item: any, index: number) => (
+        {(section.props?.items || []).map((item: any, index: number) => (
           <div key={index} className="bg-gray-50 rounded-lg p-6">
             <div className="flex items-center mb-4">
               <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center text-xl">

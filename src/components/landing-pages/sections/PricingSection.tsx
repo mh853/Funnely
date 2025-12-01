@@ -13,10 +13,10 @@ export default function PricingSection({ section, themeColors }: PricingSectionP
   return (
     <section className="py-16 px-6 bg-gray-50">
       <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-        {section.props.title || '요금제'}
+        {section.props?.title || '요금제'}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-        {(section.props.plans || []).map((plan: any, index: number) => (
+        {(section.props?.plans || []).map((plan: any, index: number) => (
           <div
             key={index}
             className={`bg-white rounded-lg p-8 ${

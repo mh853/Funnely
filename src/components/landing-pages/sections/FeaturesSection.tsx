@@ -11,10 +11,10 @@ export default function FeaturesSection({ section, themeColors }: FeaturesSectio
   return (
     <section className="py-16 px-6 bg-white">
       <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-        {section.props.title || '주요 기능'}
+        {section.props?.title || '주요 기능'}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-        {(section.props.items || []).map((item: any, index: number) => (
+        {(section.props?.items || []).map((item: any, index: number) => (
           <div key={index} className="text-center">
             <div className="text-4xl mb-4">{item.icon || '✨'}</div>
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
