@@ -29,7 +29,7 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
     if (!landingPage.timer_enabled || !landingPage.timer_deadline) return
 
     const calculateTimeLeft = () => {
-      const deadline = new Date(landingPage.timer_deadline)
+      const deadline = new Date(landingPage.timer_deadline!)
       const difference = deadline.getTime() - Date.now()
 
       if (difference > 0) {
