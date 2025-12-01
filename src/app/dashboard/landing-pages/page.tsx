@@ -6,6 +6,9 @@ import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
 
 type PeriodFilter = 'today' | 'week' | 'month'
 
+// ISR: Revalidate every 60 seconds for better performance
+export const revalidate = 60
+
 export default async function LandingPagesPage({
   searchParams,
 }: {
@@ -52,48 +55,45 @@ export default async function LandingPagesPage({
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   }
 
-  // Get landing pages
+  // Get landing pages with statistics in a single optimized query
   const { data: landingPages } = await supabase
     .from('landing_pages')
     .select('*')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
-  // Get statistics for each landing page
-  const landingPagesWithStats = await Promise.all(
-    (landingPages || []).map(async (page) => {
-      // Get DB inflow (total leads)
-      const { count: dbInflow } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('landing_page_id', page.id)
-        .gte('created_at', startDate.toISOString())
+  // Get all leads statistics in a single query (prevents N+1 problem)
+  const { data: leadsStats } = await supabase
+    .from('leads')
+    .select('landing_page_id, status, created_at')
+    .in('landing_page_id', (landingPages || []).map(p => p.id))
+    .gte('created_at', startDate.toISOString())
 
-      // Get rejected count (consultation rejected)
-      const { count: rejectedCount } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('landing_page_id', page.id)
-        .eq('status', 'rejected')
-        .gte('created_at', startDate.toISOString())
+  // Aggregate statistics by landing page ID
+  const statsMap = new Map<string, { dbInflow: number; rejectedCount: number; contractCount: number }>()
 
-      // Get contract completion count
-      const { count: contractCount } = await supabase
-        .from('leads')
-        .select('*', { count: 'exact', head: true })
-        .eq('landing_page_id', page.id)
-        .eq('status', 'contract_completed')
-        .gte('created_at', startDate.toISOString())
+  leadsStats?.forEach(lead => {
+    const pageId = lead.landing_page_id
+    if (!statsMap.has(pageId)) {
+      statsMap.set(pageId, { dbInflow: 0, rejectedCount: 0, contractCount: 0 })
+    }
+    const stats = statsMap.get(pageId)!
+    stats.dbInflow++
+    if (lead.status === 'rejected') stats.rejectedCount++
+    if (lead.status === 'contract_completed') stats.contractCount++
+  })
 
-      return {
-        ...page,
-        pageViews: page.views_count || 0,
-        dbInflow: dbInflow || 0,
-        rejectedCount: rejectedCount || 0,
-        contractCount: contractCount || 0,
-      }
-    })
-  )
+  // Combine landing pages with their statistics
+  const landingPagesWithStats = (landingPages || []).map(page => {
+    const stats = statsMap.get(page.id) || { dbInflow: 0, rejectedCount: 0, contractCount: 0 }
+    return {
+      ...page,
+      pageViews: page.views_count || 0,
+      dbInflow: stats.dbInflow,
+      rejectedCount: stats.rejectedCount,
+      contractCount: stats.contractCount,
+    }
+  })
 
   return (
     <div className="space-y-6">
