@@ -199,6 +199,34 @@ function getDefaultProps(type: SectionType): any {
       images: [],
       layout: 'grid-3',
     },
+    hero_image: {
+      title: '제목을 입력하세요',
+      subtitle: '부제목을 입력하세요',
+      imageUrl: '',
+      ctaText: '시작하기',
+    },
+    description: {
+      title: '설명 제목',
+      content: '설명 내용을 입력하세요',
+    },
+    cta_button: {
+      text: '지금 시작하기',
+      enabled: true,
+    },
+    call_button: {
+      phone: '',
+      enabled: true,
+    },
+    realtime_status: {
+      template: '{count}명이 지금 보고 있습니다',
+      enabled: true,
+    },
+    privacy_consent: {
+      privacyRequired: true,
+      marketingRequired: false,
+      privacyContent: '',
+      marketingContent: '',
+    },
   }
 
   return defaults[type] || {}

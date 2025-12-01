@@ -86,15 +86,21 @@ export interface FormTemplate {
 
 export type SectionType =
   | 'hero'
+  | 'hero_image'
   | 'features'
   | 'form'
   | 'testimonials'
   | 'cta'
+  | 'cta_button'
   | 'timer'
   | 'faq'
   | 'pricing'
-  | 'media'      // 🆕 미디어 섹션 (이미지, GIF, 비디오)
-  | 'gallery';   // 🆕 갤러리 섹션
+  | 'media'
+  | 'gallery'
+  | 'description'
+  | 'realtime_status'
+  | 'call_button'
+  | 'privacy_consent';
 
 export interface SectionProps {
   [key: string]: any;
@@ -133,6 +139,7 @@ export interface Section {
   props: SectionProps;
   styles?: SectionStyles;  // 🆕 확장된 스타일 시스템
   order?: number;          // 🆕 섹션 순서
+  enabled?: boolean;       // 🆕 섹션 활성화 여부
 }
 
 export interface Theme {
@@ -157,14 +164,77 @@ export interface LandingPage {
   template_id: string;
   theme: Theme;
   sections: Section[];
+
+  // Content
+  description?: string;
+  description_enabled?: boolean;
+  images?: string[];
+
+  // Data Collection
+  collect_data?: boolean;
+  collect_name?: boolean;
+  collect_phone?: boolean;
+  collect_fields?: Array<{
+    type: 'name' | 'phone' | 'short_answer' | 'multiple_choice';
+    question?: string;
+    options?: string[];
+  }>;
+  collection_mode?: 'inline' | 'external';
+  custom_fields?: Array<{
+    id: string;
+    type: 'short_answer' | 'multiple_choice';
+    question: string;
+    options?: string[];
+  }>;
+
+  // CTA Settings
+  cta_enabled?: boolean;
+  cta_text?: string;
+  cta_color?: string;
+  cta_sticky_position?: 'none' | 'top' | 'bottom';
+
+  // Timer Settings
+  timer_enabled?: boolean;
+  timer_deadline?: string;
+  timer_color?: string;
+  timer_sticky_position?: 'none' | 'top' | 'bottom';
+
+  // Call Button Settings
+  call_button_enabled?: boolean;
+  call_button_phone?: string;
+  call_button_color?: string;
+  call_button_sticky_position?: 'none' | 'top' | 'bottom';
+
+  // Realtime Status
+  realtime_enabled?: boolean;
+  realtime_template?: string;
+  realtime_speed?: number;
+  realtime_count?: number;
+
+  // Privacy Consent
+  require_privacy_consent?: boolean;
+  require_marketing_consent?: boolean;
+  privacy_policy?: string;
+  marketing_consent?: string;
+  privacy_content?: string;
+  marketing_content?: string;
+
+  // Status
+  is_active?: boolean;
+
+  // SEO
   meta_title?: string;
   meta_description?: string;
   meta_image?: string;
   utm_campaign?: string;
   utm_source?: string;
   utm_medium?: string;
+
+  // Stats
   views_count: number;
   submissions_count: number;
+
+  // Metadata
   created_by?: string;
   created_at: string;
   updated_at: string;
