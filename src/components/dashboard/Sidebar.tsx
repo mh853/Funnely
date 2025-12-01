@@ -16,6 +16,8 @@ import {
   PhoneIcon,
   CalendarIcon,
   PresentationChartLineIcon,
+  CreditCardIcon,
+  CurrencyDollarIcon,
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -34,6 +36,8 @@ const navigation = [
   { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
   { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
   { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
+  { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
+  { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },
   { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
   { name: '설정', href: '/dashboard/settings', icon: CogIcon },
 ]
