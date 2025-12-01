@@ -2023,11 +2023,14 @@ export default function LandingPageNewForm({
                   <p className="text-xs font-semibold text-gray-700 mb-1">배포 URL</p>
                   <div className="flex items-center gap-2">
                     <code className="text-sm text-green-700 font-mono bg-green-100 px-2 py-1 rounded flex-1 overflow-x-auto">
-                      {(process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/\/$/, '')}/landing/{slug || 'your-slug'}
+                      {(() => {
+                        const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
+                        return `${baseUrl}/landing/${slug || 'your-slug'}`
+                      })()}
                     </code>
                     <button
                       onClick={() => {
-                        const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/\/$/, '')
+                        const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
                         const url = `${baseUrl}/landing/${slug}`
                         navigator.clipboard.writeText(url)
                         alert('URL이 클립보드에 복사되었습니다!')
