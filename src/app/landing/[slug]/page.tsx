@@ -1,26 +1,55 @@
 import { createClient } from '@/lib/supabase/server'
+import { createClient as createBrowserClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import PublicLandingPage from '@/components/landing-pages/PublicLandingPage'
 import { config } from '@/lib/config'
+import { LandingPage as LandingPageType } from '@/types/landing-page.types'
 
 interface Props {
   params: { slug: string }
 }
 
-// ISR: Revalidate every 60 seconds
-export const revalidate = 60
+// ISR: Revalidate every 5 minutes for better performance
+export const revalidate = 300
+
+// Generate static params for popular landing pages (build time only, no auth needed)
+export async function generateStaticParams() {
+  // Create a simple client without cookies for static generation
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+
+  const { data: landingPages } = await supabase
+    .from('landing_pages')
+    .select('slug')
+    .eq('is_active', true)
+    .limit(10) // Pre-generate top 10 landing pages
+
+  return (landingPages || []).map((page) => ({
+    slug: page.slug,
+  }))
+}
+
+// Shared function to fetch landing page (prevents duplicate queries)
+async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
+  const supabase = await createClient()
+
+  const { data, error } = await supabase
+    .from('landing_pages')
+    .select('*')
+    .eq('slug', slug)
+    .eq('is_active', true)
+    .single()
+
+  if (error || !data) return null
+  return data as LandingPageType
+}
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const supabase = await createClient()
-
-  const { data: landingPage } = await supabase
-    .from('landing_pages')
-    .select('title, meta_title, meta_description, meta_image')
-    .eq('slug', params.slug)
-    .eq('is_active', true)
-    .single()
+  const landingPage = await fetchLandingPage(params.slug)
 
   if (!landingPage) {
     return {
@@ -51,34 +80,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function LandingPage({ params }: Props) {
-  const supabase = await createClient()
+  const landingPage = await fetchLandingPage(params.slug)
 
-  // Fetch published landing page
-  const { data: landingPage, error } = await supabase
-    .from('landing_pages')
-    .select('*')
-    .eq('slug', params.slug)
-    .eq('is_active', true)
-    .single()
-
-  if (error || !landingPage) {
+  if (!landingPage) {
     notFound()
   }
 
-  // Debug: Log collect_fields to understand its structure
-  console.log('🔍 Landing Page Data:', {
-    slug: landingPage.slug,
-    collect_fields: landingPage.collect_fields,
-    collect_fields_type: typeof landingPage.collect_fields,
-    collect_fields_isArray: Array.isArray(landingPage.collect_fields),
-  })
-
-  // Increment view count (fire-and-forget)
-  supabase
+  // Increment view count asynchronously (non-blocking)
+  const supabase = await createClient()
+  void supabase
     .from('landing_pages')
     .update({ views_count: (landingPage.views_count || 0) + 1 })
     .eq('id', landingPage.id)
-    .then()
 
   return <PublicLandingPage landingPage={landingPage} />
 }

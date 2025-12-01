@@ -2,7 +2,7 @@
 
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, memo } from 'react'
 
 interface PublicLandingPageProps {
   landingPage: LandingPage
@@ -15,14 +15,14 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
 
-  // Demo realtime data
-  const demoRealtimeData = [
+  // Demo realtime data (memoized to prevent recreation on every render)
+  const demoRealtimeData = useMemo(() => [
     { name: '김민수', location: '서울 강남구' },
     { name: '이지은', location: '경기 성남시' },
     { name: '박준영', location: '인천 남동구' },
     { name: '최서연', location: '부산 해운대구' },
     { name: '정현우', location: '대전 유성구' },
-  ]
+  ], [])
 
   // Timer countdown calculation
   useEffect(() => {
@@ -59,13 +59,21 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
     return () => clearInterval(interval)
   }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, demoRealtimeData.length])
 
-  const timerCountdown = `${String(timeLeft.days).padStart(2, '0')}일 ${String(timeLeft.hours).padStart(2, '0')}시 ${String(timeLeft.minutes).padStart(2, '0')}분 ${String(timeLeft.seconds).padStart(2, '0')}초`
+  // Memoize timer countdown string to prevent unnecessary recalculations
+  const timerCountdown = useMemo(
+    () => `${String(timeLeft.days).padStart(2, '0')}일 ${String(timeLeft.hours).padStart(2, '0')}시 ${String(timeLeft.minutes).padStart(2, '0')}분 ${String(timeLeft.seconds).padStart(2, '0')}초`,
+    [timeLeft]
+  )
 
-  // Helper to check if section is enabled
-  const isSectionEnabled = (sectionType: string) => {
-    const section = landingPage.sections.find(s => s.type === sectionType)
-    return section?.enabled !== false
-  }
+  // Helper to check if section is enabled (memoized)
+  const isSectionEnabled = useMemo(() => {
+    const enabledSections = new Set(
+      landingPage.sections
+        .filter(s => s.enabled !== false)
+        .map(s => s.type)
+    )
+    return (sectionType: string) => enabledSections.has(sectionType as any)
+  }, [landingPage.sections])
 
   // Render sticky buttons (matching preview logic)
   const renderStickyButtons = (position: 'top' | 'bottom') => {
