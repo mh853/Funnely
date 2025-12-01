@@ -38,6 +38,7 @@ const calculateTimeRemaining = (deadline: string): string => {
 interface LandingPageNewFormProps {
   companyId: string
   userId: string
+  landingPage?: any // 수정 모드일 때 기존 데이터
 }
 
 interface CustomField {
@@ -68,57 +69,96 @@ interface Section {
 export default function LandingPageNewForm({
   companyId,
   userId,
+  landingPage,
 }: LandingPageNewFormProps) {
   const router = useRouter()
   const supabase = createClient()
+  const isEditMode = !!landingPage
 
-  // Form state
-  const [slug, setSlug] = useState('')
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [images, setImages] = useState<string[]>([])
-  const [collectData, setCollectData] = useState(true)
-  const [collectName, setCollectName] = useState(true)
-  const [collectPhone, setCollectPhone] = useState(true)
+  // Helper function to parse custom fields from DB
+  const parseCustomFields = (collectFields: any): CustomField[] => {
+    if (!collectFields || !Array.isArray(collectFields)) return []
+
+    return collectFields
+      .filter((field: any) => field.type === 'short_answer' || field.type === 'multiple_choice')
+      .map((field: any, index: number) => ({
+        id: `field-${index}-${Date.now()}`,
+        type: field.type,
+        question: field.question || '',
+        options: field.options || (field.type === 'multiple_choice' ? [''] : undefined),
+      }))
+  }
+
+  // Form state - initialize with existing data if editing
+  const [slug, setSlug] = useState(landingPage?.slug || '')
+  const [title, setTitle] = useState(landingPage?.title || '')
+  const [description, setDescription] = useState(landingPage?.description || '')
+  const [images, setImages] = useState<string[]>(landingPage?.images || [])
+  const [collectData, setCollectData] = useState(landingPage?.collect_data ?? true)
+  const [collectName, setCollectName] = useState(
+    landingPage?.collect_fields?.some((f: any) => f.type === 'name') ?? true
+  )
+  const [collectPhone, setCollectPhone] = useState(
+    landingPage?.collect_fields?.some((f: any) => f.type === 'phone') ?? true
+  )
 
   // Dynamic custom fields
-  const [customFields, setCustomFields] = useState<CustomField[]>([])
+  const [customFields, setCustomFields] = useState<CustomField[]>(
+    parseCustomFields(landingPage?.collect_fields)
+  )
   const [showFieldTypeModal, setShowFieldTypeModal] = useState(false)
 
-  const [descriptionEnabled, setDescriptionEnabled] = useState(true)
-  const [realtimeEnabled, setRealtimeEnabled] = useState(true)
-  const [realtimeTemplate, setRealtimeTemplate] = useState('{name}님이 {location}에서 상담 신청했습니다')
-  const [realtimeSpeed, setRealtimeSpeed] = useState(5)
-  const [realtimeCount, setRealtimeCount] = useState(10)
-  const [ctaEnabled, setCtaEnabled] = useState(true)
-  const [ctaText, setCtaText] = useState('')
-  const [ctaColor, setCtaColor] = useState('#6366f1')
-  const [timerEnabled, setTimerEnabled] = useState(true)
-  const [timerDeadline, setTimerDeadline] = useState('')
-  const [timerColor, setTimerColor] = useState('#ef4444')
+  const [descriptionEnabled, setDescriptionEnabled] = useState(landingPage?.description_enabled ?? true)
+  const [realtimeEnabled, setRealtimeEnabled] = useState(landingPage?.realtime_enabled ?? true)
+  const [realtimeTemplate, setRealtimeTemplate] = useState(
+    landingPage?.realtime_template || '{name}님이 {location}에서 상담 신청했습니다'
+  )
+  const [realtimeSpeed, setRealtimeSpeed] = useState(landingPage?.realtime_speed || 5)
+  const [realtimeCount, setRealtimeCount] = useState(landingPage?.realtime_count || 10)
+  const [ctaEnabled, setCtaEnabled] = useState(landingPage?.cta_enabled ?? true)
+  const [ctaText, setCtaText] = useState(landingPage?.cta_text || '')
+  const [ctaColor, setCtaColor] = useState(landingPage?.cta_color || '#6366f1')
+  const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? true)
+  const [timerDeadline, setTimerDeadline] = useState(landingPage?.timer_deadline || '')
+  const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
   const [timerCountdown, setTimerCountdown] = useState('00:00:00')
-  const [callButtonEnabled, setCallButtonEnabled] = useState(true)
-  const [callButtonPhone, setCallButtonPhone] = useState('')
-  const [callButtonColor, setCallButtonColor] = useState('#10b981')
+  const [callButtonEnabled, setCallButtonEnabled] = useState(landingPage?.call_button_enabled ?? true)
+  const [callButtonPhone, setCallButtonPhone] = useState(landingPage?.call_button_phone || '')
+  const [callButtonColor, setCallButtonColor] = useState(landingPage?.call_button_color || '#10b981')
 
   // Sticky button positions
-  const [ctaStickyPosition, setCtaStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
-  const [callButtonStickyPosition, setCallButtonStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
-  const [timerStickyPosition, setTimerStickyPosition] = useState<'none' | 'top' | 'bottom'>('none')
+  const [ctaStickyPosition, setCtaStickyPosition] = useState<'none' | 'top' | 'bottom'>(
+    landingPage?.cta_sticky_position || 'none'
+  )
+  const [callButtonStickyPosition, setCallButtonStickyPosition] = useState<'none' | 'top' | 'bottom'>(
+    landingPage?.call_button_sticky_position || 'none'
+  )
+  const [timerStickyPosition, setTimerStickyPosition] = useState<'none' | 'top' | 'bottom'>(
+    landingPage?.timer_sticky_position || 'none'
+  )
 
   // Collection mode (inline vs external)
-  const [collectionMode, setCollectionMode] = useState<'inline' | 'external'>('inline')
+  const [collectionMode, setCollectionMode] = useState<'inline' | 'external'>(
+    landingPage?.collection_mode || 'inline'
+  )
 
   // External form modal state
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)
 
   // Privacy consent state
-  const [requirePrivacyConsent, setRequirePrivacyConsent] = useState(true)
-  const [requireMarketingConsent, setRequireMarketingConsent] = useState(false)
-  const [privacyContent, setPrivacyContent] = useState('')
-  const [marketingContent, setMarketingContent] = useState('')
+  const [requirePrivacyConsent, setRequirePrivacyConsent] = useState(
+    landingPage?.require_privacy_consent ?? true
+  )
+  const [requireMarketingConsent, setRequireMarketingConsent] = useState(
+    landingPage?.require_marketing_consent ?? false
+  )
+  const [privacyContent, setPrivacyContent] = useState(landingPage?.privacy_content || '')
+  const [marketingContent, setMarketingContent] = useState(landingPage?.marketing_content || '')
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
+
+  // Deployment state
+  const [isActive, setIsActive] = useState(landingPage?.is_active ?? true)
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -183,21 +223,15 @@ export default function LandingPageNewForm({
   useEffect(() => {
     async function loadPrivacyPolicy() {
       try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data: profile } = await supabase
-          .from('user_profiles')
-          .select('company_id')
-          .eq('user_id', user.id)
-          .single()
-
-        if (!profile) return
+        // 수정 모드일 때는 기존 데이터 사용
+        if (landingPage?.privacy_content || landingPage?.marketing_content) {
+          return
+        }
 
         const { data: policy } = await supabase
           .from('privacy_policies')
           .select('*')
-          .eq('company_id', profile.company_id)
+          .eq('company_id', companyId)
           .single()
 
         if (policy) {
@@ -210,7 +244,7 @@ export default function LandingPageNewForm({
     }
 
     loadPrivacyPolicy()
-  }, [])
+  }, [landingPage, companyId])
 
   // Format phone number with auto-hyphen
   const formatPhoneNumber = (value: string) => {
@@ -716,8 +750,8 @@ export default function LandingPageNewForm({
       )
     }
 
-    // Call Button (inline mode only)
-    if (collectionMode === 'inline' && callButtonEnabled && callButtonStickyPosition === position) {
+    // Call Button (both modes)
+    if (callButtonEnabled && callButtonStickyPosition === position) {
       buttons.push(
         <button
           key="call"
@@ -736,7 +770,7 @@ export default function LandingPageNewForm({
 
     return (
       <div
-        className={`${position === 'top' ? 'sticky top-0' : 'sticky bottom-0'} z-10 bg-white ${isDesktop ? 'p-4' : 'p-3'} border-${position === 'top' ? 'b' : 't'} border-gray-200 shadow-md space-y-${isDesktop ? '3' : '2'}`}
+        className={`${position === 'top' ? 'sticky top-0 border-b' : 'sticky bottom-0 border-t'} z-10 bg-white ${isDesktop ? 'p-4 space-y-3' : 'p-3 space-y-2'} border-gray-200 shadow-md`}
       >
         {buttons}
       </div>
@@ -915,30 +949,63 @@ export default function LandingPageNewForm({
         })
       })
 
-      const { error: insertError } = await supabase
-        .from('landing_pages')
-        .insert({
-          company_id: companyId,
-          created_by: userId,
-          slug,
-          title,
-          images,
-          collect_data: collectData,
-          collect_fields: collectFields,
-          collection_mode: collectionMode,
-          realtime_enabled: realtimeEnabled,
-          cta_enabled: ctaEnabled,
-          cta_text: ctaText,
-          cta_color: ctaColor,
-          cta_sticky_position: ctaStickyPosition,
-          timer_enabled: timerEnabled,
-          timer_sticky_position: timerStickyPosition,
-          call_button_enabled: callButtonEnabled,
-          call_button_sticky_position: callButtonStickyPosition,
-          is_active: true,
-        })
+      const dataToSave = {
+        company_id: companyId,
+        slug,
+        title,
+        description,
+        images,
+        sections, // ✅ 섹션 데이터 추가
+        collect_data: collectData,
+        collect_fields: collectFields,
+        collection_mode: collectionMode,
+        description_enabled: descriptionEnabled,
+        realtime_enabled: realtimeEnabled,
+        realtime_template: realtimeTemplate,
+        realtime_speed: realtimeSpeed,
+        realtime_count: realtimeCount,
+        cta_enabled: ctaEnabled,
+        cta_text: ctaText,
+        cta_color: ctaColor,
+        cta_sticky_position: ctaStickyPosition,
+        timer_enabled: timerEnabled,
+        timer_deadline: timerDeadline || null, // 빈 문자열을 null로 변환
+        timer_color: timerColor,
+        timer_sticky_position: timerStickyPosition,
+        call_button_enabled: callButtonEnabled,
+        call_button_phone: callButtonPhone || null, // 빈 문자열을 null로 변환
+        call_button_color: callButtonColor,
+        call_button_sticky_position: callButtonStickyPosition,
+        require_privacy_consent: requirePrivacyConsent,
+        require_marketing_consent: requireMarketingConsent,
+        privacy_content: privacyContent || null, // 빈 문자열을 null로 변환
+        marketing_content: marketingContent || null, // 빈 문자열을 null로 변환
+        is_active: isActive,
+      }
 
-      if (insertError) throw insertError
+      if (landingPage) {
+        // 수정 모드 - company_id와 created_by는 제외
+        const { company_id, ...updateData } = dataToSave
+        const { error: updateError } = await supabase
+          .from('landing_pages')
+          .update({
+            ...updateData,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', landingPage.id)
+
+        if (updateError) throw updateError
+      } else {
+        // 생성 모드
+        const { error: insertError } = await supabase
+          .from('landing_pages')
+          .insert({
+            ...dataToSave,
+            created_by: userId,
+          })
+
+        if (insertError) throw insertError
+      }
 
       router.push('/dashboard/landing-pages')
       router.refresh()
@@ -949,12 +1016,114 @@ export default function LandingPageNewForm({
     }
   }
 
+  // Image compression utility
+  const compressImage = async (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image()
+      const reader = new FileReader()
+
+      reader.onload = (e) => {
+        img.src = e.target?.result as string
+      }
+
+      img.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = img.width
+        let height = img.height
+
+        // Resize if larger than maxWidth
+        if (width > maxWidth) {
+          height = (height * maxWidth) / width
+          width = maxWidth
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const ctx = canvas.getContext('2d')
+        ctx?.drawImage(img, 0, 0, width, height)
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob)
+            } else {
+              reject(new Error('Image compression failed'))
+            }
+          },
+          'image/jpeg',
+          quality
+        )
+      }
+
+      img.onerror = reject
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (!files || files.length === 0) return
 
-    const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-    setImages([...images, ...newImages])
+    setSaving(true)
+    try {
+      // Process all files in parallel
+      const uploadPromises = Array.from(files).map(async (file) => {
+        try {
+          // Compress image before upload
+          const compressedBlob = await compressImage(file)
+
+          // Generate unique filename
+          const fileExt = 'jpg' // Always use jpg after compression
+          const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
+          const filePath = `landing-pages/${companyId}/${fileName}`
+
+          // Upload to Supabase Storage
+          const { error: uploadError } = await supabase.storage
+            .from('public-assets')
+            .upload(filePath, compressedBlob, {
+              cacheControl: '3600',
+              upsert: false,
+              contentType: 'image/jpeg'
+            })
+
+          if (uploadError) {
+            console.error('Upload error:', uploadError)
+            throw uploadError
+          }
+
+          // Get public URL
+          const { data: { publicUrl } } = supabase.storage
+            .from('public-assets')
+            .getPublicUrl(filePath)
+
+          return publicUrl
+        } catch (error) {
+          console.error('Error processing file:', file.name, error)
+          return null
+        }
+      })
+
+      // Wait for all uploads to complete
+      const results = await Promise.all(uploadPromises)
+      const uploadedUrls = results.filter((url): url is string => url !== null)
+
+      if (uploadedUrls.length === 0) {
+        throw new Error('모든 이미지 업로드가 실패했습니다.')
+      }
+
+      if (uploadedUrls.length < files.length) {
+        alert(`${files.length - uploadedUrls.length}개의 이미지 업로드가 실패했습니다.`)
+      }
+
+      setImages([...images, ...uploadedUrls])
+    } catch (error) {
+      console.error('Error uploading images:', error)
+      alert('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const removeImage = (index: number) => {
@@ -1826,6 +1995,54 @@ export default function LandingPageNewForm({
           </div>
         )}
 
+        {/* Deployment Settings */}
+        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 pt-1">
+              <input
+                type="checkbox"
+                id="deployment-toggle"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
+              />
+            </div>
+            <div className="flex-1">
+              <label htmlFor="deployment-toggle" className="flex items-center gap-2 cursor-pointer">
+                <h3 className="text-lg font-bold text-gray-900">
+                  {isActive ? '🟢 배포 중' : '⚫ 비활성'}
+                </h3>
+              </label>
+              <p className="text-sm text-gray-600 mt-1">
+                {isActive
+                  ? '이 랜딩페이지는 현재 배포되어 있습니다. 사용자가 URL을 통해 접근할 수 있습니다.'
+                  : '이 랜딩페이지는 비활성 상태입니다. URL 접근이 차단됩니다.'}
+              </p>
+              {isActive && (
+                <div className="mt-3 bg-white/80 rounded-lg p-3 border border-green-200">
+                  <p className="text-xs font-semibold text-gray-700 mb-1">배포 URL</p>
+                  <div className="flex items-center gap-2">
+                    <code className="text-sm text-green-700 font-mono bg-green-100 px-2 py-1 rounded flex-1 overflow-x-auto">
+                      {process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr'}/landing/{slug || 'your-slug'}
+                    </code>
+                    <button
+                      onClick={() => {
+                        const url = `${process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr'}/landing/${slug}`
+                        navigator.clipboard.writeText(url)
+                        alert('URL이 클립보드에 복사되었습니다!')
+                      }}
+                      disabled={!slug}
+                      className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                    >
+                      URL 복사
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
         {/* Action Buttons */}
         <div className="flex gap-4">
           <button
@@ -1857,12 +2074,12 @@ export default function LandingPageNewForm({
                     d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                   />
                 </svg>
-                생성 중...
+                {landingPage ? '수정 중...' : '생성 중...'}
               </>
             ) : (
               <>
                 <CheckIcon className="h-5 w-5" />
-                생성하기
+                {landingPage ? '수정하기' : '생성하기'}
               </>
             )}
           </button>
@@ -1916,6 +2133,7 @@ export default function LandingPageNewForm({
                     if (content === null) return false
 
                     // Filter out sticky buttons
+                    if (section.type === 'timer' && timerStickyPosition !== 'none') return false
                     if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
                     if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
 
@@ -2048,6 +2266,7 @@ export default function LandingPageNewForm({
                           if (content === null) return false
 
                           // Filter out sticky buttons
+                          if (section.type === 'timer' && timerStickyPosition !== 'none') return false
                           if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
                           if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
 

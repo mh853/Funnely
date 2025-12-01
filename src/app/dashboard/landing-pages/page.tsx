@@ -1,7 +1,8 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { PlusIcon, GlobeAltIcon, PencilIcon } from '@heroicons/react/24/outline'
+import { PlusIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
+import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
 
 type PeriodFilter = 'today' | 'week' | 'month'
 
@@ -193,6 +194,12 @@ export default async function LandingPagesPage({
                     scope="col"
                     className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
                   >
+                    상태
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                  >
                     페이지 뷰
                   </th>
                   <th
@@ -217,73 +224,14 @@ export default async function LandingPagesPage({
                     scope="col"
                     className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
                   >
-                    수정
+                    작업
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {landingPagesWithStats.map((page, index) => {
-                  const createdDate = new Date(page.created_at)
-                  const formattedDate = createdDate.toLocaleDateString('ko-KR', {
-                    year: 'numeric',
-                    month: '2-digit',
-                    day: '2-digit',
-                  })
-
-                  return (
-                    <tr
-                      key={page.id}
-                      className={`transition-colors hover:bg-indigo-50 ${
-                        index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
-                      }`}
-                    >
-                      <td className="px-6 py-5 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formattedDate}
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap">
-                        <div className="flex items-center">
-                          <div>
-                            <div className="text-sm font-semibold text-gray-900">
-                              {page.title}
-                            </div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              /{page.slug}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-center">
-                        <span className="text-sm font-semibold text-gray-900">
-                          {page.pageViews.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-blue-100 text-blue-800">
-                          {page.dbInflow.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-red-100 text-red-800">
-                          {page.rejectedCount.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-center">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-800">
-                          {page.contractCount.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-6 py-5 whitespace-nowrap text-center text-sm">
-                        <Link
-                          href={`/dashboard/landing-pages/${page.id}/edit`}
-                          className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg font-medium hover:from-indigo-600 hover:to-purple-700 transition-all shadow-sm gap-2"
-                        >
-                          <PencilIcon className="h-4 w-4" />
-                          수정
-                        </Link>
-                      </td>
-                    </tr>
-                  )
-                })}
+                {landingPagesWithStats.map((page, index) => (
+                  <LandingPageTableRow key={page.id} page={page} index={index} />
+                ))}
               </tbody>
             </table>
           </div>
