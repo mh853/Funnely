@@ -1,12 +1,25 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import LandingPageNewForm from '@/components/landing-pages/LandingPageNewForm'
+import dynamic from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import LandingPageFormSkeleton from '@/components/landing-pages/LandingPageFormSkeleton'
+
+// Dynamic import for large form component
+const LandingPageNewForm = dynamic(
+  () => import('@/components/landing-pages/LandingPageNewForm'),
+  {
+    loading: () => <LandingPageFormSkeleton />,
+    ssr: false,
+  }
+)
 
 interface Props {
   params: { id: string }
 }
+
+// ISR: Revalidate every 1 minute for edit page
+export const revalidate = 60
 
 export default async function LandingPageEditPage({ params }: Props) {
   const supabase = await createClient()
