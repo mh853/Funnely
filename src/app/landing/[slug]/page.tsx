@@ -1,5 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createBrowserClient } from '@supabase/supabase-js'
+import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import PublicLandingPage from '@/components/landing-pages/PublicLandingPage'
@@ -13,13 +12,17 @@ interface Props {
 // ISR: Revalidate every 5 minutes for better performance
 export const revalidate = 300
 
-// Generate static params for popular landing pages (build time only, no auth needed)
-export async function generateStaticParams() {
-  // Create a simple client without cookies for static generation
-  const supabase = createBrowserClient(
+// Create a public Supabase client (no cookies needed for public landing pages)
+function getPublicSupabaseClient() {
+  return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   )
+}
+
+// Generate static params for popular landing pages (build time only, no auth needed)
+export async function generateStaticParams() {
+  const supabase = getPublicSupabaseClient()
 
   const { data: landingPages } = await supabase
     .from('landing_pages')
@@ -34,7 +37,7 @@ export async function generateStaticParams() {
 
 // Shared function to fetch landing page (prevents duplicate queries)
 async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
-  const supabase = await createClient()
+  const supabase = getPublicSupabaseClient()
 
   const { data, error } = await supabase
     .from('landing_pages')
@@ -89,7 +92,7 @@ export default async function LandingPage({ params }: Props) {
   }
 
   // Increment view count asynchronously (non-blocking)
-  const supabase = await createClient()
+  const supabase = getPublicSupabaseClient()
   void supabase
     .from('landing_pages')
     .update({ views_count: (landingPage.views_count || 0) + 1 })
