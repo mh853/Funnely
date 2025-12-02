@@ -12,17 +12,24 @@ interface Props {
 // ISR: Revalidate every 5 minutes for better performance
 export const revalidate = 300
 
-// Create a public Supabase client (no cookies needed for public landing pages)
-function getPublicSupabaseClient() {
+// Create a Supabase client with service role for public landing pages
+// Service role bypasses RLS - safe for server components only
+function getServiceRoleClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
   )
 }
 
 // Generate static params for popular landing pages (build time only, no auth needed)
 export async function generateStaticParams() {
-  const supabase = getPublicSupabaseClient()
+  const supabase = getServiceRoleClient()
 
   const { data: landingPages } = await supabase
     .from('landing_pages')
@@ -37,7 +44,7 @@ export async function generateStaticParams() {
 
 // Shared function to fetch landing page (prevents duplicate queries)
 async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
-  const supabase = getPublicSupabaseClient()
+  const supabase = getServiceRoleClient()
 
   const { data, error } = await supabase
     .from('landing_pages')
@@ -92,7 +99,7 @@ export default async function LandingPage({ params }: Props) {
   }
 
   // Increment view count asynchronously (non-blocking)
-  const supabase = getPublicSupabaseClient()
+  const supabase = getServiceRoleClient()
   void supabase
     .from('landing_pages')
     .update({ views_count: (landingPage.views_count || 0) + 1 })
