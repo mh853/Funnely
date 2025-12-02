@@ -6,8 +6,8 @@ import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
 
 type PeriodFilter = 'today' | 'week' | 'month'
 
-// ISR: Revalidate every 60 seconds for better performance
-export const revalidate = 60
+// ISR: Revalidate every 5 minutes for better performance and reduced server load
+export const revalidate = 300
 
 export default async function LandingPagesPage({
   searchParams,
@@ -55,10 +55,10 @@ export default async function LandingPagesPage({
       startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
   }
 
-  // Get landing pages with statistics in a single optimized query
+  // Get landing pages with only needed columns (optimized data transfer)
   const { data: landingPages } = await supabase
     .from('landing_pages')
-    .select('*')
+    .select('id, title, slug, is_active, created_at, views_count, company_id')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
