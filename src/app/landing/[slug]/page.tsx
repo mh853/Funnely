@@ -27,7 +27,7 @@ export async function generateStaticParams() {
   const { data: landingPages } = await supabase
     .from('landing_pages')
     .select('slug')
-    .eq('is_active', true)
+    .eq('status', 'published')
     .limit(10) // Pre-generate top 10 landing pages
 
   return (landingPages || []).map((page) => ({
@@ -43,7 +43,7 @@ async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
     .from('landing_pages')
     .select('*')
     .eq('slug', slug)
-    .eq('is_active', true)
+    .eq('status', 'published')
     .single()
 
   if (error || !data) return null
