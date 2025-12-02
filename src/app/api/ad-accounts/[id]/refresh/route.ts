@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -37,7 +38,7 @@ export async function POST(
     const { data: adAccount, error: accountError } = await supabase
       .from('ad_accounts')
       .select('*')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (accountError || !adAccount) {
@@ -83,7 +84,7 @@ export async function POST(
         token_expires_at: expiresAt,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       throw new Error('토큰 업데이트에 실패했습니다.')

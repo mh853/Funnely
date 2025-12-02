@@ -7,7 +7,7 @@ import { config } from '@/lib/config'
 import { LandingPage as LandingPageType } from '@/types/landing-page.types'
 
 interface Props {
-  params: { slug: string }
+  params: Promise<{ slug: string }>
 }
 
 // ISR: Revalidate every 5 minutes for better performance
@@ -49,7 +49,8 @@ async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const landingPage = await fetchLandingPage(params.slug)
+  const { slug } = await params
+  const landingPage = await fetchLandingPage(slug)
 
   if (!landingPage) {
     return {
@@ -80,7 +81,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function LandingPage({ params }: Props) {
-  const landingPage = await fetchLandingPage(params.slug)
+  const { slug } = await params
+  const landingPage = await fetchLandingPage(slug)
 
   if (!landingPage) {
     notFound()

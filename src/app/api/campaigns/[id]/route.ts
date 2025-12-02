@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -37,7 +38,7 @@ export async function PATCH(
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select('company_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (campaignError || !campaign) {
@@ -74,7 +75,7 @@ export async function PATCH(
         end_date,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       console.error('Campaign update error:', updateError)
@@ -95,9 +96,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -129,7 +131,7 @@ export async function DELETE(
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .select('company_id')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (campaignError || !campaign) {
@@ -145,7 +147,7 @@ export async function DELETE(
     const { error: deleteError } = await supabase
       .from('campaigns')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteError) {
       console.error('Campaign deletion error:', deleteError)

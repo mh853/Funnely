@@ -4,9 +4,10 @@ import type { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials 
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { platform: string } }
+  { params }: { params: Promise<{ platform: string }> }
 ) {
   try {
+    const { platform: platformParam } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -34,7 +35,7 @@ export async function GET(
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    const platform = params.platform as ApiPlatform
+    const platform = platformParam as ApiPlatform
 
     // Validate platform
     if (!['meta', 'kakao', 'google'].includes(platform)) {

@@ -13,8 +13,8 @@ const nextConfig = {
   // 프로덕션 빌드 최적화
   poweredByHeader: false, // X-Powered-By 헤더 제거
 
-  // 정적 페이지 생성 최적화
-  output: 'standalone', // Docker/serverless 배포 최적화
+  // Vercel은 자체 최적화 배포를 사용하므로 standalone 불필요
+  // output: 'standalone', // Docker/자체 서버 배포 시에만 사용
 
   images: {
     domains: ['localhost'],

@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server'
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -37,7 +38,7 @@ export async function PATCH(
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
       .select('company_id, role')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (targetError || !targetUser) {
@@ -77,7 +78,7 @@ export async function PATCH(
         role,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (updateError) {
       console.error('User update error:', updateError)
@@ -95,9 +96,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
 
     // Check authentication
@@ -110,7 +112,7 @@ export async function DELETE(
     }
 
     // Prevent self-deletion
-    if (user.id === params.id) {
+    if (user.id === id) {
       return NextResponse.json({ error: '본인 계정은 삭제할 수 없습니다.' }, { status: 400 })
     }
 
@@ -134,7 +136,7 @@ export async function DELETE(
     const { data: targetUser, error: targetError } = await supabase
       .from('users')
       .select('company_id, role')
-      .eq('id', params.id)
+      .eq('id', id)
       .single()
 
     if (targetError || !targetUser) {
@@ -155,7 +157,7 @@ export async function DELETE(
     const { error: deleteUserError } = await supabase
       .from('users')
       .delete()
-      .eq('id', params.id)
+      .eq('id', id)
 
     if (deleteUserError) {
       console.error('User profile deletion error:', deleteUserError)
@@ -163,7 +165,7 @@ export async function DELETE(
     }
 
     // Delete auth user using admin API
-    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(params.id)
+    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(id)
 
     if (deleteAuthError) {
       console.error('Auth user deletion error:', deleteAuthError)
