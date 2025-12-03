@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { PlusIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
+import LandingPageMobileCard from '@/components/landing-pages/LandingPageMobileCard'
 
 type PeriodFilter = 'today' | 'week' | 'month'
 
@@ -97,18 +98,18 @@ export default async function LandingPagesPage({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex items-center justify-between">
+      {/* Header - 모바일 최적화 */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-8 text-white shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">랜딩 페이지 관리</h1>
-            <p className="mt-2 text-indigo-100">
+            <h1 className="text-xl sm:text-3xl font-bold">랜딩 페이지 관리</h1>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-indigo-100">
               DB 수집용 랜딩 페이지를 만들고 관리합니다
             </p>
           </div>
           <Link
             href="/dashboard/landing-pages/new"
-            className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
+            className="w-full sm:w-auto px-4 sm:px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center justify-center gap-2"
           >
             <PlusIcon className="h-5 w-5" />
             새 랜딩 페이지
@@ -116,12 +117,12 @@ export default async function LandingPagesPage({
         </div>
       </div>
 
-      {/* Period Filter */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
-        <div className="flex gap-3">
+      {/* Period Filter - 모바일 최적화 */}
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+        <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1">
           <Link
             href="/dashboard/landing-pages?period=today"
-            className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold transition-all duration-200 ${
               period === 'today'
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -131,7 +132,7 @@ export default async function LandingPagesPage({
           </Link>
           <Link
             href="/dashboard/landing-pages?period=week"
-            className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold transition-all duration-200 ${
               period === 'week'
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -141,7 +142,7 @@ export default async function LandingPagesPage({
           </Link>
           <Link
             href="/dashboard/landing-pages?period=month"
-            className={`px-6 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+            className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold transition-all duration-200 ${
               period === 'month'
                 ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
                 : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
@@ -152,20 +153,20 @@ export default async function LandingPagesPage({
         </div>
       </div>
 
-      {/* Landing Pages Table */}
+      {/* Landing Pages - 모바일 최적화 */}
       {!landingPagesWithStats || landingPagesWithStats.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl shadow-lg">
-          <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <GlobeAltIcon className="h-10 w-10 text-indigo-600" />
+        <div className="text-center py-12 sm:py-16 bg-white rounded-xl sm:rounded-2xl shadow-lg px-4">
+          <div className="bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full w-16 h-16 sm:w-20 sm:h-20 flex items-center justify-center mx-auto mb-4">
+            <GlobeAltIcon className="h-8 w-8 sm:h-10 sm:w-10 text-indigo-600" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900">랜딩 페이지 없음</h3>
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900">랜딩 페이지 없음</h3>
           <p className="mt-2 text-sm text-gray-600">
             DB 수집을 위한 첫 랜딩 페이지를 만들어보세요.
           </p>
-          <div className="mt-8">
+          <div className="mt-6 sm:mt-8">
             <Link
               href="/dashboard/landing-pages/new"
-              className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg gap-2"
+              className="inline-flex items-center px-5 sm:px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg gap-2 text-sm sm:text-base"
             >
               <PlusIcon className="h-5 w-5" />
               랜딩 페이지 만들기
@@ -173,69 +174,79 @@ export default async function LandingPagesPage({
           </div>
         </div>
       ) : (
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
-                <tr>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    생성 날짜
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    랜딩페이지 이름
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    상태
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    페이지 뷰
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    DB 유입
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    상담 거절
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    계약완료
-                  </th>
-                  <th
-                    scope="col"
-                    className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
-                  >
-                    작업
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {landingPagesWithStats.map((page, index) => (
-                  <LandingPageTableRow key={page.id} page={page} index={index} />
-                ))}
-              </tbody>
-            </table>
+        <>
+          {/* 모바일 카드 뷰 */}
+          <div className="sm:hidden space-y-4">
+            {landingPagesWithStats.map((page) => (
+              <LandingPageMobileCard key={page.id} page={page} />
+            ))}
           </div>
-        </div>
+
+          {/* 데스크톱 테이블 뷰 */}
+          <div className="hidden sm:block bg-white rounded-2xl shadow-lg overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gradient-to-r from-gray-50 to-gray-100">
+                  <tr>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      생성 날짜
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-left text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      랜딩페이지 이름
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      상태
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      페이지 뷰
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      DB 유입
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      상담 거절
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      계약완료
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      작업
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {landingPagesWithStats.map((page, index) => (
+                    <LandingPageTableRow key={page.id} page={page} index={index} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

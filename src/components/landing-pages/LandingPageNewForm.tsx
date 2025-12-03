@@ -1131,24 +1131,24 @@ export default function LandingPageNewForm({
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
       {/* Main Form */}
-      <div className="lg:col-span-2 space-y-6">
+      <div className="lg:col-span-2 space-y-4 sm:space-y-6">
         {/* URL Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             랜딩페이지 주소
           </h2>
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+              <span className="text-sm text-gray-600 flex-shrink-0">
                 https://funnely.co.kr/landing/
               </span>
               <input
                 type="text"
                 value={slug}
                 onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                className="w-full sm:flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 placeholder="페이지-주소"
               />
             </div>
@@ -1165,8 +1165,8 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Title Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             랜딩페이지 이름
           </h2>
           <input
@@ -1179,13 +1179,13 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Description Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             랜딩페이지 설명
           </h2>
 
           {/* Radio Buttons */}
-          <div className="flex items-center gap-4 mb-4">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4">
             <label className="flex items-center gap-3 cursor-pointer">
               <input
                 type="radio"
@@ -1219,12 +1219,12 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Images Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             이미지/영상 등록
           </h2>
           <div className="space-y-4">
-            <label className="inline-flex items-center px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2">
+            <label className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2 text-sm sm:text-base">
               <PhotoIcon className="h-5 w-5" />
               파일 업로드
               <input
@@ -1279,34 +1279,34 @@ export default function LandingPageNewForm({
         </div>
 
         {/* DB Collection Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">DB 수집 항목</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">DB 수집 항목</h2>
           <div className="space-y-4">
             {/* Collection Mode Selection */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-4">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 sm:p-4 mb-4">
               <h3 className="text-sm font-bold text-gray-900 mb-3">수집 방식 선택</h3>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-3 cursor-pointer">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <label className="flex items-start sm:items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     checked={collectionMode === 'inline'}
                     onChange={() => setCollectionMode('inline')}
-                    className="w-5 h-5 text-indigo-600"
+                    className="w-5 h-5 text-indigo-600 mt-0.5 sm:mt-0"
                   />
                   <div>
-                    <span className="font-semibold text-gray-900">옵션1: 페이지 내 수집</span>
+                    <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션1: 페이지 내 수집</span>
                     <p className="text-xs text-gray-600">랜딩 페이지에서 바로 정보 수집</p>
                   </div>
                 </label>
-                <label className="flex items-center gap-3 cursor-pointer">
+                <label className="flex items-start sm:items-center gap-3 cursor-pointer">
                   <input
                     type="radio"
                     checked={collectionMode === 'external'}
                     onChange={() => setCollectionMode('external')}
-                    className="w-5 h-5 text-purple-600"
+                    className="w-5 h-5 text-purple-600 mt-0.5 sm:mt-0"
                   />
                   <div>
-                    <span className="font-semibold text-gray-900">옵션2: 외부 페이지 수집</span>
+                    <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
                     <p className="text-xs text-gray-600">별도 페이지에서 상세 정보 수집</p>
                   </div>
                 </label>
@@ -1315,8 +1315,8 @@ export default function LandingPageNewForm({
 
             {/* External Page Info (Option 2 only) */}
             {collectionMode === 'external' && (
-              <div className="bg-purple-50 rounded-xl p-4 mb-4">
-                <p className="text-sm text-purple-900">
+              <div className="bg-purple-50 rounded-xl p-3 sm:p-4 mb-4">
+                <p className="text-xs sm:text-sm text-purple-900 break-all">
                   💡 외부 수집 페이지 URL: <span className="font-semibold">https://funnely.co.kr/landing/{slug || '[페이지-주소]'}/collect-detail</span>
                 </p>
                 <p className="text-xs text-purple-700 mt-2">
@@ -1329,7 +1329,7 @@ export default function LandingPageNewForm({
             {collectionMode && (
               <>
                 {/* Enable/Disable Toggle */}
-                <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 pb-4 border-b border-gray-200">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input
                       type="radio"
@@ -1354,33 +1354,33 @@ export default function LandingPageNewForm({
                 {collectData && (
               <div className="space-y-4">
                 {/* Fixed Fields: Name and Phone */}
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <label className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
                     <input
                       type="checkbox"
                       checked={collectName}
                       onChange={(e) => setCollectName(e.target.checked)}
                       className="w-5 h-5 text-indigo-600 rounded"
                     />
-                    <span className="font-medium text-gray-900">1. 이름</span>
+                    <span className="font-medium text-gray-900 text-sm sm:text-base">1. 이름</span>
                   </label>
 
-                  <label className="flex items-center gap-3 p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
+                  <label className="flex items-center gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl cursor-pointer hover:bg-indigo-50 transition-colors">
                     <input
                       type="checkbox"
                       checked={collectPhone}
                       onChange={(e) => setCollectPhone(e.target.checked)}
                       className="w-5 h-5 text-indigo-600 rounded"
                     />
-                    <span className="font-medium text-gray-900">2. 연락처</span>
+                    <span className="font-medium text-gray-900 text-sm sm:text-base">2. 연락처</span>
                   </label>
                 </div>
 
                 {/* Custom Fields */}
                 {customFields.map((field, index) => (
-                  <div key={field.id} className="border-2 border-gray-200 rounded-xl p-4 space-y-3">
+                  <div key={field.id} className="border-2 border-gray-200 rounded-xl p-3 sm:p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-bold text-gray-900">
+                      <h3 className="text-base sm:text-lg font-bold text-gray-900">
                         {field.type === 'short_answer' ? '단답형 항목 추가' : '선택형 항목 추가'}
                       </h3>
                       <button
@@ -1392,8 +1392,8 @@ export default function LandingPageNewForm({
                     </div>
 
                     {/* Question Input */}
-                    <div className="flex items-center gap-3">
-                      <label className="text-sm font-medium text-gray-700 w-16">질문</label>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                      <label className="text-sm font-medium text-gray-700 sm:w-16">질문</label>
                       <input
                         type="text"
                         value={field.question}
@@ -1405,30 +1405,32 @@ export default function LandingPageNewForm({
 
                     {/* Multiple Choice Options */}
                     {field.type === 'multiple_choice' && field.options && (
-                      <div className="space-y-2 pl-20">
+                      <div className="space-y-2 sm:pl-20">
                         {field.options.map((option, optionIndex) => (
-                          <div key={optionIndex} className="flex items-center gap-2">
-                            <label className="text-sm font-medium text-gray-700 w-20">선택항목</label>
-                            <input
-                              type="text"
-                              value={option}
-                              onChange={(e) => updateOption(field.id, optionIndex, e.target.value)}
-                              className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                              placeholder="선택항목 입력"
-                            />
-                            {field.options!.length > 1 && (
-                              <button
-                                onClick={() => removeOption(field.id, optionIndex)}
-                                className="p-2 hover:bg-gray-100 rounded-full"
-                              >
-                                <XMarkIcon className="h-4 w-4 text-gray-500" />
-                              </button>
-                            )}
+                          <div key={optionIndex} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                            <label className="text-sm font-medium text-gray-700 sm:w-20">선택항목</label>
+                            <div className="flex items-center gap-2 flex-1">
+                              <input
+                                type="text"
+                                value={option}
+                                onChange={(e) => updateOption(field.id, optionIndex, e.target.value)}
+                                className="flex-1 px-3 sm:px-4 py-2 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                                placeholder="선택항목 입력"
+                              />
+                              {field.options!.length > 1 && (
+                                <button
+                                  onClick={() => removeOption(field.id, optionIndex)}
+                                  className="p-2 hover:bg-gray-100 rounded-full flex-shrink-0"
+                                >
+                                  <XMarkIcon className="h-4 w-4 text-gray-500" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         ))}
                         <button
                           onClick={() => addOption(field.id)}
-                          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-medium hover:bg-gray-200 transition-colors gap-2 ml-20"
+                          className="inline-flex items-center px-4 py-2 bg-gray-100 text-gray-700 rounded-full font-medium hover:bg-gray-200 transition-colors gap-2 sm:ml-20 text-sm"
                         >
                           <PlusIcon className="h-4 w-4" />
                           선택항목 추가
@@ -1475,8 +1477,8 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Realtime Status Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">실시간 현황 사용</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">실시간 현황 사용</h2>
 
           {/* Conditional Notice */}
           {!collectData && (
@@ -1492,7 +1494,7 @@ export default function LandingPageNewForm({
 
           <div className="space-y-4">
             {/* Radio Buttons */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
@@ -1530,11 +1532,11 @@ export default function LandingPageNewForm({
                     value={realtimeTemplate}
                     onChange={(e) => setRealtimeTemplate(e.target.value)}
                     placeholder="예: {name}님이 {location}에서 상담 신청했습니다"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-sm sm:text-base"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700">
                       롤링 속도 (초)
@@ -1582,8 +1584,8 @@ export default function LandingPageNewForm({
         </div>
 
         {/* CTA Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">하단 CTA 버튼</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">하단 CTA 버튼</h2>
 
           {/* Conditional Notice */}
           {!collectData && (
@@ -1598,7 +1600,7 @@ export default function LandingPageNewForm({
           )}
 
           <div className="space-y-4">
-            <div className="flex items-center gap-4 pb-4 border-b border-gray-200">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4 pb-4 border-b border-gray-200">
               <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
@@ -1624,20 +1626,20 @@ export default function LandingPageNewForm({
             {/* CTA Settings (only when enabled and collectData is true) */}
             {ctaEnabled && collectData && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-20">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-20">
                     버튼명
                   </label>
                   <input
                     type="text"
                     value={ctaText}
                     onChange={(e) => setCtaText(e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                     placeholder="상담 신청하기"
                   />
                 </div>
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-20">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-20">
                     버튼 색상
                   </label>
                   <div className="flex items-center gap-3 flex-1">
@@ -1645,13 +1647,13 @@ export default function LandingPageNewForm({
                       type="color"
                       value={ctaColor}
                       onChange={(e) => setCtaColor(e.target.value)}
-                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-200 cursor-pointer flex-shrink-0"
                     />
                     <input
                       type="text"
                       value={ctaColor}
                       onChange={(e) => setCtaColor(e.target.value)}
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
                       placeholder="#6366f1"
                     />
                   </div>
@@ -1662,7 +1664,7 @@ export default function LandingPageNewForm({
                   <label className="block text-sm font-medium text-gray-700">
                     화면 고정 위치
                   </label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -1707,10 +1709,10 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Timer Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">타이머 사용</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">타이머 사용</h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="radio"
@@ -1733,19 +1735,19 @@ export default function LandingPageNewForm({
 
             {timerEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-24">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
                     마감 날짜/시간
                   </label>
                   <input
                     type="datetime-local"
                     value={timerDeadline}
                     onChange={(e) => setTimerDeadline(e.target.value)}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                   />
                 </div>
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-24">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
                     타이머 색상
                   </label>
                   <div className="flex items-center gap-3 flex-1">
@@ -1753,13 +1755,13 @@ export default function LandingPageNewForm({
                       type="color"
                       value={timerColor}
                       onChange={(e) => setTimerColor(e.target.value)}
-                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-200 cursor-pointer flex-shrink-0"
                     />
                     <input
                       type="text"
                       value={timerColor}
                       onChange={(e) => setTimerColor(e.target.value)}
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
                       placeholder="#ef4444"
                     />
                   </div>
@@ -1770,7 +1772,7 @@ export default function LandingPageNewForm({
                   <label className="block text-sm font-medium text-gray-700">
                     화면 고정 위치
                   </label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -1809,10 +1811,10 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Call Button Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">전화 연결 버튼</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">전화 연결 버튼</h2>
           <div className="space-y-4">
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
                   type="radio"
@@ -1835,21 +1837,21 @@ export default function LandingPageNewForm({
 
             {callButtonEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-24">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
                     전화번호
                   </label>
                   <input
                     type="tel"
                     value={callButtonPhone}
                     onChange={(e) => setCallButtonPhone(formatPhoneNumber(e.target.value))}
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                     placeholder="01012345678"
                     maxLength={13}
                   />
                 </div>
-                <div className="flex items-center gap-4">
-                  <label className="text-sm font-medium text-gray-700 w-24">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
                     버튼 색상
                   </label>
                   <div className="flex items-center gap-3 flex-1">
@@ -1857,13 +1859,13 @@ export default function LandingPageNewForm({
                       type="color"
                       value={callButtonColor}
                       onChange={(e) => setCallButtonColor(e.target.value)}
-                      className="w-12 h-12 rounded-lg border-2 border-gray-200 cursor-pointer"
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-200 cursor-pointer flex-shrink-0"
                     />
                     <input
                       type="text"
                       value={callButtonColor}
                       onChange={(e) => setCallButtonColor(e.target.value)}
-                      className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
                       placeholder="#10b981"
                     />
                   </div>
@@ -1874,7 +1876,7 @@ export default function LandingPageNewForm({
                   <label className="block text-sm font-medium text-gray-700">
                     화면 고정 위치
                   </label>
-                  <div className="flex items-center gap-4">
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
                         type="radio"
@@ -1919,12 +1921,12 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Privacy Consent Section */}
-        <div className="bg-white rounded-2xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold text-gray-900">개인정보 동의</h2>
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">개인정보 동의</h2>
             <Link
               href="/dashboard/settings/privacy-policy"
-              className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+              className="px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -1945,48 +1947,48 @@ export default function LandingPageNewForm({
             </div>
           )}
 
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {/* 개인정보 수집·이용 동의 */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   checked={requirePrivacyConsent}
                   onChange={(e) => setRequirePrivacyConsent(e.target.checked)}
                   disabled={!collectData}
-                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50"
+                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50 flex-shrink-0"
                 />
-                <div>
-                  <span className="font-semibold text-gray-900">개인정보 수집·이용 동의</span>
-                  <span className="ml-2 text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">필수</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-gray-900 text-sm sm:text-base">개인정보 수집·이용 동의</span>
+                  <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">필수</span>
                 </div>
               </div>
               <button
                 onClick={() => setShowPrivacyModal(true)}
-                className="text-sm text-indigo-600 underline"
+                className="text-sm text-indigo-600 underline ml-8 sm:ml-0"
               >
                 내용 미리보기
               </button>
             </div>
 
             {/* 마케팅 활용 동의 */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 sm:p-4 bg-gray-50 rounded-xl">
               <div className="flex items-center gap-3">
                 <input
                   type="checkbox"
                   checked={requireMarketingConsent}
                   onChange={(e) => setRequireMarketingConsent(e.target.checked)}
                   disabled={!collectData}
-                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50"
+                  className="w-5 h-5 text-indigo-600 rounded disabled:opacity-50 flex-shrink-0"
                 />
-                <div>
-                  <span className="font-semibold text-gray-900">마케팅 활용 동의</span>
-                  <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">선택</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-semibold text-gray-900 text-sm sm:text-base">마케팅 활용 동의</span>
+                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">선택</span>
                 </div>
               </div>
               <button
                 onClick={() => setShowMarketingModal(true)}
-                className="text-sm text-indigo-600 underline"
+                className="text-sm text-indigo-600 underline ml-8 sm:ml-0"
               >
                 내용 미리보기
               </button>
@@ -2039,8 +2041,8 @@ export default function LandingPageNewForm({
               {isActive && (
                 <div className="mt-3 bg-white/80 rounded-lg p-3 border border-green-200">
                   <p className="text-xs font-semibold text-gray-700 mb-1">배포 URL</p>
-                  <div className="flex items-center gap-2">
-                    <code className="text-sm text-green-700 font-mono bg-green-100 px-2 py-1 rounded flex-1 overflow-x-auto">
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <code className="text-xs sm:text-sm text-green-700 font-mono bg-green-100 px-2 py-1.5 rounded w-full sm:flex-1 overflow-x-auto break-all">
                       {(() => {
                         const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
                         return `${baseUrl}/landing/${slug || 'your-slug'}`
@@ -2054,7 +2056,7 @@ export default function LandingPageNewForm({
                         alert('URL이 클립보드에 복사되었습니다!')
                       }}
                       disabled={!slug}
-                      className="px-3 py-1 bg-green-600 text-white text-xs rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      className="w-full sm:w-auto px-3 py-2 sm:py-1 bg-green-600 text-white text-sm sm:text-xs rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
                     >
                       URL 복사
                     </button>
@@ -2066,17 +2068,17 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-4">
+        <div className="flex gap-3 sm:gap-4">
           <button
             onClick={() => router.push('/dashboard/landing-pages')}
-            className="flex-1 px-6 py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+            className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-white border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-all text-sm sm:text-base"
           >
             취소
           </button>
           <button
             onClick={handleSave}
             disabled={saving || !slug || !title}
-            className="flex-1 px-6 py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="flex-1 px-4 sm:px-6 py-3 sm:py-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm sm:text-base"
           >
             {saving ? (
               <>

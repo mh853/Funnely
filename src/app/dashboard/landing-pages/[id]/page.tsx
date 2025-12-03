@@ -61,23 +61,23 @@ export default async function LandingPageDetailPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header - 모바일 최적화 */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4">
           <Link
             href="/dashboard/landing-pages"
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-1 -ml-1"
           >
-            <ArrowLeftIcon className="h-6 w-6" />
+            <ArrowLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">{landingPage.title}</h1>
-            <p className="mt-1 text-sm text-gray-600">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 truncate">{landingPage.title}</h1>
+            <p className="mt-0.5 sm:mt-1 text-xs sm:text-sm text-gray-600 truncate">
               {landingPage.status === 'published' ? (
                 <span className="inline-flex items-center">
-                  <GlobeAltIcon className="mr-1 h-4 w-4" />
-                  {getLandingPageUrl(landingPage.slug).replace('https://', '')}
+                  <GlobeAltIcon className="mr-1 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
+                  <span className="truncate">{getLandingPageUrl(landingPage.slug).replace('https://', '')}</span>
                 </span>
               ) : (
                 <span className="text-gray-500">초안</span>
@@ -86,33 +86,33 @@ export default async function LandingPageDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center ml-8 sm:ml-0">
           {landingPage.status === 'published' && (
             <a
               href={getLandingPageUrl(landingPage.slug)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
             >
-              <EyeIcon className="-ml-1 mr-2 h-5 w-5" />
+              <EyeIcon className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
               미리보기
             </a>
           )}
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
+      {/* Stats - 모바일 최적화 */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-5">
+        <div className="bg-white overflow-hidden shadow rounded-xl">
+          <div className="p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0">
                 <EyeIcon className="h-6 w-6 text-gray-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="sm:ml-5 w-full sm:w-0 sm:flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">조회수</dt>
-                  <dd className="text-lg font-semibold text-gray-900">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">조회수</dt>
+                  <dd className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">
                     {landingPage.views_count?.toLocaleString() || 0}
                   </dd>
                 </dl>
@@ -121,16 +121,16 @@ export default async function LandingPageDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
+        <div className="bg-white overflow-hidden shadow rounded-xl">
+          <div className="p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0">
                 <ChartBarIcon className="h-6 w-6 text-gray-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="sm:ml-5 w-full sm:w-0 sm:flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">신청수</dt>
-                  <dd className="text-lg font-semibold text-gray-900">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">신청수</dt>
+                  <dd className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">
                     {landingPage.submissions_count?.toLocaleString() || 0}
                   </dd>
                 </dl>
@@ -139,19 +139,19 @@ export default async function LandingPageDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
+        <div className="bg-white overflow-hidden shadow rounded-xl">
+          <div className="p-3 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center">
+              <div className="hidden sm:block flex-shrink-0">
                 <ChartBarIcon className="h-6 w-6 text-green-400" />
               </div>
-              <div className="ml-5 w-0 flex-1">
+              <div className="sm:ml-5 w-full sm:w-0 sm:flex-1">
                 <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">전환율</dt>
-                  <dd className="text-lg font-semibold text-gray-900">
+                  <dt className="text-xs sm:text-sm font-medium text-gray-500 truncate">전환율</dt>
+                  <dd className="text-base sm:text-lg font-semibold text-gray-900 mt-0.5">
                     {landingPage.views_count > 0
                       ? ((landingPage.submissions_count / landingPage.views_count) * 100).toFixed(
-                          2
+                          1
                         )
                       : 0}
                     %

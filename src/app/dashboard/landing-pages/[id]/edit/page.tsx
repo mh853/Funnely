@@ -88,23 +88,21 @@ export default async function LandingPageEditPage({ params }: Props) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Link
-              href="/dashboard/landing-pages"
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <ArrowLeftIcon className="h-6 w-6" />
-            </Link>
-            <div>
-              <h1 className="text-3xl font-bold">랜딩페이지 수정</h1>
-              <p className="mt-2 text-indigo-100">
-                랜딩페이지 설정을 수정하고 업데이트하세요
-              </p>
-            </div>
+    <div className="space-y-4 sm:space-y-6">
+      {/* Header - 모바일 최적화 */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-8 text-white shadow-xl">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <Link
+            href="/dashboard/landing-pages"
+            className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
+          >
+            <ArrowLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </Link>
+          <div className="min-w-0">
+            <h1 className="text-xl sm:text-3xl font-bold truncate">랜딩페이지 수정</h1>
+            <p className="mt-1 sm:mt-2 text-xs sm:text-base text-indigo-100 truncate">
+              랜딩페이지 설정을 수정하고 업데이트하세요
+            </p>
           </div>
         </div>
       </div>
