@@ -9,13 +9,28 @@ import {
   PhoneIcon,
   UserGroupIcon,
   ClockIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
 
+interface Lead {
+  id: string
+  name: string
+  phone: string
+  status: string
+  created_at: string
+  preferred_date?: string
+  preferred_time?: string
+  landing_page_id?: string
+  contract_completed_at?: string
+}
+
 interface CalendarViewProps {
   events: any[]
+  leads: Lead[]
   teamMembers: any[]
   currentUserId: string
+  statusFilter?: string
 }
 
 type ViewMode = 'month' | 'week' | 'day'
@@ -28,17 +43,39 @@ const EVENT_COLORS = {
   other: 'bg-gray-100 border-gray-500 text-gray-900',
 }
 
+const LEAD_STATUS_COLORS = {
+  new: 'bg-orange-100 border-orange-500 text-orange-900',
+  contacted: 'bg-sky-100 border-sky-500 text-sky-900',
+  qualified: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  converted: 'bg-teal-100 border-teal-500 text-teal-900',
+  contract_completed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  lost: 'bg-red-100 border-red-500 text-red-900',
+}
+
+const STATUS_LABELS: { [key: string]: string } = {
+  new: '신규',
+  contacted: '연락완료',
+  qualified: '상담예정',
+  converted: '전환완료',
+  contract_completed: '계약완료',
+  lost: '이탈',
+}
+
 export default function CalendarView({
   events,
+  leads,
   teamMembers,
   currentUserId,
+  statusFilter,
 }: CalendarViewProps) {
   const router = useRouter()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [showEventModal, setShowEventModal] = useState(false)
+  const [showDayDetailModal, setShowDayDetailModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
+  const [selectedDayData, setSelectedDayData] = useState<{ events: any[], leads: Lead[], day: number } | null>(null)
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -80,6 +117,40 @@ export default function CalendarView({
     })
   }
 
+  // Get leads for a specific day (by contract_completed_at for contract_completed status, otherwise preferred_date or created_at)
+  const getLeadsForDay = (day: number) => {
+    const targetDate = new Date(year, month, day)
+    return leads.filter((lead) => {
+      // For contract_completed status, use contract_completed_at date
+      if (lead.status === 'contract_completed' && lead.contract_completed_at) {
+        const completedDate = new Date(lead.contract_completed_at)
+        return (
+          completedDate.getFullYear() === targetDate.getFullYear() &&
+          completedDate.getMonth() === targetDate.getMonth() &&
+          completedDate.getDate() === targetDate.getDate()
+        )
+      }
+      // Check preferred_date first (if set)
+      if (lead.preferred_date) {
+        const preferredDate = new Date(lead.preferred_date)
+        if (
+          preferredDate.getFullYear() === targetDate.getFullYear() &&
+          preferredDate.getMonth() === targetDate.getMonth() &&
+          preferredDate.getDate() === targetDate.getDate()
+        ) {
+          return true
+        }
+      }
+      // Otherwise check created_at
+      const createdDate = new Date(lead.created_at)
+      return (
+        createdDate.getFullYear() === targetDate.getFullYear() &&
+        createdDate.getMonth() === targetDate.getMonth() &&
+        createdDate.getDate() === targetDate.getDate()
+      )
+    })
+  }
+
   // Check if day is today
   const isToday = (day: number) => {
     const today = new Date()
@@ -90,11 +161,20 @@ export default function CalendarView({
     )
   }
 
-  // Handle day click
+  // Handle day click - open day detail modal to show all items
   const handleDayClick = (day: number) => {
+    const dayEvents = getEventsForDay(day)
+    const dayLeads = getLeadsForDay(day)
+    setSelectedDayData({ events: dayEvents, leads: dayLeads, day })
+    setShowDayDetailModal(true)
+  }
+
+  // Handle add event from day detail modal
+  const handleAddEventFromDay = (day: number) => {
     const clickedDate = new Date(year, month, day)
     setSelectedDate(clickedDate)
     setSelectedEvent(null)
+    setShowDayDetailModal(false)
     setShowEventModal(true)
   }
 
@@ -117,6 +197,29 @@ export default function CalendarView({
 
   return (
     <div className="bg-white shadow rounded-lg">
+      {/* Filter Banner */}
+      {statusFilter && (
+        <div className="p-4 bg-emerald-50 border-b border-emerald-200 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="text-emerald-700 font-medium">
+              🔍 {STATUS_LABELS[statusFilter] || statusFilter} 필터가 적용되었습니다
+            </span>
+            <span className="text-sm text-emerald-600">
+              ({leads.length}건)
+            </span>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard/calendar')}
+            className="px-3 py-1 text-sm text-emerald-700 bg-white border border-emerald-300 rounded-lg hover:bg-emerald-100 transition flex items-center gap-1"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            필터 해제
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="p-6 border-b border-gray-200">
         <div className="flex items-center justify-between">
@@ -221,7 +324,9 @@ export default function CalendarView({
               }
 
               const dayEvents = getEventsForDay(day)
+              const dayLeads = getLeadsForDay(day)
               const isTodayDay = isToday(day)
+              const totalItems = dayEvents.length + dayLeads.length
 
               return (
                 <div
@@ -243,11 +348,12 @@ export default function CalendarView({
                     {day}
                   </div>
 
-                  {/* Events */}
+                  {/* Events and Leads */}
                   <div className="space-y-1">
-                    {dayEvents.slice(0, 3).map((event: any) => (
+                    {/* Display events first (max 2) */}
+                    {dayEvents.slice(0, 2).map((event: any) => (
                       <div
-                        key={event.id}
+                        key={`event-${event.id}`}
                         onClick={(e) => handleEventClick(event, e)}
                         className={`text-xs px-2 py-1 rounded border-l-2 truncate ${
                           EVENT_COLORS[event.event_type as keyof typeof EVENT_COLORS]
@@ -260,9 +366,38 @@ export default function CalendarView({
                         {event.title}
                       </div>
                     ))}
-                    {dayEvents.length > 3 && (
-                      <div className="text-xs text-gray-500 px-2">+{dayEvents.length - 3} 더보기</div>
-                    )}
+                    {/* Display leads (remaining slots from max 3 total) */}
+                    {(() => {
+                      const eventsShown = Math.min(dayEvents.length, 2)
+                      const leadsToShow = Math.max(0, 3 - eventsShown)
+                      const displayedLeads = dayLeads.slice(0, leadsToShow)
+                      const hiddenCount = totalItems - eventsShown - displayedLeads.length
+
+                      return (
+                        <>
+                          {displayedLeads.map((lead: Lead) => (
+                            <div
+                              key={`lead-${lead.id}`}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                router.push(`/dashboard/leads?id=${lead.id}`)
+                              }}
+                              className={`text-xs px-2 py-1 rounded border-l-2 truncate flex items-center gap-1 ${
+                                LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
+                              }`}
+                            >
+                              <UserIcon className="h-3 w-3 flex-shrink-0" />
+                              <span className="truncate">{lead.name}</span>
+                            </div>
+                          ))}
+                          {hiddenCount > 0 && (
+                            <div className="text-xs text-indigo-600 font-medium px-2 py-1 bg-indigo-50 rounded hover:bg-indigo-100 transition">
+                              +{hiddenCount}개 더보기
+                            </div>
+                          )}
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
               )
@@ -270,26 +405,47 @@ export default function CalendarView({
           </div>
 
           {/* Legend */}
-          <div className="mt-6 flex items-center justify-center space-x-6">
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-blue-100 border-l-2 border-blue-500 rounded"></div>
-              <span className="text-sm text-gray-600">전화 상담</span>
+          <div className="mt-6 space-y-3">
+            <div className="flex items-center justify-center space-x-6">
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-blue-100 border-l-2 border-blue-500 rounded"></div>
+                <span className="text-sm text-gray-600">전화 상담</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-purple-100 border-l-2 border-purple-500 rounded"></div>
+                <span className="text-sm text-gray-600">회의</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-green-100 border-l-2 border-green-500 rounded"></div>
+                <span className="text-sm text-gray-600">대면 상담</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-yellow-100 border-l-2 border-yellow-500 rounded"></div>
+                <span className="text-sm text-gray-600">업무</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-gray-100 border-l-2 border-gray-500 rounded"></div>
+                <span className="text-sm text-gray-600">기타</span>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-purple-100 border-l-2 border-purple-500 rounded"></div>
-              <span className="text-sm text-gray-600">회의</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-green-100 border-l-2 border-green-500 rounded"></div>
-              <span className="text-sm text-gray-600">대면 상담</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-yellow-100 border-l-2 border-yellow-500 rounded"></div>
-              <span className="text-sm text-gray-600">업무</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-4 h-4 bg-gray-100 border-l-2 border-gray-500 rounded"></div>
-              <span className="text-sm text-gray-600">기타</span>
+            <div className="flex items-center justify-center space-x-6 pt-2 border-t border-gray-100">
+              <span className="text-xs text-gray-500 font-medium">DB 신청:</span>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-orange-100 border-l-2 border-orange-500 rounded"></div>
+                <span className="text-sm text-gray-600">신규</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-sky-100 border-l-2 border-sky-500 rounded"></div>
+                <span className="text-sm text-gray-600">연락완료</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-emerald-100 border-l-2 border-emerald-500 rounded"></div>
+                <span className="text-sm text-gray-600">상담예정</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-4 h-4 bg-teal-100 border-l-2 border-teal-500 rounded"></div>
+                <span className="text-sm text-gray-600">전환완료</span>
+              </div>
             </div>
           </div>
         </div>
@@ -332,6 +488,130 @@ export default function CalendarView({
             router.refresh()
           }}
         />
+      )}
+
+      {/* Day Detail Modal - Shows all events and leads for a specific day */}
+      {showDayDetailModal && selectedDayData && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full max-h-[80vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">
+                    {year}년 {month + 1}월 {selectedDayData.day}일
+                  </h3>
+                  <p className="text-sm text-indigo-100">
+                    일정 {selectedDayData.events.length}개 · DB신청 {selectedDayData.leads.length}개
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDayDetailModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-4 overflow-y-auto max-h-[60vh] space-y-4">
+              {/* Events Section */}
+              {selectedDayData.events.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2 flex items-center gap-2">
+                    <ClockIcon className="h-4 w-4" />
+                    일정
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedDayData.events.map((event: any) => (
+                      <div
+                        key={event.id}
+                        onClick={() => {
+                          setSelectedEvent(event)
+                          setShowDayDetailModal(false)
+                          setShowEventModal(true)
+                        }}
+                        className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
+                          EVENT_COLORS[event.event_type as keyof typeof EVENT_COLORS]
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium">{event.title}</span>
+                          <span className="text-xs">
+                            {new Date(event.start_time).toLocaleTimeString('ko-KR', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                        </div>
+                        {event.description && (
+                          <p className="text-sm mt-1 opacity-75 line-clamp-2">{event.description}</p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Leads Section */}
+              {selectedDayData.leads.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-500 mb-2 flex items-center gap-2">
+                    <UserIcon className="h-4 w-4" />
+                    DB 신청
+                  </h4>
+                  <div className="space-y-2">
+                    {selectedDayData.leads.map((lead: Lead) => (
+                      <div
+                        key={lead.id}
+                        onClick={() => {
+                          setShowDayDetailModal(false)
+                          router.push(`/dashboard/leads?id=${lead.id}`)
+                        }}
+                        className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
+                          LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <UserIcon className="h-4 w-4" />
+                            <span className="font-medium">{lead.name}</span>
+                          </div>
+                          <span className="text-xs px-2 py-1 bg-white/50 rounded">
+                            {STATUS_LABELS[lead.status] || lead.status}
+                          </span>
+                        </div>
+                        <p className="text-sm mt-1 opacity-75">{lead.phone}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {selectedDayData.events.length === 0 && selectedDayData.leads.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <ClockIcon className="h-12 w-12 mx-auto mb-2 opacity-50" />
+                  <p>이 날에는 일정이나 신청이 없습니다</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => handleAddEventFromDay(selectedDayData.day)}
+                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
+              >
+                <PlusIcon className="h-5 w-5" />
+                새 일정 추가
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

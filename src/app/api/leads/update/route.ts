@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, assigned_to } = body
+    const { id, status, priority, assigned_to, contract_completed_at } = body
 
     // Validate required fields
     if (!id) {
@@ -60,6 +60,12 @@ export async function PUT(request: NextRequest) {
 
       if (status === 'completed') {
         updateData.completed_at = new Date().toISOString()
+      }
+
+      // contract_completed 상태로 변경 시 타임스탬프 설정
+      // 클라이언트에서 날짜/시간을 지정한 경우 해당 값 사용, 아니면 현재 시간 사용
+      if (status === 'contract_completed') {
+        updateData.contract_completed_at = contract_completed_at || new Date().toISOString()
       }
 
       // Always update last contact time when status changes

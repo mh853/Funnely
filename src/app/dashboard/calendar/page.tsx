@@ -2,8 +2,17 @@ import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CalendarView from '@/components/calendar/CalendarView'
 
-export default async function CalendarPage() {
+interface SearchParams {
+  status?: string
+}
+
+export default async function CalendarPage({
+  searchParams,
+}: {
+  searchParams: SearchParams
+}) {
   const supabase = await createClient()
+  const statusFilter = searchParams.status
 
   const {
     data: { user },
@@ -43,6 +52,19 @@ export default async function CalendarPage() {
     .eq('company_id', userProfile.company_id)
     .order('start_time', { ascending: true })
 
+  // Get leads for this hospital to display on calendar
+  let leadsQuery = supabase
+    .from('leads')
+    .select('id, name, phone, status, created_at, preferred_date, preferred_time, landing_page_id, contract_completed_at')
+    .eq('company_id', userProfile.company_id)
+
+  // Apply status filter if provided (e.g., from reservations page)
+  if (statusFilter) {
+    leadsQuery = leadsQuery.eq('status', statusFilter)
+  }
+
+  const { data: leads } = await leadsQuery.order('created_at', { ascending: false })
+
   // Get team members for event assignment
   const { data: teamMembers } = await supabase
     .from('users')
@@ -69,8 +91,10 @@ export default async function CalendarPage() {
       <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
         <CalendarView
           events={events || []}
+          leads={leads || []}
           teamMembers={teamMembers || []}
           currentUserId={user.id}
+          statusFilter={statusFilter}
         />
       </div>
     </div>

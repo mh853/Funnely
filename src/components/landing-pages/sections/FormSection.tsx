@@ -9,6 +9,24 @@ interface FormSectionProps {
   landingPageId: string
 }
 
+// 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
+const formatPhoneNumber = (value: string): string => {
+  // 숫자만 추출
+  const numbers = value.replace(/[^0-9]/g, '')
+
+  // 최대 11자리로 제한
+  const limited = numbers.slice(0, 11)
+
+  // 포맷팅 적용
+  if (limited.length <= 3) {
+    return limited
+  } else if (limited.length <= 7) {
+    return `${limited.slice(0, 3)}-${limited.slice(3)}`
+  } else {
+    return `${limited.slice(0, 3)}-${limited.slice(3, 7)}-${limited.slice(7)}`
+  }
+}
+
 export default function FormSection({ section, themeColors, landingPageId }: FormSectionProps) {
   const primaryColor = themeColors.primary || '#3B82F6'
   const [formData, setFormData] = useState<Record<string, string>>({})
@@ -124,9 +142,13 @@ export default function FormSection({ section, themeColors, landingPageId }: For
                 type={getFieldType(field)}
                 required={section.props?.requiredFields?.includes(field)}
                 value={formData[field] || ''}
-                onChange={(e) =>
-                  setFormData({ ...formData, [field]: e.target.value })
-                }
+                onChange={(e) => {
+                  const value = field === 'phone'
+                    ? formatPhoneNumber(e.target.value)
+                    : e.target.value
+                  setFormData({ ...formData, [field]: value })
+                }}
+                placeholder={field === 'phone' ? '01012345678' : undefined}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-offset-2 transition-colors"
                 style={{ focusRing: primaryColor } as any}
                 disabled={loading}

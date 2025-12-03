@@ -98,12 +98,8 @@ export default async function LandingPage({ params }: Props) {
     notFound()
   }
 
-  // Increment view count asynchronously (non-blocking)
-  const supabase = getServiceRoleClient()
-  void supabase
-    .from('landing_pages')
-    .update({ views_count: (landingPage.views_count || 0) + 1 })
-    .eq('id', landingPage.id)
+  // Page view tracking is handled by client component (PublicLandingPage)
+  // to bypass ISR caching and ensure accurate counts on every visit
 
   return <PublicLandingPage landingPage={landingPage} />
 }

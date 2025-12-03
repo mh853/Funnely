@@ -4,6 +4,24 @@ import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo } from 'react'
 
+// 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
+const formatPhoneNumber = (value: string): string => {
+  // 숫자만 추출
+  const numbers = value.replace(/[^0-9]/g, '')
+
+  // 최대 11자리로 제한
+  const limited = numbers.slice(0, 11)
+
+  // 포맷팅 적용
+  if (limited.length <= 3) {
+    return limited
+  } else if (limited.length <= 7) {
+    return `${limited.slice(0, 3)}-${limited.slice(3)}`
+  } else {
+    return `${limited.slice(0, 3)}-${limited.slice(3, 7)}-${limited.slice(7)}`
+  }
+}
+
 interface PublicLandingPageProps {
   landingPage: LandingPage
 }
@@ -15,6 +33,16 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
 
+  // 폼 데이터 상태 관리
+  const [nameInput, setNameInput] = useState('')
+  const [phoneInput, setPhoneInput] = useState('')
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({})
+  const [privacyConsent, setPrivacyConsent] = useState(false)
+  const [marketingConsent, setMarketingConsent] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
+  const [isSubmitted, setIsSubmitted] = useState(false)
+
   // Demo realtime data (memoized to prevent recreation on every render)
   const demoRealtimeData = useMemo(() => [
     { name: '김민수', location: '서울 강남구' },
@@ -23,6 +51,23 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
     { name: '최서연', location: '부산 해운대구' },
     { name: '정현우', location: '대전 유성구' },
   ], [])
+
+  // Track page view on mount (bypasses ISR caching issue)
+  useEffect(() => {
+    const trackPageView = async () => {
+      try {
+        await fetch('/api/landing-pages/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pageId: landingPage.id }),
+        })
+      } catch (error) {
+        // Silently fail - page view tracking is non-critical
+        console.error('Failed to track page view:', error)
+      }
+    }
+    trackPageView()
+  }, [landingPage.id])
 
   // Timer countdown calculation
   useEffect(() => {
@@ -58,6 +103,92 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
 
     return () => clearInterval(interval)
   }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, demoRealtimeData.length])
+
+  // 폼 제출 핸들러
+  const handleFormSubmit = async () => {
+    setSubmitError(null)
+
+    // 필수 필드 검증
+    if (landingPage.collect_name !== false && !nameInput.trim()) {
+      setSubmitError('이름을 입력해주세요')
+      return
+    }
+    if (landingPage.collect_phone !== false && !phoneInput.trim()) {
+      setSubmitError('전화번호를 입력해주세요')
+      return
+    }
+    if (landingPage.require_privacy_consent && !privacyConsent) {
+      setSubmitError('개인정보 수집 및 이용에 동의해주세요')
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      // UTM 파라미터 수집
+      const urlParams = new URLSearchParams(window.location.search)
+      const utmParams = {
+        utm_source: urlParams.get('utm_source') || undefined,
+        utm_medium: urlParams.get('utm_medium') || undefined,
+        utm_campaign: urlParams.get('utm_campaign') || undefined,
+        utm_content: urlParams.get('utm_content') || undefined,
+        utm_term: urlParams.get('utm_term') || undefined,
+      }
+
+      // 폼 데이터 구성
+      const formData: Record<string, any> = {
+        name: nameInput,
+        phone: phoneInput,
+      }
+
+      // 커스텀 필드 추가
+      if (landingPage.custom_fields && Array.isArray(landingPage.custom_fields)) {
+        landingPage.custom_fields.forEach((field: any) => {
+          const fieldKey = field.id || field.question
+          if (customFieldValues[fieldKey]) {
+            formData[field.question || fieldKey] = customFieldValues[fieldKey]
+          }
+        })
+      }
+
+      // 동의 정보 추가
+      formData.privacy_consent = privacyConsent
+      formData.marketing_consent = marketingConsent
+
+      const response = await fetch('/api/landing-pages/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          landing_page_id: landingPage.id,
+          form_data: formData,
+          utm_params: utmParams,
+          metadata: {
+            referrer: document.referrer,
+            user_agent: navigator.userAgent,
+          },
+        }),
+      })
+
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error?.message || '제출에 실패했습니다')
+      }
+
+      setIsSubmitted(true)
+      // 폼 초기화
+      setNameInput('')
+      setPhoneInput('')
+      setCustomFieldValues({})
+      setPrivacyConsent(false)
+      setMarketingConsent(false)
+    } catch (err: any) {
+      setSubmitError(err.message)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
 
   // Memoize timer countdown string to prevent unnecessary recalculations
   const timerCountdown = useMemo(
@@ -103,12 +234,15 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
           onClick={() => {
             if (landingPage.collection_mode === 'external') {
               setShowExternalFormModal(true)
+            } else if (landingPage.collection_mode === 'inline') {
+              handleFormSubmit()
             }
           }}
-          className="w-full py-4 text-lg rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-shadow"
+          disabled={isSubmitting}
+          className="w-full py-4 text-lg rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50"
           style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
         >
-          {landingPage.cta_text || '상담 신청하기'}
+          {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
         </button>
       )
     }
@@ -206,43 +340,115 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
           </div>
         )}
 
-        {/* Form Section (Inline Mode) - Preview Style */}
+        {/* Form Section (Inline Mode) - Functional Form */}
         {isSectionEnabled('form') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
-          <div className="space-y-4">
-            <div className="text-base font-semibold text-gray-700 mb-4">DB 수집 폼</div>
-            {/* Name Field */}
-            {landingPage.collect_name !== false && (
-              <div className="bg-white rounded-xl p-4 border-2 border-gray-200">
-                <div className="text-base text-gray-600">이름</div>
-              </div>
-            )}
-            {/* Phone Field */}
-            {landingPage.collect_phone !== false && (
-              <div className="bg-white rounded-xl p-4 border-2 border-gray-200">
-                <div className="text-base text-gray-600">연락처</div>
-              </div>
-            )}
-            {/* Custom Fields */}
-            {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, idx: number) => (
-              <div key={idx} className="bg-white rounded-xl p-4 border-2 border-gray-200">
-                <div className="text-base text-gray-600">{idx + 3}. {field.question || '질문'}</div>
-              </div>
-            ))}
+          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="p-4 bg-indigo-50 border-b border-indigo-100">
+              <p className="text-sm text-indigo-900">
+                💡 상담을 위해 아래 정보를 입력해주세요
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* 에러 메시지 */}
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                  {submitError}
+                </div>
+              )}
+
+              {/* Name Field */}
+              {landingPage.collect_name !== false && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    이름 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    placeholder="홍길동"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+              {/* Phone Field */}
+              {landingPage.collect_phone !== false && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    전화번호 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(formatPhoneNumber(e.target.value))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    placeholder="01012345678"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+              {/* Custom Fields */}
+              {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, index: number) => {
+                const fieldKey = field.id || field.question || `field_${index}`
+                return (
+                  <div key={fieldKey}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {field.question || `${index + 3}. 항목추가`}
+                    </label>
+                    {field.type === 'short_answer' ? (
+                      <input
+                        type="text"
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        placeholder="답변을 입력해주세요"
+                        disabled={isSubmitting}
+                      />
+                    ) : (
+                      <select
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        disabled={isSubmitting}
+                      >
+                        <option value="">선택해주세요</option>
+                        {field.options?.map((option: string, idx: number) => (
+                          <option key={idx} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
         {/* Privacy Consent Section (Inline Mode) */}
         {isSectionEnabled('privacy_consent') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
-          <div className="space-y-4 border-t-2 border-gray-200 pt-6">
+          <div className="space-y-3 bg-white rounded-xl p-4 border border-gray-200">
             {landingPage.require_privacy_consent && (
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={privacyConsent}
+                  onChange={(e) => setPrivacyConsent(e.target.checked)}
                   className="mt-1 w-5 h-5 rounded border-gray-300"
-                  disabled
+                  disabled={isSubmitting}
                 />
-                <span className="text-base text-gray-700">
-                  개인정보 수집·이용 동의 (필수)
+                <span className="text-sm text-gray-600">
+                  개인정보 수집 및 이용 동의 (필수)
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowPrivacyModal(true)
+                    }}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    보기
+                  </button>
                 </span>
               </label>
             )}
@@ -250,11 +456,23 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
               <label className="flex items-start gap-3 cursor-pointer">
                 <input
                   type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
                   className="mt-1 w-5 h-5 rounded border-gray-300"
-                  disabled
+                  disabled={isSubmitting}
                 />
-                <span className="text-base text-gray-600">
+                <span className="text-sm text-gray-600">
                   마케팅 활용 동의 (선택)
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowMarketingModal(true)
+                    }}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    보기
+                  </button>
                 </span>
               </label>
             )}
@@ -268,12 +486,15 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
               onClick={() => {
                 if (landingPage.collection_mode === 'external') {
                   setShowExternalFormModal(true)
+                } else if (landingPage.collection_mode === 'inline') {
+                  handleFormSubmit()
                 }
               }}
-              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow"
+              disabled={isSubmitting}
+              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50"
               style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
             >
-              {landingPage.cta_text || '상담 신청하기'}
+              {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
             </button>
           </div>
         )}
@@ -324,6 +545,13 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
 
             {/* Form Content */}
             <div className="p-6 space-y-4">
+              {/* 에러 메시지 */}
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                  {submitError}
+                </div>
+              )}
+
               {/* Basic Fields */}
               {landingPage.collect_name !== false && (
                 <div>
@@ -332,8 +560,11 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                   </label>
                   <input
                     type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                     placeholder="홍길동"
+                    disabled={isSubmitting}
                   />
                 </div>
               )}
@@ -345,34 +576,48 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                   </label>
                   <input
                     type="tel"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(formatPhoneNumber(e.target.value))}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                    placeholder="010-1234-5678"
+                    placeholder="01012345678"
+                    disabled={isSubmitting}
                   />
                 </div>
               )}
 
               {/* Custom Fields */}
-              {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, index: number) => (
-                <div key={field.id || index}>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {field.question || `${index + 3}. 항목추가`}
-                  </label>
-                  {field.type === 'short_answer' ? (
-                    <input
-                      type="text"
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                      placeholder="답변을 입력해주세요"
-                    />
-                  ) : (
-                    <select className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all">
-                      <option>선택해주세요</option>
-                      {field.options?.map((option: string, idx: number) => (
-                        <option key={idx}>{option}</option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-              ))}
+              {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, index: number) => {
+                const fieldKey = field.id || field.question || `field_${index}`
+                return (
+                  <div key={fieldKey}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {field.question || `${index + 3}. 항목추가`}
+                    </label>
+                    {field.type === 'short_answer' ? (
+                      <input
+                        type="text"
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        placeholder="답변을 입력해주세요"
+                        disabled={isSubmitting}
+                      />
+                    ) : (
+                      <select
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        disabled={isSubmitting}
+                      >
+                        <option value="">선택해주세요</option>
+                        {field.options?.map((option: string, idx: number) => (
+                          <option key={idx} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
 
               {/* Privacy Consent */}
               <div className="space-y-3 pt-4 border-t border-gray-200">
@@ -380,7 +625,10 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={privacyConsent}
+                      onChange={(e) => setPrivacyConsent(e.target.checked)}
                       className="mt-1 w-5 h-5 rounded border-gray-300"
+                      disabled={isSubmitting}
                     />
                     <span className="text-sm text-gray-600">
                       개인정보 수집 및 이용 동의 (필수)
@@ -401,7 +649,10 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
+                      checked={marketingConsent}
+                      onChange={(e) => setMarketingConsent(e.target.checked)}
                       className="mt-1 w-5 h-5 rounded border-gray-300"
+                      disabled={isSubmitting}
                     />
                     <span className="text-sm text-gray-600">
                       마케팅 활용 동의 (선택)
@@ -422,12 +673,37 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
 
               {/* Submit Button */}
               <button
-                className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl"
+                onClick={handleFormSubmit}
+                disabled={isSubmitting}
+                className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
                 style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
               >
-                {landingPage.cta_text || '상담 신청하기'}
+                {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 제출 완료 모달 */}
+      {isSubmitted && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
+            <div className="text-6xl mb-4">✅</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">신청 완료!</h2>
+            <p className="text-gray-600 mb-6">
+              신청이 완료되었습니다. 빠른 시일 내에 연락드리겠습니다.
+            </p>
+            <button
+              onClick={() => {
+                setIsSubmitted(false)
+                setShowExternalFormModal(false)
+              }}
+              className="w-full py-3 rounded-xl font-bold text-white"
+              style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
+            >
+              확인
+            </button>
           </div>
         </div>
       )}

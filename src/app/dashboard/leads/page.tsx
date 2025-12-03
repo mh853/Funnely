@@ -5,11 +5,14 @@ import LeadsClient from './LeadsClient'
 
 interface SearchParams {
   dateRange?: string
+  startDate?: string  // yyyy-mm-dd 형식
+  endDate?: string    // yyyy-mm-dd 형식
   landingPageId?: string
   deviceType?: string
   status?: string
   search?: string
   page?: string
+  id?: string  // 특정 리드 ID로 필터링 (캘린더에서 클릭 시)
 }
 
 export default async function LeadsPage({
@@ -38,33 +41,52 @@ export default async function LeadsPage({
   }
 
   // Parse search params
-  const dateRange = searchParams.dateRange || '7days'
+  const dateRange = searchParams.dateRange
+  const startDateParam = searchParams.startDate
+  const endDateParam = searchParams.endDate
   const landingPageId = searchParams.landingPageId
   const deviceType = searchParams.deviceType
   const status = searchParams.status
   const search = searchParams.search
   const page = Number(searchParams.page) || 1
   const pageSize = 20
+  const selectedLeadId = searchParams.id  // 캘린더에서 클릭한 특정 리드 ID
 
   // Calculate date range
   const now = new Date()
   let startDate: Date | null = null
+  let endDate: Date | null = null
 
-  switch (dateRange) {
-    case '7days':
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      break
-    case '14days':
-      startDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-      break
-    case '30days':
-      startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
-      break
-    case 'all':
-      startDate = null
-      break
-    default:
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+  // 직접 입력된 날짜 범위 우선 처리
+  if (startDateParam && endDateParam) {
+    startDate = new Date(startDateParam)
+    startDate.setHours(0, 0, 0, 0)
+    endDate = new Date(endDateParam)
+    endDate.setHours(23, 59, 59, 999)
+  } else if (dateRange) {
+    // 프리셋 날짜 범위 처리
+    switch (dateRange) {
+      case '7days':
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+        endDate = new Date()
+        break
+      case '14days':
+        startDate = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
+        endDate = new Date()
+        break
+      case '30days':
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+        endDate = new Date()
+        break
+      case 'all':
+        startDate = null
+        endDate = null
+        break
+    }
+  } else {
+    // 기본값: 최근 7일
+    startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+    endDate = new Date()
   }
 
   // Build query
@@ -83,31 +105,39 @@ export default async function LeadsPage({
     )
     .eq('company_id', userProfile.company_id)
 
-  // Apply filters
-  if (startDate) {
-    query = query.gte('created_at', startDate.toISOString())
-  }
-
-  if (landingPageId) {
-    query = query.eq('landing_page_id', landingPageId)
-  }
-
-  if (deviceType) {
-    query = query.eq('device_type', deviceType)
-  }
-
-  if (status) {
-    if (status === 'new') {
-      query = query.in('status', ['new', 'pending'])
-    } else if (status === 'contacted') {
-      query = query.in('status', ['contacted', 'qualified'])
-    } else {
-      query = query.eq('status', status)
+  // 특정 리드 ID로 필터링 (캘린더에서 클릭 시)
+  if (selectedLeadId) {
+    query = query.eq('id', selectedLeadId)
+  } else {
+    // Apply filters only when not filtering by specific lead ID
+    if (startDate) {
+      query = query.gte('created_at', startDate.toISOString())
     }
-  }
+    if (endDate) {
+      query = query.lte('created_at', endDate.toISOString())
+    }
 
-  if (search) {
-    query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+    if (landingPageId) {
+      query = query.eq('landing_page_id', landingPageId)
+    }
+
+    if (deviceType) {
+      query = query.eq('device_type', deviceType)
+    }
+
+    if (status) {
+      if (status === 'new') {
+        query = query.in('status', ['new', 'pending'])
+      } else if (status === 'contacted') {
+        query = query.in('status', ['contacted', 'qualified'])
+      } else {
+        query = query.eq('status', status)
+      }
+    }
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+    }
   }
 
   // Get total count and paginated data
@@ -152,6 +182,7 @@ export default async function LeadsPage({
         leads={leads || []}
         landingPages={landingPages || []}
         totalCount={totalCount || 0}
+        selectedLeadId={selectedLeadId}
       />
     </div>
   )

@@ -37,18 +37,32 @@ export function encryptPhone(phone: string): string {
  */
 export function decryptPhone(encrypted: string): string {
   try {
-    const secretKey = getSecretKey();
-    const bytes = CryptoJS.AES.decrypt(encrypted, secretKey);
+    // 환경변수가 없으면 원본 그대로 반환 (암호화되지 않은 데이터)
+    const key = process.env.PHONE_ENCRYPTION_KEY;
+    if (!key) {
+      // 암호화 키가 없으면 입력값이 이미 평문일 가능성이 높음
+      return encrypted;
+    }
+
+    // 전화번호 형식인 경우 이미 복호화된 상태 (평문)
+    const cleanedPhone = encrypted.replace(/[-\s]/g, '');
+    if (/^(\+82|0)?1[0-9]{8,9}$/.test(cleanedPhone)) {
+      return encrypted;
+    }
+
+    const bytes = CryptoJS.AES.decrypt(encrypted, key);
     const decrypted = bytes.toString(CryptoJS.enc.Utf8);
 
     if (!decrypted) {
-      throw new Error('Decryption failed');
+      // 복호화 실패 시 원본 반환 (이미 평문일 수 있음)
+      return encrypted;
     }
 
     return decrypted;
   } catch (error) {
     console.error('Phone decryption error:', error);
-    throw new Error('Failed to decrypt phone number');
+    // 에러 발생 시 원본 반환 (이미 평문일 수 있음)
+    return encrypted;
   }
 }
 
