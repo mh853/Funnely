@@ -1008,6 +1008,23 @@ export default function LandingPageNewForm({
         if (insertError) throw insertError
       }
 
+      // Revalidate the landing page cache if published
+      if (isActive && slug) {
+        try {
+          await fetch('/api/revalidate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              slug,
+              secret: process.env.NEXT_PUBLIC_REVALIDATION_SECRET,
+            }),
+          })
+        } catch (revalidateError) {
+          console.warn('Cache revalidation failed:', revalidateError)
+          // Don't block save on revalidation failure
+        }
+      }
+
       router.push('/dashboard/landing-pages')
       router.refresh()
     } catch (err: any) {
