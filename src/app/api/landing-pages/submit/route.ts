@@ -1,11 +1,25 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { FormSubmission } from '@/types/landing-page.types'
 import crypto from 'crypto'
 
+// Service Role client for public form submissions (bypasses RLS)
+function getServiceRoleClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    }
+  )
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
+    const supabase = getServiceRoleClient()
     const body: FormSubmission = await request.json()
 
     const { landing_page_id, form_data, utm_params, metadata } = body
