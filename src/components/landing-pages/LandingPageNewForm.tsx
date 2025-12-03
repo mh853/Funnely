@@ -981,6 +981,7 @@ export default function LandingPageNewForm({
         privacy_content: privacyContent || null, // 빈 문자열을 null로 변환
         marketing_content: marketingContent || null, // 빈 문자열을 null로 변환
         is_active: isActive,
+        status: isActive ? 'published' : 'draft', // is_active에 따라 status 설정
       }
 
       if (landingPage) {
