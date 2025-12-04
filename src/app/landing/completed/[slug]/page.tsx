@@ -138,10 +138,6 @@ export default async function CompletedPage({ params }: Props) {
           </div>
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          이 페이지는 신청 완료 확인용입니다
-        </p>
       </div>
     </div>
   )

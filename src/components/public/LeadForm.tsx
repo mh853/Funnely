@@ -73,8 +73,8 @@ export default function LeadForm({
         throw new Error(data.error?.message || '신청에 실패했습니다.')
       }
 
-      // 신청 성공 시 완료 페이지로 리다이렉트
-      router.push(`/landing/completed/${slug}`)
+      // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
+      router.replace(`/landing/completed/${slug}`)
     } catch (err: any) {
       setError(err.message)
     } finally {

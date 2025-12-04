@@ -108,23 +108,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Increment submissions count
-    const { data: currentPage } = await supabase
-      .from('landing_pages')
-      .select('submissions_count')
-      .eq('id', landing_page_id)
-      .single()
+    // Increment submissions count (fire and forget - non-blocking)
+    supabase.rpc('increment_submissions_count', { page_id: landing_page_id }).catch(() => {
+      // Fallback: manual increment if RPC doesn't exist
+      supabase
+        .from('landing_pages')
+        .select('submissions_count')
+        .eq('id', landing_page_id)
+        .single()
+        .then(({ data: currentPage }) => {
+          supabase
+            .from('landing_pages')
+            .update({ submissions_count: (currentPage?.submissions_count || 0) + 1 })
+            .eq('id', landing_page_id)
+        })
+    })
 
-    await supabase
-      .from('landing_pages')
-      .update({
-        submissions_count: (currentPage?.submissions_count || 0) + 1
-      })
-      .eq('id', landing_page_id)
-
-    // TODO: Send notification to assigned staff
-    // TODO: Send confirmation email/SMS to customer
-
+    // Return immediately without waiting for count update
     return NextResponse.json({
       success: true,
       data: {

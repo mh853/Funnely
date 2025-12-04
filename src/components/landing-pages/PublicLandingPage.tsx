@@ -177,8 +177,8 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
         throw new Error(data.error?.message || '제출에 실패했습니다')
       }
 
-      // 신청 성공 시 완료 페이지로 리다이렉트
-      router.push(`/landing/completed/${landingPage.slug}`)
+      // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
+      router.replace(`/landing/completed/${landingPage.slug}`)
     } catch (err: any) {
       setSubmitError(err.message)
     } finally {
