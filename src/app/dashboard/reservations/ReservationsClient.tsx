@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState, useMemo } from 'react'
-import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
@@ -9,6 +8,9 @@ import {
   XMarkIcon,
   ChevronDownIcon,
   PhoneIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 
 interface LandingPage {
@@ -78,6 +80,10 @@ export default function ReservationsClient({
   const [showDateLeadsModal, setShowDateLeadsModal] = useState(false)
   const [selectedDateForModal, setSelectedDateForModal] = useState<string | null>(null)
 
+  // Calendar modal state (캘린더 뷰 모달)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [calendarCurrentMonth, setCalendarCurrentMonth] = useState(new Date())
+
   // 디버깅용 로그
   console.log('ReservationsClient initialLeads:', initialLeads)
   console.log('ReservationsClient leads state:', leads)
@@ -115,6 +121,53 @@ export default function ReservationsClient({
   const handleDateClick = (date: string) => {
     setSelectedDateForModal(date)
     setShowDateLeadsModal(true)
+  }
+
+  // Calendar modal helpers
+  const goToPrevMonth = () => {
+    setCalendarCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1))
+  }
+
+  const goToNextMonth = () => {
+    setCalendarCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+  }
+
+  // Generate calendar days for a given month
+  const generateCalendarDays = (year: number, month: number) => {
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay() // 0 = Sunday
+
+    const days: (number | null)[] = []
+
+    // Add empty slots for days before the first day of the month
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null)
+    }
+
+    // Add days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(day)
+    }
+
+    return days
+  }
+
+  // Get lead count for a specific date
+  const getLeadCountForDate = (year: number, month: number, day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return leadsByDate[dateStr]?.length || 0
+  }
+
+  // Handle calendar date click
+  const handleCalendarDateClick = (year: number, month: number, day: number) => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    if (leadsByDate[dateStr] && leadsByDate[dateStr].length > 0) {
+      setShowCalendarModal(false)
+      setSelectedDateForModal(dateStr)
+      setShowDateLeadsModal(true)
+    }
   }
 
   // Handle status update
@@ -418,12 +471,13 @@ export default function ReservationsClient({
         >
           모든 계약 완료 건 보기
         </button>
-        <Link
-          href="/dashboard/calendar?status=contract_completed"
-          className="inline-flex items-center justify-center px-8 py-3 text-base font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+        <button
+          onClick={() => setShowCalendarModal(true)}
+          className="inline-flex items-center justify-center gap-2 px-8 py-3 text-base font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl"
         >
+          <CalendarDaysIcon className="h-5 w-5" />
           캘린더 뷰로 보기
-        </Link>
+        </button>
       </div>
 
       {/* Lead Detail Modal - Shows lead information in table format like DB현황 */}
@@ -920,6 +974,167 @@ export default function ReservationsClient({
                   setShowDateLeadsModal(false)
                   setSelectedDateForModal(null)
                 }}
+                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Modal - 캘린더 뷰 */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <CalendarDaysIcon className="h-5 w-5" />
+                    캘린더 뷰
+                  </h3>
+                  <p className="text-sm text-emerald-100">총 {leads.length}건의 계약 완료</p>
+                </div>
+                <button
+                  onClick={() => setShowCalendarModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {/* Month Navigation */}
+              <div className="flex items-center justify-between mb-6">
+                <button
+                  onClick={goToPrevMonth}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+                </button>
+                <h4 className="text-xl font-bold text-gray-900">
+                  {calendarCurrentMonth.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                  })}
+                </h4>
+                <button
+                  onClick={goToNextMonth}
+                  className="p-2 hover:bg-gray-100 rounded-lg transition"
+                >
+                  <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="border border-gray-200 rounded-xl overflow-hidden">
+                {/* Weekday Headers */}
+                <div className="grid grid-cols-7 bg-gray-50">
+                  {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
+                    <div
+                      key={day}
+                      className={`py-3 text-center text-sm font-semibold ${
+                        idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'
+                      }`}
+                    >
+                      {day}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Calendar Days */}
+                <div className="grid grid-cols-7">
+                  {generateCalendarDays(
+                    calendarCurrentMonth.getFullYear(),
+                    calendarCurrentMonth.getMonth()
+                  ).map((day, idx) => {
+                    const leadCount = day
+                      ? getLeadCountForDate(
+                          calendarCurrentMonth.getFullYear(),
+                          calendarCurrentMonth.getMonth(),
+                          day
+                        )
+                      : 0
+                    const isToday =
+                      day &&
+                      new Date().toDateString() ===
+                        new Date(
+                          calendarCurrentMonth.getFullYear(),
+                          calendarCurrentMonth.getMonth(),
+                          day
+                        ).toDateString()
+                    const dayOfWeek = idx % 7
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          if (day && leadCount > 0) {
+                            handleCalendarDateClick(
+                              calendarCurrentMonth.getFullYear(),
+                              calendarCurrentMonth.getMonth(),
+                              day
+                            )
+                          }
+                        }}
+                        className={`
+                          min-h-[80px] p-2 border-t border-l border-gray-100
+                          ${day && leadCount > 0 ? 'cursor-pointer hover:bg-emerald-50' : ''}
+                          ${isToday ? 'bg-emerald-50' : ''}
+                          ${!day ? 'bg-gray-50' : ''}
+                        `}
+                      >
+                        {day && (
+                          <>
+                            <div
+                              className={`text-sm font-medium mb-1 ${
+                                isToday
+                                  ? 'text-emerald-600'
+                                  : dayOfWeek === 0
+                                  ? 'text-red-500'
+                                  : dayOfWeek === 6
+                                  ? 'text-blue-500'
+                                  : 'text-gray-700'
+                              }`}
+                            >
+                              {day}
+                            </div>
+                            {leadCount > 0 && (
+                              <div className="flex items-center justify-center">
+                                <div className="bg-emerald-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                                  {leadCount}건
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {/* Legend */}
+              <div className="mt-4 flex items-center justify-center gap-6 text-sm text-gray-500">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 bg-emerald-50 border border-emerald-200 rounded"></div>
+                  <span>오늘</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">N건</div>
+                  <span>계약 완료 건수</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowCalendarModal(false)}
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
                 닫기
