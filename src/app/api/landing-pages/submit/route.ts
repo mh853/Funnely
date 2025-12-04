@@ -109,20 +109,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Increment submissions count (fire and forget - non-blocking)
-    supabase.rpc('increment_submissions_count', { page_id: landing_page_id }).catch(() => {
-      // Fallback: manual increment if RPC doesn't exist
-      supabase
-        .from('landing_pages')
-        .select('submissions_count')
-        .eq('id', landing_page_id)
-        .single()
-        .then(({ data: currentPage }) => {
-          supabase
-            .from('landing_pages')
-            .update({ submissions_count: (currentPage?.submissions_count || 0) + 1 })
-            .eq('id', landing_page_id)
-        })
-    })
+    // Using .then() to convert to Promise before .catch()
+    supabase
+      .from('landing_pages')
+      .select('submissions_count')
+      .eq('id', landing_page_id)
+      .single()
+      .then(({ data: currentPage }) => {
+        supabase
+          .from('landing_pages')
+          .update({ submissions_count: (currentPage?.submissions_count || 0) + 1 })
+          .eq('id', landing_page_id)
+      })
 
     // Return immediately without waiting for count update
     return NextResponse.json({
