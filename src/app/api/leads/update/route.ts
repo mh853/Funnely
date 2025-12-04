@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, assigned_to, contract_completed_at } = body
+    const { id, status, priority, assigned_to, contract_completed_at, notes } = body
 
     // Validate required fields
     if (!id) {
@@ -98,6 +98,10 @@ export async function PUT(request: NextRequest) {
       if (assigned_to && lead.status === 'new') {
         updateData.status = 'assigned'
       }
+    }
+
+    if (notes !== undefined) {
+      updateData.notes = notes
     }
 
     // Update lead

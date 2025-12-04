@@ -137,6 +137,57 @@ export default function LeadsClient({
   const [contractDate, setContractDate] = useState('')
   const [contractTime, setContractTime] = useState('')
 
+  // 상세 모달 상태
+  const [selectedLead, setSelectedLead] = useState<any | null>(null)
+  const [showDetailModal, setShowDetailModal] = useState(false)
+  const [notesValue, setNotesValue] = useState('')
+  const [savingNotes, setSavingNotes] = useState(false)
+
+  // 행 클릭 핸들러 - 상세 모달 열기
+  const handleRowClick = (lead: any, e: React.MouseEvent) => {
+    // 상태 드롭다운 버튼 클릭은 무시
+    const target = e.target as HTMLElement
+    if (target.closest('.status-dropdown')) return
+
+    setSelectedLead(lead)
+    setNotesValue(lead.notes || '')
+    setShowDetailModal(true)
+  }
+
+  // 비고 저장 핸들러
+  const handleSaveNotes = async () => {
+    if (!selectedLead) return
+
+    setSavingNotes(true)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          notes: notesValue,
+        }),
+      })
+
+      if (!response.ok) throw new Error('비고 저장 실패')
+
+      // 로컬 상태 업데이트
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === selectedLead.id
+            ? { ...lead, notes: notesValue }
+            : lead
+        )
+      )
+      setSelectedLead({ ...selectedLead, notes: notesValue })
+    } catch (error) {
+      console.error('Notes save error:', error)
+      alert('비고 저장에 실패했습니다.')
+    } finally {
+      setSavingNotes(false)
+    }
+  }
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -573,18 +624,25 @@ export default function LeadsClient({
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   계약 완료
                 </th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  비고
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="px-6 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={11} className="px-6 py-12 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
               ) : (
                 leads.map((lead: any) => (
-                  <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
+                  <tr
+                    key={lead.id}
+                    className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    onClick={(e) => handleRowClick(lead, e)}
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(lead.created_at)}
                     </td>
@@ -655,6 +713,11 @@ export default function LeadsClient({
                       ) : (
                         '-'
                       )}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[150px]">
+                      <span className="truncate block" title={lead.notes || ''}>
+                        {lead.notes || '-'}
+                      </span>
                     </td>
                   </tr>
                 ))
@@ -931,6 +994,217 @@ export default function LeadsClient({
                     계약 완료
                   </>
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 상세 정보 모달 */}
+      {showDetailModal && selectedLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
+            {/* 헤더 */}
+            <div className="p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  DB 신청 상세 정보
+                </h3>
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+              <p className="text-sm text-indigo-100 mt-1">
+                {formatDateTime(selectedLead.created_at)}
+              </p>
+            </div>
+
+            {/* 본문 */}
+            <div className="p-5 space-y-5">
+              {/* 상태 배지 */}
+              <div className="flex items-center gap-2">
+                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${STATUS_STYLES[selectedLead.status]?.bg || 'bg-gray-100'} ${STATUS_STYLES[selectedLead.status]?.text || 'text-gray-800'}`}>
+                  {STATUS_STYLES[selectedLead.status]?.label || getStatusLabel(selectedLead.status)}
+                </span>
+                {selectedLead.contract_completed_at && (
+                  <span className="text-xs text-emerald-600 font-medium">
+                    계약: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
+                  </span>
+                )}
+              </div>
+
+              {/* 모든 정보를 테이블로 표시 */}
+              <div className="border rounded-xl overflow-hidden">
+                <table className="w-full">
+                  <tbody className="divide-y divide-gray-100">
+                    {/* 이름 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600 w-28">이름</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.name || '-'}</td>
+                    </tr>
+                    {/* 전화번호 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">전화번호</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {selectedLead.phone ? decryptPhone(selectedLead.phone) : '-'}
+                      </td>
+                    </tr>
+                    {/* 이메일 */}
+                    {selectedLead.email && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">이메일</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.email}</td>
+                      </tr>
+                    )}
+                    {/* 랜딩페이지 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">랜딩페이지</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.landing_pages?.title || '-'}</td>
+                    </tr>
+                    {/* 기기 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">기기</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.device_type?.toUpperCase() || '-'}</td>
+                    </tr>
+                    {/* 항목 1 */}
+                    {selectedLead.custom_field_1 && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 1</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_1}</td>
+                      </tr>
+                    )}
+                    {/* 항목 2 */}
+                    {selectedLead.custom_field_2 && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 2</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_2}</td>
+                      </tr>
+                    )}
+                    {/* 항목 3 */}
+                    {selectedLead.custom_field_3 && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 3</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_3}</td>
+                      </tr>
+                    )}
+                    {/* 항목 4 */}
+                    {selectedLead.custom_field_4 && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 4</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_4}</td>
+                      </tr>
+                    )}
+                    {/* 항목 5 */}
+                    {selectedLead.custom_field_5 && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 5</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_5}</td>
+                      </tr>
+                    )}
+                    {/* 희망 상담일 */}
+                    {selectedLead.preferred_date && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">희망 상담일</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          {new Date(selectedLead.preferred_date).toLocaleDateString('ko-KR')}
+                        </td>
+                      </tr>
+                    )}
+                    {/* 계약 완료일 */}
+                    {selectedLead.contract_completed_at && (
+                      <tr>
+                        <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">계약 완료일</td>
+                        <td className="px-4 py-3 text-sm text-emerald-900 bg-emerald-50/50">
+                          {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            weekday: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                          {selectedLead.previous_contract_completed_at && (
+                            <span className="block text-xs text-emerald-600 mt-0.5">
+                              이전: {new Date(selectedLead.previous_contract_completed_at).toLocaleDateString('ko-KR')}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                    {/* UTM Source */}
+                    {selectedLead.utm_source && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Source</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_source}</td>
+                      </tr>
+                    )}
+                    {/* UTM Medium */}
+                    {selectedLead.utm_medium && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Medium</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_medium}</td>
+                      </tr>
+                    )}
+                    {/* UTM Campaign */}
+                    {selectedLead.utm_campaign && (
+                      <tr>
+                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Campaign</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_campaign}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* 비고 섹션 - 바로 편집 가능 */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-sm font-medium text-gray-700">비고</label>
+                  <button
+                    onClick={handleSaveNotes}
+                    disabled={savingNotes || notesValue === (selectedLead.notes || '')}
+                    className={`flex items-center gap-1 text-xs px-3 py-1 rounded-lg font-medium transition-all ${
+                      notesValue !== (selectedLead.notes || '')
+                        ? 'text-white bg-indigo-600 hover:bg-indigo-700'
+                        : 'text-gray-400 bg-gray-100 cursor-not-allowed'
+                    }`}
+                  >
+                    {savingNotes ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        저장 중...
+                      </>
+                    ) : (
+                      <>
+                        <CheckIcon className="h-3.5 w-3.5" />
+                        저장
+                      </>
+                    )}
+                  </button>
+                </div>
+                <textarea
+                  value={notesValue}
+                  onChange={(e) => setNotesValue(e.target.value)}
+                  placeholder="비고를 입력하세요..."
+                  rows={3}
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-gray-900 text-sm resize-none"
+                />
+              </div>
+            </div>
+
+            {/* 푸터 */}
+            <div className="p-5 bg-gray-50 border-t">
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="w-full py-3 px-4 rounded-xl font-medium text-gray-700 bg-white border-2 border-gray-200 hover:bg-gray-100 transition-all"
+              >
+                닫기
               </button>
             </div>
           </div>
