@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { UserCircleIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import EditUserModal from './EditUserModal'
 import DeleteUserModal from './DeleteUserModal'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface User {
   id: string
@@ -83,7 +84,7 @@ export default function UsersList({ users, currentUserId, canManage }: UsersList
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(user.created_at).toLocaleDateString('ko-KR')}
+                        {formatDateTime(user.created_at)}
                       </td>
                       {canManage && (
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

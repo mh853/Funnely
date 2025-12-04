@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
 import { XMarkIcon, DocumentTextIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { formatDateTime, formatDate } from '@/lib/utils/date'
 
 interface Transaction {
   id: string
@@ -120,7 +121,7 @@ export default function PaymentsClient({
               </p>
               {subscription.trial_end_date && subscription.status === 'trial' && (
                 <p className="text-sm mt-2 opacity-90">
-                  체험 종료: {new Date(subscription.trial_end_date).toLocaleDateString('ko-KR')}
+                  체험 종료: {formatDate(subscription.trial_end_date)}
                 </p>
               )}
             </div>
@@ -168,7 +169,7 @@ export default function PaymentsClient({
                 {transactions.map((transaction) => (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(transaction.created_at).toLocaleDateString('ko-KR')}
+                      {formatDateTime(transaction.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-mono">
                       {transaction.order_id}
@@ -262,7 +263,7 @@ export default function PaymentsClient({
                         <div className="flex justify-between">
                           <span className="text-sm text-gray-600">결제일시</span>
                           <span className="text-sm font-medium text-gray-900">
-                            {new Date(selectedTransaction.created_at).toLocaleString('ko-KR')}
+                            {formatDateTime(selectedTransaction.created_at)}
                           </span>
                         </div>
 
@@ -337,7 +338,7 @@ export default function PaymentsClient({
                             ✓ 세금계산서 발행 요청됨
                             {selectedTransaction.tax_invoice_issued_at && (
                               <span className="block text-gray-500 mt-1">
-                                발행일: {new Date(selectedTransaction.tax_invoice_issued_at).toLocaleDateString('ko-KR')}
+                                발행일: {formatDate(selectedTransaction.tax_invoice_issued_at)}
                               </span>
                             )}
                           </div>

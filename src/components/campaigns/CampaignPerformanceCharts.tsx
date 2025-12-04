@@ -14,6 +14,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
+import { formatDate } from '@/lib/utils/date'
 
 interface PerformanceMetric {
   id: string
@@ -44,10 +45,7 @@ export default function CampaignPerformanceCharts({
 
   // Format data for Recharts
   const chartData = sortedMetrics.map((metric) => ({
-    date: new Date(metric.date).toLocaleDateString('ko-KR', {
-      month: '2-digit',
-      day: '2-digit',
-    }),
+    date: formatDate(metric.date).slice(5), // MM-DD only for chart
     노출수: metric.impressions || 0,
     클릭수: metric.clicks || 0,
     지출: metric.spend || 0,

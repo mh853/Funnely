@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BellIcon } from '@heroicons/react/24/outline'
+import { formatDateTime } from '@/lib/utils/date'
 
 export default async function NotificationsPage() {
   const supabase = await createClient()
@@ -117,13 +118,7 @@ export default async function NotificationsPage() {
                       </p>
                     )}
                     <p className="mt-2 text-xs text-gray-400">
-                      {new Date(notification.created_at).toLocaleDateString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(notification.created_at)}
                     </p>
                   </div>
                   {notification.campaign_id && (

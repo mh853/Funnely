@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PencilIcon, TrashIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
+import { formatDate } from '@/lib/utils/date'
 
 interface LandingPageMobileCardProps {
   page: {
@@ -23,12 +24,7 @@ export default function LandingPageMobileCard({ page }: LandingPageMobileCardPro
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
-  const createdDate = new Date(page.created_at)
-  const formattedDate = createdDate.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const formattedDate = formatDate(page.created_at)
 
   return (
     <>
@@ -37,12 +33,14 @@ export default function LandingPageMobileCard({ page }: LandingPageMobileCardPro
         <div className="p-4">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <Link
-                href={`/dashboard/landing-pages/${page.id}`}
+              <a
+                href={`https://funnely.co.kr/landing/${page.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors truncate block"
               >
                 {page.title}
-              </Link>
+              </a>
               <p className="text-xs text-gray-500 mt-0.5">/{page.slug}</p>
               <p className="text-xs text-gray-400 mt-1">{formattedDate}</p>
             </div>

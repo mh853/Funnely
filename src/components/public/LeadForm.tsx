@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { FormField } from '@/types/landing-page.types'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface LeadFormProps {
   landingPageId: string
@@ -204,7 +205,7 @@ export default function LeadForm({
         <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-center">
           <p className="text-sm text-red-800 font-medium">⏰ 마감까지</p>
           <p className="text-2xl font-bold text-red-600 mt-1">
-            {new Date(timerDeadline).toLocaleString('ko-KR')}
+            {formatDateTime(timerDeadline)}
           </p>
         </div>
       )}

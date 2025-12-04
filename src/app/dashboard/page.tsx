@@ -42,7 +42,7 @@ export default async function DashboardPage() {
   // Optimized: Single query to fetch all leads data (instead of 5 separate queries)
   const { data: allLeads } = await supabase
     .from('leads')
-    .select('id, created_at, status')
+    .select('id, created_at, status, device_type')
     .eq('company_id', userProfile?.company_id)
     .gte('created_at', thirtyDaysAgo.toISOString())
     .order('created_at', { ascending: true })
@@ -81,15 +81,33 @@ export default async function DashboardPage() {
           rejected: 0,
           inProgress: 0,
           completed: 0,
+          contractCompleted: 0,
           needsFollowUp: 0,
+          other: 0,
+          // Device type counts
+          pcCount: 0,
+          mobileCount: 0,
+          tabletCount: 0,
+          unknownDeviceCount: 0,
         }
       }
       resultsByDate[dateStr].total++
+
+      // Count by device type
+      const deviceType = lead.device_type || 'unknown'
+      if (deviceType === 'pc') resultsByDate[dateStr].pcCount++
+      else if (deviceType === 'mobile') resultsByDate[dateStr].mobileCount++
+      else if (deviceType === 'tablet') resultsByDate[dateStr].tabletCount++
+      else resultsByDate[dateStr].unknownDeviceCount++
+
       const status = lead.status || 'pending'
       if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
       else if (status === 'rejected') resultsByDate[dateStr].rejected++
       else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
       else if (status === 'converted') resultsByDate[dateStr].completed++
+      else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
+      else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
+      else resultsByDate[dateStr].other++
     }
   })
 
@@ -257,7 +275,7 @@ export default async function DashboardPage() {
                     상담 완료
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    계약 완료
+                    예약 확정
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     추가상담 필요
@@ -289,14 +307,14 @@ export default async function DashboardPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                         {row.completed} {row.total > 0 ? `(${Math.round((row.completed / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        ...
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                        {row.contractCompleted} {row.total > 0 ? `(${Math.round((row.contractCompleted / row.total) * 100)}%)` : ''}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {row.needsFollowUp}
+                        {row.needsFollowUp} {row.total > 0 ? `(${Math.round((row.needsFollowUp / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        ...
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                        {row.other}
                       </td>
                     </tr>
                   ))
@@ -395,10 +413,8 @@ export default async function DashboardPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {resultRows.length > 0 ? (
                     resultRows.slice(0, 3).map((row: any) => {
-                      const total = row.total || 100
-                      const pc = Math.floor(total * 0.3)
-                      const mobile = Math.floor(total * 0.7)
-                      const other = total - pc - mobile
+                      const total = row.total || 0
+                      const otherDevices = (row.tabletCount || 0) + (row.unknownDeviceCount || 0)
 
                       return (
                         <tr key={`traffic-source-${row.date}`} className="hover:bg-gray-50 transition-colors">
@@ -409,13 +425,13 @@ export default async function DashboardPage() {
                             {total}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {pc} ({Math.round((pc / total) * 100)}%)
+                            {row.pcCount || 0}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {mobile} ({Math.round((mobile / total) * 100)}%)
+                            {row.mobileCount || 0}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {other} ({Math.round((other / total) * 100)}%)
+                            {otherDevices}
                           </td>
                         </tr>
                       )
@@ -439,6 +455,7 @@ export default async function DashboardPage() {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">날짜</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">합계</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">PC</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Mobile</th>
@@ -448,31 +465,32 @@ export default async function DashboardPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {resultRows.length > 0 ? (
                     resultRows.slice(0, 3).map((row: any) => {
-                      const total = Math.floor((row.total || 100) * 0.3) // 30% conversion
-                      const pc = Math.floor(total * 0.1)
-                      const mobile = Math.floor(total * 0.85)
-                      const other = total - pc - mobile
+                      const total = row.total || 0
+                      const otherDevices = (row.tabletCount || 0) + (row.unknownDeviceCount || 0)
 
                       return (
                         <tr key={`db-conversion-${row.date}`} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {row.date}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                            {total} ({Math.round((total / (row.total || 100)) * 100)}%)
+                            {total}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {pc} ({total > 0 ? Math.round((pc / total) * 100) : 0}%)
+                            {row.pcCount || 0}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {mobile} ({total > 0 ? Math.round((mobile / total) * 100) : 0}%)
+                            {row.mobileCount || 0}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                            {other}
+                            {otherDevices}
                           </td>
                         </tr>
                       )
                     })
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-4 py-8 text-center text-sm text-gray-400">
+                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
                         데이터가 없습니다
                       </td>
                     </tr>

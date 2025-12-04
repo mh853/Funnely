@@ -2,6 +2,7 @@
 
 import { DocumentArrowDownIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { useState } from 'react'
+import { formatDateTime, formatDate } from '@/lib/utils/date'
 
 interface Report {
   id: string
@@ -118,8 +119,7 @@ export default function RecentReports({ reports, companyId }: RecentReportsProps
                     {reportTypeLabels[report.report_type] || report.report_type}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(report.start_date).toLocaleDateString('ko-KR')} ~{' '}
-                    {new Date(report.end_date).toLocaleDateString('ko-KR')}
+                    {formatDate(report.start_date)} ~ {formatDate(report.end_date)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {report.campaign_count}개
@@ -130,13 +130,7 @@ export default function RecentReports({ reports, companyId }: RecentReportsProps
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(report.created_at).toLocaleDateString('ko-KR', {
-                      year: 'numeric',
-                      month: '2-digit',
-                      day: '2-digit',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
+                    {formatDateTime(report.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end gap-2">

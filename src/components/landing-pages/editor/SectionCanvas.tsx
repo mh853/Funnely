@@ -231,16 +231,16 @@ function SectionPreview({
       return (
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            {section.props.title || '제목'}
+            {section.props?.title || '제목'}
           </h1>
           <p className="text-xl text-gray-600 mb-8">
-            {section.props.subtitle || '부제목'}
+            {section.props?.subtitle || '부제목'}
           </p>
           <button
             className="px-8 py-3 rounded-lg font-medium text-white"
             style={{ backgroundColor: primary }}
           >
-            {section.props.ctaText || '버튼'}
+            {section.props?.ctaText || '버튼'}
           </button>
         </div>
       )
@@ -249,10 +249,10 @@ function SectionPreview({
       return (
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            {section.props.title || '주요 기능'}
+            {section.props?.title || '주요 기능'}
           </h2>
           <div className="grid grid-cols-3 gap-6">
-            {(section.props.items || []).map((item: any, idx: number) => (
+            {(section.props?.items || []).map((item: any, idx: number) => (
               <div key={idx} className="text-center">
                 <div className="text-4xl mb-3">{item.icon}</div>
                 <h3 className="font-semibold text-gray-900 mb-2">{item.title}</h3>
@@ -267,19 +267,19 @@ function SectionPreview({
       return (
         <div className="max-w-xl mx-auto">
           <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">
-            {section.props.title || '신청하기'}
+            {section.props?.title || '신청하기'}
           </h2>
           <p className="text-gray-600 mb-6 text-center">
-            {section.props.description || '정보를 입력해주세요'}
+            {section.props?.description || '정보를 입력해주세요'}
           </p>
           <div className="space-y-4 bg-white p-6 rounded-lg border">
-            {(section.props.fields || []).map((field: string) => (
+            {(section.props?.fields || []).map((field: string) => (
               <div key={field}>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   {field === 'name' && '이름'}
                   {field === 'phone' && '연락처'}
                   {field === 'email' && '이메일'}
-                  {section.props.requiredFields?.includes(field) && ' *'}
+                  {section.props?.requiredFields?.includes(field) && ' *'}
                 </label>
                 <input
                   type="text"
@@ -292,7 +292,7 @@ function SectionPreview({
               className="w-full py-3 rounded-md font-medium text-white"
               style={{ backgroundColor: primary }}
             >
-              {section.props.submitButtonText || '제출'}
+              {section.props?.submitButtonText || '제출'}
             </button>
           </div>
         </div>
@@ -302,16 +302,16 @@ function SectionPreview({
       return (
         <div className="text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">
-            {section.props.title || '지금 바로 시작하세요'}
+            {section.props?.title || '지금 바로 시작하세요'}
           </h2>
           <p className="text-lg text-gray-600 mb-6">
-            {section.props.description || '오늘부터 바로 이용 가능합니다'}
+            {section.props?.description || '오늘부터 바로 이용 가능합니다'}
           </p>
           <button
             className="px-8 py-3 rounded-lg font-medium text-white"
             style={{ backgroundColor: primary }}
           >
-            {section.props.buttonText || '시작하기'}
+            {section.props?.buttonText || '시작하기'}
           </button>
         </div>
       )
@@ -320,10 +320,10 @@ function SectionPreview({
       return (
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            {section.props.title || '고객 후기'}
+            {section.props?.title || '고객 후기'}
           </h2>
           <div className="grid grid-cols-1 gap-6">
-            {(section.props.items || []).map((item: any, idx: number) => (
+            {(section.props?.items || []).map((item: any, idx: number) => (
               <div key={idx} className="bg-white p-6 rounded-lg border">
                 <div className="flex items-center mb-2">
                   <span className="font-semibold">{item.name}</span>
@@ -340,10 +340,10 @@ function SectionPreview({
       return (
         <div className="max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            {section.props.title || '자주 묻는 질문'}
+            {section.props?.title || '자주 묻는 질문'}
           </h2>
           <div className="space-y-4">
-            {(section.props.items || []).map((item: any, idx: number) => (
+            {(section.props?.items || []).map((item: any, idx: number) => (
               <div key={idx} className="bg-white p-4 rounded-lg border">
                 <h3 className="font-semibold text-gray-900 mb-2">{item.question}</h3>
                 <p className="text-gray-600 text-sm">{item.answer}</p>
@@ -357,10 +357,10 @@ function SectionPreview({
       return (
         <div>
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            {section.props.title || '요금제'}
+            {section.props?.title || '요금제'}
           </h2>
           <div className="grid grid-cols-2 gap-6">
-            {(section.props.plans || []).map((plan: any, idx: number) => (
+            {(section.props?.plans || []).map((plan: any, idx: number) => (
               <div
                 key={idx}
                 className={`p-6 rounded-lg border-2 ${
@@ -386,28 +386,28 @@ function SectionPreview({
       return (
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {section.props.title || '특별 할인 마감까지'}
+            {section.props?.title || '특별 할인 마감까지'}
           </h2>
           <div className="flex justify-center gap-4">
-            {section.props.showDays && (
+            {section.props?.showDays && (
               <div className="text-center">
                 <div className="text-3xl font-bold" style={{ color: primary }}>00</div>
                 <div className="text-sm text-gray-600">일</div>
               </div>
             )}
-            {section.props.showHours && (
+            {section.props?.showHours && (
               <div className="text-center">
                 <div className="text-3xl font-bold" style={{ color: primary }}>00</div>
                 <div className="text-sm text-gray-600">시간</div>
               </div>
             )}
-            {section.props.showMinutes && (
+            {section.props?.showMinutes && (
               <div className="text-center">
                 <div className="text-3xl font-bold" style={{ color: primary }}>00</div>
                 <div className="text-sm text-gray-600">분</div>
               </div>
             )}
-            {section.props.showSeconds && (
+            {section.props?.showSeconds && (
               <div className="text-center">
                 <div className="text-3xl font-bold" style={{ color: primary }}>00</div>
                 <div className="text-sm text-gray-600">초</div>
@@ -420,11 +420,11 @@ function SectionPreview({
     case 'media':
       return (
         <div className="text-center">
-          {section.props.url ? (
-            section.props.mediaType === 'video' ? (
-              <video src={section.props.url} controls className="mx-auto max-w-full rounded-lg" />
+          {section.props?.url ? (
+            section.props?.mediaType === 'video' ? (
+              <video src={section.props?.url} controls className="mx-auto max-w-full rounded-lg" />
             ) : (
-              <img src={section.props.url} alt="Media" className="mx-auto max-w-full rounded-lg" />
+              <img src={section.props?.url} alt="Media" className="mx-auto max-w-full rounded-lg" />
             )
           ) : (
             <div className="bg-gray-100 rounded-lg p-12 text-gray-400">
@@ -437,13 +437,13 @@ function SectionPreview({
     case 'gallery':
       return (
         <div>
-          {section.props.images?.length > 0 ? (
+          {section.props?.images?.length > 0 ? (
             <div className={`grid gap-4 ${
-              section.props.layout === 'grid-2' ? 'grid-cols-2' :
-              section.props.layout === 'grid-3' ? 'grid-cols-3' :
-              section.props.layout === 'grid-4' ? 'grid-cols-4' : 'grid-cols-3'
+              section.props?.layout === 'grid-2' ? 'grid-cols-2' :
+              section.props?.layout === 'grid-3' ? 'grid-cols-3' :
+              section.props?.layout === 'grid-4' ? 'grid-cols-4' : 'grid-cols-3'
             }`}>
-              {section.props.images.map((img: string, idx: number) => (
+              {section.props?.images.map((img: string, idx: number) => (
                 <img key={idx} src={img} alt={`Gallery ${idx}`} className="w-full h-48 object-cover rounded-lg" />
               ))}
             </div>

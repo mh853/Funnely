@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import ExcelJS from 'exceljs'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import { formatDate } from '@/lib/utils/date'
 
 export async function POST(request: NextRequest) {
   try {
@@ -197,7 +198,7 @@ export async function POST(request: NextRequest) {
 
       doc.setFontSize(10)
       doc.text(`기간: ${startDate || '전체'} ~ ${endDate || '전체'}`, 14, 22)
-      doc.text(`생성일: ${new Date().toLocaleDateString('ko-KR')}`, 14, 27)
+      doc.text(`생성일: ${formatDate(new Date())}`, 14, 27)
 
       // Prepare table data
       const headers = [['캠페인명', '플랫폼', '상태']]

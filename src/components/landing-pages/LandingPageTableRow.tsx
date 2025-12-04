@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
+import { formatDate } from '@/lib/utils/date'
 
 interface LandingPageTableRowProps {
   page: {
@@ -23,12 +24,7 @@ interface LandingPageTableRowProps {
 export default function LandingPageTableRow({ page, index }: LandingPageTableRowProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
-  const createdDate = new Date(page.created_at)
-  const formattedDate = createdDate.toLocaleDateString('ko-KR', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  })
+  const formattedDate = formatDate(page.created_at)
 
   return (
     <>
@@ -43,12 +39,14 @@ export default function LandingPageTableRow({ page, index }: LandingPageTableRow
         <td className="px-6 py-5 whitespace-nowrap">
           <div className="flex items-center">
             <div>
-              <Link
-                href={`/dashboard/landing-pages/${page.id}`}
+              <a
+                href={`https://funnely.co.kr/landing/${page.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
               >
                 {page.title}
-              </Link>
+              </a>
               <div className="text-xs text-gray-500 mt-1">/{page.slug}</div>
             </div>
           </div>

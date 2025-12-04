@@ -17,6 +17,7 @@ import {
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
 
 interface Lead {
   id: string
@@ -63,7 +64,7 @@ const STATUS_LABELS: { [key: string]: string } = {
   contacted: '연락완료',
   qualified: '상담예정',
   converted: '전환완료',
-  contract_completed: '계약완료',
+  contract_completed: '예약확정',
   lost: '이탈',
 }
 
@@ -75,7 +76,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   converted: { bg: 'bg-green-100', text: 'text-green-800', label: '상담 완료' },
-  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '계약 완료' },
+  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '예약 확정' },
   needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
 }
@@ -86,7 +87,7 @@ const STATUS_OPTIONS = [
   { value: 'rejected', label: '상담 거절' },
   { value: 'contacted', label: '상담 진행중' },
   { value: 'converted', label: '상담 완료' },
-  { value: 'contract_completed', label: '계약 완료' },
+  { value: 'contract_completed', label: '예약 확정' },
   { value: 'needs_followup', label: '추가상담 필요' },
   { value: 'other', label: '기타' },
 ]
@@ -479,10 +480,7 @@ export default function CalendarView({
                           EVENT_COLORS[event.event_type as keyof typeof EVENT_COLORS]
                         }`}
                       >
-                        {new Date(event.start_time).toLocaleTimeString('ko-KR', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}{' '}
+                        {formatTime(event.start_time)}{' '}
                         {event.title}
                       </div>
                     ))}
@@ -658,10 +656,7 @@ export default function CalendarView({
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{event.title}</span>
                           <span className="text-xs">
-                            {new Date(event.start_time).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatTime(event.start_time)}
                           </span>
                         </div>
                         {event.description && (
@@ -698,7 +693,7 @@ export default function CalendarView({
                             <span className="font-medium">{lead.name}</span>
                           </div>
                           <span className="text-xs px-2 py-1 bg-white/50 rounded">
-                            {STATUS_LABELS[lead.status] || lead.status}
+                            {STATUS_STYLES[lead.status]?.label || STATUS_LABELS[lead.status] || lead.status}
                           </span>
                         </div>
                         <p className="text-sm mt-1 opacity-75">{lead.phone}</p>
@@ -850,11 +845,7 @@ export default function CalendarView({
                           <tr>
                             <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">희망 상담일</td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {new Date(leadDetails.preferred_date).toLocaleDateString('ko-KR', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
+                              {formatDate(leadDetails.preferred_date)}
                               {leadDetails.preferred_time && ` ${leadDetails.preferred_time}`}
                             </td>
                           </tr>
@@ -943,26 +934,20 @@ export default function CalendarView({
                         <tr>
                           <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">신청일시</td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {new Date(leadDetails.created_at).toLocaleString('ko-KR', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatDateTime(leadDetails.created_at)}
                           </td>
                         </tr>
-                        {/* 계약 완료일 */}
+                        {/* 예약 확정일 */}
                         {leadDetails.contract_completed_at && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">계약 완료일</td>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">예약 확정일</td>
                             <td className="px-4 py-3 text-sm text-gray-900">
                               <div>
-                                {new Date(leadDetails.contract_completed_at).toISOString().split('T')[0]}
+                                {formatDate(leadDetails.contract_completed_at)}
                               </div>
                               {leadDetails.previous_contract_completed_at && (
                                 <div className="text-xs text-gray-400 mt-0.5">
-                                  이전: {new Date(leadDetails.previous_contract_completed_at).toISOString().split('T')[0]}
+                                  이전: {formatDate(leadDetails.previous_contract_completed_at)}
                                 </div>
                               )}
                             </td>

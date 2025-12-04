@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { createClient } from '@/lib/supabase/client'
+import { formatDate } from '@/lib/utils/date'
 
 interface Plan {
   id: string
@@ -118,8 +119,7 @@ export default function SubscriptionClient({
             </p>
             {currentSubscription.status === 'trial' && (
               <p className="text-sm text-gray-600 mt-1">
-                체험 종료:{' '}
-                {new Date(currentSubscription.trial_end_date!).toLocaleDateString('ko-KR')}
+                체험 종료: {formatDate(currentSubscription.trial_end_date!)}
               </p>
             )}
           </div>

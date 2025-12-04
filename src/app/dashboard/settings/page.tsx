@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HospitalSettingsForm from '@/components/settings/HospitalSettingsForm'
 import { KeyIcon } from '@heroicons/react/24/outline'
+import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -172,7 +173,7 @@ export default async function SettingsPage() {
             <div>
               <dt className="text-sm font-medium text-gray-500">가입일</dt>
               <dd className="mt-1 text-sm text-gray-900">
-                {new Date(userProfile.created_at).toLocaleDateString('ko-KR')}
+                {formatDate(userProfile.created_at)}
               </dd>
             </div>
           </dl>

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import { decryptPhone } from '@/lib/encryption/phone'
 import LeadDetails from '@/components/leads/LeadDetails'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface Props {
   params: { id: string }
@@ -108,13 +109,7 @@ export default async function LeadDetailPage({ params }: Props) {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">{lead.name}</h1>
             <p className="mt-1 text-sm text-gray-600">
-              {new Date(lead.created_at).toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatDateTime(lead.created_at)}
             </p>
           </div>
         </div>

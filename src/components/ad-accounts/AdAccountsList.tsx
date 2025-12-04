@@ -7,6 +7,7 @@ import {
   XCircleIcon,
   ArrowPathIcon,
 } from '@heroicons/react/24/outline'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface AdAccount {
   id: string
@@ -147,7 +148,7 @@ export default function AdAccountsList({
                     )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(account.created_at).toLocaleDateString('ko-KR')}
+                    {formatDateTime(account.created_at)}
                   </td>
                   {canManage && (
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

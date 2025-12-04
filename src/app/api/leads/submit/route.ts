@@ -73,7 +73,20 @@ export async function POST(request: NextRequest) {
 
     // Get client IP and user agent
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
-    const userAgent = request.headers.get('user-agent')
+    const userAgent = request.headers.get('user-agent') || ''
+
+    // Detect device type from user agent
+    const detectDeviceType = (ua: string): string => {
+      const lowerUA = ua.toLowerCase()
+      if (/mobile|android|iphone|ipod|blackberry|windows phone/i.test(lowerUA)) {
+        return 'mobile'
+      }
+      if (/ipad|tablet|playbook|silk/i.test(lowerUA)) {
+        return 'tablet'
+      }
+      return 'pc'
+    }
+    const deviceType = detectDeviceType(userAgent)
 
     // Check for duplicate lead (same phone number for this hospital)
     const { data: existingLead } = await supabase
@@ -118,6 +131,7 @@ export async function POST(request: NextRequest) {
         referrer,
         ip_address: ipAddress,
         user_agent: userAgent,
+        device_type: deviceType,
       })
       .select('id')
       .single()

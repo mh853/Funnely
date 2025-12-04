@@ -247,7 +247,7 @@ export default async function LandingPagesPage({
                       scope="col"
                       className="px-6 py-4 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
                     >
-                      계약완료
+                      예약확정
                     </th>
                     <th
                       scope="col"

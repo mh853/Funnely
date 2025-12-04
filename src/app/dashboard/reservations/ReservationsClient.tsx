@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
 import {
   XMarkIcon,
   ChevronDownIcon,
@@ -42,7 +43,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   converted: { bg: 'bg-green-100', text: 'text-green-800', label: '상담 완료' },
-  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '계약 완료' },
+  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '예약 확정' },
   needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
 }
@@ -53,7 +54,7 @@ const STATUS_OPTIONS = [
   { value: 'rejected', label: '상담 거절' },
   { value: 'contacted', label: '상담 진행중' },
   { value: 'converted', label: '상담 완료' },
-  { value: 'contract_completed', label: '계약 완료' },
+  { value: 'contract_completed', label: '예약 확정' },
   { value: 'needs_followup', label: '추가상담 필요' },
   { value: 'other', label: '기타' },
 ]
@@ -84,6 +85,16 @@ export default function ReservationsClient({
   // Calendar modal state (캘린더 뷰 모달)
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [calendarCurrentMonth, setCalendarCurrentMonth] = useState(new Date())
+
+  // Schedule input modal state (예약 스케줄 수동 입력 모달)
+  const [showScheduleInputModal, setShowScheduleInputModal] = useState(false)
+  const [scheduleInputDate, setScheduleInputDate] = useState<string>('')
+  const [scheduleInputTime, setScheduleInputTime] = useState('10:00')
+  const [scheduleInputLeadId, setScheduleInputLeadId] = useState<string>('')
+  const [availableLeadsForSchedule, setAvailableLeadsForSchedule] = useState<any[]>([])
+  const [loadingAvailableLeads, setLoadingAvailableLeads] = useState(false)
+  const [savingSchedule, setSavingSchedule] = useState(false)
+  const [scheduleSearchQuery, setScheduleSearchQuery] = useState('')
 
   // 디버깅용 로그
   console.log('ReservationsClient initialLeads:', initialLeads)
@@ -161,14 +172,126 @@ export default function ReservationsClient({
     return leadsByDate[dateStr]?.length || 0
   }
 
-  // Handle calendar date click
-  const handleCalendarDateClick = (year: number, month: number, day: number) => {
+  // Handle calendar date click - 기존 예약 있으면 목록 보기, 없으면 새 예약 입력 모달
+  const handleCalendarDateClick = async (year: number, month: number, day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+
     if (leadsByDate[dateStr] && leadsByDate[dateStr].length > 0) {
+      // 기존 예약이 있으면 목록 모달
       setShowCalendarModal(false)
       setSelectedDateForModal(dateStr)
       setShowDateLeadsModal(true)
+    } else {
+      // 예약이 없으면 새 예약 입력 모달
+      setScheduleInputDate(dateStr)
+      setScheduleInputTime('10:00')
+      setScheduleInputLeadId('')
+      setShowScheduleInputModal(true)
+
+      // 계약 완료 상태가 아닌 리드 목록 가져오기 (상담완료 상태 등)
+      setLoadingAvailableLeads(true)
+      setScheduleSearchQuery('')
+      try {
+        const { data, error } = await supabase
+          .from('leads')
+          .select(`
+            id,
+            name,
+            phone,
+            status,
+            landing_pages (
+              id,
+              title
+            )
+          `)
+          .eq('company_id', companyId)
+          .neq('status', 'contract_completed')
+          .neq('status', 'rejected')
+          .order('created_at', { ascending: false })
+          .limit(200)
+
+        if (error) throw error
+        setAvailableLeadsForSchedule(data || [])
+      } catch (error) {
+        console.error('Error fetching available leads:', error)
+        setAvailableLeadsForSchedule([])
+      } finally {
+        setLoadingAvailableLeads(false)
+      }
     }
+  }
+
+  // 예약 스케줄 저장
+  const handleSaveSchedule = async () => {
+    if (!scheduleInputLeadId || !scheduleInputDate) {
+      alert('고객과 날짜를 선택해주세요.')
+      return
+    }
+
+    setSavingSchedule(true)
+    try {
+      // 날짜와 시간 결합하여 ISO 문자열 생성
+      const contractCompletedAt = `${scheduleInputDate}T${scheduleInputTime}:00`
+
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: scheduleInputLeadId,
+          status: 'contract_completed',
+          contract_completed_at: contractCompletedAt
+        })
+      })
+
+      if (!response.ok) throw new Error('예약 스케줄 저장 실패')
+
+      // 성공 시 해당 리드 정보 가져와서 로컬 상태 업데이트
+      const { data: updatedLead } = await supabase
+        .from('leads')
+        .select(`
+          *,
+          landing_pages (
+            id,
+            title,
+            slug
+          )
+        `)
+        .eq('id', scheduleInputLeadId)
+        .single()
+
+      if (updatedLead) {
+        setLeads(prev => {
+          const exists = prev.find(l => l.id === updatedLead.id)
+          if (exists) {
+            return prev.map(l => l.id === updatedLead.id ? updatedLead as Lead : l)
+          }
+          return [...prev, updatedLead as Lead]
+        })
+      }
+
+      setShowScheduleInputModal(false)
+      setShowCalendarModal(false)
+      alert('예약 스케줄이 저장되었습니다.')
+    } catch (error) {
+      console.error('Error saving schedule:', error)
+      alert('예약 스케줄 저장에 실패했습니다.')
+    } finally {
+      setSavingSchedule(false)
+    }
+  }
+
+  // 해당 월의 계약 완료 건수 계산
+  const getMonthlyContractCount = (year: number, month: number) => {
+    let count = 0
+    leads.forEach(lead => {
+      if (lead.contract_completed_at) {
+        const date = new Date(lead.contract_completed_at)
+        if (date.getFullYear() === year && date.getMonth() === month) {
+          count++
+        }
+      }
+    })
+    return count
   }
 
   // Handle status update (using API to properly track previous_contract_completed_at)
@@ -345,7 +468,7 @@ export default function ReservationsClient({
           <div>
             <h1 className="text-3xl font-bold">예약 스케줄</h1>
             <p className="mt-2 text-emerald-100">
-              계약 완료된 예약 일정을 관리합니다
+              예약 확정된 일정을 관리합니다
             </p>
           </div>
           <div className="text-right">
@@ -361,7 +484,7 @@ export default function ReservationsClient({
           <div className="p-12 text-center">
             <div className="text-gray-400 text-lg mb-2">예약된 일정이 없습니다</div>
             <p className="text-sm text-gray-500">
-              계약 완료 시 날짜/시간을 지정하면 여기에 표시됩니다
+              예약 확정 시 날짜/시간을 지정하면 여기에 표시됩니다
             </p>
           </div>
         ) : (
@@ -406,13 +529,7 @@ export default function ReservationsClient({
                   {/* Reservation Items */}
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-0 md:ml-20">
                     {dateLeads.map((lead) => {
-                      const time = new Date(lead.contract_completed_at!).toLocaleTimeString(
-                        'ko-KR',
-                        {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        }
-                      )
+                      const time = formatTime(lead.contract_completed_at!)
                       const phone = lead.phone ? decryptPhone(lead.phone) : null
                       // landing_pages가 배열일 수도 있고 객체일 수도 있음
                       const landingPage = Array.isArray(lead.landing_pages)
@@ -485,7 +602,7 @@ export default function ReservationsClient({
           onClick={() => setShowAllLeadsModal(true)}
           className="inline-flex items-center justify-center px-8 py-3 text-base font-medium text-emerald-600 bg-white border-2 border-emerald-600 rounded-full hover:bg-emerald-50 transition-all duration-300 shadow-md hover:shadow-lg"
         >
-          모든 계약 완료 건 보기
+          모든 예약 확정 건 보기
         </button>
         <button
           onClick={() => setShowCalendarModal(true)}
@@ -505,7 +622,7 @@ export default function ReservationsClient({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold">예약 상세 정보</h3>
-                  <p className="text-sm text-emerald-100">계약 완료 고객 정보</p>
+                  <p className="text-sm text-emerald-100">예약 확정 고객 정보</p>
                 </div>
                 <button
                   onClick={() => {
@@ -615,11 +732,7 @@ export default function ReservationsClient({
                           <tr>
                             <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">희망 상담일</td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {new Date(leadDetails.preferred_date).toLocaleDateString('ko-KR', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                              })}
+                              {formatDate(leadDetails.preferred_date)}
                               {leadDetails.preferred_time && ` ${leadDetails.preferred_time}`}
                             </td>
                           </tr>
@@ -710,19 +823,13 @@ export default function ReservationsClient({
                         <tr>
                           <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">신청일시</td>
                           <td className="px-4 py-3 text-sm text-gray-900">
-                            {new Date(leadDetails.created_at).toLocaleString('ko-KR', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
+                            {formatDateTime(leadDetails.created_at)}
                           </td>
                         </tr>
-                        {/* 계약 완료일 */}
+                        {/* 예약 확정일 */}
                         {leadDetails.contract_completed_at && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">계약 완료일</td>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">예약 확정일</td>
                             <td className="px-4 py-3 text-sm text-gray-900">
                               <div>
                                 {new Date(leadDetails.contract_completed_at).toISOString().split('T')[0]}
@@ -829,10 +936,7 @@ export default function ReservationsClient({
                         {/* Leads List */}
                         <div className="divide-y divide-gray-100">
                           {dateLeads.map((lead) => {
-                            const time = new Date(lead.contract_completed_at!).toLocaleTimeString('ko-KR', {
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })
+                            const time = formatTime(lead.contract_completed_at!)
                             const phone = lead.phone ? decryptPhone(lead.phone) : null
                             const landingPage = Array.isArray(lead.landing_pages)
                               ? lead.landing_pages[0]
@@ -934,10 +1038,7 @@ export default function ReservationsClient({
               ) : (
                 <div className="space-y-3">
                   {leadsByDate[selectedDateForModal].map((lead) => {
-                    const time = new Date(lead.contract_completed_at!).toLocaleTimeString('ko-KR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })
+                    const time = formatTime(lead.contract_completed_at!)
                     const phone = lead.phone ? decryptPhone(lead.phone) : null
                     const landingPage = Array.isArray(lead.landing_pages)
                       ? lead.landing_pages[0]
@@ -1090,7 +1191,7 @@ export default function ReservationsClient({
                       <div
                         key={idx}
                         onClick={() => {
-                          if (day && leadCount > 0) {
+                          if (day) {
                             handleCalendarDateClick(
                               calendarCurrentMonth.getFullYear(),
                               calendarCurrentMonth.getMonth(),
@@ -1100,7 +1201,7 @@ export default function ReservationsClient({
                         }}
                         className={`
                           min-h-[80px] p-2 border-t border-l border-gray-100
-                          ${day && leadCount > 0 ? 'cursor-pointer hover:bg-emerald-50' : ''}
+                          ${day ? 'cursor-pointer hover:bg-emerald-50' : ''}
                           ${isToday ? 'bg-emerald-50' : ''}
                           ${!day ? 'bg-gray-50' : ''}
                         `}
@@ -1142,8 +1243,14 @@ export default function ReservationsClient({
                   <span>오늘</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">N건</div>
-                  <span>계약 완료 건수</span>
+                  <div className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {getMonthlyContractCount(calendarCurrentMonth.getFullYear(), calendarCurrentMonth.getMonth())}건
+                  </div>
+                  <span>이번달 계약 완료</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-400">|</span>
+                  <span>날짜 클릭 시 예약 추가 가능</span>
                 </div>
               </div>
             </div>
@@ -1155,6 +1262,250 @@ export default function ReservationsClient({
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
                 닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Schedule Input Modal - 예약 스케줄 수동 입력 */}
+      {showScheduleInputModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">예약 스케줄 입력</h3>
+                  <p className="text-sm text-emerald-100">
+                    {scheduleInputDate && new Date(scheduleInputDate).toLocaleDateString('ko-KR', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                      weekday: 'long',
+                    })}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowScheduleInputModal(false)}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              {/* 고객 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  고객 선택 <span className="text-red-500">*</span>
+                </label>
+                {loadingAvailableLeads ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-emerald-600"></div>
+                    <span className="ml-2 text-sm text-gray-500">로딩 중...</span>
+                  </div>
+                ) : availableLeadsForSchedule.length === 0 ? (
+                  <div className="text-center py-4 text-gray-500 text-sm bg-gray-50 rounded-lg">
+                    <p>예약 가능한 고객이 없습니다.</p>
+                    <p className="text-xs mt-1">계약 완료, 상담 거절 상태가 아닌 고객만 선택 가능합니다.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {/* 검색 입력 */}
+                    <input
+                      type="text"
+                      placeholder="이름 또는 연락처로 검색..."
+                      value={scheduleSearchQuery}
+                      onChange={(e) => setScheduleSearchQuery(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                    />
+                    {/* 고객 목록 */}
+                    <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg">
+                      {(() => {
+                        const filteredLeads = availableLeadsForSchedule.filter(lead => {
+                          if (!scheduleSearchQuery) return true
+                          const query = scheduleSearchQuery.toLowerCase()
+                          const name = (lead.name || '').toLowerCase()
+                          const phone = lead.phone ? decryptPhone(lead.phone) : ''
+                          return name.includes(query) || phone.includes(query)
+                        })
+
+                        if (filteredLeads.length === 0) {
+                          return (
+                            <div className="p-3 text-center text-sm text-gray-500">
+                              검색 결과가 없습니다.
+                            </div>
+                          )
+                        }
+
+                        return filteredLeads.map((lead) => {
+                          const landingPage = Array.isArray(lead.landing_pages)
+                            ? lead.landing_pages[0]
+                            : lead.landing_pages
+                          const phone = lead.phone ? decryptPhone(lead.phone) : ''
+                          const isSelected = scheduleInputLeadId === lead.id
+
+                          return (
+                            <div
+                              key={lead.id}
+                              onClick={() => setScheduleInputLeadId(lead.id)}
+                              className={`p-3 border-b border-gray-100 last:border-b-0 cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'bg-emerald-50 border-l-4 border-l-emerald-500'
+                                  : 'hover:bg-gray-50'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div>
+                                  <span className="font-medium text-gray-900">{lead.name}</span>
+                                  {phone && <span className="ml-2 text-gray-500 text-sm">({phone})</span>}
+                                </div>
+                                <span className={`text-xs px-2 py-1 rounded-full ${STATUS_STYLES[lead.status]?.bg || 'bg-gray-100'} ${STATUS_STYLES[lead.status]?.text || 'text-gray-800'}`}>
+                                  {STATUS_STYLES[lead.status]?.label || lead.status}
+                                </span>
+                              </div>
+                              {landingPage?.title && (
+                                <div className="text-xs text-gray-400 mt-1">{landingPage.title}</div>
+                              )}
+                            </div>
+                          )
+                        })
+                      })()}
+                    </div>
+                    <p className="text-xs text-gray-400">총 {availableLeadsForSchedule.length}명의 고객</p>
+                  </div>
+                )}
+              </div>
+
+              {/* 빠른 날짜 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  빠른 선택
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setScheduleInputDate(new Date().toISOString().split('T')[0])}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                      scheduleInputDate === new Date().toISOString().split('T')[0]
+                        ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    오늘
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const tomorrow = new Date()
+                      tomorrow.setDate(tomorrow.getDate() + 1)
+                      setScheduleInputDate(tomorrow.toISOString().split('T')[0])
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                      (() => {
+                        const tomorrow = new Date()
+                        tomorrow.setDate(tomorrow.getDate() + 1)
+                        return scheduleInputDate === tomorrow.toISOString().split('T')[0]
+                      })()
+                        ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    내일
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextWeek = new Date()
+                      nextWeek.setDate(nextWeek.getDate() + 7)
+                      setScheduleInputDate(nextWeek.toISOString().split('T')[0])
+                    }}
+                    className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                      (() => {
+                        const nextWeek = new Date()
+                        nextWeek.setDate(nextWeek.getDate() + 7)
+                        return scheduleInputDate === nextWeek.toISOString().split('T')[0]
+                      })()
+                        ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    다음주
+                  </button>
+                </div>
+              </div>
+
+              {/* 날짜 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  예약 날짜 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={scheduleInputDate}
+                  onChange={(e) => setScheduleInputDate(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              {/* 빠른 시간 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  예약 시간 <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-4 gap-2 mb-2">
+                  {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map((time) => (
+                    <button
+                      key={time}
+                      type="button"
+                      onClick={() => setScheduleInputTime(time)}
+                      className={`py-2 px-2 rounded-lg text-sm font-medium transition-all ${
+                        scheduleInputTime === time
+                          ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="time"
+                  value={scheduleInputTime}
+                  onChange={(e) => setScheduleInputTime(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                />
+              </div>
+
+              {/* 안내 메시지 */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                <p className="text-xs text-amber-800">
+                  <strong>참고:</strong> 예약 스케줄을 저장하면 해당 고객의 상태가 &apos;계약 완료&apos;로 변경됩니다.
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+              <button
+                onClick={() => setShowScheduleInputModal(false)}
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                disabled={savingSchedule}
+              >
+                취소
+              </button>
+              <button
+                onClick={handleSaveSchedule}
+                disabled={savingSchedule || !scheduleInputLeadId || !scheduleInputDate}
+                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+              >
+                {savingSchedule && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                )}
+                예약 저장
               </button>
             </div>
           </div>

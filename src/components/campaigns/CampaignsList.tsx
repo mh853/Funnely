@@ -9,6 +9,7 @@ import {
 } from '@heroicons/react/24/outline'
 import EditCampaignModal from './EditCampaignModal'
 import DeleteCampaignModal from './DeleteCampaignModal'
+import { formatDate } from '@/lib/utils/date'
 
 interface AdAccount {
   id: string
@@ -88,17 +89,9 @@ export default function CampaignsList({
 
   const formatDateRange = (startDate: string | null, endDate: string | null) => {
     if (!startDate) return '기간 미설정'
-    const start = new Date(startDate).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
+    const start = formatDate(startDate)
     if (!endDate) return `${start} ~`
-    const end = new Date(endDate).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit'
-    })
+    const end = formatDate(endDate)
     return `${start} ~ ${end}`
   }
 

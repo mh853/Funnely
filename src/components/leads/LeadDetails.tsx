@@ -12,6 +12,7 @@ import {
   UserIcon,
   ChatBubbleLeftIcon,
 } from '@heroicons/react/24/outline'
+import { formatDateTime, formatDate } from '@/lib/utils/date'
 
 interface LeadDetailsProps {
   lead: any
@@ -177,7 +178,7 @@ export default function LeadDetails({
                   희망 날짜
                 </dt>
                 <dd className="mt-1 text-sm text-gray-900">
-                  {new Date(lead.preferred_date).toLocaleDateString('ko-KR')}
+                  {formatDate(lead.preferred_date)}
                 </dd>
               </div>
             )}
@@ -290,12 +291,7 @@ export default function LeadDetails({
                     <span>{note.users?.name || '알 수 없음'}</span>
                     <span className="mx-2">•</span>
                     <span>
-                      {new Date(note.created_at).toLocaleDateString('ko-KR', {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(note.created_at)}
                     </span>
                   </div>
                 </div>
@@ -389,13 +385,7 @@ export default function LeadDetails({
             <div className="text-sm">
               <p className="text-gray-500">생성일</p>
               <p className="text-gray-900">
-                {new Date(lead.created_at).toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+                {formatDateTime(lead.created_at)}
               </p>
             </div>
 
@@ -403,13 +393,7 @@ export default function LeadDetails({
               <div className="text-sm">
                 <p className="text-gray-500">첫 연락</p>
                 <p className="text-gray-900">
-                  {new Date(lead.first_contact_at).toLocaleDateString('ko-KR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(lead.first_contact_at)}
                 </p>
               </div>
             )}
@@ -418,13 +402,7 @@ export default function LeadDetails({
               <div className="text-sm">
                 <p className="text-gray-500">마지막 연락</p>
                 <p className="text-gray-900">
-                  {new Date(lead.last_contact_at).toLocaleDateString('ko-KR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(lead.last_contact_at)}
                 </p>
               </div>
             )}
@@ -433,13 +411,7 @@ export default function LeadDetails({
               <div className="text-sm">
                 <p className="text-gray-500">완료일</p>
                 <p className="text-gray-900">
-                  {new Date(lead.completed_at).toLocaleDateString('ko-KR', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
+                  {formatDateTime(lead.completed_at)}
                 </p>
               </div>
             )}

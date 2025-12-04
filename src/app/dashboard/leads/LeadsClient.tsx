@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { decryptPhone } from '@/lib/encryption/phone'
 import DateRangePicker from '@/components/ui/DateRangePicker'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface LeadsClientProps {
   leads: any[]
@@ -22,7 +23,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   converted: { bg: 'bg-green-100', text: 'text-green-800', label: '상담 완료' },
-  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '계약 완료' },
+  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '예약 확정' },
   needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
 }
@@ -33,7 +34,7 @@ const STATUS_OPTIONS = [
   { value: 'rejected', label: '상담 거절' },
   { value: 'contacted', label: '상담 진행중' },
   { value: 'converted', label: '상담 완료' },
-  { value: 'contract_completed', label: '계약 완료' },
+  { value: 'contract_completed', label: '예약 확정' },
   { value: 'needs_followup', label: '추가상담 필요' },
   { value: 'other', label: '기타' },
 ]
@@ -464,7 +465,7 @@ export default function LeadsClient({
           {/* Device */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              PC/Mobile
+              기기
             </label>
             <select
               value={deviceType}
@@ -549,7 +550,7 @@ export default function LeadsClient({
                   랜딩페이지 이름
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  PC/Mobile
+                  기기
                 </th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   이름
@@ -585,19 +586,13 @@ export default function LeadsClient({
                 leads.map((lead: any) => (
                   <tr key={lead.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(lead.created_at).toLocaleString('ko-KR', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
+                      {formatDateTime(lead.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {lead.landing_pages?.title || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {lead.device_type?.toUpperCase() || 'PC'}
+                      {lead.device_type?.toUpperCase() || '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       {lead.name}

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import CampaignPerformanceMetrics from '@/components/campaigns/CampaignPerformanceMetrics'
 import CampaignPerformanceCharts from '@/components/campaigns/CampaignPerformanceCharts'
+import { formatDate } from '@/lib/utils/date'
 
 export default async function CampaignDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -114,9 +115,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
               {campaign.start_date && (
                 <p>
                   <span className="font-medium">기간:</span>{' '}
-                  {new Date(campaign.start_date).toLocaleDateString('ko-KR')}
-                  {campaign.end_date &&
-                    ` ~ ${new Date(campaign.end_date).toLocaleDateString('ko-KR')}`}
+                  {formatDate(campaign.start_date)}
+                  {campaign.end_date && ` ~ ${formatDate(campaign.end_date)}`}
                 </p>
               )}
             </div>
@@ -176,7 +176,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
                   {metrics.map((metric: any) => (
                     <tr key={metric.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(metric.date).toLocaleDateString('ko-KR')}
+                        {formatDate(metric.date)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-right">
                         {new Intl.NumberFormat('ko-KR').format(metric.impressions || 0)}

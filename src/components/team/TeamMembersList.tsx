@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { UserCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { formatDateTime } from '@/lib/utils/date'
 
 interface TeamMember {
   id: string
@@ -206,7 +207,7 @@ export default function TeamMembersList({
                     )}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {new Date(member.created_at).toLocaleDateString('ko-KR')}
+                    {formatDateTime(member.created_at)}
                   </td>
                   {canManage && (
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
