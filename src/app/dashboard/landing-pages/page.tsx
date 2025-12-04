@@ -13,7 +13,7 @@ export const revalidate = 300
 export default async function LandingPagesPage({
   searchParams,
 }: {
-  searchParams: { period?: PeriodFilter }
+  searchParams: Promise<{ period?: PeriodFilter }>
 }) {
   const supabase = await createClient()
 
@@ -36,7 +36,8 @@ export default async function LandingPagesPage({
   }
 
   // Get period filter (default to all)
-  const period = searchParams.period || 'all'
+  const resolvedSearchParams = await searchParams
+  const period = resolvedSearchParams.period || 'all'
 
   // Calculate date range based on period
   const now = new Date()
@@ -60,11 +61,18 @@ export default async function LandingPagesPage({
   }
 
   // Get landing pages with only needed columns (optimized data transfer)
-  const { data: landingPages } = await supabase
+  // 생성날짜(created_at) 기준으로 필터 적용
+  let landingPagesQuery = supabase
     .from('landing_pages')
     .select('id, title, slug, is_active, created_at, views_count, company_id')
     .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
+
+  // 전체가 아닌 경우에만 날짜 필터 적용 (랜딩페이지 생성일 기준)
+  if (startDate) {
+    landingPagesQuery = landingPagesQuery.gte('created_at', startDate.toISOString())
+  }
+
+  const { data: landingPages } = await landingPagesQuery.order('created_at', { ascending: false })
 
   // Get all leads statistics in a single query (prevents N+1 problem)
   let leadsQuery = supabase
