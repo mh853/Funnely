@@ -72,7 +72,6 @@ export default function ReservationsClient({
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
   const [leadDetails, setLeadDetails] = useState<any>(null)
   const [loadingLeadDetails, setLoadingLeadDetails] = useState(false)
-  const [editingStatus, setEditingStatus] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
   // All leads modal state (날짜별 전체 리스트)
@@ -333,7 +332,6 @@ export default function ReservationsClient({
       setLeads(leads.map(l =>
         l.id === selectedLead.id ? { ...l, ...updatedData } : l
       ))
-      setEditingStatus(false)
     } catch (error) {
       console.error('Error updating status:', error)
       alert('상태 업데이트에 실패했습니다.')
@@ -629,7 +627,6 @@ export default function ReservationsClient({
                     setShowLeadDetailModal(false)
                     setSelectedLead(null)
                     setLeadDetails(null)
-                    setEditingStatus(false)
                   }}
                   className="p-2 hover:bg-white/20 rounded-full transition"
                 >
@@ -688,43 +685,29 @@ export default function ReservationsClient({
                         <tr>
                           <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상태</td>
                           <td className="px-4 py-3">
-                            {editingStatus ? (
-                              <div className="relative">
-                                <select
-                                  value={leadDetails.status}
-                                  onChange={(e) => handleStatusUpdate(e.target.value)}
-                                  disabled={updatingStatus}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                >
-                                  {STATUS_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {updatingStatus && (
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
-                                  </div>
+                            <div className="relative">
+                              <select
+                                value={leadDetails.status}
+                                onChange={(e) => handleStatusUpdate(e.target.value)}
+                                disabled={updatingStatus}
+                                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer appearance-none pr-8 ${
+                                  STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
+                                } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'} border-gray-300 font-medium`}
+                              >
+                                {STATUS_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                {updatingStatus ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                ) : (
+                                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
                                 )}
                               </div>
-                            ) : (
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                                    STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
-                                  } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'}`}
-                                >
-                                  {STATUS_STYLES[leadDetails.status]?.label || leadDetails.status}
-                                </span>
-                                <button
-                                  onClick={() => setEditingStatus(true)}
-                                  className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition"
-                                >
-                                  <ChevronDownIcon className="h-4 w-4" />
-                                </button>
-                              </div>
-                            )}
+                            </div>
                           </td>
                         </tr>
                         {/* 희망 상담일 */}
@@ -869,7 +852,6 @@ export default function ReservationsClient({
                   setShowLeadDetailModal(false)
                   setSelectedLead(null)
                   setLeadDetails(null)
-                  setEditingStatus(false)
                 }}
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
