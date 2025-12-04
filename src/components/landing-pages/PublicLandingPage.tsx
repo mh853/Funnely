@@ -349,13 +349,6 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
               </p>
             </div>
             <div className="p-6 space-y-4">
-              {/* 에러 메시지 */}
-              {submitError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-                  {submitError}
-                </div>
-              )}
-
               {/* Name Field */}
               {landingPage.collect_name !== false && (
                 <div>
@@ -479,6 +472,13 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
           </div>
         )}
 
+        {/* 에러 메시지 - CTA 버튼 바로 위 */}
+        {submitError && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+            {submitError}
+          </div>
+        )}
+
         {/* CTA Button (only if not sticky) */}
         {isSectionEnabled('cta_button') && landingPage.cta_enabled && landingPage.collect_data && landingPage.cta_sticky_position === 'none' && (
           <div className="flex justify-center">
@@ -545,13 +545,6 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
 
             {/* Form Content */}
             <div className="p-6 space-y-4">
-              {/* 에러 메시지 */}
-              {submitError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-                  {submitError}
-                </div>
-              )}
-
               {/* Basic Fields */}
               {landingPage.collect_name !== false && (
                 <div>
@@ -670,6 +663,13 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                   </label>
                 )}
               </div>
+
+              {/* 에러 메시지 - Submit 버튼 바로 위 */}
+              {submitError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+                  {submitError}
+                </div>
+              )}
 
               {/* Submit Button */}
               <button
