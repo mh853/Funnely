@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
@@ -66,12 +65,9 @@ export default async function CompletedPage({ params }: Props) {
   const { slug } = await params
   const landingPage = await fetchLandingPage(slug)
 
-  if (!landingPage) {
-    notFound()
-  }
-
-  const primaryColor = landingPage.primary_color || '#3B82F6'
-  const successMessage = landingPage.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
+  // 랜딩페이지를 찾지 못해도 기본 완료 페이지 표시 (404 대신)
+  const primaryColor = landingPage?.primary_color || '#3B82F6'
+  const successMessage = landingPage?.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -123,16 +119,22 @@ export default async function CompletedPage({ params }: Props) {
             </div>
 
             {/* Back Button */}
-            <Link
-              href={`/landing/${slug}`}
-              className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white transition-all hover:opacity-90 hover:shadow-lg"
-              style={{ backgroundColor: primaryColor }}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-              </svg>
-              페이지로 돌아가기
-            </Link>
+            {landingPage ? (
+              <Link
+                href={`/landing/${slug}`}
+                className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white transition-all hover:opacity-90 hover:shadow-lg"
+                style={{ backgroundColor: primaryColor }}
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                페이지로 돌아가기
+              </Link>
+            ) : (
+              <p className="text-sm text-gray-500">
+                창을 닫아도 됩니다.
+              </p>
+            )}
           </div>
         </div>
 
