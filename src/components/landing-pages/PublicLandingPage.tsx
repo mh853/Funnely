@@ -3,6 +3,7 @@
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo } from 'react'
+import { useRouter } from 'next/navigation'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -27,6 +28,7 @@ interface PublicLandingPageProps {
 }
 
 export default function PublicLandingPage({ landingPage }: PublicLandingPageProps) {
+  const router = useRouter()
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)
@@ -41,7 +43,6 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
-  const [isSubmitted, setIsSubmitted] = useState(false)
 
   // Demo realtime data (memoized to prevent recreation on every render)
   const demoRealtimeData = useMemo(() => [
@@ -176,13 +177,8 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
         throw new Error(data.error?.message || '제출에 실패했습니다')
       }
 
-      setIsSubmitted(true)
-      // 폼 초기화
-      setNameInput('')
-      setPhoneInput('')
-      setCustomFieldValues({})
-      setPrivacyConsent(false)
-      setMarketingConsent(false)
+      // 신청 성공 시 완료 페이지로 리다이렉트
+      router.push(`/landing/completed/${landingPage.slug}`)
     } catch (err: any) {
       setSubmitError(err.message)
     } finally {
@@ -681,29 +677,6 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                 {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* 제출 완료 모달 */}
-      {isSubmitted && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-8 text-center shadow-2xl">
-            <div className="text-6xl mb-4">✅</div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">신청 완료!</h2>
-            <p className="text-gray-600 mb-6">
-              신청이 완료되었습니다. 빠른 시일 내에 연락드리겠습니다.
-            </p>
-            <button
-              onClick={() => {
-                setIsSubmitted(false)
-                setShowExternalFormModal(false)
-              }}
-              className="w-full py-3 rounded-xl font-bold text-white"
-              style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
-            >
-              확인
-            </button>
           </div>
         </div>
       )}

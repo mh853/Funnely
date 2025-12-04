@@ -1,11 +1,13 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { FormField } from '@/types/landing-page.types'
 import { formatDateTime } from '@/lib/utils/date'
 
 interface LeadFormProps {
   landingPageId: string
+  slug: string
   fields: FormField[]
   successMessage?: string
   enableTimer?: boolean
@@ -18,6 +20,7 @@ interface LeadFormProps {
 
 export default function LeadForm({
   landingPageId,
+  slug,
   fields,
   successMessage = '신청이 완료되었습니다. 곧 연락드리겠습니다.',
   enableTimer,
@@ -27,8 +30,8 @@ export default function LeadForm({
   counterCurrent = 0,
   primaryColor = '#3B82F6',
 }: LeadFormProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState<Record<string, any>>({})
 
@@ -70,8 +73,8 @@ export default function LeadForm({
         throw new Error(data.error?.message || '신청에 실패했습니다.')
       }
 
-      setSubmitted(true)
-      setFormData({})
+      // 신청 성공 시 완료 페이지로 리다이렉트
+      router.push(`/landing/completed/${slug}`)
     } catch (err: any) {
       setError(err.message)
     } finally {
@@ -172,28 +175,6 @@ export default function LeadForm({
           />
         )
     }
-  }
-
-  if (submitted) {
-    return (
-      <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-        <svg
-          className="mx-auto h-12 w-12 text-green-600 mb-4"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-          />
-        </svg>
-        <h3 className="text-lg font-medium text-green-900 mb-2">신청 완료!</h3>
-        <p className="text-green-700">{successMessage}</p>
-      </div>
-    )
   }
 
   const remainingSlots = enableCounter ? counterLimit! - counterCurrent : 0
