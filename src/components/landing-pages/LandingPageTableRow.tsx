@@ -43,7 +43,12 @@ export default function LandingPageTableRow({ page, index }: LandingPageTableRow
         <td className="px-6 py-5 whitespace-nowrap">
           <div className="flex items-center">
             <div>
-              <div className="text-sm font-semibold text-gray-900">{page.title}</div>
+              <Link
+                href={`/dashboard/landing-pages/${page.id}`}
+                className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+              >
+                {page.title}
+              </Link>
               <div className="text-xs text-gray-500 mt-1">/{page.slug}</div>
             </div>
           </div>
