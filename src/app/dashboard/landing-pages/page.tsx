@@ -5,7 +5,7 @@ import { PlusIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
 import LandingPageMobileCard from '@/components/landing-pages/LandingPageMobileCard'
 
-type PeriodFilter = 'today' | 'week' | 'month'
+type PeriodFilter = 'all' | 'today' | 'week' | 'month'
 
 // ISR: Revalidate every 5 minutes for better performance and reduced server load
 export const revalidate = 300
@@ -35,14 +35,17 @@ export default async function LandingPagesPage({
     )
   }
 
-  // Get period filter (default to week)
-  const period = searchParams.period || 'week'
+  // Get period filter (default to all)
+  const period = searchParams.period || 'all'
 
   // Calculate date range based on period
   const now = new Date()
-  let startDate: Date
+  let startDate: Date | null = null
 
   switch (period) {
+    case 'all':
+      startDate = null // 전체 기간 - 날짜 필터 없음
+      break
     case 'today':
       startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate())
       break
@@ -53,7 +56,7 @@ export default async function LandingPagesPage({
       startDate = new Date(now.getFullYear(), now.getMonth(), 1)
       break
     default:
-      startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
+      startDate = null // 기본값 전체
   }
 
   // Get landing pages with only needed columns (optimized data transfer)
@@ -64,11 +67,17 @@ export default async function LandingPagesPage({
     .order('created_at', { ascending: false })
 
   // Get all leads statistics in a single query (prevents N+1 problem)
-  const { data: leadsStats } = await supabase
+  let leadsQuery = supabase
     .from('leads')
     .select('landing_page_id, status, created_at')
     .in('landing_page_id', (landingPages || []).map(p => p.id))
-    .gte('created_at', startDate.toISOString())
+
+  // 전체가 아닌 경우에만 날짜 필터 적용
+  if (startDate) {
+    leadsQuery = leadsQuery.gte('created_at', startDate.toISOString())
+  }
+
+  const { data: leadsStats } = await leadsQuery
 
   // Aggregate statistics by landing page ID
   const statsMap = new Map<string, { dbInflow: number; rejectedCount: number; contractCount: number }>()
@@ -120,6 +129,16 @@ export default async function LandingPagesPage({
       {/* Period Filter - 모바일 최적화 */}
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
         <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+          <Link
+            href="/dashboard/landing-pages?period=all"
+            className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold transition-all duration-200 ${
+              period === 'all'
+                ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md'
+                : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            전체
+          </Link>
           <Link
             href="/dashboard/landing-pages?period=today"
             className={`flex-shrink-0 px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl text-sm font-semibold transition-all duration-200 ${
