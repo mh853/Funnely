@@ -30,9 +30,14 @@ async function fetchLandingPage(slug: string) {
     .from('landing_pages')
     .select('id, slug, title, success_message, primary_color, company_id')
     .eq('slug', slug)
+    .eq('status', 'published')
     .single()
 
-  if (error || !data) return null
+  if (error) {
+    console.error('Error fetching landing page for completed:', error)
+    return null
+  }
+  if (!data) return null
   return data
 }
 
