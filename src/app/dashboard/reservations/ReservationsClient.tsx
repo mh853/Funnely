@@ -25,6 +25,7 @@ interface Lead {
   phone: string | null
   status: string
   contract_completed_at: string | null
+  previous_contract_completed_at?: string | null
   landing_pages: LandingPage | LandingPage[] | null
 }
 
@@ -170,34 +171,43 @@ export default function ReservationsClient({
     }
   }
 
-  // Handle status update
+  // Handle status update (using API to properly track previous_contract_completed_at)
   const handleStatusUpdate = async (newStatus: string) => {
     if (!selectedLead || !leadDetails) return
 
     setUpdatingStatus(true)
     try {
-      const updateData: any = { status: newStatus }
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          status: newStatus,
+          // 계약완료로 변경 시 현재 시간 기록
+          ...(newStatus === 'contract_completed' && {
+            contract_completed_at: new Date().toISOString()
+          })
+        })
+      })
 
-      // 계약완료로 변경 시 현재 시간 기록
-      if (newStatus === 'contract_completed') {
-        updateData.contract_completed_at = new Date().toISOString()
+      if (!response.ok) throw new Error('상태 업데이트 실패')
+
+      // Update local state (기존 날짜를 previous로 이동)
+      const updatedData = {
+        status: newStatus,
+        ...(newStatus === 'contract_completed' && {
+          previous_contract_completed_at: leadDetails.contract_completed_at || null,
+          contract_completed_at: new Date().toISOString()
+        })
       }
-
-      const { error } = await supabase
-        .from('leads')
-        .update(updateData)
-        .eq('id', selectedLead.id)
-
-      if (error) throw error
-
-      // Update local state
-      setLeadDetails({ ...leadDetails, ...updateData })
+      setLeadDetails({ ...leadDetails, ...updatedData })
       setLeads(leads.map(l =>
-        l.id === selectedLead.id ? { ...l, status: newStatus } : l
+        l.id === selectedLead.id ? { ...l, ...updatedData } : l
       ))
       setEditingStatus(false)
     } catch (error) {
       console.error('Error updating status:', error)
+      alert('상태 업데이트에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -708,13 +718,14 @@ export default function ReservationsClient({
                           <tr>
                             <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">계약 완료일</td>
                             <td className="px-4 py-3 text-sm text-gray-900">
-                              {new Date(leadDetails.contract_completed_at).toLocaleString('ko-KR', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
+                              <div>
+                                {new Date(leadDetails.contract_completed_at).toISOString().split('T')[0]}
+                              </div>
+                              {leadDetails.previous_contract_completed_at && (
+                                <div className="text-xs text-gray-400 mt-0.5">
+                                  이전: {new Date(leadDetails.previous_contract_completed_at).toISOString().split('T')[0]}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         )}

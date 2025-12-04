@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest) {
     // Verify lead belongs to user's hospital
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, company_id, status')
+      .select('id, company_id, status, contract_completed_at')
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .single()
@@ -65,6 +65,10 @@ export async function PUT(request: NextRequest) {
       // contract_completed 상태로 변경 시 타임스탬프 설정
       // 클라이언트에서 날짜/시간을 지정한 경우 해당 값 사용, 아니면 현재 시간 사용
       if (status === 'contract_completed') {
+        // 기존에 contract_completed_at이 있으면 previous_contract_completed_at에 저장
+        if (lead.contract_completed_at) {
+          updateData.previous_contract_completed_at = lead.contract_completed_at
+        }
         updateData.contract_completed_at = contract_completed_at || new Date().toISOString()
       }
 

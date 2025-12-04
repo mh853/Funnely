@@ -225,11 +225,16 @@ export default function LeadsClient({
         throw new Error('상태 업데이트 실패')
       }
 
-      // 로컬 상태 업데이트
+      // 로컬 상태 업데이트 (기존 날짜를 previous로 이동)
       setLeads(prevLeads =>
         prevLeads.map(lead =>
           lead.id === contractModalLeadId
-            ? { ...lead, status: 'contract_completed', contract_completed_at: contractCompletedAt }
+            ? {
+                ...lead,
+                status: 'contract_completed',
+                previous_contract_completed_at: lead.contract_completed_at || null,
+                contract_completed_at: contractCompletedAt
+              }
             : lead
         )
       )
@@ -631,15 +636,20 @@ export default function LeadsClient({
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                      {lead.contract_completed_at
-                        ? new Date(lead.contract_completed_at).toLocaleString('ko-KR', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })
-                        : '-'}
+                      {lead.contract_completed_at ? (
+                        <div>
+                          <div>
+                            {new Date(lead.contract_completed_at).toISOString().split('T')[0]}
+                          </div>
+                          {lead.previous_contract_completed_at && (
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              이전: {new Date(lead.previous_contract_completed_at).toISOString().split('T')[0]}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
                     </td>
                   </tr>
                 ))
