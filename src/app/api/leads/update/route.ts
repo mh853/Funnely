@@ -72,6 +72,15 @@ export async function PUT(request: NextRequest) {
         updateData.contract_completed_at = contract_completed_at || new Date().toISOString()
       }
 
+      // contract_completed에서 다른 상태로 변경 시 날짜 이동
+      // contract_completed_at → previous_contract_completed_at으로 이동, contract_completed_at은 null로
+      if (lead.status === 'contract_completed' && status !== 'contract_completed') {
+        if (lead.contract_completed_at) {
+          updateData.previous_contract_completed_at = lead.contract_completed_at
+        }
+        updateData.contract_completed_at = null
+      }
+
       // Always update last contact time when status changes
       if (status !== lead.status) {
         updateData.last_contact_at = new Date().toISOString()

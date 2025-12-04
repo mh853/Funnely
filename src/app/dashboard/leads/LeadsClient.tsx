@@ -272,13 +272,23 @@ export default function LeadsClient({
         throw new Error('상태 업데이트 실패')
       }
 
-      // 로컬 상태 업데이트
+      // 로컬 상태 업데이트 (계약완료→다른 상태: 날짜 이동)
       setLeads(prevLeads =>
-        prevLeads.map(lead =>
-          lead.id === leadId
-            ? { ...lead, status: newStatus }
-            : lead
-        )
+        prevLeads.map(lead => {
+          if (lead.id !== leadId) return lead
+
+          // 계약완료에서 다른 상태로 변경 시 날짜 이동
+          if (lead.status === 'contract_completed' && newStatus !== 'contract_completed') {
+            return {
+              ...lead,
+              status: newStatus,
+              previous_contract_completed_at: lead.contract_completed_at || null,
+              contract_completed_at: null
+            }
+          }
+
+          return { ...lead, status: newStatus }
+        })
       )
       setEditingLeadId(null)
       setDropdownPosition(null)

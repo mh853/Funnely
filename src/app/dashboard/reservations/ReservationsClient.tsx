@@ -192,14 +192,20 @@ export default function ReservationsClient({
 
       if (!response.ok) throw new Error('상태 업데이트 실패')
 
-      // Update local state (기존 날짜를 previous로 이동)
-      const updatedData = {
-        status: newStatus,
-        ...(newStatus === 'contract_completed' && {
-          previous_contract_completed_at: leadDetails.contract_completed_at || null,
-          contract_completed_at: new Date().toISOString()
-        })
+      // Update local state (계약완료↔다른 상태 전환 시 날짜 이동)
+      let updatedData: any = { status: newStatus }
+
+      // 계약완료로 변경 시: 기존 날짜 → previous로 이동, 새 날짜 설정
+      if (newStatus === 'contract_completed') {
+        updatedData.previous_contract_completed_at = leadDetails.contract_completed_at || null
+        updatedData.contract_completed_at = new Date().toISOString()
       }
+      // 계약완료에서 다른 상태로 변경 시: 날짜 → previous로 이동, 빈칸으로
+      else if (leadDetails.status === 'contract_completed') {
+        updatedData.previous_contract_completed_at = leadDetails.contract_completed_at || null
+        updatedData.contract_completed_at = null
+      }
+
       setLeadDetails({ ...leadDetails, ...updatedData })
       setLeads(leads.map(l =>
         l.id === selectedLead.id ? { ...l, ...updatedData } : l
