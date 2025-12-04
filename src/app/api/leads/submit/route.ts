@@ -58,11 +58,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Validate phone format (basic Korean phone number validation)
+    // Validate phone format (Korean mobile phone number only)
     const phoneRegex = /^01[0-9]-?[0-9]{3,4}-?[0-9]{4}$/
     if (!phoneRegex.test(phone.replace(/[^0-9]/g, ''))) {
       return NextResponse.json(
-        { error: { message: 'Invalid phone number format' } },
+        { error: { message: '휴대폰 번호를 입력해 주세요 (예: 010-1234-5678)' } },
         { status: 400 }
       )
     }
@@ -88,20 +88,8 @@ export async function POST(request: NextRequest) {
     }
     const deviceType = detectDeviceType(userAgent)
 
-    // Check for duplicate lead (same phone number for this hospital)
-    const { data: existingLead } = await supabase
-      .from('leads')
-      .select('id')
-      .eq('company_id', landingPage.company_id)
-      .eq('phone_hash', phoneHash)
-      .single()
-
-    if (existingLead) {
-      return NextResponse.json(
-        { error: { message: 'This phone number has already submitted a request' } },
-        { status: 409 }
-      )
-    }
+    // Note: phone_hash is stored for analytics purposes (duplicate detection across campaigns)
+    // but we allow the same phone number to submit multiple times across different landing pages
 
     // Extract additional fields from form_data
     const { consultation_items, preferred_date, preferred_time, message, ...customFields } =
