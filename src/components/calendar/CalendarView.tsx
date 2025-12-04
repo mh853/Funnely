@@ -10,8 +10,13 @@ import {
   UserGroupIcon,
   ClockIcon,
   UserIcon,
+  XMarkIcon,
+  ChevronDownIcon,
+  CheckIcon,
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
+import { createClient } from '@/lib/supabase/client'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 interface Lead {
   id: string
@@ -61,6 +66,30 @@ const STATUS_LABELS: { [key: string]: string } = {
   lost: '이탈',
 }
 
+// 상태별 스타일 정의 (모달 테이블용)
+const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string } } = {
+  new: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
+  pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
+  rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '상담 거절' },
+  contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
+  qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
+  converted: { bg: 'bg-green-100', text: 'text-green-800', label: '상담 완료' },
+  contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '계약 완료' },
+  needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
+  other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
+}
+
+// 상태 변경 가능 목록
+const STATUS_OPTIONS = [
+  { value: 'new', label: '상담 전' },
+  { value: 'rejected', label: '상담 거절' },
+  { value: 'contacted', label: '상담 진행중' },
+  { value: 'converted', label: '상담 완료' },
+  { value: 'contract_completed', label: '계약 완료' },
+  { value: 'needs_followup', label: '추가상담 필요' },
+  { value: 'other', label: '기타' },
+]
+
 export default function CalendarView({
   events,
   leads,
@@ -76,6 +105,15 @@ export default function CalendarView({
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedDayData, setSelectedDayData] = useState<{ events: any[], leads: Lead[], day: number } | null>(null)
+
+  // Lead detail modal state
+  const [showLeadDetailModal, setShowLeadDetailModal] = useState(false)
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+  const [leadDetails, setLeadDetails] = useState<any>(null)
+  const [loadingLeadDetails, setLoadingLeadDetails] = useState(false)
+  const [editingStatus, setEditingStatus] = useState(false)
+  const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [localLeads, setLocalLeads] = useState<Lead[]>(leads)
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -184,6 +222,71 @@ export default function CalendarView({
     setSelectedEvent(event)
     setSelectedDate(null)
     setShowEventModal(true)
+  }
+
+  // Handle lead click - open lead detail modal
+  const handleLeadClick = async (lead: Lead, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setSelectedLead(lead)
+    setShowLeadDetailModal(true)
+    setLoadingLeadDetails(true)
+
+    try {
+      const supabase = createClient()
+      const { data, error } = await supabase
+        .from('leads')
+        .select(`
+          *,
+          landing_pages (
+            id,
+            title,
+            slug
+          )
+        `)
+        .eq('id', lead.id)
+        .single()
+
+      if (error) throw error
+      setLeadDetails(data)
+    } catch (error) {
+      console.error('Error fetching lead details:', error)
+    } finally {
+      setLoadingLeadDetails(false)
+    }
+  }
+
+  // Handle status update
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!selectedLead || !leadDetails) return
+
+    setUpdatingStatus(true)
+    try {
+      const supabase = createClient()
+      const updateData: any = { status: newStatus }
+
+      // 계약완료로 변경 시 현재 시간 기록
+      if (newStatus === 'contract_completed') {
+        updateData.contract_completed_at = new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .update(updateData)
+        .eq('id', selectedLead.id)
+
+      if (error) throw error
+
+      // Update local state
+      setLeadDetails({ ...leadDetails, ...updateData })
+      setLocalLeads(localLeads.map(l =>
+        l.id === selectedLead.id ? { ...l, status: newStatus } : l
+      ))
+      setEditingStatus(false)
+    } catch (error) {
+      console.error('Error updating status:', error)
+    } finally {
+      setUpdatingStatus(false)
+    }
   }
 
   // Generate calendar days
@@ -378,10 +481,7 @@ export default function CalendarView({
                           {displayedLeads.map((lead: Lead) => (
                             <div
                               key={`lead-${lead.id}`}
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                router.push(`/dashboard/leads?id=${lead.id}`)
-                              }}
+                              onClick={(e) => handleLeadClick(lead, e)}
                               className={`text-xs px-2 py-1 rounded border-l-2 truncate flex items-center gap-1 ${
                                 LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
                               }`}
@@ -567,9 +667,9 @@ export default function CalendarView({
                     {selectedDayData.leads.map((lead: Lead) => (
                       <div
                         key={lead.id}
-                        onClick={() => {
+                        onClick={(e) => {
                           setShowDayDetailModal(false)
-                          router.push(`/dashboard/leads?id=${lead.id}`)
+                          handleLeadClick(lead, e)
                         }}
                         className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
                           LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
@@ -608,6 +708,280 @@ export default function CalendarView({
               >
                 <PlusIcon className="h-5 w-5" />
                 새 일정 추가
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lead Detail Modal - Shows lead information in table format like DB현황 */}
+      {showLeadDetailModal && selectedLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">DB 상세 정보</h3>
+                  <p className="text-sm text-emerald-100">신청자 상세 정보</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLeadDetailModal(false)
+                    setSelectedLead(null)
+                    setLeadDetails(null)
+                    setEditingStatus(false)
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {loadingLeadDetails ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                  <span className="ml-3 text-gray-600">로딩 중...</span>
+                </div>
+              ) : leadDetails ? (
+                <div className="space-y-6">
+                  {/* 기본 정보 테이블 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 이름 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">이름</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.name || '-'}</td>
+                        </tr>
+                        {/* 전화번호 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">전화번호</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <span>{(() => {
+                                try {
+                                  return decryptPhone(leadDetails.phone)
+                                } catch {
+                                  return leadDetails.phone || '-'
+                                }
+                              })()}</span>
+                              <a
+                                href={`tel:${leadDetails.phone}`}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                              >
+                                <PhoneIcon className="h-4 w-4" />
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 이메일 */}
+                        {leadDetails.email && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">이메일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.email}</td>
+                          </tr>
+                        )}
+                        {/* 상태 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상태</td>
+                          <td className="px-4 py-3">
+                            {editingStatus ? (
+                              <div className="relative">
+                                <select
+                                  value={leadDetails.status}
+                                  onChange={(e) => handleStatusUpdate(e.target.value)}
+                                  disabled={updatingStatus}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                                >
+                                  {STATUS_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                      {option.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                {updatingStatus && (
+                                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
+                                    STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
+                                  } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'}`}
+                                >
+                                  {STATUS_STYLES[leadDetails.status]?.label || leadDetails.status}
+                                </span>
+                                <button
+                                  onClick={() => setEditingStatus(true)}
+                                  className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition"
+                                >
+                                  <ChevronDownIcon className="h-4 w-4" />
+                                </button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                        {/* 희망 상담일 */}
+                        {leadDetails.preferred_date && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">희망 상담일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {new Date(leadDetails.preferred_date).toLocaleDateString('ko-KR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                              })}
+                              {leadDetails.preferred_time && ` ${leadDetails.preferred_time}`}
+                            </td>
+                          </tr>
+                        )}
+                        {/* 상담 항목 */}
+                        {leadDetails.consultation_items && leadDetails.consultation_items.length > 0 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상담 항목</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {leadDetails.consultation_items.map((item: string, index: number) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        {/* 메시지 */}
+                        {leadDetails.message && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">메시지</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">{leadDetails.message}</td>
+                          </tr>
+                        )}
+                        {/* 메모 */}
+                        {leadDetails.notes && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">메모</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">{leadDetails.notes}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 추가 정보 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">유입 정보</h4>
+                    </div>
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 랜딩 페이지 */}
+                        {leadDetails.landing_pages && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">랜딩 페이지</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {leadDetails.landing_pages.title || '-'}
+                            </td>
+                          </tr>
+                        )}
+                        {/* UTM Source */}
+                        {leadDetails.utm_source && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Source</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_source}</td>
+                          </tr>
+                        )}
+                        {/* UTM Medium */}
+                        {leadDetails.utm_medium && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Medium</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_medium}</td>
+                          </tr>
+                        )}
+                        {/* UTM Campaign */}
+                        {leadDetails.utm_campaign && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Campaign</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_campaign}</td>
+                          </tr>
+                        )}
+                        {/* Referrer */}
+                        {leadDetails.referrer && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">Referrer</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 break-all">{leadDetails.referrer}</td>
+                          </tr>
+                        )}
+                        {/* 신청일시 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">신청일시</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {new Date(leadDetails.created_at).toLocaleString('ko-KR', {
+                              year: 'numeric',
+                              month: 'long',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </td>
+                        </tr>
+                        {/* 계약 완료일 */}
+                        {leadDetails.contract_completed_at && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">계약 완료일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {new Date(leadDetails.contract_completed_at).toLocaleString('ko-KR', {
+                                year: 'numeric',
+                                month: 'long',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>정보를 불러올 수 없습니다.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setShowLeadDetailModal(false)
+                  router.push(`/dashboard/leads?id=${selectedLead.id}`)
+                }}
+                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+              >
+                DB현황에서 보기
+              </button>
+              <button
+                onClick={() => {
+                  setShowLeadDetailModal(false)
+                  setSelectedLead(null)
+                  setLeadDetails(null)
+                  setEditingStatus(false)
+                }}
+                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
+              >
+                닫기
               </button>
             </div>
           </div>
