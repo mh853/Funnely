@@ -13,6 +13,7 @@ import {
   ChevronRightIcon,
   CalendarDaysIcon,
   ListBulletIcon,
+  PlusIcon,
 } from '@heroicons/react/24/outline'
 
 interface LandingPage {
@@ -1356,7 +1357,36 @@ export default function ReservationsClient({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-between">
+              <button
+                onClick={async () => {
+                  // 예약 추가 모달 열기
+                  setShowDateLeadsModal(false)
+                  setScheduleInputDate(selectedDateForModal || '')
+                  setScheduleInputTime('10:00')
+                  setScheduleInputLeadId('')
+                  setShowScheduleInputModal(true)
+                  setLoadingAvailableLeads(true)
+                  setScheduleSearchQuery('')
+
+                  // 예약 가능한 리드 조회 (contract_completed, rejected 제외)
+                  const { data: availableLeads } = await supabase
+                    .from('leads')
+                    .select(`id, name, phone, status, landing_pages (id, title)`)
+                    .eq('company_id', companyId)
+                    .neq('status', 'contract_completed')
+                    .neq('status', 'rejected')
+                    .order('created_at', { ascending: false })
+                    .limit(200)
+
+                  setAvailableLeadsForSchedule(availableLeads || [])
+                  setLoadingAvailableLeads(false)
+                }}
+                className="px-4 py-2 text-sm text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition flex items-center gap-2"
+              >
+                <PlusIcon className="h-4 w-4" />
+                예약 추가
+              </button>
               <button
                 onClick={() => {
                   setShowDateLeadsModal(false)
