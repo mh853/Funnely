@@ -478,10 +478,10 @@ export default function LeadsClient({
       )}
 
       {/* Filters */}
-      <div className="bg-white rounded-2xl shadow-lg p-6">
+      <div className="bg-white rounded-xl shadow-lg p-4">
         {/* 첫 번째 행: 날짜 범위 (전체 너비) */}
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <div className="mb-3">
+          <label className="block text-xs font-medium text-gray-700 mb-1.5">
             📅 날짜 범위
           </label>
           <DateRangePicker
@@ -493,16 +493,16 @@ export default function LeadsClient({
         </div>
 
         {/* 두 번째 행: 나머지 필터들 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
           {/* Landing Page */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
               랜딩페이지 이름
             </label>
             <select
               value={landingPageId}
               onChange={(e) => setLandingPageId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">전체</option>
               {landingPages?.map((page) => (
@@ -515,13 +515,13 @@ export default function LeadsClient({
 
           {/* Device */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
               기기
             </label>
             <select
               value={deviceType}
               onChange={(e) => setDeviceType(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">전체</option>
               <option value="pc">PC</option>
@@ -531,13 +531,13 @@ export default function LeadsClient({
 
           {/* Result */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
               결과
             </label>
             <select
               value={status}
               onChange={(e) => setStatus(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">전체</option>
               <option value="new">상담 전</option>
@@ -552,7 +552,7 @@ export default function LeadsClient({
 
           {/* Search */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
               검색
             </label>
             <div className="relative">
@@ -566,22 +566,22 @@ export default function LeadsClient({
                     handleFilterChange()
                   }
                 }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
               <button
                 onClick={handleFilterChange}
                 className="absolute right-3 top-1/2 -translate-y-1/2"
               >
-                <MagnifyingGlassIcon className="h-5 w-5 text-gray-400 hover:text-indigo-600" />
+                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 hover:text-indigo-600" />
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-3 flex justify-end">
           <button
             onClick={handleFilterChange}
-            className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+            className="px-5 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
             필터 적용
           </button>
@@ -589,42 +589,42 @@ export default function LeadsClient({
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   날짜
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   랜딩페이지 이름
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   기기
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   이름
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   전화번호
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   항목 1
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   항목 2
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   항목 3
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결과
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   계약 완료
                 </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   비고
                 </th>
               </tr>
@@ -632,7 +632,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-6 py-12 text-center text-sm text-gray-400">
+                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -643,31 +643,31 @@ export default function LeadsClient({
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={(e) => handleRowClick(lead, e)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(lead.created_at)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                       {lead.landing_pages?.title || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.device_type?.toUpperCase() || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
                       {lead.name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.phone ? decryptPhone(lead.phone) : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.custom_field_1 || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.custom_field_2 || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.custom_field_3 || '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
                         {/* 상태 배지 (클릭 가능) */}
                         <button
@@ -698,7 +698,7 @@ export default function LeadsClient({
                         </button>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.contract_completed_at ? (
                         <div>
                           <div>
@@ -714,7 +714,7 @@ export default function LeadsClient({
                         '-'
                       )}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600 max-w-[150px]">
+                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-[150px]">
                       <span className="truncate block" title={lead.notes || ''}>
                         {lead.notes || '-'}
                       </span>
@@ -728,7 +728,7 @@ export default function LeadsClient({
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
+          <div className="bg-gray-50 px-4 py-3 border-t border-gray-200">
             <div className="flex items-center justify-center gap-2">
               <button
                 onClick={() => handlePageChange(currentPage - 1)}

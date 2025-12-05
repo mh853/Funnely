@@ -116,96 +116,96 @@ export default async function DashboardPage() {
     .slice(0, 5)
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4">
       {/* Header with Title */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
-        <h1 className="text-3xl font-bold">대시보드</h1>
-        <p className="mt-2 text-indigo-100">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl">
+        <h1 className="text-2xl font-bold">대시보드</h1>
+        <p className="mt-1 text-sm text-indigo-100">
           {userProfile?.companies?.name || '회사'} 데이터 현황을 확인하세요
         </p>
       </div>
 
       {/* Stats Cards - 4 Cards in a row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Today */}
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-          <div className="p-6">
+        <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+          <div className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">오늘</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{todayCount || 0}건</p>
+                <p className="text-xs font-medium text-gray-600">오늘</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{todayCount || 0}건</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl">
-                <CalendarDaysIcon className="h-8 w-8 text-white" />
+              <div className="p-2 bg-gradient-to-br from-blue-400 to-blue-600 rounded-lg">
+                <CalendarDaysIcon className="h-6 w-6 text-white" />
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-6 py-3">
+          <div className="bg-gradient-to-r from-blue-50 to-blue-100 px-4 py-2">
             <p className="text-xs text-blue-700 font-medium">금일 DB 유입</p>
           </div>
         </div>
 
         {/* Yesterday */}
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-          <div className="p-6">
+        <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+          <div className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">어제</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{yesterdayCount || 0}건</p>
+                <p className="text-xs font-medium text-gray-600">어제</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{yesterdayCount || 0}건</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl">
-                <ChartBarIcon className="h-8 w-8 text-white" />
+              <div className="p-2 bg-gradient-to-br from-purple-400 to-purple-600 rounded-lg">
+                <ChartBarIcon className="h-6 w-6 text-white" />
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-3">
+          <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-4 py-2">
             <p className="text-xs text-purple-700 font-medium">전일 DB 유입</p>
           </div>
         </div>
 
         {/* This Week */}
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-          <div className="p-6">
+        <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+          <div className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">이번주</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{thisWeekCount || 0}건</p>
+                <p className="text-xs font-medium text-gray-600">이번주</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{thisWeekCount || 0}건</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl">
-                <UserGroupIcon className="h-8 w-8 text-white" />
+              <div className="p-2 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg">
+                <UserGroupIcon className="h-6 w-6 text-white" />
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 px-6 py-3">
+          <div className="bg-gradient-to-r from-emerald-50 to-emerald-100 px-4 py-2">
             <p className="text-xs text-emerald-700 font-medium">주간 DB 유입</p>
           </div>
         </div>
 
         {/* This Month */}
-        <div className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
-          <div className="p-6">
+        <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300 overflow-hidden">
+          <div className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">이번달</p>
-                <p className="mt-2 text-3xl font-bold text-gray-900">{thisMonthCount || 0}건</p>
+                <p className="text-xs font-medium text-gray-600">이번달</p>
+                <p className="mt-1 text-2xl font-bold text-gray-900">{thisMonthCount || 0}건</p>
               </div>
-              <div className="p-3 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl">
-                <DocumentTextIcon className="h-8 w-8 text-white" />
+              <div className="p-2 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg">
+                <DocumentTextIcon className="h-6 w-6 text-white" />
               </div>
             </div>
           </div>
-          <div className="bg-gradient-to-r from-amber-50 to-amber-100 px-6 py-3">
+          <div className="bg-gradient-to-r from-amber-50 to-amber-100 px-4 py-2">
             <p className="text-xs text-amber-700 font-medium">월간 DB 유입</p>
           </div>
         </div>
       </div>
 
       {/* Daily DB Chart */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">일자별 DB</h2>
+      <div className="bg-white rounded-xl shadow-lg p-5">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">일자별 DB</h2>
 
         {/* Chart */}
-        <div className="relative h-80">
+        <div className="relative h-64">
           {Object.keys(dailyStats).length > 0 ? (
             <div className="flex items-end justify-between h-full gap-2">
               {Object.entries(dailyStats).map(([date, count], index) => {
@@ -248,39 +248,39 @@ export default async function DashboardPage() {
       </div>
 
       {/* Results Table */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-        <div className="p-8">
-          <h2 className="text-xl font-bold text-gray-900 mb-6">결과별 DB</h2>
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="p-5">
+          <h2 className="text-lg font-bold text-gray-900 mb-4">결과별 DB</h2>
 
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     날짜
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     DB 유입
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     상담 전
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     상담 거절
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     상담 진행중
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     상담 완료
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     예약 확정
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     추가상담 필요
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     기타
                   </th>
                 </tr>
@@ -289,38 +289,38 @@ export default async function DashboardPage() {
                 {resultRows.length > 0 ? (
                   resultRows.map((row: any, index: number) => (
                     <tr key={row.date} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
                         {row.date}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900 font-semibold">
                         {row.total}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                         {row.pending} {row.total > 0 ? `(${Math.round((row.pending / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                         {row.rejected} {row.total > 0 ? `(${Math.round((row.rejected / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                         {row.inProgress} {row.total > 0 ? `(${Math.round((row.inProgress / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                         {row.completed} {row.total > 0 ? `(${Math.round((row.completed / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-green-600 font-medium">
                         {row.contractCompleted} {row.total > 0 ? `(${Math.round((row.contractCompleted / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                         {row.needsFollowUp} {row.total > 0 ? `(${Math.round((row.needsFollowUp / row.total) * 100)}%)` : ''}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-400">
                         {row.other}
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-6 py-12 text-center text-sm text-gray-400">
+                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
                       데이터가 없습니다
                     </td>
                   </tr>
@@ -331,7 +331,7 @@ export default async function DashboardPage() {
         </div>
 
         {/* View All Link */}
-        <div className="bg-gray-50 px-8 py-4 border-t border-gray-200">
+        <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
           <Link
             href="/dashboard/leads"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-2"
@@ -345,11 +345,11 @@ export default async function DashboardPage() {
       </div>
 
       {/* Traffic Source Chart */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">트래픽 유입</h2>
+      <div className="bg-white rounded-xl shadow-lg p-5">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">트래픽 유입</h2>
 
         {/* Chart */}
-        <div className="relative h-80">
+        <div className="relative h-64">
           {Object.keys(dailyStats).length > 0 ? (
             <div className="flex items-end justify-between h-full gap-2">
               {Object.entries(dailyStats).map(([date, count], index) => {
@@ -392,13 +392,13 @@ export default async function DashboardPage() {
       </div>
 
       {/* Traffic Efficiency Section */}
-      <div className="bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-xl font-bold text-gray-900 mb-6">트래픽 효율</h2>
+      <div className="bg-white rounded-xl shadow-lg p-5">
+        <h2 className="text-lg font-bold text-gray-900 mb-4">트래픽 효율</h2>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Traffic Source Table (Page Type) */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">트래픽 유입 (페이지별)</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-3">트래픽 유입 (페이지별)</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -450,7 +450,7 @@ export default async function DashboardPage() {
 
           {/* DB Conversion Table */}
           <div>
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">DB 유입 전환</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-3">DB 유입 전환</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -506,7 +506,7 @@ export default async function DashboardPage() {
       <div className="flex justify-center">
         <Link
           href="/dashboard/leads"
-          className="inline-flex items-center justify-center px-12 py-4 text-base font-medium text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
+          className="inline-flex items-center justify-center px-10 py-3 text-sm font-medium text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
         >
           DB 확인
         </Link>

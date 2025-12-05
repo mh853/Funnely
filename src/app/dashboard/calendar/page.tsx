@@ -74,13 +74,13 @@ export default async function CalendarPage({
     .order('name')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">DB 스케줄</h1>
-            <p className="mt-2 text-indigo-100">
+            <h1 className="text-2xl font-bold">DB 스케줄</h1>
+            <p className="mt-1 text-sm text-indigo-100">
               DB 상담 일정과 약속을 관리합니다
             </p>
           </div>
@@ -88,7 +88,7 @@ export default async function CalendarPage({
       </div>
 
       {/* Calendar */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <CalendarView
           events={events || []}
           leads={leads || []}

@@ -12,6 +12,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   CalendarDaysIcon,
+  ListBulletIcon,
 } from '@heroicons/react/24/outline'
 
 interface LandingPage {
@@ -85,6 +86,17 @@ export default function ReservationsClient({
   const [showCalendarModal, setShowCalendarModal] = useState(false)
   const [calendarCurrentMonth, setCalendarCurrentMonth] = useState(new Date())
 
+  // 뷰 모드 상태 (calendar가 기본값)
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+
+  // 주간 캘린더 뷰 상태
+  const [weekStartDate, setWeekStartDate] = useState(() => {
+    const today = new Date()
+    const dayOfWeek = today.getDay() // 0 = Sunday
+    const diff = today.getDate() - dayOfWeek
+    return new Date(today.getFullYear(), today.getMonth(), diff)
+  })
+
   // Schedule input modal state (예약 스케줄 수동 입력 모달)
   const [showScheduleInputModal, setShowScheduleInputModal] = useState(false)
   const [scheduleInputDate, setScheduleInputDate] = useState<string>('')
@@ -141,6 +153,57 @@ export default function ReservationsClient({
 
   const goToNextMonth = () => {
     setCalendarCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
+  }
+
+  // 주간 네비게이션
+  const goToPrevWeek = () => {
+    setWeekStartDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7))
+  }
+
+  const goToNextWeek = () => {
+    setWeekStartDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() + 7))
+  }
+
+  const goToCurrentWeek = () => {
+    const today = new Date()
+    const dayOfWeek = today.getDay()
+    const diff = today.getDate() - dayOfWeek
+    setWeekStartDate(new Date(today.getFullYear(), today.getMonth(), diff))
+  }
+
+  // 주간 날짜 배열 생성
+  const getWeekDays = () => {
+    const days = []
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + i)
+      days.push(date)
+    }
+    return days
+  }
+
+  // 시간 슬롯 생성 (09:00 ~ 20:00)
+  const timeSlots = [
+    '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00', '20:00'
+  ]
+
+  // 특정 날짜와 시간에 해당하는 리드 찾기
+  const getLeadsForTimeSlot = (date: Date, timeSlot: string) => {
+    const dateStr = date.toISOString().split('T')[0]
+    const dayLeads = leadsByDate[dateStr] || []
+
+    return dayLeads.filter(lead => {
+      if (!lead.contract_completed_at) return false
+      const leadTime = new Date(lead.contract_completed_at)
+      const leadHour = leadTime.getHours().toString().padStart(2, '0')
+      const slotHour = timeSlot.split(':')[0]
+      return leadHour === slotHour
+    })
+  }
+
+  // 특정 날짜의 리드 수
+  const getLeadCountForDay = (date: Date) => {
+    const dateStr = date.toISOString().split('T')[0]
+    return leadsByDate[dateStr]?.length || 0
   }
 
   // Generate calendar days for a given month
@@ -459,155 +522,380 @@ export default function ReservationsClient({
   }, [leads])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-2xl p-8 text-white shadow-xl">
+      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">예약 스케줄</h1>
-            <p className="mt-2 text-emerald-100">
+            <h1 className="text-2xl font-bold">예약 스케줄</h1>
+            <p className="mt-1 text-sm text-emerald-100">
               예약 확정된 일정을 관리합니다
             </p>
           </div>
-          <div className="text-right">
-            <div className="text-4xl font-bold">{leads.length}</div>
-            <div className="text-sm text-emerald-100">총 예약 건수</div>
+          <div className="flex items-center gap-4">
+            {/* 뷰 모드 토글 */}
+            <div className="flex items-center bg-white/20 rounded-lg p-1">
+              <button
+                onClick={() => setViewMode('calendar')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'calendar'
+                    ? 'bg-white text-emerald-600 shadow-sm'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <CalendarDaysIcon className="h-4 w-4" />
+                캘린더
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+                  viewMode === 'list'
+                    ? 'bg-white text-emerald-600 shadow-sm'
+                    : 'text-white/80 hover:text-white hover:bg-white/10'
+                }`}
+              >
+                <ListBulletIcon className="h-4 w-4" />
+                리스트
+              </button>
+            </div>
+            {/* 총 예약 건수 */}
+            <div className="text-right">
+              <div className="text-3xl font-bold">{leads.length}</div>
+              <div className="text-xs text-emerald-100">총 예약 건수</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Schedule List */}
-      <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-        {sortedDates.length === 0 ? (
-          <div className="p-12 text-center">
-            <div className="text-gray-400 text-lg mb-2">예약된 일정이 없습니다</div>
-            <p className="text-sm text-gray-500">
-              예약 확정 시 날짜/시간을 지정하면 여기에 표시됩니다
-            </p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {sortedDates.map((date) => {
-              const dateLeads = leadsByDate[date]
-              const dateObj = new Date(date)
-              const formattedDate = dateObj.toLocaleDateString('ko-KR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'long',
-              })
+      {/* Calendar View (기본 뷰) */}
+      {viewMode === 'calendar' && (
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="p-4">
+            {/* Month Navigation */}
+            <div className="flex items-center justify-between mb-4">
+              <button
+                onClick={goToPrevMonth}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+              </button>
+              <h4 className="text-xl font-bold text-gray-900">
+                {calendarCurrentMonth.toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                })}
+              </h4>
+              <button
+                onClick={goToNextMonth}
+                className="p-2 hover:bg-gray-100 rounded-lg transition"
+              >
+                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
 
-              return (
-                <div key={date} className="p-6 hover:bg-gray-50 transition-colors">
-                  {/* Date Header - Clickable */}
+            {/* Calendar Grid */}
+            <div className="border border-gray-200 rounded-xl overflow-hidden">
+              {/* Weekday Headers */}
+              <div className="grid grid-cols-7 bg-gray-50">
+                {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
                   <div
-                    className="flex items-center gap-3 mb-4 cursor-pointer group"
-                    onClick={() => handleDateClick(date)}
+                    key={day}
+                    className={`py-2.5 text-center text-sm font-semibold ${
+                      idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'
+                    }`}
                   >
-                    <div className="flex-shrink-0 w-16 h-16 bg-emerald-100 rounded-xl flex items-center justify-center group-hover:bg-emerald-200 transition-colors">
-                      <div className="text-center">
-                        <div className="text-2xl font-bold text-emerald-600">
-                          {dateObj.getDate()}
-                        </div>
-                        <div className="text-xs text-emerald-600">
-                          {dateObj.toLocaleDateString('ko-KR', { month: 'short' })}
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">
-                        {formattedDate}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {dateLeads.length}건의 예약 <span className="text-emerald-600 opacity-0 group-hover:opacity-100 transition-opacity">• 클릭하여 전체 보기</span>
-                      </p>
-                    </div>
+                    {day}
                   </div>
+                ))}
+              </div>
 
-                  {/* Reservation Items */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 ml-0 md:ml-20">
-                    {dateLeads.map((lead) => {
-                      const time = formatTime(lead.contract_completed_at!)
-                      const phone = lead.phone ? decryptPhone(lead.phone) : null
-                      // landing_pages가 배열일 수도 있고 객체일 수도 있음
-                      const landingPage = Array.isArray(lead.landing_pages)
-                        ? lead.landing_pages[0]
-                        : lead.landing_pages
+              {/* Calendar Days */}
+              <div className="grid grid-cols-7">
+                {generateCalendarDays(
+                  calendarCurrentMonth.getFullYear(),
+                  calendarCurrentMonth.getMonth()
+                ).map((day, idx) => {
+                  const leadCount = day
+                    ? getLeadCountForDate(
+                        calendarCurrentMonth.getFullYear(),
+                        calendarCurrentMonth.getMonth(),
+                        day
+                      )
+                    : 0
+                  const isToday =
+                    day &&
+                    new Date().toDateString() ===
+                      new Date(
+                        calendarCurrentMonth.getFullYear(),
+                        calendarCurrentMonth.getMonth(),
+                        day
+                      ).toDateString()
+                  const dayOfWeek = idx % 7
+
+                  return (
+                    <div
+                      key={idx}
+                      onClick={() => {
+                        if (day) {
+                          handleCalendarDateClick(
+                            calendarCurrentMonth.getFullYear(),
+                            calendarCurrentMonth.getMonth(),
+                            day
+                          )
+                        }
+                      }}
+                      className={`
+                        min-h-[70px] p-2 border-t border-l border-gray-100
+                        ${day ? 'cursor-pointer hover:bg-emerald-50' : ''}
+                        ${isToday ? 'bg-emerald-50' : ''}
+                        ${!day ? 'bg-gray-50' : ''}
+                      `}
+                    >
+                      {day && (
+                        <>
+                          <div
+                            className={`text-sm font-medium mb-1 ${
+                              isToday
+                                ? 'text-emerald-600'
+                                : dayOfWeek === 0
+                                ? 'text-red-500'
+                                : dayOfWeek === 6
+                                ? 'text-blue-500'
+                                : 'text-gray-700'
+                            }`}
+                          >
+                            {day}
+                          </div>
+                          {leadCount > 0 && (
+                            <div className="flex items-center justify-center">
+                              <div className="bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+                                {leadCount}건
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Legend */}
+            <div className="mt-3 flex items-center justify-center gap-6 text-sm text-gray-500">
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-emerald-50 border border-emerald-200 rounded"></div>
+                <span>오늘</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">
+                  {getMonthlyContractCount(calendarCurrentMonth.getFullYear(), calendarCurrentMonth.getMonth())}건
+                </div>
+                <span>이번달 예약</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-400">|</span>
+                <span>날짜 클릭 시 예약 추가 가능</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Weekly Calendar View (주간 캘린더 뷰) */}
+      {viewMode === 'list' && (
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Week Navigation */}
+          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-gray-50 to-gray-100">
+            <div className="flex items-center justify-between">
+              <button
+                onClick={goToPrevWeek}
+                className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
+              >
+                <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+              </button>
+              <div className="flex items-center gap-3">
+                <h4 className="text-lg font-bold text-gray-900">
+                  {weekStartDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+                </h4>
+                <span className="text-sm text-gray-500">
+                  {weekStartDate.getDate()}일 - {new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6).getDate()}일
+                </span>
+                <button
+                  onClick={goToCurrentWeek}
+                  className="ml-2 px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition"
+                >
+                  오늘
+                </button>
+              </div>
+              <button
+                onClick={goToNextWeek}
+                className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
+              >
+                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* Weekly Calendar Grid */}
+          <div className="overflow-x-auto">
+            <div className="min-w-[800px]">
+              {/* Day Headers */}
+              <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50 sticky top-0 z-10">
+                <div className="p-2 text-center text-xs font-medium text-gray-500 border-r border-gray-200">
+                  시간
+                </div>
+                {getWeekDays().map((day, idx) => {
+                  const isToday = day.toDateString() === new Date().toDateString()
+                  const dayOfWeek = day.getDay()
+                  const leadCount = getLeadCountForDay(day)
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-2 text-center border-r border-gray-200 last:border-r-0 ${
+                        isToday ? 'bg-emerald-50' : ''
+                      }`}
+                    >
+                      <div className={`text-xs font-medium ${
+                        dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-500'
+                      }`}>
+                        {day.toLocaleDateString('ko-KR', { weekday: 'short' })}
+                      </div>
+                      <div className={`text-lg font-bold ${
+                        isToday ? 'text-emerald-600' :
+                        dayOfWeek === 0 ? 'text-red-600' :
+                        dayOfWeek === 6 ? 'text-blue-600' : 'text-gray-900'
+                      }`}>
+                        {day.getDate()}
+                      </div>
+                      {leadCount > 0 && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-emerald-500 text-white rounded-full">
+                            {leadCount}건
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Time Slots */}
+              <div className="divide-y divide-gray-100">
+                {timeSlots.map((timeSlot) => (
+                  <div key={timeSlot} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[60px]">
+                    {/* Time Label */}
+                    <div className="p-2 text-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-200 flex items-start justify-center pt-3">
+                      {timeSlot}
+                    </div>
+
+                    {/* Day Cells */}
+                    {getWeekDays().map((day, dayIdx) => {
+                      const isToday = day.toDateString() === new Date().toDateString()
+                      const leadsInSlot = getLeadsForTimeSlot(day, timeSlot)
+                      const dateStr = day.toISOString().split('T')[0]
 
                       return (
                         <div
-                          key={lead.id}
-                          onClick={() => handleLeadClick(lead)}
-                          className="group relative bg-white border-2 border-gray-200 rounded-xl p-4 hover:border-emerald-500 hover:shadow-lg transition-all duration-200 cursor-pointer"
+                          key={dayIdx}
+                          onClick={() => {
+                            if (leadsInSlot.length === 0) {
+                              // 빈 슬롯 클릭 시 예약 추가 모달
+                              setScheduleInputDate(dateStr)
+                              setScheduleInputTime(timeSlot)
+                              setScheduleInputLeadId('')
+                              setShowScheduleInputModal(true)
+                              setLoadingAvailableLeads(true)
+                              setScheduleSearchQuery('')
+                              supabase
+                                .from('leads')
+                                .select(`id, name, phone, status, landing_pages (id, title)`)
+                                .eq('company_id', companyId)
+                                .neq('status', 'contract_completed')
+                                .neq('status', 'rejected')
+                                .order('created_at', { ascending: false })
+                                .limit(200)
+                                .then(({ data }) => {
+                                  setAvailableLeadsForSchedule(data || [])
+                                  setLoadingAvailableLeads(false)
+                                })
+                            }
+                          }}
+                          className={`p-1 border-r border-gray-100 last:border-r-0 ${
+                            isToday ? 'bg-emerald-50/50' : ''
+                          } ${leadsInSlot.length === 0 ? 'hover:bg-gray-50 cursor-pointer' : ''} transition-colors`}
                         >
-                          {/* Time Badge */}
-                          <div className="absolute -top-3 -right-3 bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                            {time}
-                          </div>
+                          <div className="space-y-1">
+                            {leadsInSlot.map((lead) => {
+                              const phone = lead.phone ? decryptPhone(lead.phone) : null
+                              const exactTime = formatTime(lead.contract_completed_at!)
+                              const landingPage = Array.isArray(lead.landing_pages)
+                                ? lead.landing_pages[0]
+                                : lead.landing_pages
 
-                          {/* Lead Info */}
-                          <div className="space-y-2">
-                            <div className="font-semibold text-gray-900 group-hover:text-emerald-600 transition-colors">
-                              {lead.name}
-                            </div>
-
-                            {landingPage?.title && (
-                              <div className="text-xs text-gray-500">
-                                {landingPage.title}
-                              </div>
-                            )}
-
-                            {/* Contact Info - Shows on Hover */}
-                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                              {phone && (
-                                <div className="text-sm text-emerald-600 font-medium">
-                                  {phone}
+                              return (
+                                <div
+                                  key={lead.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleLeadClick(lead)
+                                  }}
+                                  className="group bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-md p-2 text-xs cursor-pointer hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm hover:shadow-md"
+                                >
+                                  <div className="flex items-center justify-between mb-0.5">
+                                    <span className="font-semibold truncate">{lead.name}</span>
+                                    <span className="text-emerald-100 text-[10px] ml-1">{exactTime}</span>
+                                  </div>
+                                  {phone && (
+                                    <div className="text-emerald-100 text-[10px] truncate">{phone}</div>
+                                  )}
+                                  {landingPage?.title && (
+                                    <div className="text-emerald-200 text-[10px] truncate mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      {landingPage.title}
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-                            </div>
-                          </div>
-
-                          {/* Hover Indicator */}
-                          <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <svg
-                              className="w-5 h-5 text-emerald-500"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M9 5l7 7-7 7"
-                              />
-                            </svg>
+                              )
+                            })}
                           </div>
                         </div>
                       )
                     })}
                   </div>
-                </div>
-              )
-            })}
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Legend & Tips */}
+          <div className="p-3 border-t border-gray-200 bg-gray-50 flex flex-wrap items-center justify-center gap-4 text-xs text-gray-500">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-emerald-50 border border-emerald-200 rounded"></div>
+              <span>오늘</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-gradient-to-r from-emerald-500 to-teal-500 rounded"></div>
+              <span>예약</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">|</span>
+              <span>빈 시간 클릭하여 예약 추가</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-gray-400">|</span>
+              <span>예약 클릭하여 상세 정보 보기</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Actions */}
-      <div className="flex justify-center gap-4">
+      <div className="flex justify-center gap-3">
         <button
           onClick={() => setShowAllLeadsModal(true)}
-          className="inline-flex items-center justify-center px-8 py-3 text-base font-medium text-emerald-600 bg-white border-2 border-emerald-600 rounded-full hover:bg-emerald-50 transition-all duration-300 shadow-md hover:shadow-lg"
+          className="inline-flex items-center justify-center px-6 py-2.5 text-sm font-medium text-emerald-600 bg-white border-2 border-emerald-600 rounded-full hover:bg-emerald-50 transition-all duration-300 shadow-md hover:shadow-lg"
         >
           모든 예약 확정 건 보기
-        </button>
-        <button
-          onClick={() => setShowCalendarModal(true)}
-          className="inline-flex items-center justify-center gap-2 px-8 py-3 text-base font-medium text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full hover:from-emerald-600 hover:to-teal-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-        >
-          <CalendarDaysIcon className="h-5 w-5" />
-          캘린더 뷰로 보기
         </button>
       </div>
 

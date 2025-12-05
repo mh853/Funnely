@@ -102,23 +102,23 @@ export default function SubscriptionClient({
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 mb-2">
           {currentSubscription ? '구독 플랜 변경' : '플랜 선택'}
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-base text-gray-600">
           7일 무료 체험을 시작하고 최적의 플랜을 선택하세요
         </p>
 
         {currentSubscription && (
-          <div className="mt-4 inline-block bg-blue-50 rounded-lg px-6 py-3">
-            <p className="text-sm text-gray-600">현재 플랜</p>
-            <p className="text-lg font-semibold text-blue-600">
+          <div className="mt-3 inline-block bg-blue-50 rounded-lg px-5 py-2.5">
+            <p className="text-xs text-gray-600">현재 플랜</p>
+            <p className="text-base font-semibold text-blue-600">
               {currentSubscription.subscription_plans.display_name} -{' '}
               {currentSubscription.billing_cycle === 'monthly' ? '월간' : '연간'}
             </p>
             {currentSubscription.status === 'trial' && (
-              <p className="text-sm text-gray-600 mt-1">
+              <p className="text-xs text-gray-600 mt-0.5">
                 체험 종료: {formatDate(currentSubscription.trial_end_date!)}
               </p>
             )}
@@ -127,11 +127,11 @@ export default function SubscriptionClient({
       </div>
 
       {/* 결제 주기 선택 */}
-      <div className="flex justify-center mb-8">
+      <div className="flex justify-center mb-5">
         <div className="inline-flex rounded-lg bg-gray-100 p-1">
           <button
             onClick={() => setBillingCycle('monthly')}
-            className={`px-6 py-2 rounded-md text-sm font-semibold transition-colors ${
+            className={`px-5 py-1.5 rounded-md text-sm font-semibold transition-colors ${
               billingCycle === 'monthly'
                 ? 'bg-white text-gray-900 shadow'
                 : 'text-gray-600 hover:text-gray-900'
@@ -141,7 +141,7 @@ export default function SubscriptionClient({
           </button>
           <button
             onClick={() => setBillingCycle('yearly')}
-            className={`px-6 py-2 rounded-md text-sm font-semibold transition-colors ${
+            className={`px-5 py-1.5 rounded-md text-sm font-semibold transition-colors ${
               billingCycle === 'yearly'
                 ? 'bg-white text-gray-900 shadow'
                 : 'text-gray-600 hover:text-gray-900'
@@ -156,7 +156,7 @@ export default function SubscriptionClient({
       </div>
 
       {/* 플랜 카드 */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {plans.map((plan) => {
           const isCurrentPlan =
             currentSubscription?.subscription_plans.id === plan.id
@@ -165,35 +165,35 @@ export default function SubscriptionClient({
           return (
             <div
               key={plan.id}
-              className={`relative rounded-2xl border-2 p-8 ${
+              className={`relative rounded-xl border-2 p-5 ${
                 isPro
                   ? 'border-blue-500 shadow-xl'
                   : 'border-gray-200 shadow-sm'
               } ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''}`}
             >
               {isPro && (
-                <div className="absolute top-0 right-8 transform -translate-y-1/2">
-                  <span className="inline-flex rounded-full bg-blue-500 px-4 py-1 text-xs font-semibold text-white">
+                <div className="absolute top-0 right-6 transform -translate-y-1/2">
+                  <span className="inline-flex rounded-full bg-blue-500 px-3 py-0.5 text-xs font-semibold text-white">
                     추천
                   </span>
                 </div>
               )}
 
               <div className="text-center">
-                <h3 className="text-2xl font-bold text-gray-900">
+                <h3 className="text-xl font-bold text-gray-900">
                   {plan.display_name}
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+                <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
 
-                <div className="mt-6">
-                  <p className="text-4xl font-bold text-gray-900">
+                <div className="mt-4">
+                  <p className="text-3xl font-bold text-gray-900">
                     {getPrice(plan).toLocaleString()}원
                   </p>
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="text-sm text-gray-600 mt-0.5">
                     / {billingCycle === 'monthly' ? '월' : '년'}
                   </p>
                   {billingCycle === 'yearly' && (
-                    <p className="text-sm text-green-600 font-semibold mt-2">
+                    <p className="text-sm text-green-600 font-semibold mt-1">
                       {getSavings(plan)}% 절약
                     </p>
                   )}
@@ -202,7 +202,7 @@ export default function SubscriptionClient({
                 <button
                   onClick={() => handleSelectPlan(plan)}
                   disabled={loading || isCurrentPlan}
-                  className={`mt-8 w-full rounded-lg px-6 py-3 text-sm font-semibold transition-colors ${
+                  className={`mt-5 w-full rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
                     isPro
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-900 text-white hover:bg-gray-800'
@@ -220,11 +220,11 @@ export default function SubscriptionClient({
                 </button>
               </div>
 
-              <ul className="mt-8 space-y-4">
+              <ul className="mt-5 space-y-2.5">
                 {plan.features.map((feature, index) => (
                   <li key={index} className="flex items-start">
-                    <CheckIcon className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
-                    <span className="ml-3 text-sm text-gray-700">{feature}</span>
+                    <CheckIcon className="h-4 w-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <span className="ml-2.5 text-sm text-gray-700">{feature}</span>
                   </li>
                 ))}
               </ul>
@@ -234,42 +234,42 @@ export default function SubscriptionClient({
       </div>
 
       {/* FAQ */}
-      <div className="mt-16 border-t border-gray-200 pt-12">
-        <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
+      <div className="mt-10 border-t border-gray-200 pt-8">
+        <h2 className="text-xl font-bold text-gray-900 text-center mb-5">
           자주 묻는 질문
         </h2>
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="max-w-3xl mx-auto space-y-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               무료 체험 기간은 어떻게 되나요?
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-1 text-sm text-gray-600">
               모든 플랜에서 7일 무료 체험이 제공됩니다. 체험 기간 동안 전체 기능을 무제한으로
               이용할 수 있습니다.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               결제 수단은 무엇이 지원되나요?
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-1 text-sm text-gray-600">
               신용카드, 계좌이체, 가상계좌 결제가 지원됩니다.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               플랜을 변경할 수 있나요?
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-1 text-sm text-gray-600">
               언제든지 플랜을 업그레이드하거나 다운그레이드할 수 있습니다. 변경 시
               일할 계산으로 정산됩니다.
             </p>
           </div>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+            <h3 className="text-base font-semibold text-gray-900">
               세금계산서 발행이 가능한가요?
             </h3>
-            <p className="mt-2 text-gray-600">
+            <p className="mt-1 text-sm text-gray-600">
               네, 결제 후 세금계산서 발행을 요청하실 수 있습니다.
             </p>
           </div>
