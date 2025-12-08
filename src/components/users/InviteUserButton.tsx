@@ -6,9 +6,10 @@ import InviteUserModal from './InviteUserModal'
 
 interface InviteUserButtonProps {
   companyId: string
+  existingDepartments?: string[]
 }
 
-export default function InviteUserButton({ companyId }: InviteUserButtonProps) {
+export default function InviteUserButton({ companyId, existingDepartments = [] }: InviteUserButtonProps) {
   const [showModal, setShowModal] = useState(false)
 
   return (
@@ -25,6 +26,7 @@ export default function InviteUserButton({ companyId }: InviteUserButtonProps) {
         <InviteUserModal
           companyId={companyId}
           onClose={() => setShowModal(false)}
+          existingDepartments={existingDepartments}
         />
       )}
     </>

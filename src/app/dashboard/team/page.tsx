@@ -41,6 +41,15 @@ export default async function TeamPage() {
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
+  // Get unique departments for autocomplete
+  const existingDepartments = Array.from(
+    new Set(
+      (teamMembers || [])
+        .map((m) => m.department)
+        .filter((d): d is string => Boolean(d))
+    )
+  ).sort()
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -52,7 +61,10 @@ export default async function TeamPage() {
           </p>
         </div>
         {canManage && (
-          <InviteUserButton companyId={userProfile.company_id} />
+          <InviteUserButton
+            companyId={userProfile.company_id}
+            existingDepartments={existingDepartments}
+          />
         )}
       </div>
 
@@ -92,6 +104,7 @@ export default async function TeamPage() {
             members={teamMembers || []}
             currentUserId={user.id}
             canManage={canManage}
+            existingDepartments={existingDepartments}
           />
         </div>
       </div>

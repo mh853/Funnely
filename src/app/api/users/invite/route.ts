@@ -37,7 +37,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json()
-    const { role, email } = body
+    const { role, email, department } = body
 
     // Validate role
     const validRoles = ['admin', 'manager', 'user']
@@ -68,6 +68,7 @@ export async function POST(request: Request) {
         invitation_code: invitationCode,
         role: role,
         email: email || null,
+        department: department || null,
         status: 'pending',
         expires_at: expiresAt.toISOString(),
       })

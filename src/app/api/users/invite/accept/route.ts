@@ -118,6 +118,7 @@ export async function POST(request: Request) {
       role: legacyRole,
       simple_role: invitation.role,
       company_id: invitation.company_id,
+      department: invitation.department || null,
     })
 
     if (userError) {
@@ -182,7 +183,7 @@ export async function GET(request: Request) {
     // Find invitation by code
     const { data: invitation, error: inviteError } = await supabase
       .from('company_invitations')
-      .select('id, role, status, expires_at, companies(id, name)')
+      .select('id, role, department, status, expires_at, companies(id, name)')
       .eq('invitation_code', code)
       .single()
 
@@ -217,6 +218,7 @@ export async function GET(request: Request) {
       invitation: {
         id: invitation.id,
         role: invitation.role,
+        department: invitation.department,
         expiresAt: invitation.expires_at,
         companyName: company?.name,
       },

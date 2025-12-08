@@ -12,6 +12,7 @@ import {
 interface InviteUserModalProps {
   companyId: string
   onClose: () => void
+  existingDepartments?: string[]
 }
 
 const roleOptions = [
@@ -20,14 +21,21 @@ const roleOptions = [
   { value: 'admin', label: '관리자', description: '모든 권한 및 팀원 관리' },
 ]
 
-export default function InviteUserModal({ companyId, onClose }: InviteUserModalProps) {
+export default function InviteUserModal({ companyId, onClose, existingDepartments = [] }: InviteUserModalProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedRole, setSelectedRole] = useState('user')
   const [email, setEmail] = useState('')
+  const [department, setDepartment] = useState('')
+  const [showDepartmentSuggestions, setShowDepartmentSuggestions] = useState(false)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [expiresAt, setExpiresAt] = useState<string | null>(null)
+
+  // Filter departments for autocomplete
+  const filteredDepartments = existingDepartments.filter(
+    (dept) => dept.toLowerCase().includes(department.toLowerCase()) && dept !== department
+  )
 
   const handleCreateInvite = async () => {
     setLoading(true)
@@ -42,6 +50,7 @@ export default function InviteUserModal({ companyId, onClose }: InviteUserModalP
         body: JSON.stringify({
           role: selectedRole,
           email: email || undefined,
+          department: department.trim() || undefined,
         }),
       })
 
@@ -76,6 +85,7 @@ export default function InviteUserModal({ companyId, onClose }: InviteUserModalP
     setInviteUrl(null)
     setExpiresAt(null)
     setEmail('')
+    setDepartment('')
     setSelectedRole('user')
   }
 
@@ -204,6 +214,44 @@ export default function InviteUserModal({ companyId, onClose }: InviteUserModalP
                   />
                   <p className="mt-1 text-xs text-gray-500">
                     이메일을 입력하면 초대 기록에 표시됩니다.
+                  </p>
+                </div>
+
+                {/* Department (Optional) */}
+                <div className="relative">
+                  <label htmlFor="department" className="block text-sm font-medium text-gray-700">
+                    담당부서 (선택)
+                  </label>
+                  <input
+                    type="text"
+                    name="department"
+                    id="department"
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    onFocus={() => setShowDepartmentSuggestions(true)}
+                    onBlur={() => setTimeout(() => setShowDepartmentSuggestions(false), 200)}
+                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    placeholder="예: 영업팀, 마케팅팀"
+                    autoComplete="off"
+                  />
+                  {showDepartmentSuggestions && filteredDepartments.length > 0 && (
+                    <ul className="absolute z-10 mt-1 max-h-32 w-full overflow-auto rounded-md bg-white py-1 text-sm shadow-lg ring-1 ring-black ring-opacity-5">
+                      {filteredDepartments.map((dept) => (
+                        <li
+                          key={dept}
+                          className="cursor-pointer px-3 py-2 hover:bg-gray-100"
+                          onMouseDown={() => {
+                            setDepartment(dept)
+                            setShowDepartmentSuggestions(false)
+                          }}
+                        >
+                          {dept}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <p className="mt-1 text-xs text-gray-500">
+                    부서를 입력하면 팀원 관리에 활용됩니다.
                   </p>
                 </div>
 

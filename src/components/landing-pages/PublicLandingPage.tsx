@@ -2,7 +2,7 @@
 
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
-import { useState, useEffect, useMemo, memo } from 'react'
+import { useState, useEffect, useMemo, memo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
@@ -27,7 +27,26 @@ interface PublicLandingPageProps {
   landingPage: LandingPage
 }
 
+// Wrapper component that handles Suspense for useSearchParams
 export default function PublicLandingPage({ landingPage }: PublicLandingPageProps) {
+  return (
+    <Suspense fallback={<PublicLandingPageSkeleton />}>
+      <PublicLandingPageContent landingPage={landingPage} />
+    </Suspense>
+  )
+}
+
+// Simple loading skeleton
+function PublicLandingPageSkeleton() {
+  return (
+    <div className="min-h-screen bg-white flex items-center justify-center">
+      <div className="animate-pulse text-gray-400">로딩 중...</div>
+    </div>
+  )
+}
+
+// Main content component that uses useSearchParams
+function PublicLandingPageContent({ landingPage }: PublicLandingPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const refParam = searchParams.get('ref')
