@@ -7,6 +7,7 @@ interface SearchParams {
   dateRange?: string
   startDate?: string  // yyyy-mm-dd 형식
   endDate?: string    // yyyy-mm-dd 형식
+  date?: string       // yyyy-mm-dd 형식 (단일 날짜 필터 - 대시보드 그래프에서 클릭 시)
   landingPageId?: string
   deviceType?: string
   status?: string
@@ -45,6 +46,7 @@ export default async function LeadsPage({
   const dateRange = searchParams.dateRange
   const startDateParam = searchParams.startDate
   const endDateParam = searchParams.endDate
+  const singleDateParam = searchParams.date  // 대시보드 그래프에서 클릭한 단일 날짜
   const landingPageId = searchParams.landingPageId
   const deviceType = searchParams.deviceType
   const status = searchParams.status
@@ -59,8 +61,15 @@ export default async function LeadsPage({
   let startDate: Date | null = null
   let endDate: Date | null = null
 
+  // 단일 날짜 필터 (대시보드 그래프에서 클릭 시) - 가장 높은 우선순위
+  if (singleDateParam) {
+    startDate = new Date(singleDateParam)
+    startDate.setHours(0, 0, 0, 0)
+    endDate = new Date(singleDateParam)
+    endDate.setHours(23, 59, 59, 999)
+  }
   // 직접 입력된 날짜 범위 우선 처리
-  if (startDateParam && endDateParam) {
+  else if (startDateParam && endDateParam) {
     startDate = new Date(startDateParam)
     startDate.setHours(0, 0, 0, 0)
     endDate = new Date(endDateParam)
@@ -100,7 +109,8 @@ export default async function LeadsPage({
       landing_pages (
         id,
         title,
-        slug
+        slug,
+        collect_fields
       ),
       call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name)
     `,
@@ -166,6 +176,14 @@ export default async function LeadsPage({
     .eq('company_id', userProfile.company_id)
     .order('full_name')
 
+  // Get lead statuses for filter and status display
+  const { data: leadStatuses } = await supabase
+    .from('lead_statuses')
+    .select('id, code, label, color, sort_order, is_default')
+    .eq('company_id', userProfile.company_id)
+    .eq('is_active', true)
+    .order('sort_order')
+
   const handleExcelExport = async () => {
     'use server'
     // Excel export implementation will be added later
@@ -198,6 +216,8 @@ export default async function LeadsPage({
         teamMembers={teamMembers || []}
         totalCount={totalCount || 0}
         selectedLeadId={selectedLeadId}
+        userRole={userProfile.simple_role || userProfile.role}
+        leadStatuses={leadStatuses || []}
       />
     </div>
   )

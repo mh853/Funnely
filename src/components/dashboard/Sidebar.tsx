@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import {
   HomeIcon,
   ChartBarIcon,
@@ -24,6 +24,8 @@ interface SidebarProps {
   userProfile: any
   mobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
+  collapsed?: boolean
+  onToggleCollapse?: () => void
 }
 
 const navigation = [
@@ -42,64 +44,130 @@ const navigation = [
   { name: '설정', href: '/dashboard/settings', icon: CogIcon },
 ]
 
-export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen }: SidebarProps) {
+export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse }: SidebarProps) {
   const pathname = usePathname()
 
-  const SidebarContent = () => (
-    <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
-        {/* Logo */}
-        <div className="flex h-16 shrink-0 items-center">
-          <h1 className="text-2xl font-bold text-blue-600">Funnely</h1>
-        </div>
-
-        {/* Hospital Info */}
-        {userProfile?.companies && (
-          <div className="rounded-lg bg-blue-50 p-3">
-            <p className="text-xs text-gray-600">회사</p>
-            <p className="font-medium text-gray-900 truncate">
-              {userProfile.companies.name}
-            </p>
-          </div>
-        )}
-
-        {/* Navigation */}
-        <nav className="flex flex-1 flex-col">
-          <ul role="list" className="flex flex-1 flex-col gap-y-7">
-            <li>
-              <ul role="list" className="-mx-2 space-y-1">
-                {navigation.map((item) => {
-                  const isActive = pathname === item.href
-                  return (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        prefetch={true}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className={`
-                          group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold
-                          ${
-                            isActive
-                              ? 'bg-blue-50 text-blue-600'
-                              : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
-                          }
-                        `}
-                      >
-                        <item.icon
-                          className={`h-6 w-6 shrink-0 ${
-                            isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'
-                          }`}
-                          aria-hidden="true"
-                        />
-                        {item.name}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
-            </li>
-          </ul>
-        </nav>
+  // 접힌 상태의 사이드바 콘텐츠
+  const CollapsedSidebarContent = () => (
+    <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 px-3 pb-4">
+      {/* Logo */}
+      <div className="flex h-16 shrink-0 items-center justify-center">
+        <h1 className="text-xl font-bold text-blue-600">F</h1>
       </div>
+
+      {/* Toggle Button */}
+      <button
+        onClick={onToggleCollapse}
+        className="flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+        title="사이드바 펼치기"
+      >
+        <ChevronRightIcon className="h-5 w-5" />
+      </button>
+
+      {/* Navigation - Icons Only */}
+      <nav className="flex flex-1 flex-col">
+        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+          <li>
+            <ul role="list" className="space-y-1">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      prefetch={true}
+                      title={item.name}
+                      className={`
+                        group flex items-center justify-center rounded-md p-2
+                        ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                        }
+                      `}
+                    >
+                      <item.icon
+                        className={`h-6 w-6 shrink-0 ${
+                          isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'
+                        }`}
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  )
+
+  // 펼쳐진 상태의 사이드바 콘텐츠
+  const ExpandedSidebarContent = ({ showToggle = true }: { showToggle?: boolean }) => (
+    <div className="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
+      {/* Logo & Toggle */}
+      <div className="flex h-16 shrink-0 items-center justify-between">
+        <h1 className="text-2xl font-bold text-blue-600">Funnely</h1>
+        {showToggle && onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="p-1.5 rounded-md text-gray-400 hover:text-blue-600 hover:bg-gray-50 transition-colors"
+            title="사이드바 접기"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+        )}
+      </div>
+
+      {/* Hospital Info */}
+      {userProfile?.companies && (
+        <div className="rounded-lg bg-blue-50 p-3">
+          <p className="text-xs text-gray-600">회사</p>
+          <p className="font-medium text-gray-900 truncate">
+            {userProfile.companies.name}
+          </p>
+        </div>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex flex-1 flex-col">
+        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+          <li>
+            <ul role="list" className="-mx-2 space-y-1">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href}
+                      prefetch={true}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={`
+                        group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold
+                        ${
+                          isActive
+                            ? 'bg-blue-50 text-blue-600'
+                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                        }
+                      `}
+                    >
+                      <item.icon
+                        className={`h-6 w-6 shrink-0 ${
+                          isActive ? 'text-blue-600' : 'text-gray-400 group-hover:text-blue-600'
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {item.name}
+                    </Link>
+                  </li>
+                )
+              })}
+            </ul>
+          </li>
+        </ul>
+      </nav>
+    </div>
   )
 
   return (
@@ -150,7 +218,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
                     </button>
                   </div>
                 </Transition.Child>
-                <SidebarContent />
+                <ExpandedSidebarContent showToggle={false} />
               </Dialog.Panel>
             </Transition.Child>
           </div>
@@ -158,8 +226,8 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       </Transition.Root>
 
       {/* Desktop sidebar */}
-      <div className="hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:w-64 lg:flex-col">
-        <SidebarContent />
+      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300 ${collapsed ? 'lg:w-20' : 'lg:w-64'}`}>
+        {collapsed ? <CollapsedSidebarContent /> : <ExpandedSidebarContent />}
       </div>
     </>
   )

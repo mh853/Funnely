@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline'
@@ -13,16 +13,41 @@ interface TeamMember {
   full_name: string
 }
 
+interface LeadStatus {
+  id: string
+  code: string
+  label: string
+  color: string
+  sort_order: number
+  is_default: boolean
+}
+
 interface LeadsClientProps {
   leads: any[]
   landingPages: any[]
   teamMembers: TeamMember[]
   totalCount: number
   selectedLeadId?: string  // 캘린더에서 클릭한 특정 리드 ID
+  userRole?: string  // 사용자 역할 (감사 로그 표시용)
+  leadStatuses?: LeadStatus[]  // 동적 상태 목록
 }
 
-// 상태별 스타일 정의
-const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string } } = {
+// 색상별 Tailwind 클래스 매핑
+const COLOR_CLASS_MAP: { [key: string]: { bg: string; text: string } } = {
+  gray: { bg: 'bg-gray-100', text: 'text-gray-800' },
+  red: { bg: 'bg-red-100', text: 'text-red-800' },
+  orange: { bg: 'bg-orange-100', text: 'text-orange-800' },
+  yellow: { bg: 'bg-yellow-100', text: 'text-yellow-800' },
+  green: { bg: 'bg-green-100', text: 'text-green-800' },
+  emerald: { bg: 'bg-emerald-100', text: 'text-emerald-800' },
+  sky: { bg: 'bg-sky-100', text: 'text-sky-800' },
+  blue: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  purple: { bg: 'bg-purple-100', text: 'text-purple-800' },
+  pink: { bg: 'bg-pink-100', text: 'text-pink-800' },
+}
+
+// 기본 상태 스타일 (fallback)
+const DEFAULT_STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string } } = {
   new: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '상담 거절' },
@@ -34,24 +59,49 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
 }
 
-// 상태 변경 가능 목록
-const STATUS_OPTIONS = [
-  { value: 'new', label: '상담 전' },
-  { value: 'rejected', label: '상담 거절' },
-  { value: 'contacted', label: '상담 진행중' },
-  { value: 'converted', label: '상담 완료' },
-  { value: 'contract_completed', label: '예약 확정' },
-  { value: 'needs_followup', label: '추가상담 필요' },
-  { value: 'other', label: '기타' },
-]
-
 export default function LeadsClient({
   leads: initialLeads,
   landingPages,
   teamMembers,
   totalCount,
   selectedLeadId,
+  userRole,
+  leadStatuses = [],
 }: LeadsClientProps) {
+  // 관리자 여부 확인 (simple_role: admin)
+  const isAdmin = userRole === 'admin'
+
+  // 동적 상태 스타일 맵 생성
+  const statusStyles = useMemo(() => {
+    if (leadStatuses.length === 0) return DEFAULT_STATUS_STYLES
+    const styles: { [key: string]: { bg: string; text: string; label: string } } = {}
+    for (const status of leadStatuses) {
+      const colorClasses = COLOR_CLASS_MAP[status.color] || COLOR_CLASS_MAP.gray
+      styles[status.code] = {
+        bg: colorClasses.bg,
+        text: colorClasses.text,
+        label: status.label,
+      }
+    }
+    // Fallback for codes not in dynamic statuses
+    return { ...DEFAULT_STATUS_STYLES, ...styles }
+  }, [leadStatuses])
+
+  // 상태 옵션 목록 생성
+  const statusOptions = useMemo(() => {
+    if (leadStatuses.length === 0) {
+      return [
+        { value: 'new', label: '상담 전' },
+        { value: 'rejected', label: '상담 거절' },
+        { value: 'contacted', label: '상담 진행중' },
+        { value: 'converted', label: '상담 완료' },
+        { value: 'contract_completed', label: '예약 확정' },
+        { value: 'needs_followup', label: '추가상담 필요' },
+        { value: 'other', label: '기타' },
+      ]
+    }
+    return leadStatuses.map(s => ({ value: s.code, label: s.label }))
+  }, [leadStatuses])
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -59,6 +109,7 @@ export default function LeadsClient({
   const urlDateRange = searchParams.get('dateRange') || ''
   const urlStartDate = searchParams.get('startDate') || ''
   const urlEndDate = searchParams.get('endDate') || ''
+  const urlSingleDate = searchParams.get('date') || ''  // 대시보드 그래프에서 클릭한 단일 날짜
   const urlLandingPageId = searchParams.get('landingPageId') || ''
   const urlDeviceType = searchParams.get('deviceType') || ''
   const urlStatus = searchParams.get('status') || ''
@@ -67,6 +118,8 @@ export default function LeadsClient({
 
   // 날짜 범위 상태 (Date 객체)
   const [startDate, setStartDate] = useState<Date | null>(() => {
+    // 단일 날짜 필터가 가장 우선
+    if (urlSingleDate) return new Date(urlSingleDate)
     if (urlStartDate) return new Date(urlStartDate)
     if (urlDateRange) {
       const now = new Date()
@@ -81,6 +134,8 @@ export default function LeadsClient({
     return new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000)
   })
   const [endDate, setEndDate] = useState<Date | null>(() => {
+    // 단일 날짜 필터가 가장 우선
+    if (urlSingleDate) return new Date(urlSingleDate)
     if (urlEndDate) return new Date(urlEndDate)
     if (urlDateRange === 'all') return null
     return new Date()
@@ -94,7 +149,12 @@ export default function LeadsClient({
 
   // URL 파라미터가 변경될 때 (router.push 후) 필터 상태 동기화
   useEffect(() => {
-    if (urlStartDate) {
+    // 단일 날짜 필터가 가장 우선
+    if (urlSingleDate) {
+      const singleDate = new Date(urlSingleDate)
+      setStartDate(singleDate)
+      setEndDate(singleDate)
+    } else if (urlStartDate) {
       setStartDate(new Date(urlStartDate))
     } else if (urlDateRange) {
       const now = new Date()
@@ -117,7 +177,7 @@ export default function LeadsClient({
           break
       }
     }
-    if (urlEndDate) {
+    if (!urlSingleDate && urlEndDate) {
       setEndDate(new Date(urlEndDate))
     }
     setLandingPageId(urlLandingPageId)
@@ -125,10 +185,38 @@ export default function LeadsClient({
     setStatus(urlStatus)
     setAssignedTo(urlAssignedTo)
     setSearchQuery(urlSearch)
-  }, [urlDateRange, urlStartDate, urlEndDate, urlLandingPageId, urlDeviceType, urlStatus, urlAssignedTo, urlSearch])
+  }, [urlDateRange, urlStartDate, urlEndDate, urlSingleDate, urlLandingPageId, urlDeviceType, urlStatus, urlAssignedTo, urlSearch])
 
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
+
+  // 모든 랜딩페이지에서 collect_fields 수집하여 동적 컬럼 생성
+  const customFieldColumns = useMemo(() => {
+    const fieldsMap = new Map<string, string>() // field_index -> question
+    leads.forEach((lead: any) => {
+      const collectFields = lead.landing_pages?.collect_fields
+      if (Array.isArray(collectFields)) {
+        // collect_fields에서 short_answer, multiple_choice 타입만 custom_field로 사용
+        let customFieldIndex = 0
+        collectFields.forEach((field: { type: string; question?: string; label?: string }) => {
+          if (field.type === 'short_answer' || field.type === 'multiple_choice') {
+            if (!fieldsMap.has(`field_${customFieldIndex}`)) {
+              fieldsMap.set(`field_${customFieldIndex}`, field.question || field.label || `항목 ${customFieldIndex + 1}`)
+            }
+            customFieldIndex++
+          }
+        })
+      }
+    })
+    // 최대 5개 필드까지 표시
+    const result: { key: string; label: string }[] = []
+    for (let i = 0; i < 5; i++) {
+      if (fieldsMap.has(`field_${i}`)) {
+        result.push({ key: `custom_field_${i + 1}`, label: fieldsMap.get(`field_${i}`)! })
+      }
+    }
+    return result
+  }, [leads])
 
   // initialLeads가 변경될 때 (router.refresh() 후) leads 상태 동기화
   useEffect(() => {
@@ -152,10 +240,194 @@ export default function LeadsClient({
   const [showDetailModal, setShowDetailModal] = useState(false)
   const [notesValue, setNotesValue] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [savingPaymentAmount, setSavingPaymentAmount] = useState(false)
+
+  // 결제 내역 관련 상태
+  const [payments, setPayments] = useState<any[]>([])
+  const [paymentsTotalAmount, setPaymentsTotalAmount] = useState(0)
+  const [loadingPayments, setLoadingPayments] = useState(false)
+  const [newPaymentAmount, setNewPaymentAmount] = useState('')
+  const [newPaymentNotes, setNewPaymentNotes] = useState('')
+  const [addingPayment, setAddingPayment] = useState(false)
+
+  // 감사 로그 관련 상태 (관리자 전용)
+  const [paymentAuditLogs, setPaymentAuditLogs] = useState<any[]>([])
+  const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
+  const [showAuditLogs, setShowAuditLogs] = useState(false)
 
   // 담당자 변경 관련 상태
   const [editingAssigneeLeadId, setEditingAssigneeLeadId] = useState<string | null>(null)
   const [updatingAssigneeLeadId, setUpdatingAssigneeLeadId] = useState<string | null>(null)
+
+  // 결제 내역 조회 함수
+  const fetchPayments = async (leadId: string, existingPaymentAmount?: number) => {
+    setLoadingPayments(true)
+    try {
+      const response = await fetch(`/api/leads/payments?lead_id=${leadId}`)
+      if (response.ok) {
+        const data = await response.json()
+        const fetchedPayments = data.data?.payments || []
+        const fetchedTotal = data.data?.totalAmount || 0
+
+        // 기존 payment_amount가 있고, lead_payments 테이블에 데이터가 없는 경우
+        // 기존 데이터를 레거시로 표시
+        if (fetchedPayments.length === 0 && existingPaymentAmount && existingPaymentAmount > 0) {
+          setPayments([{
+            id: 'legacy',
+            amount: existingPaymentAmount,
+            payment_date: null, // 날짜 정보 없음
+            notes: '(기존 데이터 - 마이그레이션 필요)',
+            isLegacy: true,
+          }])
+          setPaymentsTotalAmount(existingPaymentAmount)
+        } else {
+          setPayments(fetchedPayments)
+          setPaymentsTotalAmount(fetchedTotal)
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch payments:', error)
+    } finally {
+      setLoadingPayments(false)
+    }
+  }
+
+  // 결제 내역 추가 함수
+  const handleAddPayment = async () => {
+    if (!selectedLead || !newPaymentAmount) return
+
+    setAddingPayment(true)
+    try {
+      const amountValue = Number(newPaymentAmount.replace(/,/g, ''))
+      const response = await fetch('/api/leads/payments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: selectedLead.id,
+          amount: amountValue,
+          notes: newPaymentNotes || null,
+        }),
+      })
+
+      if (!response.ok) throw new Error('결제 내역 추가 실패')
+
+      const data = await response.json()
+      setPayments(prev => [data.data.payment, ...prev])
+      setPaymentsTotalAmount(data.data.totalAmount)
+      setNewPaymentAmount('')
+      setNewPaymentNotes('')
+
+      // 리드 목록의 결제금액도 업데이트
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === selectedLead.id
+            ? { ...lead, payment_amount: data.data.totalAmount }
+            : lead
+        )
+      )
+      setSelectedLead({ ...selectedLead, payment_amount: data.data.totalAmount })
+
+      // 감사 로그 새로고침 (관리자이고 감사 로그가 열려있는 경우)
+      if (isAdmin && showAuditLogs) {
+        fetchPaymentAuditLogs(selectedLead.id)
+      }
+    } catch (error) {
+      console.error('Add payment error:', error)
+      alert('결제 내역 추가에 실패했습니다.')
+    } finally {
+      setAddingPayment(false)
+    }
+  }
+
+  // 결제 내역 삭제 함수
+  const handleDeletePayment = async (paymentId: string) => {
+    if (!confirm('이 결제 내역을 삭제하시겠습니까?')) return
+
+    try {
+      const response = await fetch(`/api/leads/payments?id=${paymentId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('결제 내역 삭제 실패')
+
+      const data = await response.json()
+      setPayments(prev => prev.filter(p => p.id !== paymentId))
+      setPaymentsTotalAmount(data.data.totalAmount)
+
+      // 리드 목록의 결제금액도 업데이트
+      if (selectedLead) {
+        setLeads(prevLeads =>
+          prevLeads.map(lead =>
+            lead.id === selectedLead.id
+              ? { ...lead, payment_amount: data.data.totalAmount }
+              : lead
+          )
+        )
+        setSelectedLead({ ...selectedLead, payment_amount: data.data.totalAmount })
+
+        // 감사 로그 새로고침 (관리자이고 감사 로그가 열려있는 경우)
+        if (isAdmin && showAuditLogs) {
+          fetchPaymentAuditLogs(selectedLead.id)
+        }
+      }
+    } catch (error) {
+      console.error('Delete payment error:', error)
+      alert('결제 내역 삭제에 실패했습니다.')
+    }
+  }
+
+  // 레거시 결제 데이터 삭제 함수 (leads.payment_amount를 0으로 초기화)
+  const handleDeleteLegacyPayment = async () => {
+    if (!selectedLead) return
+    if (!confirm('기존 결제 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          payment_amount: 0,
+        }),
+      })
+
+      if (!response.ok) throw new Error('레거시 데이터 삭제 실패')
+
+      // 상태 업데이트
+      setPayments([])
+      setPaymentsTotalAmount(0)
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === selectedLead.id
+            ? { ...lead, payment_amount: 0 }
+            : lead
+        )
+      )
+      setSelectedLead({ ...selectedLead, payment_amount: 0 })
+    } catch (error) {
+      console.error('Delete legacy payment error:', error)
+      alert('기존 데이터 삭제에 실패했습니다.')
+    }
+  }
+
+  // 감사 로그 조회 함수 (관리자 전용)
+  const fetchPaymentAuditLogs = async (leadId: string) => {
+    if (!isAdmin) return
+
+    setLoadingAuditLogs(true)
+    try {
+      const response = await fetch(`/api/leads/payments/audit?lead_id=${leadId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setPaymentAuditLogs(data.data?.logs || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch audit logs:', error)
+    } finally {
+      setLoadingAuditLogs(false)
+    }
+  }
 
   // 행 클릭 핸들러 - 상세 모달 열기
   const handleRowClick = (lead: any, e: React.MouseEvent) => {
@@ -165,7 +437,15 @@ export default function LeadsClient({
 
     setSelectedLead(lead)
     setNotesValue(lead.notes || '')
+    setPaymentAmount(lead.payment_amount ? String(lead.payment_amount) : '')
     setShowDetailModal(true)
+    // 결제 내역 조회 (기존 payment_amount도 전달하여 레거시 데이터 표시)
+    fetchPayments(lead.id, lead.payment_amount)
+    setNewPaymentAmount('')
+    setNewPaymentNotes('')
+    // 감사 로그 초기화
+    setPaymentAuditLogs([])
+    setShowAuditLogs(false)
   }
 
   // 비고 저장 핸들러
@@ -202,6 +482,41 @@ export default function LeadsClient({
     }
   }
 
+  // 결제금액 저장 핸들러
+  const handleSavePaymentAmount = async () => {
+    if (!selectedLead) return
+
+    setSavingPaymentAmount(true)
+    try {
+      const amountValue = paymentAmount ? Number(paymentAmount.replace(/,/g, '')) : null
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          payment_amount: amountValue,
+        }),
+      })
+
+      if (!response.ok) throw new Error('결제금액 저장 실패')
+
+      // 로컬 상태 업데이트
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === selectedLead.id
+            ? { ...lead, payment_amount: amountValue }
+            : lead
+        )
+      )
+      setSelectedLead({ ...selectedLead, payment_amount: amountValue })
+    } catch (error) {
+      console.error('Payment amount save error:', error)
+      alert('결제금액 저장에 실패했습니다.')
+    } finally {
+      setSavingPaymentAmount(false)
+    }
+  }
+
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -231,7 +546,7 @@ export default function LeadsClient({
     } else {
       const button = event.currentTarget
       const rect = button.getBoundingClientRect()
-      const dropdownHeight = 340 // 드롭다운 예상 높이 (7개 옵션 + 취소)
+      const dropdownHeight = 300 // 드롭다운 예상 높이 (7개 옵션)
       const viewportHeight = window.innerHeight
       const spaceBelow = viewportHeight - rect.bottom
 
@@ -444,26 +759,50 @@ export default function LeadsClient({
     setEndDate(end)
   }
 
-  const handleFilterChange = () => {
-    const params = new URLSearchParams()
+  // 실시간 필터링을 위한 debounce 타이머 ref
+  const filterTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const isInitialMount = useRef(true)
 
-    // 날짜 범위 설정
-    if (startDate && endDate) {
-      params.set('startDate', formatDateForUrl(startDate))
-      params.set('endDate', formatDateForUrl(endDate))
-    } else if (!startDate && !endDate) {
-      params.set('dateRange', 'all')
+  // 필터 변경 시 자동으로 URL 업데이트 (debounce 적용)
+  useEffect(() => {
+    // 초기 마운트 시에는 실행하지 않음 (URL에서 이미 필터가 적용되어 있으므로)
+    if (isInitialMount.current) {
+      isInitialMount.current = false
+      return
     }
 
-    if (landingPageId) params.set('landingPageId', landingPageId)
-    if (deviceType) params.set('deviceType', deviceType)
-    if (status) params.set('status', status)
-    if (assignedTo) params.set('assignedTo', assignedTo)
-    if (searchQuery) params.set('search', searchQuery)
-    params.set('page', '1')
+    if (filterTimeoutRef.current) {
+      clearTimeout(filterTimeoutRef.current)
+    }
 
-    router.push(`/dashboard/leads?${params.toString()}`)
-  }
+    filterTimeoutRef.current = setTimeout(() => {
+      const params = new URLSearchParams()
+
+      // 날짜 범위 설정
+      if (startDate && endDate) {
+        params.set('startDate', formatDateForUrl(startDate))
+        params.set('endDate', formatDateForUrl(endDate))
+      } else if (!startDate && !endDate) {
+        params.set('dateRange', 'all')
+      }
+
+      if (landingPageId) params.set('landingPageId', landingPageId)
+      if (deviceType) params.set('deviceType', deviceType)
+      if (status) params.set('status', status)
+      if (assignedTo) params.set('assignedTo', assignedTo)
+      if (searchQuery) params.set('search', searchQuery)
+      params.set('page', '1')
+
+      router.push(`/dashboard/leads?${params.toString()}`)
+    }, 100) // 100ms debounce - 빠른 반응
+
+    return () => {
+      if (filterTimeoutRef.current) {
+        clearTimeout(filterTimeoutRef.current)
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate, landingPageId, deviceType, status, assignedTo, searchQuery])
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -486,8 +825,8 @@ export default function LeadsClient({
 
   return (
     <>
-      {/* 상태 필터 알림 배너 (URL에서 status가 설정된 경우) */}
-      {urlStatus && !selectedLeadId && (
+      {/* 필터 알림 배너 (URL에서 status, deviceType, date가 설정된 경우) */}
+      {(urlStatus || urlDeviceType || urlSingleDate) && !selectedLeadId && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-lg">
@@ -495,7 +834,12 @@ export default function LeadsClient({
             </div>
             <div>
               <p className="text-sm font-medium text-emerald-900">
-                {STATUS_STYLES[urlStatus]?.label || urlStatus} 필터가 적용되었습니다 ({totalCount}건)
+                {urlSingleDate && `${urlSingleDate} 날짜`}
+                {urlSingleDate && (urlStatus || urlDeviceType) && ' + '}
+                {urlStatus && (statusStyles[urlStatus]?.label || urlStatus)}
+                {urlStatus && urlDeviceType && ' + '}
+                {urlDeviceType && (urlDeviceType === 'pc' ? 'PC' : urlDeviceType === 'mobile' ? 'Mobile' : urlDeviceType)}
+                {' '}필터가 적용되었습니다 ({totalCount}건)
               </p>
               <p className="text-xs text-emerald-600">
                 전체 목록을 보려면 필터 해제 버튼을 클릭하세요
@@ -538,27 +882,26 @@ export default function LeadsClient({
         </div>
       )}
 
-      {/* Filters */}
+      {/* Filters - 한 행 레이아웃 */}
       <div className="bg-white rounded-xl shadow-lg p-4">
-        {/* 첫 번째 행: 날짜 범위 (전체 너비) */}
-        <div className="mb-3">
-          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-            📅 날짜 범위
-          </label>
-          <DateRangePicker
-            startDate={startDate}
-            endDate={endDate}
-            onChange={handleDateRangeChange}
-            placeholder="날짜 범위를 선택하세요"
-          />
-        </div>
-
-        {/* 두 번째 행: 나머지 필터들 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-          {/* Landing Page */}
-          <div>
+        <div className="flex flex-wrap items-end gap-3">
+          {/* 날짜 범위 */}
+          <div className="flex-shrink-0 w-72">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              랜딩페이지 이름
+              📅 날짜 범위
+            </label>
+            <DateRangePicker
+              startDate={startDate}
+              endDate={endDate}
+              onChange={handleDateRangeChange}
+              placeholder="날짜 범위 선택"
+            />
+          </div>
+
+          {/* Landing Page */}
+          <div className="flex-shrink-0 w-40">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              랜딩페이지
             </label>
             <select
               value={landingPageId}
@@ -575,7 +918,7 @@ export default function LeadsClient({
           </div>
 
           {/* Device */}
-          <div>
+          <div className="flex-shrink-0 w-24">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               기기
             </label>
@@ -591,7 +934,7 @@ export default function LeadsClient({
           </div>
 
           {/* Result */}
-          <div>
+          <div className="flex-shrink-0 w-32">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               결과
             </label>
@@ -601,18 +944,16 @@ export default function LeadsClient({
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">전체</option>
-              <option value="new">상담 전</option>
-              <option value="rejected">상담 거절</option>
-              <option value="contacted">상담 진행중</option>
-              <option value="converted">상담 완료</option>
-              <option value="contract_completed">계약 완료</option>
-              <option value="needs_followup">추가상담 필요</option>
-              <option value="other">기타</option>
+              {statusOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
 
           {/* Assigned To */}
-          <div>
+          <div className="flex-shrink-0 w-28">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               담당자
             </label>
@@ -631,40 +972,21 @@ export default function LeadsClient({
           </div>
 
           {/* Search */}
-          <div>
+          <div className="flex-1 min-w-[180px]">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
               검색
             </label>
             <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="이름, 전화번호 검색"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleFilterChange()
-                  }
-                }}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 pr-10 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-300 pl-9 pr-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
               />
-              <button
-                onClick={handleFilterChange}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-              >
-                <MagnifyingGlassIcon className="h-4 w-4 text-gray-400 hover:text-indigo-600" />
-              </button>
             </div>
           </div>
-        </div>
-
-        <div className="mt-3 flex justify-end">
-          <button
-            onClick={handleFilterChange}
-            className="px-5 py-1.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
-          >
-            필터 적용
-          </button>
         </div>
       </div>
 
@@ -689,33 +1011,41 @@ export default function LeadsClient({
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   전화번호
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  항목 1
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  항목 2
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  항목 3
-                </th>
+                {/* 동적 custom_fields 컬럼 */}
+                {customFieldColumns.length > 0 ? (
+                  customFieldColumns.map((field) => (
+                    <th key={field.key} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                      {field.label}
+                    </th>
+                  ))
+                ) : (
+                  <>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 1</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 2</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 3</th>
+                  </>
+                )}
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결과
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  담당자
+                  예약날짜
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  계약 완료
+                  결제금액
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   비고
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  담당자
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={customFieldColumns.length > 0 ? 10 + customFieldColumns.length : 13} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -741,15 +1071,26 @@ export default function LeadsClient({
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.phone ? decryptPhone(lead.phone) : '-'}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.custom_field_1 || '-'}
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.custom_field_2 || '-'}
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.custom_field_3 || '-'}
-                    </td>
+                    {/* 동적 custom_fields 데이터 */}
+                    {customFieldColumns.length > 0 ? (
+                      customFieldColumns.map((field, index) => (
+                        <td key={field.key} className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                          {lead[`custom_field_${index + 1}`] || '-'}
+                        </td>
+                      ))
+                    ) : (
+                      <>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                          {lead.custom_field_1 || '-'}
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                          {lead.custom_field_2 || '-'}
+                        </td>
+                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                          {lead.custom_field_3 || '-'}
+                        </td>
+                      </>
+                    )}
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
                         {/* 상태 배지 (클릭 가능) */}
@@ -757,8 +1098,8 @@ export default function LeadsClient({
                           onClick={(e) => handleDropdownToggle(lead.id, e)}
                           disabled={updatingLeadId === lead.id}
                           className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full transition-all ${
-                            STATUS_STYLES[lead.status]?.bg || 'bg-gray-100'
-                          } ${STATUS_STYLES[lead.status]?.text || 'text-gray-800'} ${
+                            statusStyles[lead.status]?.bg || 'bg-gray-100'
+                          } ${statusStyles[lead.status]?.text || 'text-gray-800'} ${
                             updatingLeadId === lead.id
                               ? 'opacity-50 cursor-wait'
                               : 'hover:ring-2 hover:ring-offset-1 hover:ring-indigo-300 cursor-pointer'
@@ -774,12 +1115,42 @@ export default function LeadsClient({
                             </>
                           ) : (
                             <>
-                              {STATUS_STYLES[lead.status]?.label || getStatusLabel(lead.status)}
+                              {statusStyles[lead.status]?.label || getStatusLabel(lead.status)}
                               <ChevronDownIcon className="h-3 w-3" />
                             </>
                           )}
                         </button>
                       </div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.contract_completed_at ? (
+                        <div>
+                          <div>
+                            {new Date(lead.contract_completed_at).toISOString().split('T')[0]}
+                          </div>
+                          {lead.previous_contract_completed_at && (
+                            <div className="text-xs text-gray-400 mt-0.5">
+                              이전: {new Date(lead.previous_contract_completed_at).toISOString().split('T')[0]}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.payment_amount ? (
+                        <span className="font-medium text-emerald-600">
+                          {Number(lead.payment_amount).toLocaleString()}원
+                        </span>
+                      ) : (
+                        '-'
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-[150px]">
+                      <span className="truncate block" title={lead.notes || ''}>
+                        {lead.notes || '-'}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       <div className="relative assignee-dropdown">
@@ -834,27 +1205,6 @@ export default function LeadsClient({
                           </button>
                         )}
                       </div>
-                    </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.contract_completed_at ? (
-                        <div>
-                          <div>
-                            {new Date(lead.contract_completed_at).toISOString().split('T')[0]}
-                          </div>
-                          {lead.previous_contract_completed_at && (
-                            <div className="text-xs text-gray-400 mt-0.5">
-                              이전: {new Date(lead.previous_contract_completed_at).toISOString().split('T')[0]}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        '-'
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-[150px]">
-                      <span className="truncate block" title={lead.notes || ''}>
-                        {lead.notes || '-'}
-                      </span>
                     </td>
                   </tr>
                 ))
@@ -926,21 +1276,7 @@ export default function LeadsClient({
             left: dropdownPosition.left,
           }}
         >
-          {/* 위로 펼쳐질 때 취소 버튼을 먼저 표시 */}
-          {dropdownPosition.openUpward && (
-            <div className="border-b border-gray-100 mb-1 pb-1">
-              <button
-                onClick={() => {
-                  setEditingLeadId(null)
-                  setDropdownPosition(null)
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
-              >
-                취소
-              </button>
-            </div>
-          )}
-          {STATUS_OPTIONS.map((option) => {
+          {statusOptions.map((option) => {
             const currentLead = leads.find(l => l.id === editingLeadId)
             return (
               <button
@@ -958,20 +1294,6 @@ export default function LeadsClient({
               </button>
             )
           })}
-          {/* 아래로 펼쳐질 때 취소 버튼을 마지막에 표시 */}
-          {!dropdownPosition.openUpward && (
-            <div className="border-t border-gray-100 mt-1 pt-1">
-              <button
-                onClick={() => {
-                  setEditingLeadId(null)
-                  setDropdownPosition(null)
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-gray-500 hover:bg-gray-50"
-              >
-                취소
-              </button>
-            </div>
-          )}
         </div>,
         document.body
       )}
@@ -1178,12 +1500,12 @@ export default function LeadsClient({
                   }}
                   disabled={updatingLeadId === selectedLead.id}
                   className={`w-full px-4 py-3 border-2 rounded-xl text-sm font-semibold transition-all focus:ring-2 focus:ring-indigo-200 ${
-                    STATUS_STYLES[selectedLead.status]?.bg || 'bg-gray-100'
-                  } ${STATUS_STYLES[selectedLead.status]?.text || 'text-gray-800'} ${
+                    statusStyles[selectedLead.status]?.bg || 'bg-gray-100'
+                  } ${statusStyles[selectedLead.status]?.text || 'text-gray-800'} ${
                     updatingLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'
                   }`}
                 >
-                  {STATUS_OPTIONS.map((option) => (
+                  {statusOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
                     </option>
@@ -1373,6 +1695,189 @@ export default function LeadsClient({
                   rows={3}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-gray-900 text-sm resize-none"
                 />
+              </div>
+
+              {/* 결제 내역 섹션 */}
+              <div className="border-2 border-emerald-100 rounded-xl p-4 bg-emerald-50/30">
+                <div className="flex items-center justify-between mb-3">
+                  <label className="text-sm font-semibold text-emerald-700">결제 내역</label>
+                  <div className="text-sm font-bold text-emerald-600">
+                    합계: {paymentsTotalAmount.toLocaleString()}원
+                  </div>
+                </div>
+
+                {/* 새 결제 추가 폼 */}
+                <div className="flex gap-2 mb-3">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={newPaymentAmount}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/[^0-9]/g, '')
+                        setNewPaymentAmount(value ? Number(value).toLocaleString() : '')
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && newPaymentAmount && !addingPayment) {
+                          e.preventDefault()
+                          handleAddPayment()
+                        }
+                      }}
+                      placeholder="금액"
+                      className="w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">원</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={newPaymentNotes}
+                    onChange={(e) => setNewPaymentNotes(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && newPaymentAmount && !addingPayment) {
+                        e.preventDefault()
+                        handleAddPayment()
+                      }
+                    }}
+                    placeholder="비고 (선택)"
+                    className="flex-1 px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
+                  />
+                  <button
+                    onClick={handleAddPayment}
+                    disabled={addingPayment || !newPaymentAmount}
+                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {addingPayment ? '추가 중...' : '추가'}
+                  </button>
+                </div>
+
+                {/* 결제 내역 리스트 */}
+                {loadingPayments ? (
+                  <div className="text-center py-4 text-gray-500 text-sm">로딩 중...</div>
+                ) : payments.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {payments.map((payment) => (
+                      <div
+                        key={payment.id}
+                        className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 text-sm">
+                            {/* 날짜 */}
+                            {payment.payment_date ? (
+                              <span className="text-gray-600">
+                                {new Date(payment.payment_date).toLocaleDateString('ko-KR', {
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit',
+                                }).replace(/\. /g, '-').replace('.', '')}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">날짜 없음</span>
+                            )}
+                            <span className="text-gray-300">|</span>
+                            {/* 금액 */}
+                            <span className="font-semibold text-gray-900">
+                              {Number(payment.amount).toLocaleString()}원
+                            </span>
+                            {/* 비고 */}
+                            {payment.notes && (
+                              <>
+                                <span className="text-gray-300">|</span>
+                                <span className="text-gray-500 truncate max-w-[150px]" title={payment.notes}>
+                                  {payment.notes}
+                                </span>
+                              </>
+                            )}
+                            {/* 레거시 뱃지 */}
+                            {payment.isLegacy && (
+                              <span className="text-xs text-amber-500 bg-amber-50 px-2 py-0.5 rounded ml-1">
+                                기존
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {payment.isLegacy ? (
+                          <button
+                            onClick={handleDeleteLegacyPayment}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                            title="기존 데이터 삭제"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleDeletePayment(payment.id)}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
+                            title="삭제"
+                          >
+                            <XMarkIcon className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-4 text-gray-400 text-sm">결제 내역이 없습니다</div>
+                )}
+
+                {/* 감사 로그 섹션 - 관리자 전용 */}
+                {isAdmin && (
+                  <div className="mt-3 border-t border-emerald-200 pt-3">
+                    <button
+                      onClick={() => {
+                        if (!showAuditLogs && paymentAuditLogs.length === 0) {
+                          fetchPaymentAuditLogs(selectedLead.id)
+                        }
+                        setShowAuditLogs(!showAuditLogs)
+                      }}
+                      className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
+                    >
+                      <svg
+                        className={`h-3 w-3 transition-transform ${showAuditLogs ? 'rotate-90' : ''}`}
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                      <span>변경 이력 (관리자 전용)</span>
+                    </button>
+
+                    {showAuditLogs && (
+                      <div className="mt-2 bg-gray-50 rounded-lg p-2 max-h-32 overflow-y-auto">
+                        {loadingAuditLogs ? (
+                          <div className="text-center py-2 text-gray-400 text-xs">로딩 중...</div>
+                        ) : paymentAuditLogs.length > 0 ? (
+                          <div className="space-y-1">
+                            {paymentAuditLogs.map((log, index) => (
+                              <div key={index} className="text-xs text-gray-500 flex items-start gap-2">
+                                <span className="text-gray-400 whitespace-nowrap">
+                                  {new Date(log.created_at).toLocaleDateString('ko-KR', {
+                                    month: '2-digit',
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
+                                  log.action === 'create' ? 'bg-green-100 text-green-700' :
+                                  log.action === 'update' ? 'bg-blue-100 text-blue-700' :
+                                  'bg-red-100 text-red-700'
+                                }`}>
+                                  {log.action === 'create' ? '생성' : log.action === 'update' ? '수정' : '삭제'}
+                                </span>
+                                <span className="flex-1">
+                                  {log.user_name || '알 수 없음'}: {log.description}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-2 text-gray-400 text-xs">변경 이력이 없습니다</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 

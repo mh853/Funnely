@@ -95,6 +95,37 @@ export async function POST(request: NextRequest) {
     const { consultation_items, preferred_date, preferred_time, message, ...customFields } =
       form_data
 
+    // Get landing page collect_fields to map custom field values
+    const { data: lpWithFields } = await supabase
+      .from('landing_pages')
+      .select('collect_fields')
+      .eq('id', landing_page_id)
+      .single()
+
+    // Extract custom field values based on collect_fields configuration
+    const customFieldValues: Record<string, string | null> = {
+      custom_field_1: null,
+      custom_field_2: null,
+      custom_field_3: null,
+      custom_field_4: null,
+      custom_field_5: null,
+    }
+
+    if (lpWithFields?.collect_fields && Array.isArray(lpWithFields.collect_fields)) {
+      let customFieldIndex = 0
+      lpWithFields.collect_fields.forEach((field: { type: string; id?: string; question?: string }) => {
+        if (field.type === 'short_answer' || field.type === 'multiple_choice') {
+          if (customFieldIndex < 5) {
+            // Try to get value from form_data using field id or question as key
+            const fieldKey = field.id || field.question
+            const value = fieldKey ? (customFields[fieldKey] || form_data[fieldKey]) : null
+            customFieldValues[`custom_field_${customFieldIndex + 1}`] = value || null
+            customFieldIndex++
+          }
+        }
+      })
+    }
+
     // Create lead
     const { data: lead, error: leadError } = await supabase
       .from('leads')
@@ -120,6 +151,7 @@ export async function POST(request: NextRequest) {
         ip_address: ipAddress,
         user_agent: userAgent,
         device_type: deviceType,
+        ...customFieldValues,
       })
       .select('id')
       .single()

@@ -328,16 +328,16 @@ export default function DateRangePicker({
         type="button"
         onClick={() => setIsOpen(!isOpen)}
         className={`
-          w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-left
-          flex items-center justify-between gap-2
+          w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-left
+          flex items-center justify-between gap-1
           focus:ring-2 focus:ring-indigo-500 focus:border-transparent
           hover:border-gray-400 transition-colors
           ${className}
         `}
       >
-        <div className="flex items-center gap-2">
-          <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-          <span className={startDate ? 'text-gray-900' : 'text-gray-500'}>
+        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+          <CalendarDaysIcon className="h-4 w-4 text-gray-400 flex-shrink-0" />
+          <span className={`truncate text-xs ${startDate ? 'text-gray-900' : 'text-gray-500'}`}>
             {displayText}
           </span>
         </div>

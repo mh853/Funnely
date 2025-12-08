@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, assigned_to, call_assigned_to, counselor_assigned_to, contract_completed_at, notes } = body
+    const { id, status, priority, assigned_to, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount } = body
 
     // Validate required fields
     if (!id) {
@@ -113,6 +113,10 @@ export async function PUT(request: NextRequest) {
 
     if (counselor_assigned_to !== undefined) {
       updateData.counselor_assigned_to = counselor_assigned_to || null
+    }
+
+    if (payment_amount !== undefined) {
+      updateData.payment_amount = payment_amount
     }
 
     // Update lead
