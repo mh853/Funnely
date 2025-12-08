@@ -69,6 +69,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .lt('created_at', queryEnd)
     .order('created_at', { ascending: true })
 
+  // 선택된 월의 결제 데이터 조회 (리드의 created_at 기준으로 집계)
+  const { data: paymentData } = await supabase
+    .from('lead_payments')
+    .select('lead_id, amount, leads!inner(created_at)')
+    .eq('company_id', userProfile?.company_id)
+    .gte('leads.created_at', queryStart)
+    .lt('leads.created_at', queryEnd)
+
   // 현재 월 통계용 데이터 (Stats Cards는 항상 현재 월 기준)
   let todayCount = 0
   let yesterdayCount = 0
@@ -149,6 +157,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         mobileCount: 0,
         tabletCount: 0,
         unknownDeviceCount: 0,
+        // Payment stats
+        paymentAmount: 0,
+        paymentCount: 0,
       }
     }
     resultsByDate[dateStr].total++
@@ -168,6 +179,19 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
     else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
     else resultsByDate[dateStr].other++
+  })
+
+  // 결제 데이터를 날짜별로 집계
+  paymentData?.forEach((payment: any) => {
+    const leadCreatedAt = payment.leads?.created_at
+    if (leadCreatedAt) {
+      const paymentDate = new Date(leadCreatedAt)
+      const dateStr = paymentDate.toISOString().split('T')[0]
+      if (resultsByDate[dateStr]) {
+        resultsByDate[dateStr].paymentAmount += payment.amount || 0
+        resultsByDate[dateStr].paymentCount += 1
+      }
+    }
   })
 
   // 정렬된 선택된 월 차트 데이터 배열 생성
@@ -461,6 +485,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                   <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     기타
                   </th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    결제금액
+                  </th>
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                    결제횟수
+                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
@@ -510,11 +540,17 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                       <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-400">
                         {row.other}
                       </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                        {row.paymentAmount > 0 ? `${row.paymentAmount.toLocaleString()}원` : '-'}
+                      </td>
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-right text-gray-600">
+                        {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
+                      </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-400">
+                    <td colSpan={11} className="px-4 py-8 text-center text-sm text-gray-400">
                       데이터가 없습니다
                     </td>
                   </tr>
@@ -677,11 +713,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">날짜</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">합계</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">PC</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Mobile</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">기타</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">날짜</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">합계</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">PC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Mobile</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet(기타)</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -692,27 +728,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                       return (
                         <tr key={`traffic-source-${row.date}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
                               {row.date}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
                               {total}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}&deviceType=pc`} className="hover:text-indigo-600 hover:underline">
                               {row.pcCount || 0}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}&deviceType=mobile`} className="hover:text-indigo-600 hover:underline">
                               {row.mobileCount || 0}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             {otherDevices}
                           </td>
                         </tr>
@@ -737,11 +773,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">날짜</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">합계</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">PC</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">Mobile</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase">기타</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">날짜</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">합계</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">PC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Mobile</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet(기타)</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -752,27 +788,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                       return (
                         <tr key={`db-conversion-${row.date}`} className="hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
                               {row.date}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
                               {total}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}&deviceType=pc`} className="hover:text-indigo-600 hover:underline">
                               {row.pcCount || 0}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             <Link href={`/dashboard/leads?date=${row.date}&deviceType=mobile`} className="hover:text-indigo-600 hover:underline">
                               {row.mobileCount || 0}
                             </Link>
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
                             {otherDevices}
                           </td>
                         </tr>
