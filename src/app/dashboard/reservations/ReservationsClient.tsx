@@ -14,12 +14,20 @@ import {
   CalendarDaysIcon,
   ListBulletIcon,
   PlusIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/outline'
+import * as XLSX from 'xlsx'
 
 interface LandingPage {
   id: string
   title: string
   slug: string
+}
+
+interface User {
+  id: string
+  full_name: string
+  email?: string
 }
 
 interface Lead {
@@ -29,12 +37,24 @@ interface Lead {
   status: string
   contract_completed_at: string | null
   previous_contract_completed_at?: string | null
+  created_at?: string | null
+  notes?: string | null
   landing_pages: LandingPage | LandingPage[] | null
+  call_assigned_to?: string | null
+  counselor_assigned_to?: string | null
+  call_assigned_user?: User | null
+  counselor_assigned_user?: User | null
+}
+
+interface TeamMember {
+  id: string
+  full_name: string
 }
 
 interface ReservationsClientProps {
   initialLeads: Lead[]
   companyId: string
+  teamMembers: TeamMember[]
 }
 
 // 상태별 스타일 정의 (모달 테이블용)
@@ -64,6 +84,7 @@ const STATUS_OPTIONS = [
 export default function ReservationsClient({
   initialLeads,
   companyId,
+  teamMembers,
 }: ReservationsClientProps) {
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
@@ -107,6 +128,20 @@ export default function ReservationsClient({
   const [loadingAvailableLeads, setLoadingAvailableLeads] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
   const [scheduleSearchQuery, setScheduleSearchQuery] = useState('')
+  const [scheduleInputCounselorId, setScheduleInputCounselorId] = useState<string>('')
+
+  // 상담담당자 변경 상태
+  const [updatingCounselor, setUpdatingCounselor] = useState(false)
+
+  // 예약일 변경 이력 상태
+  const [reservationDateLogs, setReservationDateLogs] = useState<any[]>([])
+  const [loadingDateLogs, setLoadingDateLogs] = useState(false)
+
+  // 예약일 수정 상태
+  const [editingReservationDate, setEditingReservationDate] = useState(false)
+  const [reservationDateValue, setReservationDateValue] = useState('')
+  const [reservationTimeValue, setReservationTimeValue] = useState('')
+  const [updatingReservationDate, setUpdatingReservationDate] = useState(false)
 
   // 디버깅용 로그
   console.log('ReservationsClient initialLeads:', initialLeads)
@@ -117,27 +152,157 @@ export default function ReservationsClient({
     setSelectedLead(lead)
     setShowLeadDetailModal(true)
     setLoadingLeadDetails(true)
+    setLoadingDateLogs(true)
+    setReservationDateLogs([])
 
     try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select(`
-          *,
-          landing_pages (
+      // 리드 상세 정보와 예약일 변경 로그를 병렬로 가져옴
+      const [leadResult, logsResult] = await Promise.all([
+        supabase
+          .from('leads')
+          .select(`
+            *,
+            landing_pages (
+              id,
+              title,
+              slug
+            ),
+            call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name, email),
+            counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name, email)
+          `)
+          .eq('id', lead.id)
+          .single(),
+        supabase
+          .from('reservation_date_logs')
+          .select(`
             id,
-            title,
-            slug
-          )
-        `)
-        .eq('id', lead.id)
-        .single()
+            previous_date,
+            new_date,
+            created_at,
+            changed_by_user:users!reservation_date_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', lead.id)
+          .order('created_at', { ascending: false })
+      ])
 
-      if (error) throw error
-      setLeadDetails(data)
+      if (leadResult.error) throw leadResult.error
+      setLeadDetails(leadResult.data)
+
+      if (!logsResult.error && logsResult.data) {
+        setReservationDateLogs(logsResult.data)
+      }
     } catch (error) {
       console.error('Error fetching lead details:', error)
     } finally {
       setLoadingLeadDetails(false)
+      setLoadingDateLogs(false)
+    }
+  }
+
+  // Handle counselor assignment update
+  const handleCounselorChange = async (leadId: string, newCounselorId: string) => {
+    setUpdatingCounselor(true)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: leadId,
+          counselor_assigned_to: newCounselorId || null,
+        }),
+      })
+
+      if (!response.ok) throw new Error('상담담당자 업데이트 실패')
+
+      // Update local state
+      const newCounselor = teamMembers.find(m => m.id === newCounselorId)
+      if (leadDetails) {
+        setLeadDetails({
+          ...leadDetails,
+          counselor_assigned_to: newCounselorId || null,
+          counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
+        })
+      }
+    } catch (error) {
+      console.error('Counselor update error:', error)
+      alert('상담담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingCounselor(false)
+    }
+  }
+
+  // Handle reservation date edit start
+  const handleStartEditReservationDate = () => {
+    if (leadDetails?.contract_completed_at) {
+      const date = new Date(leadDetails.contract_completed_at)
+      setReservationDateValue(date.toISOString().split('T')[0])
+      // 시간 추출 (HH:mm 형식)
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      setReservationTimeValue(`${hours}:${minutes}`)
+    }
+    setEditingReservationDate(true)
+  }
+
+  // Handle reservation date update
+  const handleReservationDateUpdate = async () => {
+    if (!leadDetails || !reservationDateValue) return
+
+    setUpdatingReservationDate(true)
+    try {
+      // 날짜와 시간 결합
+      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00`
+
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: leadDetails.id,
+          status: 'contract_completed',
+          contract_completed_at: newContractCompletedAt,
+        }),
+      })
+
+      if (!response.ok) throw new Error('예약일 업데이트 실패')
+
+      // Update local leadDetails
+      setLeadDetails({
+        ...leadDetails,
+        contract_completed_at: newContractCompletedAt,
+      })
+
+      // Update leads list (for calendar refresh)
+      setLeads(prevLeads =>
+        prevLeads.map(l =>
+          l.id === leadDetails.id
+            ? { ...l, contract_completed_at: newContractCompletedAt }
+            : l
+        )
+      )
+
+      // Refresh reservation date logs
+      const { data: newLogs } = await supabase
+        .from('reservation_date_logs')
+        .select(`
+          id,
+          previous_date,
+          new_date,
+          created_at,
+          changed_by_user:users!reservation_date_logs_changed_by_fkey(id, full_name)
+        `)
+        .eq('lead_id', leadDetails.id)
+        .order('created_at', { ascending: false })
+
+      if (newLogs) {
+        setReservationDateLogs(newLogs)
+      }
+
+      setEditingReservationDate(false)
+    } catch (error) {
+      console.error('Reservation date update error:', error)
+      alert('예약일 변경에 실패했습니다.')
+    } finally {
+      setUpdatingReservationDate(false)
     }
   }
 
@@ -296,14 +461,21 @@ export default function ReservationsClient({
       // 날짜와 시간 결합하여 ISO 문자열 생성
       const contractCompletedAt = `${scheduleInputDate}T${scheduleInputTime}:00`
 
+      const updateBody: any = {
+        id: scheduleInputLeadId,
+        status: 'contract_completed',
+        contract_completed_at: contractCompletedAt
+      }
+
+      // 상담담당자가 선택된 경우 추가
+      if (scheduleInputCounselorId) {
+        updateBody.counselor_assigned_to = scheduleInputCounselorId
+      }
+
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: scheduleInputLeadId,
-          status: 'contract_completed',
-          contract_completed_at: contractCompletedAt
-        })
+        body: JSON.stringify(updateBody)
       })
 
       if (!response.ok) throw new Error('예약 스케줄 저장 실패')
@@ -334,12 +506,118 @@ export default function ReservationsClient({
 
       setShowScheduleInputModal(false)
       setShowCalendarModal(false)
+      setScheduleInputCounselorId('')  // 상담담당자 선택 초기화
       alert('예약 스케줄이 저장되었습니다.')
     } catch (error) {
       console.error('Error saving schedule:', error)
       alert('예약 스케줄 저장에 실패했습니다.')
     } finally {
       setSavingSchedule(false)
+    }
+  }
+
+  // 엑셀 다운로드 핸들러
+  const handleExcelDownload = async () => {
+    if (leads.length === 0) {
+      alert('다운로드할 예약 데이터가 없습니다.')
+      return
+    }
+
+    try {
+      // 데이터 가공
+      const excelData = await Promise.all(
+        leads.map(async (lead) => {
+          // 랜딩페이지 이름 가져오기
+          const landingPageTitle = lead.landing_pages
+            ? Array.isArray(lead.landing_pages)
+              ? lead.landing_pages[0]?.title || '-'
+              : lead.landing_pages.title || '-'
+            : '-'
+
+          // 전화번호 복호화
+          let phoneDisplay = '-'
+          if (lead.phone) {
+            try {
+              const decrypted = await decryptPhone(lead.phone)
+              phoneDisplay = decrypted || '-'
+            } catch {
+              phoneDisplay = lead.phone
+            }
+          }
+
+          // 예약일시 포맷팅
+          const reservationDate = lead.contract_completed_at
+            ? formatDate(new Date(lead.contract_completed_at))
+            : '-'
+          const reservationTime = lead.contract_completed_at
+            ? formatTime(new Date(lead.contract_completed_at))
+            : '-'
+
+          // 상담 담당자 이름 찾기
+          const counselorName = lead.counselor_assigned_to
+            ? teamMembers.find((m) => m.id === lead.counselor_assigned_to)?.full_name || '-'
+            : '-'
+
+          // 콜 담당자 이름 찾기
+          const callAssigneeName = lead.call_assigned_to
+            ? teamMembers.find((m) => m.id === lead.call_assigned_to)?.full_name || '-'
+            : '-'
+
+          // 신청일시 포맷팅
+          const createdAtFormatted = lead.created_at
+            ? formatDateTime(lead.created_at)
+            : '-'
+
+          return {
+            '고객명': lead.name || '-',
+            '연락처': phoneDisplay,
+            '예약일': reservationDate,
+            '예약시간': reservationTime,
+            '콜담당자': callAssigneeName,
+            '상담담당자': counselorName,
+            '유입경로': landingPageTitle,
+            '신청일시': createdAtFormatted,
+            '비고': lead.notes || '-',
+          }
+        })
+      )
+
+      // 예약일 기준으로 정렬
+      excelData.sort((a, b) => {
+        const dateA = a['예약일'] === '-' ? '' : a['예약일']
+        const dateB = b['예약일'] === '-' ? '' : b['예약일']
+        return dateA.localeCompare(dateB)
+      })
+
+      // 워크시트 생성
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+
+      // 컬럼 너비 설정
+      worksheet['!cols'] = [
+        { wch: 12 }, // 고객명
+        { wch: 15 }, // 연락처
+        { wch: 12 }, // 예약일
+        { wch: 10 }, // 예약시간
+        { wch: 12 }, // 콜담당자
+        { wch: 12 }, // 상담담당자
+        { wch: 20 }, // 유입경로
+        { wch: 18 }, // 신청일시
+        { wch: 30 }, // 비고
+      ]
+
+      // 워크북 생성 및 시트 추가
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, '예약 스케줄')
+
+      // 파일명 생성 (현재 날짜 포함)
+      const today = new Date()
+      const fileName = `예약스케줄_${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}.xlsx`
+
+      // 다운로드
+      XLSX.writeFile(workbook, fileName)
+    } catch (error) {
+      console.error('Excel download error:', error)
+      alert('엑셀 다운로드에 실패했습니다.')
     }
   }
 
@@ -559,6 +837,15 @@ export default function ReservationsClient({
                 리스트
               </button>
             </div>
+            {/* 엑셀 다운로드 버튼 */}
+            <button
+              onClick={handleExcelDownload}
+              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-all"
+              title="예약 스케줄 엑셀 다운로드"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              엑셀 다운로드
+            </button>
             {/* 총 예약 건수 */}
             <div className="text-right">
               <div className="text-3xl font-bold">{leads.length}</div>
@@ -1034,13 +1321,71 @@ export default function ReservationsClient({
                             <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">{leadDetails.message}</td>
                           </tr>
                         )}
-                        {/* 메모 */}
-                        {leadDetails.notes && (
-                          <tr>
-                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">메모</td>
-                            <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">{leadDetails.notes}</td>
-                          </tr>
-                        )}
+                        {/* 비고 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">비고</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">
+                            {leadDetails.notes || <span className="text-gray-400">-</span>}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 담당자 정보 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">담당자 정보</h4>
+                    </div>
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 콜 담당자 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">콜 담당자</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {leadDetails.call_assigned_user ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                  <span className="text-xs font-medium text-blue-600">
+                                    {leadDetails.call_assigned_user.full_name?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                                <span>{leadDetails.call_assigned_user.full_name}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">미배정</span>
+                            )}
+                          </td>
+                        </tr>
+                        {/* 상담 담당자 - 드롭다운 (한번 클릭으로 선택 가능) */}
+                        <tr>
+                          <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">상담 담당자</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 bg-emerald-50/50">
+                            <div className="relative">
+                              {updatingCounselor ? (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                  <span className="text-gray-500">저장 중...</span>
+                                </div>
+                              ) : (
+                                <select
+                                  value={leadDetails.counselor_assigned_user?.id || ''}
+                                  onChange={(e) => handleCounselorChange(leadDetails.id, e.target.value)}
+                                  disabled={updatingCounselor}
+                                  className="w-full max-w-[200px] rounded-lg border border-emerald-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white cursor-pointer hover:border-emerald-400 transition-colors appearance-none"
+                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                                >
+                                  <option value="">미배정</option>
+                                  {teamMembers.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {member.full_name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -1098,24 +1443,139 @@ export default function ReservationsClient({
                             {formatDateTime(leadDetails.created_at)}
                           </td>
                         </tr>
-                        {/* 예약 확정일 */}
+                        {/* 예약 확정일 - 수정 가능 */}
                         {leadDetails.contract_completed_at && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">예약 확정일</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              <div>
-                                {new Date(leadDetails.contract_completed_at).toISOString().split('T')[0]}
-                              </div>
-                              {leadDetails.previous_contract_completed_at && (
-                                <div className="text-xs text-gray-400 mt-0.5">
-                                  이전: {new Date(leadDetails.previous_contract_completed_at).toISOString().split('T')[0]}
+                            <td className="px-4 py-3 bg-amber-50 text-sm font-medium text-amber-700">예약 확정일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 bg-amber-50/50">
+                              {editingReservationDate ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="date"
+                                      value={reservationDateValue}
+                                      onChange={(e) => setReservationDateValue(e.target.value)}
+                                      min="2020-01-01"
+                                      max="2099-12-31"
+                                      className="rounded-lg border border-amber-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                      disabled={updatingReservationDate}
+                                    />
+                                    <input
+                                      type="time"
+                                      value={reservationTimeValue}
+                                      onChange={(e) => setReservationTimeValue(e.target.value)}
+                                      className="rounded-lg border border-amber-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                      disabled={updatingReservationDate}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={handleReservationDateUpdate}
+                                      disabled={updatingReservationDate || !reservationDateValue}
+                                      className="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                    >
+                                      {updatingReservationDate ? (
+                                        <span className="flex items-center gap-1">
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                          저장 중...
+                                        </span>
+                                      ) : '저장'}
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingReservationDate(false)}
+                                      disabled={updatingReservationDate}
+                                      className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+                                    >
+                                      취소
+                                    </button>
+                                  </div>
                                 </div>
+                              ) : (
+                                <button
+                                  onClick={handleStartEditReservationDate}
+                                  className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-amber-100 transition group"
+                                >
+                                  <div>
+                                    <div className="font-medium text-amber-800">
+                                      {formatDateTime(leadDetails.contract_completed_at)}
+                                    </div>
+                                    {leadDetails.previous_contract_completed_at && (
+                                      <div className="text-xs text-gray-400 mt-0.5">
+                                        이전: {formatDateTime(leadDetails.previous_contract_completed_at)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-amber-600 opacity-0 group-hover:opacity-100 transition">수정</span>
+                                </button>
                               )}
                             </td>
                           </tr>
                         )}
                       </tbody>
                     </table>
+                  </div>
+
+                  {/* 예약일 변경 이력 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-amber-100">
+                      <h4 className="text-sm font-medium text-amber-800">예약일 변경 이력</h4>
+                    </div>
+                    <div className="p-4">
+                      {loadingDateLogs ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+                          <span className="ml-2 text-sm text-gray-500">로딩 중...</span>
+                        </div>
+                      ) : reservationDateLogs.length > 0 ? (
+                        <div className="space-y-3 max-h-48 overflow-y-auto">
+                          {reservationDateLogs.map((log, index) => (
+                            <div
+                              key={log.id}
+                              className="flex items-start gap-3 text-sm"
+                            >
+                              {/* 타임라인 인디케이터 */}
+                              <div className="flex flex-col items-center">
+                                <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-amber-500' : 'bg-gray-300'}`}></div>
+                                {index < reservationDateLogs.length - 1 && (
+                                  <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
+                                )}
+                              </div>
+                              {/* 로그 내용 */}
+                              <div className="flex-1 pb-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  {log.previous_date ? (
+                                    <>
+                                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
+                                        {formatDateTime(log.previous_date)}
+                                      </span>
+                                      <span className="text-gray-400">→</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-xs text-gray-400 mr-1">최초 설정:</span>
+                                  )}
+                                  <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                                    {formatDateTime(log.new_date)}
+                                  </span>
+                                </div>
+                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                  <span>{formatDateTime(log.created_at)}</span>
+                                  {log.changed_by_user && (
+                                    <>
+                                      <span className="text-gray-300">|</span>
+                                      <span>{log.changed_by_user.full_name}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 text-center py-4">
+                          예약일 변경 이력이 없습니다
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -1126,21 +1586,14 @@ export default function ReservationsClient({
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  setShowLeadDetailModal(false)
-                  router.push(`/dashboard/leads?id=${selectedLead.id}`)
-                }}
-                className="px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition"
-              >
-                DB현황에서 보기
-              </button>
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
               <button
                 onClick={() => {
                   setShowLeadDetailModal(false)
                   setSelectedLead(null)
                   setLeadDetails(null)
+                  setReservationDateLogs([])
+                  setEditingReservationDate(false)
                 }}
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
@@ -1778,6 +2231,25 @@ export default function ReservationsClient({
                   onChange={(e) => setScheduleInputTime(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
                 />
+              </div>
+
+              {/* 상담 담당자 선택 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  상담 담당자
+                </label>
+                <select
+                  value={scheduleInputCounselorId}
+                  onChange={(e) => setScheduleInputCounselorId(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                >
+                  <option value="">미배정</option>
+                  {teamMembers.map((member) => (
+                    <option key={member.id} value={member.id}>
+                      {member.full_name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* 안내 메시지 */}

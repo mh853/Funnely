@@ -2,15 +2,14 @@ import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import {
-  PencilIcon,
   EyeIcon,
-  TrashIcon,
   ArrowLeftIcon,
   GlobeAltIcon,
   ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import LandingPageEditor from '@/components/landing-pages/LandingPageEditor'
 import { getLandingPageUrl } from '@/lib/config'
+import RefLinkCopyButton from '@/components/landing-pages/RefLinkCopyButton'
 
 interface Props {
   params: { id: string }
@@ -36,6 +35,13 @@ export default async function LandingPageDetailPage({ params }: Props) {
       </div>
     )
   }
+
+  // Get user short_id for ref parameter
+  const { data: userShortId } = await supabase
+    .from('users')
+    .select('short_id')
+    .eq('id', user.id)
+    .single()
 
   // Get landing page
   const { data: landingPage, error } = await supabase
@@ -86,17 +92,23 @@ export default async function LandingPageDetailPage({ params }: Props) {
           </div>
         </div>
 
-        <div className="flex items-center ml-8 sm:ml-0">
+        <div className="flex items-center gap-2 ml-8 sm:ml-0">
           {landingPage.status === 'published' && (
-            <a
-              href={getLandingPageUrl(landingPage.slug)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <EyeIcon className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              미리보기
-            </a>
+            <>
+              <RefLinkCopyButton
+                baseUrl={getLandingPageUrl(landingPage.slug)}
+                shortId={userShortId?.short_id}
+              />
+              <a
+                href={getLandingPageUrl(landingPage.slug)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+              >
+                <EyeIcon className="mr-1.5 sm:mr-2 h-4 w-4 sm:h-5 sm:w-5" />
+                미리보기
+              </a>
+            </>
           )}
         </div>
       </div>

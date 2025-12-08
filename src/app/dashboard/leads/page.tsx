@@ -10,6 +10,7 @@ interface SearchParams {
   landingPageId?: string
   deviceType?: string
   status?: string
+  assignedTo?: string  // 담당자 필터
   search?: string
   page?: string
   id?: string  // 특정 리드 ID로 필터링 (캘린더에서 클릭 시)
@@ -47,6 +48,7 @@ export default async function LeadsPage({
   const landingPageId = searchParams.landingPageId
   const deviceType = searchParams.deviceType
   const status = searchParams.status
+  const assignedTo = searchParams.assignedTo  // 담당자 필터
   const search = searchParams.search
   const page = Number(searchParams.page) || 1
   const pageSize = 20
@@ -99,7 +101,8 @@ export default async function LeadsPage({
         id,
         title,
         slug
-      )
+      ),
+      call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name)
     `,
       { count: 'exact' }
     )
@@ -138,6 +141,10 @@ export default async function LeadsPage({
     if (search) {
       query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
     }
+
+    if (assignedTo) {
+      query = query.eq('call_assigned_to', assignedTo)
+    }
   }
 
   // Get total count and paginated data
@@ -151,6 +158,13 @@ export default async function LeadsPage({
     .select('id, title')
     .eq('company_id', userProfile.company_id)
     .order('title')
+
+  // Get team members for assignee filter
+  const { data: teamMembers } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .eq('company_id', userProfile.company_id)
+    .order('full_name')
 
   const handleExcelExport = async () => {
     'use server'
@@ -181,6 +195,7 @@ export default async function LeadsPage({
       <LeadsClient
         leads={leads || []}
         landingPages={landingPages || []}
+        teamMembers={teamMembers || []}
         totalCount={totalCount || 0}
         selectedLeadId={selectedLeadId}
       />

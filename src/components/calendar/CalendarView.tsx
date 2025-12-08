@@ -7,12 +7,10 @@ import {
   ChevronRightIcon,
   PlusIcon,
   PhoneIcon,
-  UserGroupIcon,
   ClockIcon,
   UserIcon,
   XMarkIcon,
   ChevronDownIcon,
-  CheckIcon,
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
@@ -100,6 +98,7 @@ export default function CalendarView({
   statusFilter,
 }: CalendarViewProps) {
   const router = useRouter()
+  const supabase = createClient()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [viewMode, setViewMode] = useState<ViewMode>('month')
   const [showEventModal, setShowEventModal] = useState(false)
@@ -116,6 +115,9 @@ export default function CalendarView({
   const [editingStatus, setEditingStatus] = useState(false)
   const [updatingStatus, setUpdatingStatus] = useState(false)
   const [localLeads, setLocalLeads] = useState<Lead[]>(leads)
+  const [statusLogs, setStatusLogs] = useState<any[]>([])
+  const [loadingStatusLogs, setLoadingStatusLogs] = useState(false)
+
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -232,28 +234,52 @@ export default function CalendarView({
     setSelectedLead(lead)
     setShowLeadDetailModal(true)
     setLoadingLeadDetails(true)
+    setLoadingStatusLogs(true)
+    setStatusLogs([])
 
     try {
       const supabase = createClient()
-      const { data, error } = await supabase
-        .from('leads')
-        .select(`
-          *,
-          landing_pages (
-            id,
-            title,
-            slug
-          )
-        `)
-        .eq('id', lead.id)
-        .single()
 
-      if (error) throw error
-      setLeadDetails(data)
+      // 리드 상세 정보와 상태 변경 로그를 병렬로 가져옴
+      const [leadResult, logsResult] = await Promise.all([
+        supabase
+          .from('leads')
+          .select(`
+            *,
+            landing_pages (
+              id,
+              title,
+              slug
+            ),
+            call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name, email),
+            counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name, email)
+          `)
+          .eq('id', lead.id)
+          .single(),
+        supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', lead.id)
+          .order('created_at', { ascending: false })
+      ])
+
+      if (leadResult.error) throw leadResult.error
+      setLeadDetails(leadResult.data)
+
+      if (!logsResult.error && logsResult.data) {
+        setStatusLogs(logsResult.data)
+      }
     } catch (error) {
       console.error('Error fetching lead details:', error)
     } finally {
       setLoadingLeadDetails(false)
+      setLoadingStatusLogs(false)
     }
   }
 
@@ -299,6 +325,28 @@ export default function CalendarView({
         l.id === selectedLead.id ? { ...l, ...updatedData } : l
       ))
       setEditingStatus(false)
+
+      // 상태 변경 로그 새로고침
+      try {
+        const supabase = createClient()
+        const { data: newLogs } = await supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', selectedLead.id)
+          .order('created_at', { ascending: false })
+
+        if (newLogs) {
+          setStatusLogs(newLogs)
+        }
+      } catch (logError) {
+        console.error('Error refreshing status logs:', logError)
+      }
     } catch (error) {
       console.error('Error updating status:', error)
       alert('상태 업데이트에 실패했습니다.')
@@ -306,6 +354,7 @@ export default function CalendarView({
       setUpdatingStatus(false)
     }
   }
+
 
   // Generate calendar days
   const calendarDays = []
@@ -743,6 +792,7 @@ export default function CalendarView({
                     setSelectedLead(null)
                     setLeadDetails(null)
                     setEditingStatus(false)
+                    setStatusLogs([])
                   }}
                   className="p-2 hover:bg-white/20 rounded-full transition"
                 >
@@ -801,42 +851,45 @@ export default function CalendarView({
                         <tr>
                           <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상태</td>
                           <td className="px-4 py-3">
-                            {editingStatus ? (
-                              <div className="relative">
-                                <select
-                                  value={leadDetails.status}
-                                  onChange={(e) => handleStatusUpdate(e.target.value)}
-                                  disabled={updatingStatus}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
-                                >
-                                  {STATUS_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
-                                      {option.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                {updatingStatus && (
-                                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
-                                  </div>
-                                )}
+                            <div className="relative inline-block">
+                              <select
+                                value={leadDetails.status}
+                                onChange={(e) => handleStatusUpdate(e.target.value)}
+                                disabled={updatingStatus}
+                                className={`appearance-none pl-3 pr-8 py-1.5 rounded-full text-xs font-medium cursor-pointer border-0 focus:ring-2 focus:ring-emerald-500 ${
+                                  STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
+                                } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'}`}
+                              >
+                                {STATUS_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-current opacity-60" />
+                              {updatingStatus && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 담당자 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">담당자</td>
+                          <td className="px-4 py-3 bg-blue-50/50">
+                            {leadDetails.call_assigned_user ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-sm font-medium text-blue-600">
+                                    {leadDetails.call_assigned_user.full_name?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                                <span className="text-sm font-medium text-gray-900">{leadDetails.call_assigned_user.full_name}</span>
                               </div>
                             ) : (
-                              <div className="flex items-center gap-2">
-                                <span
-                                  className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                                    STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
-                                  } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'}`}
-                                >
-                                  {STATUS_STYLES[leadDetails.status]?.label || leadDetails.status}
-                                </span>
-                                <button
-                                  onClick={() => setEditingStatus(true)}
-                                  className="p-1 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded transition"
-                                >
-                                  <ChevronDownIcon className="h-4 w-4" />
-                                </button>
-                              </div>
+                              <span className="text-sm text-gray-400">미지정</span>
                             )}
                           </td>
                         </tr>
@@ -956,6 +1009,67 @@ export default function CalendarView({
                       </tbody>
                     </table>
                   </div>
+
+                  {/* 상태 변경 이력 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">상태 변경 이력</h4>
+                    </div>
+                    <div className="p-4">
+                      {loadingStatusLogs ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                          <span className="ml-2 text-sm text-gray-500">로딩 중...</span>
+                        </div>
+                      ) : statusLogs.length > 0 ? (
+                        <div className="space-y-3 max-h-48 overflow-y-auto">
+                          {statusLogs.map((log, index) => (
+                            <div
+                              key={log.id}
+                              className="flex items-start gap-3 text-sm"
+                            >
+                              {/* 타임라인 인디케이터 */}
+                              <div className="flex flex-col items-center">
+                                <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                                {index < statusLogs.length - 1 && (
+                                  <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
+                                )}
+                              </div>
+                              {/* 로그 내용 */}
+                              <div className="flex-1 pb-3">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    STATUS_STYLES[log.previous_status]?.bg || 'bg-gray-100'
+                                  } ${STATUS_STYLES[log.previous_status]?.text || 'text-gray-700'}`}>
+                                    {STATUS_STYLES[log.previous_status]?.label || log.previous_status || '없음'}
+                                  </span>
+                                  <span className="text-gray-400">→</span>
+                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                    STATUS_STYLES[log.new_status]?.bg || 'bg-gray-100'
+                                  } ${STATUS_STYLES[log.new_status]?.text || 'text-gray-700'}`}>
+                                    {STATUS_STYLES[log.new_status]?.label || log.new_status}
+                                  </span>
+                                </div>
+                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                  <span>{formatDateTime(log.created_at)}</span>
+                                  {log.changed_by_user && (
+                                    <>
+                                      <span className="text-gray-300">|</span>
+                                      <span>{log.changed_by_user.full_name}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 text-center py-4">
+                          상태 변경 이력이 없습니다
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <div className="text-center py-12 text-gray-500">
@@ -981,6 +1095,7 @@ export default function CalendarView({
                   setSelectedLead(null)
                   setLeadDetails(null)
                   setEditingStatus(false)
+                  setStatusLogs([])
                 }}
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
@@ -990,6 +1105,7 @@ export default function CalendarView({
           </div>
         </div>
       )}
+
     </div>
   )
 }

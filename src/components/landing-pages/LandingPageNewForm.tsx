@@ -137,6 +137,9 @@ export default function LandingPageNewForm({
     landingPage?.timer_sticky_position || 'none'
   )
 
+  // User short_id for ref parameter
+  const [userShortId, setUserShortId] = useState<string | null>(null)
+
   // Collection mode (inline vs external)
   const [collectionMode, setCollectionMode] = useState<'inline' | 'external'>(
     landingPage?.collection_mode || 'inline'
@@ -245,6 +248,27 @@ export default function LandingPageNewForm({
 
     loadPrivacyPolicy()
   }, [landingPage, companyId])
+
+  // Load user short_id for ref parameter
+  useEffect(() => {
+    async function loadUserShortId() {
+      try {
+        const { data } = await supabase
+          .from('users')
+          .select('short_id')
+          .eq('id', userId)
+          .single()
+
+        if (data?.short_id) {
+          setUserShortId(data.short_id)
+        }
+      } catch (err) {
+        console.error('Error loading user short_id:', err)
+      }
+    }
+
+    loadUserShortId()
+  }, [userId])
 
   // Format phone number with auto-hyphen
   const formatPhoneNumber = (value: string) => {
@@ -2059,18 +2083,20 @@ export default function LandingPageNewForm({
               </p>
               {isActive && (
                 <div className="mt-3 bg-white/80 rounded-lg p-3 border border-green-200">
-                  <p className="text-xs font-semibold text-gray-700 mb-1">배포 URL</p>
+                  <p className="text-xs font-semibold text-gray-700 mb-1">내 배포 URL {userShortId && <span className="text-green-600">(ref={userShortId})</span>}</p>
                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                     <code className="text-xs sm:text-sm text-green-700 font-mono bg-green-100 px-2 py-1.5 rounded w-full sm:flex-1 overflow-x-auto break-all">
                       {(() => {
                         const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
-                        return `${baseUrl}/landing/${slug || 'your-slug'}`
+                        const refParam = userShortId ? `?ref=${userShortId}` : ''
+                        return `${baseUrl}/landing/${slug || 'your-slug'}${refParam}`
                       })()}
                     </code>
                     <button
                       onClick={() => {
                         const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
-                        const url = `${baseUrl}/landing/${slug}`
+                        const refParam = userShortId ? `?ref=${userShortId}` : ''
+                        const url = `${baseUrl}/landing/${slug}${refParam}`
                         navigator.clipboard.writeText(url)
                         alert('URL이 클립보드에 복사되었습니다!')
                       }}

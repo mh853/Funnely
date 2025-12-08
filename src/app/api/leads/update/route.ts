@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, assigned_to, contract_completed_at, notes } = body
+    const { id, status, priority, assigned_to, call_assigned_to, counselor_assigned_to, contract_completed_at, notes } = body
 
     // Validate required fields
     if (!id) {
@@ -44,6 +44,9 @@ export async function PUT(request: NextRequest) {
     if (!lead) {
       return NextResponse.json({ error: { message: 'Lead not found' } }, { status: 404 })
     }
+
+    // 상태 변경 시 로그 기록용 변수
+    const previousStatus = lead.status
 
     // Build update object
     const updateData: any = {
@@ -104,6 +107,14 @@ export async function PUT(request: NextRequest) {
       updateData.notes = notes
     }
 
+    if (call_assigned_to !== undefined) {
+      updateData.call_assigned_to = call_assigned_to || null
+    }
+
+    if (counselor_assigned_to !== undefined) {
+      updateData.counselor_assigned_to = counselor_assigned_to || null
+    }
+
     // Update lead
     const { data: updatedLead, error: updateError } = await supabase
       .from('leads')
@@ -113,6 +124,42 @@ export async function PUT(request: NextRequest) {
       .single()
 
     if (updateError) throw updateError
+
+    // 상태가 변경된 경우 로그 기록
+    if (status !== undefined && status !== previousStatus) {
+      try {
+        await supabase.from('lead_status_logs').insert({
+          lead_id: id,
+          company_id: userProfile.company_id,
+          previous_status: previousStatus,
+          new_status: status,
+          changed_by: user.id,
+        })
+      } catch (logError) {
+        // 로그 기록 실패해도 메인 업데이트는 성공으로 처리
+        console.error('Failed to log status change:', logError)
+      }
+    }
+
+    // 예약일이 변경된 경우 로그 기록
+    const previousContractDate = lead.contract_completed_at
+    const newContractDate = updateData.contract_completed_at
+
+    // 예약일이 실제로 변경된 경우에만 로그 기록 (새로 설정되거나 기존 날짜가 변경된 경우)
+    if (newContractDate !== undefined && newContractDate !== previousContractDate) {
+      try {
+        await supabase.from('reservation_date_logs').insert({
+          lead_id: id,
+          company_id: userProfile.company_id,
+          previous_date: previousContractDate || null,
+          new_date: newContractDate,
+          changed_by: user.id,
+        })
+      } catch (logError) {
+        // 로그 기록 실패해도 메인 업데이트는 성공으로 처리
+        console.error('Failed to log reservation date change:', logError)
+      }
+    }
 
     return NextResponse.json({
       success: true,

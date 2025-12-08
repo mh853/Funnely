@@ -3,7 +3,7 @@
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -29,6 +29,8 @@ interface PublicLandingPageProps {
 
 export default function PublicLandingPage({ landingPage }: PublicLandingPageProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const refParam = searchParams.get('ref')
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)
@@ -43,6 +45,21 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
   const [marketingConsent, setMarketingConsent] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+
+  // collect_fields에서 커스텀 필드 추출 (short_answer, multiple_choice 타입만)
+  const customFields = useMemo(() => {
+    if (!landingPage.collect_fields || !Array.isArray(landingPage.collect_fields)) {
+      return []
+    }
+    return landingPage.collect_fields
+      .filter((field: any) => field.type === 'short_answer' || field.type === 'multiple_choice')
+      .map((field: any, index: number) => ({
+        id: field.id || `field_${index}`,
+        type: field.type,
+        question: field.question || '',
+        options: field.options || [],
+      }))
+  }, [landingPage.collect_fields])
 
   // Demo realtime data (memoized to prevent recreation on every render)
   const demoRealtimeData = useMemo(() => [
@@ -126,7 +143,7 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
     setIsSubmitting(true)
 
     try {
-      // UTM 파라미터 수집
+      // UTM 파라미터 및 ref 파라미터 수집
       const urlParams = new URLSearchParams(window.location.search)
       const utmParams = {
         utm_source: urlParams.get('utm_source') || undefined,
@@ -135,6 +152,8 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
         utm_content: urlParams.get('utm_content') || undefined,
         utm_term: urlParams.get('utm_term') || undefined,
       }
+      // ref 파라미터: 유입 경로 추적 (담당자 ID)
+      const refUserId = urlParams.get('ref') || undefined
 
       // 폼 데이터 구성
       const formData: Record<string, any> = {
@@ -143,14 +162,12 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
       }
 
       // 커스텀 필드 추가
-      if (landingPage.custom_fields && Array.isArray(landingPage.custom_fields)) {
-        landingPage.custom_fields.forEach((field: any) => {
-          const fieldKey = field.id || field.question
-          if (customFieldValues[fieldKey]) {
-            formData[field.question || fieldKey] = customFieldValues[fieldKey]
-          }
-        })
-      }
+      customFields.forEach((field) => {
+        const fieldKey = field.id || field.question
+        if (customFieldValues[fieldKey]) {
+          formData[field.question || fieldKey] = customFieldValues[fieldKey]
+        }
+      })
 
       // 동의 정보 추가
       formData.privacy_consent = privacyConsent
@@ -165,6 +182,7 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
           landing_page_id: landingPage.id,
           form_data: formData,
           utm_params: utmParams,
+          referrer_user_id: refUserId, // ref 파라미터로 전달된 유입 담당자 ID
           metadata: {
             referrer: document.referrer,
             user_agent: navigator.userAgent,
@@ -178,7 +196,8 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
       }
 
       // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
-      router.replace(`/landing/completed/${landingPage.slug}`)
+      const refQuery = refParam ? `?ref=${refParam}` : ''
+      router.replace(`/landing/completed/${landingPage.slug}${refQuery}`)
     } catch (err: any) {
       setSubmitError(err.message)
     } finally {
@@ -378,7 +397,7 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
                 </div>
               )}
               {/* Custom Fields */}
-              {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, index: number) => {
+              {customFields.map((field, index) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>
@@ -575,7 +594,7 @@ export default function PublicLandingPage({ landingPage }: PublicLandingPageProp
               )}
 
               {/* Custom Fields */}
-              {landingPage.custom_fields && Array.isArray(landingPage.custom_fields) && landingPage.custom_fields.map((field: any, index: number) => {
+              {customFields.map((field, index) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>

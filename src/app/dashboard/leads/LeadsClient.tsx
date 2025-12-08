@@ -8,9 +8,15 @@ import { decryptPhone } from '@/lib/encryption/phone'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
 
+interface TeamMember {
+  id: string
+  full_name: string
+}
+
 interface LeadsClientProps {
   leads: any[]
   landingPages: any[]
+  teamMembers: TeamMember[]
   totalCount: number
   selectedLeadId?: string  // 캘린더에서 클릭한 특정 리드 ID
 }
@@ -42,6 +48,7 @@ const STATUS_OPTIONS = [
 export default function LeadsClient({
   leads: initialLeads,
   landingPages,
+  teamMembers,
   totalCount,
   selectedLeadId,
 }: LeadsClientProps) {
@@ -55,6 +62,7 @@ export default function LeadsClient({
   const urlLandingPageId = searchParams.get('landingPageId') || ''
   const urlDeviceType = searchParams.get('deviceType') || ''
   const urlStatus = searchParams.get('status') || ''
+  const urlAssignedTo = searchParams.get('assignedTo') || ''
   const urlSearch = searchParams.get('search') || ''
 
   // 날짜 범위 상태 (Date 객체)
@@ -81,6 +89,7 @@ export default function LeadsClient({
   const [landingPageId, setLandingPageId] = useState(urlLandingPageId)
   const [deviceType, setDeviceType] = useState(urlDeviceType)
   const [status, setStatus] = useState(urlStatus)
+  const [assignedTo, setAssignedTo] = useState(urlAssignedTo)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
 
   // URL 파라미터가 변경될 때 (router.push 후) 필터 상태 동기화
@@ -114,8 +123,9 @@ export default function LeadsClient({
     setLandingPageId(urlLandingPageId)
     setDeviceType(urlDeviceType)
     setStatus(urlStatus)
+    setAssignedTo(urlAssignedTo)
     setSearchQuery(urlSearch)
-  }, [urlDateRange, urlStartDate, urlEndDate, urlLandingPageId, urlDeviceType, urlStatus, urlSearch])
+  }, [urlDateRange, urlStartDate, urlEndDate, urlLandingPageId, urlDeviceType, urlStatus, urlAssignedTo, urlSearch])
 
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
@@ -143,11 +153,15 @@ export default function LeadsClient({
   const [notesValue, setNotesValue] = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
 
+  // 담당자 변경 관련 상태
+  const [editingAssigneeLeadId, setEditingAssigneeLeadId] = useState<string | null>(null)
+  const [updatingAssigneeLeadId, setUpdatingAssigneeLeadId] = useState<string | null>(null)
+
   // 행 클릭 핸들러 - 상세 모달 열기
   const handleRowClick = (lead: any, e: React.MouseEvent) => {
     // 상태 드롭다운 버튼 클릭은 무시
     const target = e.target as HTMLElement
-    if (target.closest('.status-dropdown')) return
+    if (target.closest('.status-dropdown') || target.closest('.assignee-dropdown')) return
 
     setSelectedLead(lead)
     setNotesValue(lead.notes || '')
@@ -191,18 +205,23 @@ export default function LeadsClient({
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Element
       if (editingLeadId) {
-        const target = event.target as Element
         if (!target.closest('.status-dropdown') && !target.closest('.status-dropdown-menu')) {
           setEditingLeadId(null)
           setDropdownPosition(null)
+        }
+      }
+      if (editingAssigneeLeadId) {
+        if (!target.closest('.assignee-dropdown')) {
+          setEditingAssigneeLeadId(null)
         }
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [editingLeadId])
+  }, [editingLeadId, editingAssigneeLeadId])
 
   // 드롭다운 버튼 클릭 시 위치 계산 (화면 하단 가까우면 위로 펼침)
   const handleDropdownToggle = useCallback((leadId: string, event: React.MouseEvent<HTMLButtonElement>) => {
@@ -352,6 +371,47 @@ export default function LeadsClient({
     }
   }
 
+  // 담당자 변경 핸들러
+  const handleAssigneeChange = async (leadId: string, newAssigneeId: string) => {
+    setUpdatingAssigneeLeadId(leadId)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: leadId,
+          call_assigned_to: newAssigneeId || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('담당자 업데이트 실패')
+      }
+
+      // 로컬 상태 업데이트
+      const newAssignee = teamMembers.find(m => m.id === newAssigneeId)
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === leadId
+            ? {
+                ...lead,
+                call_assigned_to: newAssigneeId || null,
+                call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
+              }
+            : lead
+        )
+      )
+      setEditingAssigneeLeadId(null)
+    } catch (error) {
+      console.error('Assignee update error:', error)
+      alert('담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingAssigneeLeadId(null)
+    }
+  }
+
   const pageSize = 20
   const totalPages = Math.ceil(totalCount / pageSize)
 
@@ -398,6 +458,7 @@ export default function LeadsClient({
     if (landingPageId) params.set('landingPageId', landingPageId)
     if (deviceType) params.set('deviceType', deviceType)
     if (status) params.set('status', status)
+    if (assignedTo) params.set('assignedTo', assignedTo)
     if (searchQuery) params.set('search', searchQuery)
     params.set('page', '1')
 
@@ -493,7 +554,7 @@ export default function LeadsClient({
         </div>
 
         {/* 두 번째 행: 나머지 필터들 */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Landing Page */}
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
@@ -547,6 +608,25 @@ export default function LeadsClient({
               <option value="contract_completed">계약 완료</option>
               <option value="needs_followup">추가상담 필요</option>
               <option value="other">기타</option>
+            </select>
+          </div>
+
+          {/* Assigned To */}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              담당자
+            </label>
+            <select
+              value={assignedTo}
+              onChange={(e) => setAssignedTo(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">전체</option>
+              {teamMembers?.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.full_name}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -622,6 +702,9 @@ export default function LeadsClient({
                   결과
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  담당자
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   계약 완료
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -632,7 +715,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={12} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -696,6 +779,60 @@ export default function LeadsClient({
                             </>
                           )}
                         </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      <div className="relative assignee-dropdown">
+                        {editingAssigneeLeadId === lead.id ? (
+                          <select
+                            value={lead.call_assigned_user?.id || ''}
+                            onChange={(e) => handleAssigneeChange(lead.id, e.target.value)}
+                            disabled={updatingAssigneeLeadId === lead.id}
+                            className="w-full max-w-[120px] rounded-lg border border-blue-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+                            autoFocus
+                          >
+                            <option value="">미지정</option>
+                            {teamMembers?.map((member) => (
+                              <option key={member.id} value={member.id}>
+                                {member.full_name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <button
+                            onClick={() => setEditingAssigneeLeadId(lead.id)}
+                            disabled={updatingAssigneeLeadId === lead.id}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
+                              updatingAssigneeLeadId === lead.id
+                                ? 'opacity-50 cursor-wait'
+                                : 'hover:bg-blue-50 cursor-pointer'
+                            }`}
+                          >
+                            {updatingAssigneeLeadId === lead.id ? (
+                              <svg className="animate-spin h-4 w-4 text-blue-600" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                              </svg>
+                            ) : lead.call_assigned_user ? (
+                              <>
+                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                                  <span className="text-xs font-medium text-blue-600">
+                                    {lead.call_assigned_user.full_name?.charAt(0) || '?'}
+                                  </span>
+                                </div>
+                                <span className="truncate max-w-[80px]" title={lead.call_assigned_user.full_name}>
+                                  {lead.call_assigned_user.full_name}
+                                </span>
+                                <ChevronDownIcon className="h-3 w-3 text-gray-400" />
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-gray-400">미지정</span>
+                                <ChevronDownIcon className="h-3 w-3 text-gray-400" />
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
@@ -1068,6 +1205,24 @@ export default function LeadsClient({
                     <tr>
                       <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">기기</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.device_type?.toUpperCase() || '-'}</td>
+                    </tr>
+                    {/* 담당자 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">담당자</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 bg-blue-50/50">
+                        {selectedLead.call_assigned_user ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                              <span className="text-sm font-medium text-blue-600">
+                                {selectedLead.call_assigned_user.full_name?.charAt(0) || '?'}
+                              </span>
+                            </div>
+                            <span className="font-medium">{selectedLead.call_assigned_user.full_name}</span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400">미지정</span>
+                        )}
+                      </td>
                     </tr>
                     {/* 항목 1 */}
                     {selectedLead.custom_field_1 && (

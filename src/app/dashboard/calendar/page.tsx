@@ -68,10 +68,10 @@ export default async function CalendarPage({
   // Get team members for event assignment
   const { data: teamMembers } = await supabase
     .from('users')
-    .select('id, name, email, role')
+    .select('id, full_name, email, role')
     .eq('company_id', userProfile.company_id)
     .eq('is_active', true)
-    .order('name')
+    .order('full_name')
 
   return (
     <div className="space-y-4">

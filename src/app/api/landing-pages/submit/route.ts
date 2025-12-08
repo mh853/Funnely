@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceRoleClient()
     const body: FormSubmission = await request.json()
 
-    const { landing_page_id, form_data, utm_params, metadata } = body
+    const { landing_page_id, form_data, utm_params, referrer_user_id, metadata } = body
 
     // Validate required fields
     if (!landing_page_id || !form_data) {
@@ -65,6 +65,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Convert referrer short_id to actual user UUID
+    let actualReferrerUserId: string | undefined = undefined
+    if (referrer_user_id) {
+      const { data: referrerUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('short_id', referrer_user_id)
+        .single()
+
+      if (referrerUser) {
+        actualReferrerUserId = referrerUser.id
+      }
+    }
+
     // Hash phone number for duplicate detection
     const phoneHash = crypto
       .createHash('sha256')
@@ -94,6 +108,7 @@ export async function POST(request: NextRequest) {
         utm_content: utm_params?.utm_content,
         utm_term: utm_params?.utm_term,
         referrer: metadata?.referrer,
+        referrer_user_id: actualReferrerUserId, // ref 파라미터(short_id)로 조회한 실제 user UUID
         ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
         user_agent: metadata?.user_agent,
       })

@@ -19,12 +19,15 @@ interface LandingPageTableRowProps {
     contractCount: number
   }
   index: number
+  userShortId?: string | null
 }
 
-export default function LandingPageTableRow({ page, index }: LandingPageTableRowProps) {
+export default function LandingPageTableRow({ page, index, userShortId }: LandingPageTableRowProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
 
   const formattedDate = formatDate(page.created_at)
+  const refParam = userShortId ? `?ref=${userShortId}` : ''
+  const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
 
   return (
     <>
@@ -40,7 +43,7 @@ export default function LandingPageTableRow({ page, index }: LandingPageTableRow
           <div className="flex items-center">
             <div>
               <a
-                href={`https://funnely.co.kr/landing/${page.slug}`}
+                href={landingPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"

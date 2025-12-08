@@ -33,6 +33,10 @@ export default async function ReservationsPage() {
       phone,
       status,
       contract_completed_at,
+      created_at,
+      notes,
+      call_assigned_to,
+      counselor_assigned_to,
       landing_pages (
         id,
         title,
@@ -45,6 +49,14 @@ export default async function ReservationsPage() {
     .not('contract_completed_at', 'is', null)
     .order('contract_completed_at', { ascending: true })
 
+  // Get team members for counselor assignment
+  const { data: teamMembers } = await supabase
+    .from('users')
+    .select('id, full_name')
+    .eq('company_id', userProfile.company_id)
+    .eq('is_active', true)
+    .order('full_name')
+
   // 디버깅용 로그
   console.log('Reservations query result:', { contractLeads, error, companyId: userProfile.company_id })
 
@@ -52,6 +64,7 @@ export default async function ReservationsPage() {
     <ReservationsClient
       initialLeads={contractLeads || []}
       companyId={userProfile.company_id}
+      teamMembers={teamMembers || []}
     />
   )
 }

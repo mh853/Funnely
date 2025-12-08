@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { UserCircleIcon, TrashIcon } from '@heroicons/react/24/outline'
+import { UserCircleIcon, TrashIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { formatDateTime } from '@/lib/utils/date'
 
 interface TeamMember {
@@ -10,6 +10,8 @@ interface TeamMember {
   email: string
   full_name: string
   role: string
+  simple_role?: string
+  short_id?: string
   created_at: string
 }
 
@@ -28,6 +30,17 @@ export default function TeamMembersList({
   const [selectedRole, setSelectedRole] = useState<string>('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [copiedShortId, setCopiedShortId] = useState<string | null>(null)
+
+  const handleCopyShortId = async (shortId: string) => {
+    try {
+      await navigator.clipboard.writeText(shortId)
+      setCopiedShortId(shortId)
+      setTimeout(() => setCopiedShortId(null), 2000)
+    } catch (error) {
+      console.error('Failed to copy:', error)
+    }
+  }
 
   const handleRoleChange = async (memberId: string) => {
     if (!selectedRole) return
@@ -35,11 +48,21 @@ export default function TeamMembersList({
     setLoading(true)
     setMessage(null)
 
+    // simple_role을 legacy role로 매핑
+    const legacyRoleMap: Record<string, string> = {
+      admin: 'hospital_admin',
+      manager: 'marketing_manager',
+      user: 'marketing_staff',
+    }
+
     try {
       const supabase = createClient()
       const { error } = await supabase
         .from('users')
-        .update({ role: selectedRole })
+        .update({
+          simple_role: selectedRole,
+          role: legacyRoleMap[selectedRole] || 'marketing_staff'
+        })
         .eq('id', memberId)
 
       if (error) throw error
@@ -85,26 +108,24 @@ export default function TeamMembersList({
     }
   }
 
-  const getRoleLabel = (role: string): string => {
+  // simple_role 기반 라벨 (새 권한 시스템)
+  const getSimpleRoleLabel = (simpleRole?: string): string => {
     const labels: Record<string, string> = {
-      hospital_owner: '회사 관리자',
-      hospital_admin: '회사 어드민',
-      marketing_manager: '마케팅 매니저',
-      marketing_staff: '마케팅 스태프',
-      viewer: '뷰어',
+      admin: '관리자',
+      manager: '매니저',
+      user: '일반 사용자',
     }
-    return labels[role] || role
+    return simpleRole ? labels[simpleRole] || simpleRole : '일반 사용자'
   }
 
-  const getRoleBadgeColor = (role: string): string => {
+  // simple_role 기반 배지 색상
+  const getSimpleRoleBadgeColor = (simpleRole?: string): string => {
     const colors: Record<string, string> = {
-      hospital_owner: 'bg-purple-100 text-purple-800',
-      hospital_admin: 'bg-blue-100 text-blue-800',
-      marketing_manager: 'bg-green-100 text-green-800',
-      marketing_staff: 'bg-yellow-100 text-yellow-800',
-      viewer: 'bg-gray-100 text-gray-800',
+      admin: 'bg-purple-100 text-purple-800',
+      manager: 'bg-blue-100 text-blue-800',
+      user: 'bg-gray-100 text-gray-800',
     }
-    return colors[role] || 'bg-gray-100 text-gray-800'
+    return simpleRole ? colors[simpleRole] || 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -131,6 +152,9 @@ export default function TeamMembersList({
             <tr>
               <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
                 사용자
+              </th>
+              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+                유입 ID
               </th>
               <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
                 권한
@@ -167,6 +191,28 @@ export default function TeamMembersList({
                     </div>
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm">
+                    {member.short_id ? (
+                      <div className="flex items-center gap-1.5">
+                        <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono text-gray-700">
+                          {member.short_id}
+                        </code>
+                        <button
+                          onClick={() => handleCopyShortId(member.short_id!)}
+                          className="p-1 hover:bg-gray-100 rounded transition-colors"
+                          title="복사"
+                        >
+                          {copiedShortId === member.short_id ? (
+                            <CheckIcon className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <ClipboardDocumentIcon className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                          )}
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
+                  </td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm">
                     {isEditing ? (
                       <div className="flex items-center space-x-2">
                         <select
@@ -176,10 +222,9 @@ export default function TeamMembersList({
                           disabled={loading}
                         >
                           <option value="">선택</option>
-                          <option value="hospital_admin">회사 어드민</option>
-                          <option value="marketing_manager">마케팅 매니저</option>
-                          <option value="marketing_staff">마케팅 스태프</option>
-                          <option value="viewer">뷰어</option>
+                          <option value="admin">관리자</option>
+                          <option value="manager">매니저</option>
+                          <option value="user">일반 사용자</option>
                         </select>
                         <button
                           onClick={() => handleRoleChange(member.id)}
@@ -198,11 +243,11 @@ export default function TeamMembersList({
                       </div>
                     ) : (
                       <span
-                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getRoleBadgeColor(
-                          member.role
+                        className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getSimpleRoleBadgeColor(
+                          member.simple_role
                         )}`}
                       >
-                        {getRoleLabel(member.role)}
+                        {getSimpleRoleLabel(member.simple_role)}
                       </span>
                     )}
                   </td>
@@ -212,12 +257,12 @@ export default function TeamMembersList({
                   {canManage && (
                     <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                       <div className="flex justify-end space-x-2">
-                        {!isCurrentUser && member.role !== 'hospital_owner' && !isEditing && (
+                        {!isCurrentUser && member.simple_role !== 'admin' && !isEditing && (
                           <>
                             <button
                               onClick={() => {
                                 setEditingMember(member.id)
-                                setSelectedRole(member.role)
+                                setSelectedRole(member.simple_role || 'user')
                               }}
                               className="text-blue-600 hover:text-blue-900"
                               disabled={loading}

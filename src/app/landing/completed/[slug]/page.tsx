@@ -5,6 +5,7 @@ import { CheckCircleIcon } from '@heroicons/react/24/solid'
 
 interface Props {
   params: Promise<{ slug: string }>
+  searchParams: Promise<{ ref?: string }>
 }
 
 // Create a Supabase client with service role for public pages
@@ -61,8 +62,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-export default async function CompletedPage({ params }: Props) {
+export default async function CompletedPage({ params, searchParams }: Props) {
   const { slug } = await params
+  const { ref } = await searchParams
   const landingPage = await fetchLandingPage(slug)
 
   // 랜딩페이지를 찾지 못해도 기본 완료 페이지 표시 (404 대신)
@@ -121,7 +123,7 @@ export default async function CompletedPage({ params }: Props) {
             {/* Back Button */}
             {landingPage ? (
               <Link
-                href={`/landing/${slug}`}
+                href={`/landing/${slug}${ref ? `?ref=${ref}` : ''}`}
                 className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white transition-all hover:opacity-90 hover:shadow-lg"
                 style={{ backgroundColor: primaryColor }}
               >

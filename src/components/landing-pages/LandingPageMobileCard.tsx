@@ -18,13 +18,16 @@ interface LandingPageMobileCardProps {
     rejectedCount: number
     contractCount: number
   }
+  userShortId?: string | null
 }
 
-export default function LandingPageMobileCard({ page }: LandingPageMobileCardProps) {
+export default function LandingPageMobileCard({ page, userShortId }: LandingPageMobileCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const formattedDate = formatDate(page.created_at)
+  const refParam = userShortId ? `?ref=${userShortId}` : ''
+  const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
 
   return (
     <>
@@ -34,7 +37,7 @@ export default function LandingPageMobileCard({ page }: LandingPageMobileCardPro
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <a
-                href={`https://funnely.co.kr/landing/${page.slug}`}
+                href={landingPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors truncate block"

@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TeamMembersList from '@/components/team/TeamMembersList'
-import InviteMemberButton from '@/components/team/InviteMemberButton'
+import InviteUserButton from '@/components/users/InviteUserButton'
 
 export default async function TeamPage() {
   const supabase = await createClient()
@@ -29,8 +29,10 @@ export default async function TeamPage() {
     )
   }
 
-  // Check if user has permission to manage team
-  const canManage = ['hospital_owner', 'hospital_admin'].includes(userProfile.role)
+  // Check if user has permission to manage team (admin만 팀원 초대 가능)
+  const canManage =
+    userProfile.simple_role === 'admin' ||
+    ['hospital_owner', 'hospital_admin'].includes(userProfile.role)
 
   // Get all team members
   const { data: teamMembers } = await supabase
@@ -50,7 +52,7 @@ export default async function TeamPage() {
           </p>
         </div>
         {canManage && (
-          <InviteMemberButton companyId={userProfile.company_id} />
+          <InviteUserButton companyId={userProfile.company_id} />
         )}
       </div>
 

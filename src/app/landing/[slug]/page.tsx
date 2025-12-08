@@ -9,8 +9,8 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
-// ISR: Revalidate every 5 minutes for better performance
-export const revalidate = 300
+// ISR: Revalidate every 60 seconds for faster updates
+export const revalidate = 60
 
 // Create a Supabase client with service role for public landing pages
 // Service role bypasses RLS - safe for server components only
