@@ -1161,15 +1161,38 @@ export default function LeadsClient({
 
             {/* 본문 */}
             <div className="p-5 space-y-5">
-              {/* 상태 배지 */}
-              <div className="flex items-center gap-2">
-                <span className={`px-3 py-1 text-xs font-semibold rounded-full ${STATUS_STYLES[selectedLead.status]?.bg || 'bg-gray-100'} ${STATUS_STYLES[selectedLead.status]?.text || 'text-gray-800'}`}>
-                  {STATUS_STYLES[selectedLead.status]?.label || getStatusLabel(selectedLead.status)}
-                </span>
+              {/* 결과 드롭다운 - 바로 수정 가능 */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">결과</label>
+                <select
+                  value={selectedLead.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value
+                    if (newStatus === 'contract_completed') {
+                      // 계약 완료는 날짜 선택 모달 필요
+                      openContractModal(selectedLead.id)
+                    } else {
+                      handleStatusChange(selectedLead.id, newStatus)
+                      setSelectedLead({ ...selectedLead, status: newStatus })
+                    }
+                  }}
+                  disabled={updatingLeadId === selectedLead.id}
+                  className={`w-full px-4 py-3 border-2 rounded-xl text-sm font-semibold transition-all focus:ring-2 focus:ring-indigo-200 ${
+                    STATUS_STYLES[selectedLead.status]?.bg || 'bg-gray-100'
+                  } ${STATUS_STYLES[selectedLead.status]?.text || 'text-gray-800'} ${
+                    updatingLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'
+                  }`}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
                 {selectedLead.contract_completed_at && (
-                  <span className="text-xs text-emerald-600 font-medium">
-                    계약: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
-                  </span>
+                  <p className="mt-2 text-xs text-emerald-600 font-medium">
+                    계약일: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
+                  </p>
                 )}
               </div>
 

@@ -75,10 +75,16 @@ export default function LandingPageMobileCard({ page, userShortId }: LandingPage
             <div className="text-center p-2 bg-red-50 rounded-lg">
               <p className="text-xs text-red-600">거절</p>
               <p className="font-semibold text-red-800 text-sm">{page.rejectedCount.toLocaleString()}</p>
+              <p className="text-xs text-red-500 mt-0.5">
+                {page.dbInflow > 0 ? `${((page.rejectedCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
+              </p>
             </div>
             <div className="text-center p-2 bg-emerald-50 rounded-lg">
-              <p className="text-xs text-emerald-600">계약</p>
+              <p className="text-xs text-emerald-600">확정</p>
               <p className="font-semibold text-emerald-800 text-sm">{page.contractCount.toLocaleString()}</p>
+              <p className="text-xs text-emerald-500 mt-0.5">
+                {page.dbInflow > 0 ? `${((page.contractCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
+              </p>
             </div>
           </div>
 

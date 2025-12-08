@@ -264,7 +264,19 @@ export default async function LandingPagesPage({
                       scope="col"
                       className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
                     >
+                      거절률
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
                       예약확정
+                    </th>
+                    <th
+                      scope="col"
+                      className="px-4 py-2.5 text-center text-xs font-bold text-gray-700 uppercase tracking-wider"
+                    >
+                      확정률
                     </th>
                     <th
                       scope="col"

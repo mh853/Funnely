@@ -83,8 +83,18 @@ export default function LandingPageTableRow({ page, index, userShortId }: Landin
           </span>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
+          <span className="text-sm font-semibold text-red-600">
+            {page.dbInflow > 0 ? `${((page.rejectedCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
+          </span>
+        </td>
+        <td className="px-4 py-2.5 whitespace-nowrap text-center">
           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
             {page.contractCount.toLocaleString()}
+          </span>
+        </td>
+        <td className="px-4 py-2.5 whitespace-nowrap text-center">
+          <span className="text-sm font-semibold text-emerald-600">
+            {page.dbInflow > 0 ? `${((page.contractCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
           </span>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
