@@ -130,78 +130,63 @@ export default async function SettingsPage() {
         </div>
       )}
 
-      {/* API Credentials Link */}
-      <Link
-        href="/dashboard/settings/api-credentials"
-        className="block bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 rounded-lg shadow-md p-6 transition"
-      >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="bg-white rounded-lg p-3">
-              <KeyIcon className="h-6 w-6 text-blue-600" />
-            </div>
-            <div className="text-white">
-              <h3 className="text-lg font-semibold">광고 플랫폼 API 연동 설정</h3>
-              <p className="text-sm text-blue-100 mt-1">
-                Meta Ads, Kakao Moment, Google Ads API 인증 정보 관리
-              </p>
-            </div>
+      {/* Quick Settings Links - 1행 그리드 */}
+      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
+        {/* API Credentials */}
+        <Link
+          href="/dashboard/settings/api-credentials"
+          className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+        >
+          <div className="flex-shrink-0 bg-blue-100 rounded-lg p-2 group-hover:bg-blue-200 transition-colors">
+            <KeyIcon className="h-5 w-5 text-blue-600" />
           </div>
-          <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">광고 플랫폼 API</h3>
+            <p className="text-xs text-gray-500 truncate">Meta, Kakao, Google Ads</p>
+          </div>
+          <svg className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
-        </div>
-      </Link>
+        </Link>
 
-      {/* Lead Status Settings Link - Admin Only */}
-      {isAdmin && (
-        <Link
-          href="/dashboard/settings/lead-statuses"
-          className="block bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-lg shadow-md p-6 transition"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white rounded-lg p-3">
-                <TagIcon className="h-6 w-6 text-emerald-600" />
-              </div>
-              <div className="text-white">
-                <h3 className="text-lg font-semibold">리드 상태 관리</h3>
-                <p className="text-sm text-emerald-100 mt-1">
-                  DB현황 페이지의 결과 컬럼에 표시되는 상태 항목 관리
-                </p>
-              </div>
+        {/* Lead Status Settings - Admin Only */}
+        {isAdmin && (
+          <Link
+            href="/dashboard/settings/lead-statuses"
+            className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-emerald-300 hover:bg-emerald-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+          >
+            <div className="flex-shrink-0 bg-emerald-100 rounded-lg p-2 group-hover:bg-emerald-200 transition-colors">
+              <TagIcon className="h-5 w-5 text-emerald-600" />
             </div>
-            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 truncate">리드 상태 관리</h3>
+              <p className="text-xs text-gray-500 truncate">DB현황 결과 상태 설정</p>
+            </div>
+            <svg className="h-4 w-4 text-gray-400 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </div>
-        </Link>
-      )}
+          </Link>
+        )}
 
-      {/* Google Sheets Sync Settings Link - Admin Only */}
-      {isAdmin && (
-        <Link
-          href="/dashboard/settings/sheet-sync"
-          className="block bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg shadow-md p-6 transition"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="bg-white rounded-lg p-3">
-                <TableCellsIcon className="h-6 w-6 text-purple-600" />
-              </div>
-              <div className="text-white">
-                <h3 className="text-lg font-semibold">Google Sheets 동기화</h3>
-                <p className="text-sm text-purple-100 mt-1">
-                  Meta 광고 데이터를 Google Sheets에서 자동으로 가져옵니다
-                </p>
-              </div>
+        {/* Google Sheets Sync - Admin Only */}
+        {isAdmin && (
+          <Link
+            href="/dashboard/settings/sheet-sync"
+            className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-purple-300 hover:bg-purple-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+          >
+            <div className="flex-shrink-0 bg-purple-100 rounded-lg p-2 group-hover:bg-purple-200 transition-colors">
+              <TableCellsIcon className="h-5 w-5 text-purple-600" />
             </div>
-            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 truncate">Sheets 동기화</h3>
+              <p className="text-xs text-gray-500 truncate">Google Sheets 자동 연동</p>
+            </div>
+            <svg className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </div>
-        </Link>
-      )}
+          </Link>
+        )}
+      </div>
 
       {/* Hospital Settings */}
       <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
