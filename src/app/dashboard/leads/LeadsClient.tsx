@@ -1560,28 +1560,9 @@ export default function LeadsClient({
               <div className="border rounded-xl overflow-hidden">
                 <table className="w-full">
                   <tbody className="divide-y divide-gray-100">
-                    {/* 이름 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600 w-28">이름</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.name || '-'}</td>
-                    </tr>
-                    {/* 전화번호 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">전화번호</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {selectedLead.phone ? decryptPhone(selectedLead.phone) : '-'}
-                      </td>
-                    </tr>
-                    {/* 이메일 */}
-                    {selectedLead.email && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">이메일</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.email}</td>
-                      </tr>
-                    )}
                     {/* 랜딩페이지 */}
                     <tr>
-                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">랜딩페이지</td>
+                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600 w-28">랜딩페이지</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.landing_pages?.title || '-'}</td>
                     </tr>
                     {/* 기기 */}
@@ -1607,45 +1588,65 @@ export default function LeadsClient({
                         )}
                       </td>
                     </tr>
+                    {/* DB 수집 항목들 - 이름, 전화번호, 이메일, 커스텀필드 (같은 색상으로 그룹핑) */}
+                    {/* 이름 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">이름</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.name || '-'}</td>
+                    </tr>
+                    {/* 전화번호 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">전화번호</td>
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        {selectedLead.phone ? decryptPhone(selectedLead.phone) : '-'}
+                      </td>
+                    </tr>
+                    {/* 이메일 */}
+                    {selectedLead.email && (
+                      <tr>
+                        <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">이메일</td>
+                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.email}</td>
+                      </tr>
+                    )}
                     {/* 커스텀 필드 (JSONB 형태 - 무제한) */}
-                    {selectedLead.custom_fields && Array.isArray(selectedLead.custom_fields) && selectedLead.custom_fields.length > 0 && (
+                    {selectedLead.custom_fields && Array.isArray(selectedLead.custom_fields) && selectedLead.custom_fields.length > 0 ? (
                       selectedLead.custom_fields.map((field: { label: string; value: string }, index: number) => (
                         <tr key={`custom-field-${index}`}>
                           <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">{field.label}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">{field.value}</td>
                         </tr>
                       ))
-                    )}
+                    ) : null}
                     {/* 레거시 커스텀 필드 (custom_field_1~5) - 기존 데이터 호환용 */}
                     {(!selectedLead.custom_fields || selectedLead.custom_fields.length === 0) && (
                       <>
                         {selectedLead.custom_field_1 && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 1</td>
+                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 1</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_1}</td>
                           </tr>
                         )}
                         {selectedLead.custom_field_2 && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 2</td>
+                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 2</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_2}</td>
                           </tr>
                         )}
                         {selectedLead.custom_field_3 && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 3</td>
+                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 3</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_3}</td>
                           </tr>
                         )}
                         {selectedLead.custom_field_4 && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 4</td>
+                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 4</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_4}</td>
                           </tr>
                         )}
                         {selectedLead.custom_field_5 && (
                           <tr>
-                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 5</td>
+                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 5</td>
                             <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_5}</td>
                           </tr>
                         )}
