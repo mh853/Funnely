@@ -57,10 +57,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get landing page to retrieve company_id
+    // Get landing page to retrieve company_id and collect_fields
     const { data: landingPage, error: lpError } = await supabase
       .from('landing_pages')
-      .select('company_id, status')
+      .select('company_id, status, collect_fields')
       .eq('id', landing_page_id)
       .single()
 
@@ -110,6 +110,51 @@ export async function POST(request: NextRequest) {
       .update(phone.replace(/\D/g, ''))
       .digest('hex')
 
+    // Extract custom fields from form_data based on collect_fields configuration
+    // form_data contains keys like "질문명": "답변값" for custom fields
+    const customFields: Array<{ label: string; value: string }> = []
+    const reservedKeys = ['name', '이름', 'phone', '전화번호', 'email', '이메일', 'message', '메시지',
+                          'privacy_consent', 'marketing_consent', 'consultation_items',
+                          'preferred_date', 'preferred_time']
+
+    // Get custom field questions from landing page's collect_fields
+    const collectFields = landingPage.collect_fields as Array<{
+      type: string
+      question?: string
+      options?: string[]
+    }> | null
+
+    if (collectFields && Array.isArray(collectFields)) {
+      // Extract questions for short_answer and multiple_choice types
+      const customFieldQuestions = collectFields
+        .filter(field => field.type === 'short_answer' || field.type === 'multiple_choice')
+        .map(field => field.question)
+        .filter((q): q is string => !!q)
+
+      // Match form_data keys with custom field questions
+      customFieldQuestions.forEach(question => {
+        if (form_data[question]) {
+          customFields.push({
+            label: question,
+            value: String(form_data[question])
+          })
+        }
+      })
+    }
+
+    // Also capture any non-reserved fields that might be custom
+    Object.entries(form_data).forEach(([key, value]) => {
+      if (!reservedKeys.includes(key) &&
+          typeof value === 'string' &&
+          value.trim() !== '' &&
+          !customFields.some(cf => cf.label === key)) {
+        customFields.push({
+          label: key,
+          value: value
+        })
+      }
+    })
+
     // Create lead record
     const { data: lead, error: leadError } = await supabase
       .from('leads')
@@ -137,6 +182,7 @@ export async function POST(request: NextRequest) {
         ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
         user_agent: metadata?.user_agent,
         device_type: detectDeviceType(metadata?.user_agent),
+        custom_fields: customFields.length > 0 ? customFields : [],
       })
       .select()
       .single()

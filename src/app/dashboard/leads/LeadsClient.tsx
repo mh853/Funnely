@@ -190,33 +190,67 @@ export default function LeadsClient({
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
 
-  // 모든 랜딩페이지에서 collect_fields 수집하여 동적 컬럼 생성
+  // 모든 리드에서 custom_fields (JSONB) 수집하여 동적 컬럼 생성
+  // 형식: [{ label: "질문명", value: "답변값" }]
   const customFieldColumns = useMemo(() => {
-    const fieldsMap = new Map<string, string>() // field_index -> question
+    const fieldsSet = new Set<string>()
+
     leads.forEach((lead: any) => {
+      // 새로운 JSONB custom_fields 확인
+      if (lead.custom_fields && Array.isArray(lead.custom_fields)) {
+        lead.custom_fields.forEach((field: { label: string; value: string }) => {
+          if (field.label) {
+            fieldsSet.add(field.label)
+          }
+        })
+      }
+
+      // 기존 custom_field_1~5도 지원 (하위 호환성)
       const collectFields = lead.landing_pages?.collect_fields
       if (Array.isArray(collectFields)) {
-        // collect_fields에서 short_answer, multiple_choice 타입만 custom_field로 사용
         let customFieldIndex = 0
         collectFields.forEach((field: { type: string; question?: string; label?: string }) => {
           if (field.type === 'short_answer' || field.type === 'multiple_choice') {
-            if (!fieldsMap.has(`field_${customFieldIndex}`)) {
-              fieldsMap.set(`field_${customFieldIndex}`, field.question || field.label || `항목 ${customFieldIndex + 1}`)
-            }
+            const fieldLabel = field.question || field.label || `항목 ${customFieldIndex + 1}`
+            fieldsSet.add(fieldLabel)
             customFieldIndex++
           }
         })
       }
     })
-    // 최대 5개 필드까지 표시
-    const result: { key: string; label: string }[] = []
-    for (let i = 0; i < 5; i++) {
-      if (fieldsMap.has(`field_${i}`)) {
-        result.push({ key: `custom_field_${i + 1}`, label: fieldsMap.get(`field_${i}`)! })
+
+    // Set을 배열로 변환하여 반환 (무제한)
+    return Array.from(fieldsSet).map((label, index) => ({
+      key: `custom_${index}`,
+      label
+    }))
+  }, [leads])
+
+  // 리드에서 커스텀 필드 값 가져오기 (JSONB와 레거시 모두 지원)
+  const getCustomFieldValue = useCallback((lead: any, fieldLabel: string): string => {
+    // 새로운 JSONB custom_fields에서 찾기
+    if (lead.custom_fields && Array.isArray(lead.custom_fields)) {
+      const field = lead.custom_fields.find((f: { label: string; value: string }) => f.label === fieldLabel)
+      if (field) return field.value
+    }
+
+    // 기존 custom_field_1~5에서 찾기 (하위 호환성)
+    const collectFields = lead.landing_pages?.collect_fields
+    if (Array.isArray(collectFields)) {
+      let customFieldIndex = 0
+      for (const field of collectFields) {
+        if (field.type === 'short_answer' || field.type === 'multiple_choice') {
+          const currentLabel = field.question || field.label || `항목 ${customFieldIndex + 1}`
+          if (currentLabel === fieldLabel) {
+            return lead[`custom_field_${customFieldIndex + 1}`] || ''
+          }
+          customFieldIndex++
+        }
       }
     }
-    return result
-  }, [leads])
+
+    return ''
+  }, [])
 
   // initialLeads가 변경될 때 (router.refresh() 후) leads 상태 동기화
   useEffect(() => {
@@ -1011,19 +1045,24 @@ export default function LeadsClient({
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   전화번호
                 </th>
-                {/* 동적 custom_fields 컬럼 */}
+                {/* 동적 custom_fields 컬럼 (최대 2개 + ... 표시) */}
                 {customFieldColumns.length > 0 ? (
-                  customFieldColumns.map((field) => (
-                    <th key={field.key} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                      {field.label}
-                    </th>
-                  ))
-                ) : (
                   <>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 1</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 2</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">항목 3</th>
+                    {customFieldColumns.slice(0, 2).map((field) => (
+                      <th key={field.key} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider max-w-[150px] truncate" title={field.label}>
+                        {field.label}
+                      </th>
+                    ))}
+                    {customFieldColumns.length > 2 && (
+                      <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider" title={`외 ${customFieldColumns.length - 2}개 항목`}>
+                        +{customFieldColumns.length - 2}
+                      </th>
+                    )}
                   </>
+                ) : (
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                    추가 항목
+                  </th>
                 )}
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결과
@@ -1045,7 +1084,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={customFieldColumns.length > 0 ? 10 + customFieldColumns.length : 13} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={customFieldColumns.length > 0 ? 10 + Math.min(customFieldColumns.length, 2) + (customFieldColumns.length > 2 ? 1 : 0) : 13} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -1071,25 +1110,24 @@ export default function LeadsClient({
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.phone ? decryptPhone(lead.phone) : '-'}
                     </td>
-                    {/* 동적 custom_fields 데이터 */}
+                    {/* 동적 custom_fields 데이터 (최대 2개 + ... 표시) */}
                     {customFieldColumns.length > 0 ? (
-                      customFieldColumns.map((field, index) => (
-                        <td key={field.key} className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                          {lead[`custom_field_${index + 1}`] || '-'}
-                        </td>
-                      ))
-                    ) : (
                       <>
-                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                          {lead.custom_field_1 || '-'}
-                        </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                          {lead.custom_field_2 || '-'}
-                        </td>
-                        <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                          {lead.custom_field_3 || '-'}
-                        </td>
+                        {customFieldColumns.slice(0, 2).map((field) => (
+                          <td key={field.key} className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[150px] truncate" title={getCustomFieldValue(lead, field.label) || undefined}>
+                            {getCustomFieldValue(lead, field.label) || '-'}
+                          </td>
+                        ))}
+                        {customFieldColumns.length > 2 && (
+                          <td className="px-4 py-2.5 whitespace-nowrap text-sm text-center text-indigo-500 cursor-pointer hover:text-indigo-700" onClick={(e) => { e.stopPropagation(); handleRowClick(lead, e); }}>
+                            ...
+                          </td>
+                        )}
                       </>
+                    ) : (
+                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-400 italic">
+                        -
+                      </td>
                     )}
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
@@ -1569,40 +1607,49 @@ export default function LeadsClient({
                         )}
                       </td>
                     </tr>
-                    {/* 항목 1 */}
-                    {selectedLead.custom_field_1 && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 1</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_1}</td>
-                      </tr>
+                    {/* 커스텀 필드 (JSONB 형태 - 무제한) */}
+                    {selectedLead.custom_fields && Array.isArray(selectedLead.custom_fields) && selectedLead.custom_fields.length > 0 && (
+                      selectedLead.custom_fields.map((field: { label: string; value: string }, index: number) => (
+                        <tr key={`custom-field-${index}`}>
+                          <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">{field.label}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{field.value}</td>
+                        </tr>
+                      ))
                     )}
-                    {/* 항목 2 */}
-                    {selectedLead.custom_field_2 && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 2</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_2}</td>
-                      </tr>
-                    )}
-                    {/* 항목 3 */}
-                    {selectedLead.custom_field_3 && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 3</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_3}</td>
-                      </tr>
-                    )}
-                    {/* 항목 4 */}
-                    {selectedLead.custom_field_4 && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 4</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_4}</td>
-                      </tr>
-                    )}
-                    {/* 항목 5 */}
-                    {selectedLead.custom_field_5 && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 5</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_5}</td>
-                      </tr>
+                    {/* 레거시 커스텀 필드 (custom_field_1~5) - 기존 데이터 호환용 */}
+                    {(!selectedLead.custom_fields || selectedLead.custom_fields.length === 0) && (
+                      <>
+                        {selectedLead.custom_field_1 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 1</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_1}</td>
+                          </tr>
+                        )}
+                        {selectedLead.custom_field_2 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 2</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_2}</td>
+                          </tr>
+                        )}
+                        {selectedLead.custom_field_3 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 3</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_3}</td>
+                          </tr>
+                        )}
+                        {selectedLead.custom_field_4 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 4</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_4}</td>
+                          </tr>
+                        )}
+                        {selectedLead.custom_field_5 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">항목 5</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_5}</td>
+                          </tr>
+                        )}
+                      </>
                     )}
                     {/* 희망 상담일 */}
                     {selectedLead.preferred_date && (
