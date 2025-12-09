@@ -27,6 +27,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "googleapis": "^167.0.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",
     "lucide-react": "^0.451.0",

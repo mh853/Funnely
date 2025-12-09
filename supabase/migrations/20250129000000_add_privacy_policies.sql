@@ -32,9 +32,9 @@ CREATE POLICY "Users can view their company's privacy policies"
 ON privacy_policies FOR SELECT
 USING (
   EXISTS (
-    SELECT 1 FROM user_profiles
-    WHERE user_profiles.company_id = privacy_policies.company_id
-    AND user_profiles.user_id = auth.uid()
+    SELECT 1 FROM users
+    WHERE users.company_id = privacy_policies.company_id
+    AND users.id = auth.uid()
   )
 );
 
@@ -43,9 +43,9 @@ CREATE POLICY "Users can update their company's privacy policies"
 ON privacy_policies FOR UPDATE
 USING (
   EXISTS (
-    SELECT 1 FROM user_profiles
-    WHERE user_profiles.company_id = privacy_policies.company_id
-    AND user_profiles.user_id = auth.uid()
+    SELECT 1 FROM users
+    WHERE users.company_id = privacy_policies.company_id
+    AND users.id = auth.uid()
   )
 );
 
@@ -54,20 +54,20 @@ CREATE POLICY "Users can insert their company's privacy policies"
 ON privacy_policies FOR INSERT
 WITH CHECK (
   EXISTS (
-    SELECT 1 FROM user_profiles
-    WHERE user_profiles.company_id = privacy_policies.company_id
-    AND user_profiles.user_id = auth.uid()
+    SELECT 1 FROM users
+    WHERE users.company_id = privacy_policies.company_id
+    AND users.id = auth.uid()
   )
 );
 
 -- landing_pages 테이블에 동의 관련 컬럼 추가
 ALTER TABLE landing_pages
-ADD COLUMN require_privacy_consent BOOLEAN DEFAULT true,
-ADD COLUMN require_marketing_consent BOOLEAN DEFAULT false,
-ADD COLUMN privacy_policy_id UUID REFERENCES privacy_policies(id);
+ADD COLUMN IF NOT EXISTS require_privacy_consent BOOLEAN DEFAULT true,
+ADD COLUMN IF NOT EXISTS require_marketing_consent BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS privacy_policy_id UUID REFERENCES privacy_policies(id);
 
 -- leads 테이블에 동의 여부 컬럼 추가
 ALTER TABLE leads
-ADD COLUMN privacy_consent_agreed BOOLEAN DEFAULT false,
-ADD COLUMN marketing_consent_agreed BOOLEAN DEFAULT false,
-ADD COLUMN consented_at TIMESTAMPTZ;
+ADD COLUMN IF NOT EXISTS privacy_consent_agreed BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS marketing_consent_agreed BOOLEAN DEFAULT false,
+ADD COLUMN IF NOT EXISTS consented_at TIMESTAMPTZ;

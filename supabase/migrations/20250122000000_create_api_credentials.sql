@@ -1,7 +1,7 @@
 -- Create API credentials table for multi-tenant credential storage
 CREATE TABLE IF NOT EXISTS public.api_credentials (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  hospital_id UUID NOT NULL REFERENCES public.hospitals(id) ON DELETE CASCADE,
+  company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
   platform TEXT NOT NULL CHECK (platform IN ('meta', 'kakao', 'google')),
 
   -- Encrypted credential storage (JSONB for flexibility)
@@ -16,60 +16,60 @@ CREATE TABLE IF NOT EXISTS public.api_credentials (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW(),
 
-  -- Ensure one credential set per hospital per platform
-  UNIQUE(hospital_id, platform)
+  -- Ensure one credential set per company per platform
+  UNIQUE(company_id, platform)
 );
 
 -- Add RLS policies
 ALTER TABLE public.api_credentials ENABLE ROW LEVEL SECURITY;
 
--- Policy: Users can only view their hospital's credentials
-CREATE POLICY "Users can view own hospital credentials"
+-- Policy: Users can only view their company's credentials
+CREATE POLICY "Users can view own company credentials"
   ON public.api_credentials
   FOR SELECT
   USING (
-    hospital_id IN (
-      SELECT hospital_id FROM public.users WHERE id = auth.uid()
+    company_id IN (
+      SELECT company_id FROM public.users WHERE id = auth.uid()
     )
   );
 
--- Policy: Only hospital owners and admins can insert credentials
-CREATE POLICY "Hospital owners and admins can insert credentials"
+-- Policy: Only company owners and admins can insert credentials
+CREATE POLICY "Company owners and admins can insert credentials"
   ON public.api_credentials
   FOR INSERT
   WITH CHECK (
-    hospital_id IN (
-      SELECT hospital_id FROM public.users
+    company_id IN (
+      SELECT company_id FROM public.users
       WHERE id = auth.uid()
       AND role IN ('hospital_owner', 'hospital_admin', 'marketing_manager')
     )
   );
 
--- Policy: Only hospital owners and admins can update credentials
-CREATE POLICY "Hospital owners and admins can update credentials"
+-- Policy: Only company owners and admins can update credentials
+CREATE POLICY "Company owners and admins can update credentials"
   ON public.api_credentials
   FOR UPDATE
   USING (
-    hospital_id IN (
-      SELECT hospital_id FROM public.users
+    company_id IN (
+      SELECT company_id FROM public.users
       WHERE id = auth.uid()
       AND role IN ('hospital_owner', 'hospital_admin', 'marketing_manager')
     )
   );
 
--- Policy: Only hospital owners can delete credentials
-CREATE POLICY "Hospital owners can delete credentials"
+-- Policy: Only company owners can delete credentials
+CREATE POLICY "Company owners can delete credentials"
   ON public.api_credentials
   FOR DELETE
   USING (
-    hospital_id IN (
-      SELECT hospital_id FROM public.users
+    company_id IN (
+      SELECT company_id FROM public.users
       WHERE id = auth.uid()
       AND role = 'hospital_owner'
     )
   );
 
--- Create updated_at trigger
+-- Create updated_at trigger (only if not exists)
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -84,5 +84,5 @@ CREATE TRIGGER update_api_credentials_updated_at
   EXECUTE FUNCTION update_updated_at_column();
 
 -- Add index for faster lookups
-CREATE INDEX idx_api_credentials_hospital_platform
-  ON public.api_credentials(hospital_id, platform);
+CREATE INDEX idx_api_credentials_company_platform
+  ON public.api_credentials(company_id, platform);

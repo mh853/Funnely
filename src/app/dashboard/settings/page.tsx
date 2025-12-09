@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HospitalSettingsForm from '@/components/settings/HospitalSettingsForm'
-import { KeyIcon, TagIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
@@ -159,6 +159,31 @@ export default async function SettingsPage() {
                 <h3 className="text-lg font-semibold">리드 상태 관리</h3>
                 <p className="text-sm text-emerald-100 mt-1">
                   DB현황 페이지의 결과 컬럼에 표시되는 상태 항목 관리
+                </p>
+              </div>
+            </div>
+            <svg className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+        </Link>
+      )}
+
+      {/* Google Sheets Sync Settings Link - Admin Only */}
+      {isAdmin && (
+        <Link
+          href="/dashboard/settings/sheet-sync"
+          className="block bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 rounded-lg shadow-md p-6 transition"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-white rounded-lg p-3">
+                <TableCellsIcon className="h-6 w-6 text-purple-600" />
+              </div>
+              <div className="text-white">
+                <h3 className="text-lg font-semibold">Google Sheets 동기화</h3>
+                <p className="text-sm text-purple-100 mt-1">
+                  Meta 광고 데이터를 Google Sheets에서 자동으로 가져옵니다
                 </p>
               </div>
             </div>
