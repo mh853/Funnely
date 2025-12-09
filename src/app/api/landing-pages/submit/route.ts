@@ -3,6 +3,31 @@ import { NextRequest, NextResponse } from 'next/server'
 import { FormSubmission } from '@/types/landing-page.types'
 import crypto from 'crypto'
 
+// User-Agent를 분석하여 기기 타입 감지
+function detectDeviceType(userAgent: string | undefined): 'pc' | 'mobile' | 'tablet' | 'unknown' {
+  if (!userAgent) return 'unknown'
+
+  const ua = userAgent.toLowerCase()
+
+  // 태블릿 감지 (모바일보다 먼저 체크해야 함)
+  if (/ipad|android(?!.*mobile)|tablet|playbook|silk/i.test(ua)) {
+    return 'tablet'
+  }
+
+  // 모바일 감지
+  if (/mobile|iphone|ipod|android.*mobile|webos|blackberry|opera mini|opera mobi|iemobile|windows phone/i.test(ua)) {
+    return 'mobile'
+  }
+
+  // 봇/크롤러 감지 (unknown 처리)
+  if (/bot|crawler|spider|scraper|headless/i.test(ua)) {
+    return 'unknown'
+  }
+
+  // 나머지는 PC로 간주
+  return 'pc'
+}
+
 // Service Role client for public form submissions (bypasses RLS)
 function getServiceRoleClient() {
   return createClient(
@@ -111,6 +136,7 @@ export async function POST(request: NextRequest) {
         referrer_user_id: actualReferrerUserId, // ref 파라미터(short_id)로 조회한 실제 user UUID
         ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
         user_agent: metadata?.user_agent,
+        device_type: detectDeviceType(metadata?.user_agent),
       })
       .select()
       .single()

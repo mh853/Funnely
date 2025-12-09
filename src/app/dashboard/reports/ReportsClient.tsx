@@ -446,6 +446,11 @@ export default function ReportsClient({
                         className="hover:underline"
                       >
                         {row.rejected}
+                        {row.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-0.5">
+                            ({Math.round((row.rejected / row.total) * 100)}%)
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
@@ -454,6 +459,11 @@ export default function ReportsClient({
                         className="hover:underline"
                       >
                         {row.inProgress}
+                        {row.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-0.5">
+                            ({Math.round((row.inProgress / row.total) * 100)}%)
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
@@ -462,6 +472,11 @@ export default function ReportsClient({
                         className="hover:underline"
                       >
                         {row.completed}
+                        {row.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-0.5">
+                            ({Math.round((row.completed / row.total) * 100)}%)
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
@@ -470,6 +485,11 @@ export default function ReportsClient({
                         className="hover:underline"
                       >
                         {row.contractCompleted}
+                        {row.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-0.5">
+                            ({Math.round((row.contractCompleted / row.total) * 100)}%)
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
@@ -478,10 +498,20 @@ export default function ReportsClient({
                         className="hover:underline"
                       >
                         {row.needsFollowUp}
+                        {row.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-0.5">
+                            ({Math.round((row.needsFollowUp / row.total) * 100)}%)
+                          </span>
+                        )}
                       </Link>
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
                       {row.other}
+                      {row.total > 0 && row.other > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((row.other / row.total) * 100)}%)
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
                       {row.paymentAmount > 0

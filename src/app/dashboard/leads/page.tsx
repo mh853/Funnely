@@ -192,11 +192,11 @@ export default async function LeadsPage({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-8 text-white shadow-xl">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">DB 현황</h1>
-            <p className="mt-2 text-indigo-100">
+            <h1 className="text-2xl font-bold">DB 현황</h1>
+            <p className="mt-1 text-sm text-indigo-100">
               랜딩페이지에서 수집된 고객 DB를 관리하세요
             </p>
           </div>
