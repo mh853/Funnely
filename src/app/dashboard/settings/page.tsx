@@ -220,7 +220,7 @@ export default async function SettingsPage() {
           </div>
         </div>
         <div className="px-6 py-6">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div className="bg-gray-50 rounded-lg p-4">
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">이메일</dt>
               <dd className="mt-2 text-sm font-medium text-gray-900">{user.email}</dd>
@@ -228,6 +228,18 @@ export default async function SettingsPage() {
             <div className="bg-gray-50 rounded-lg p-4">
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">이름</dt>
               <dd className="mt-2 text-sm font-medium text-gray-900">{userProfile.full_name}</dd>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">담당부서</dt>
+              <dd className="mt-2">
+                {userProfile.department ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    {userProfile.department}
+                  </span>
+                ) : (
+                  <span className="text-sm text-gray-400">미설정</span>
+                )}
+              </dd>
             </div>
             <div className="bg-gray-50 rounded-lg p-4">
               <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">권한</dt>
@@ -244,6 +256,9 @@ export default async function SettingsPage() {
               </dd>
             </div>
           </dl>
+          <p className="mt-4 text-xs text-gray-500">
+            * 담당부서는 팀 관리 페이지에서 관리자가 변경할 수 있습니다.
+          </p>
         </div>
       </div>
     </div>
