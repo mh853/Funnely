@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
+import CloseWindowButton from './CloseWindowButton'
 
 interface Props {
   params: Promise<{ slug: string }>
@@ -28,7 +29,7 @@ async function fetchLandingPage(slug: string) {
 
   const { data, error } = await supabase
     .from('landing_pages')
-    .select('id, slug, title, success_message, primary_color, company_id')
+    .select('id, slug, title, success_message, completion_info_message, primary_color, company_id')
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
@@ -70,6 +71,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   // 랜딩페이지를 찾지 못해도 기본 완료 페이지 표시 (404 대신)
   const primaryColor = landingPage?.primary_color || '#3B82F6'
   const successMessage = landingPage?.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
+  const completionInfoMessage = landingPage?.completion_info_message || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
@@ -111,32 +113,28 @@ export default async function CompletedPage({ params, searchParams }: Props) {
                   </svg>
                 </div>
                 <div className="text-left">
-                  <p className="text-sm text-gray-600">
-                    담당자가 빠른 시일 내에 연락드릴 예정입니다.
-                    <br />
-                    문의사항이 있으시면 언제든지 연락해 주세요.
+                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                    {completionInfoMessage}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Back Button */}
-            {landingPage ? (
-              <Link
-                href={`/landing/${slug}${ref ? `?ref=${ref}` : ''}`}
-                className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white transition-all hover:opacity-90 hover:shadow-lg"
-                style={{ backgroundColor: primaryColor }}
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                </svg>
-                페이지로 돌아가기
-              </Link>
-            ) : (
-              <p className="text-sm text-gray-500">
-                창을 닫아도 됩니다.
-              </p>
-            )}
+            {/* Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              {landingPage && (
+                <Link
+                  href={`/landing/${slug}${ref ? `?ref=${ref}` : ''}`}
+                  className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-gray-700 bg-gray-100 transition-all hover:bg-gray-200"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                  </svg>
+                  페이지로 돌아가기
+                </Link>
+              )}
+              <CloseWindowButton primaryColor={primaryColor} />
+            </div>
           </div>
         </div>
 

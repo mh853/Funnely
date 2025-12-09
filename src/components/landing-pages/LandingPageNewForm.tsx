@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -160,6 +160,14 @@ export default function LandingPageNewForm({
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
 
+  // Completion page settings
+  const [successMessage, setSuccessMessage] = useState(
+    landingPage?.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
+  )
+  const [completionInfoMessage, setCompletionInfoMessage] = useState(
+    landingPage?.completion_info_message || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'
+  )
+
   // Deployment state
   const [isActive, setIsActive] = useState(landingPage?.is_active ?? true)
 
@@ -180,6 +188,11 @@ export default function LandingPageNewForm({
 
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [showDesktopPreview, setShowDesktopPreview] = useState(false)
+
+  // Preview size control (px)
+  // Resizable sidebar state
+  const [sidebarWidth, setSidebarWidth] = useState(400) // Default sidebar width
+  const [isResizing, setIsResizing] = useState(false)
 
   // Realtime rolling state
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
@@ -1004,6 +1017,8 @@ export default function LandingPageNewForm({
         require_marketing_consent: requireMarketingConsent,
         privacy_content: privacyContent || null, // 빈 문자열을 null로 변환
         marketing_content: marketingContent || null, // 빈 문자열을 null로 변환
+        success_message: successMessage || null,
+        completion_info_message: completionInfoMessage || null,
         is_active: isActive,
         status: isActive ? 'published' : 'draft', // is_active에 따라 status 설정
       }
@@ -1172,10 +1187,48 @@ export default function LandingPageNewForm({
     setImages(images.filter((_, i) => i !== index))
   }
 
+  // Handle mouse resize for sidebar
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setIsResizing(true)
+  }
+
+  // Handle mouse move during resize
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const containerRect = document.getElementById('landing-page-container')?.getBoundingClientRect()
+    if (!containerRect) return
+
+    const newWidth = containerRect.right - e.clientX
+    // Clamp between 300px and 600px
+    setSidebarWidth(Math.max(300, Math.min(600, newWidth)))
+  }, [])
+
+  // Handle mouse up to stop resizing
+  const handleMouseUp = useCallback(() => {
+    setIsResizing(false)
+  }, [])
+
+  // Add/remove mouse event listeners
+  useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = 'col-resize'
+      document.body.style.userSelect = 'none'
+    }
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove)
+      document.removeEventListener('mouseup', handleMouseUp)
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
+    }
+  }, [isResizing, handleMouseMove, handleMouseUp])
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
+    <div id="landing-page-container" className="flex flex-col lg:flex-row gap-4 sm:gap-6">
       {/* Main Form */}
-      <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+      <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
         {/* URL Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
@@ -2051,6 +2104,88 @@ export default function LandingPageNewForm({
           </div>
         </div>
 
+        {/* Completion Page Settings */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <div className="flex items-center gap-3 mb-4 sm:mb-6">
+            <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">완료 페이지 설정</h2>
+          </div>
+
+          <div className="space-y-4 sm:space-y-6">
+            {/* 완료 메시지 (상단 헤더) */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                완료 메시지
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  신청 완료 후 표시되는 메인 메시지
+                </span>
+              </label>
+              <input
+                type="text"
+                value={successMessage}
+                onChange={(e) => setSuccessMessage(e.target.value)}
+                placeholder="신청이 완료되었습니다. 곧 연락드리겠습니다."
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm sm:text-base"
+              />
+              <p className="text-xs text-gray-500">
+                완료 페이지 상단에 큰 글씨로 표시됩니다.
+              </p>
+            </div>
+
+            {/* 안내 멘트 (Info Box) */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                안내 멘트
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  Info Box에 표시되는 추가 안내 문구
+                </span>
+              </label>
+              <textarea
+                value={completionInfoMessage}
+                onChange={(e) => setCompletionInfoMessage(e.target.value)}
+                placeholder="담당자가 빠른 시일 내에 연락드릴 예정입니다.&#10;문의사항이 있으시면 언제든지 연락해 주세요."
+                rows={3}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm sm:text-base resize-none"
+              />
+              <p className="text-xs text-gray-500">
+                완료 페이지의 파란색 정보 박스에 표시됩니다. 줄바꿈이 적용됩니다.
+              </p>
+            </div>
+
+            {/* Preview */}
+            <div className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
+              <p className="text-xs font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                </svg>
+                미리보기
+              </p>
+              <div className="bg-white rounded-lg p-4 shadow-sm">
+                <p className="text-gray-700 text-base font-medium mb-3">
+                  {successMessage || '신청이 완료되었습니다. 곧 연락드리겠습니다.'}
+                </p>
+                <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                      <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </div>
+                    <p className="text-xs text-gray-600 whitespace-pre-line">
+                      {completionInfoMessage || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Error Message */}
         {error && (
           <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
@@ -2155,9 +2290,23 @@ export default function LandingPageNewForm({
         </div>
       </div>
 
-      {/* Interactive Preview Sidebar */}
-      <div className="lg:col-span-1">
-        <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6">
+      {/* Interactive Preview Sidebar with Resizable Handle */}
+      <div
+        className="hidden lg:flex flex-shrink-0 relative"
+        style={{ width: sidebarWidth }}
+      >
+        {/* Resize Handle */}
+        <div
+          onMouseDown={handleMouseDown}
+          className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize group z-10 flex items-center justify-center
+            ${isResizing ? 'bg-indigo-500' : 'hover:bg-indigo-400'} transition-colors`}
+        >
+          <div className={`w-0.5 h-12 rounded-full transition-all
+            ${isResizing ? 'bg-white' : 'bg-gray-300 group-hover:bg-white'}`}
+          />
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6 ml-2 flex-1">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <EyeIcon className="h-6 w-6 text-indigo-600" />
@@ -2167,17 +2316,17 @@ export default function LandingPageNewForm({
             {/* Desktop Preview Button */}
             <button
               onClick={() => setShowDesktopPreview(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors flex items-center gap-2"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-lg text-xs font-medium hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
             >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
-              데스크탑 미리보기
+              데스크탑
             </button>
           </div>
 
           {/* Mobile Phone Preview Frame */}
-          <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl">
+          <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl mx-auto max-w-full">
             <div className="bg-white rounded-2xl overflow-hidden">
               {/* Phone Status Bar */}
               <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
@@ -2189,7 +2338,7 @@ export default function LandingPageNewForm({
             </div>
 
             {/* Preview Content - Scrollable */}
-            <div className="h-[600px] overflow-y-auto bg-white relative">
+            <div className="overflow-y-auto bg-white relative h-[600px]">
               {/* Sticky Top Buttons */}
               {renderStickyButtons('top', false)}
 
