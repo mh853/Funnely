@@ -53,19 +53,21 @@ export default async function TeamPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between px-2 sm:px-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">팀 관리</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            팀원을 초대하고 권한을 관리합니다.
-          </p>
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">팀 관리</h1>
+            <p className="mt-1 text-sm text-indigo-100">
+              팀원을 초대하고 권한을 관리합니다.
+            </p>
+          </div>
+          {canManage && (
+            <InviteUserButton
+              companyId={userProfile.company_id}
+              existingDepartments={existingDepartments}
+            />
+          )}
         </div>
-        {canManage && (
-          <InviteUserButton
-            companyId={userProfile.company_id}
-            existingDepartments={existingDepartments}
-          />
-        )}
       </div>
 
       {/* Permission Warning */}
