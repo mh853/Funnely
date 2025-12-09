@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import HospitalSettingsForm from '@/components/settings/HospitalSettingsForm'
-import { KeyIcon, TagIcon, TableCellsIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
@@ -95,12 +95,21 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">설정</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          회사 정보 및 계정 설정을 관리합니다.
-        </p>
+      {/* Header - team 페이지와 동일한 스타일 */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
+              <Cog6ToothIcon className="h-8 w-8 text-white" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold">설정</h1>
+              <p className="mt-1 text-sm text-indigo-100">
+                회사 정보 및 계정 설정을 관리합니다.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Permission Warning */}
@@ -195,35 +204,57 @@ export default async function SettingsPage() {
       )}
 
       {/* Hospital Settings */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-6">회사 정보</h2>
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-100 rounded-lg p-2">
+              <BuildingOffice2Icon className="h-5 w-5 text-indigo-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">회사 정보</h2>
+              <p className="text-sm text-gray-500">회사 기본 정보를 관리합니다</p>
+            </div>
+          </div>
+        </div>
+        <div className="px-6 py-6">
           <HospitalSettingsForm hospital={hospital} canEdit={canEdit} />
         </div>
       </div>
 
       {/* Account Info */}
-      <div className="bg-white shadow rounded-lg">
-        <div className="px-4 py-5 sm:p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-6">계정 정보</h2>
-          <dl className="space-y-4">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">이메일</dt>
-              <dd className="mt-1 text-sm text-gray-900">{user.email}</dd>
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="bg-purple-100 rounded-lg p-2">
+              <UserCircleIcon className="h-5 w-5 text-purple-600" />
             </div>
             <div>
-              <dt className="text-sm font-medium text-gray-500">이름</dt>
-              <dd className="mt-1 text-sm text-gray-900">{userProfile.full_name}</dd>
+              <h2 className="text-lg font-semibold text-gray-900">계정 정보</h2>
+              <p className="text-sm text-gray-500">로그인 계정 및 권한 정보</p>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">권한</dt>
-              <dd className="mt-1 text-sm text-gray-900">
-                {getRoleLabel(userProfile.role)}
+          </div>
+        </div>
+        <div className="px-6 py-6">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">이메일</dt>
+              <dd className="mt-2 text-sm font-medium text-gray-900">{user.email}</dd>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">이름</dt>
+              <dd className="mt-2 text-sm font-medium text-gray-900">{userProfile.full_name}</dd>
+            </div>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">권한</dt>
+              <dd className="mt-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                  {getRoleLabel(userProfile.role)}
+                </span>
               </dd>
             </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">가입일</dt>
-              <dd className="mt-1 text-sm text-gray-900">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <dt className="text-xs font-medium text-gray-500 uppercase tracking-wider">가입일</dt>
+              <dd className="mt-2 text-sm font-medium text-gray-900">
                 {formatDate(userProfile.created_at)}
               </dd>
             </div>
