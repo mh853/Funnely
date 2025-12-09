@@ -30,7 +30,7 @@ export async function POST(
     }
 
     // Check permission
-    if (!['hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -45,7 +45,7 @@ export async function POST(
       return NextResponse.json({ error: '광고 계정을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Verify same hospital
+    // Verify same company
     if (adAccount.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }

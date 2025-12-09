@@ -29,7 +29,7 @@ export async function DELETE(
     }
 
     // Check permission
-    const allowedRoles = ['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff']
+    const allowedRoles = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff']
     if (!allowedRoles.includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }

@@ -83,13 +83,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 400 })
     }
 
-    // Map simple_role to legacy role for backward compatibility
-    const legacyRoleMap: Record<string, string> = {
-      admin: 'hospital_admin',
+    // Map simple_role to role
+    const roleMap: Record<string, string> = {
+      admin: 'company_admin',
       manager: 'marketing_manager',
       user: 'marketing_staff',
     }
-    const legacyRole = legacyRoleMap[invitation.role] || 'marketing_staff'
+    const mappedRole = roleMap[invitation.role] || 'marketing_staff'
 
     // Create auth user using admin API
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
       id: authData.user.id,
       email,
       full_name: fullName,
-      role: legacyRole,
+      role: mappedRole,
       simple_role: invitation.role,
       company_id: invitation.company_id,
       department: invitation.department || null,

@@ -29,8 +29,8 @@ export async function PATCH(
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Check if user has permission to edit (hospital_owner or hospital_admin)
-    if (!['hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
+    // Check if user has permission to edit (company_owner or company_admin)
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
       return NextResponse.json({ error: '팀원을 수정할 권한이 없습니다.' }, { status: 403 })
     }
 
@@ -45,7 +45,7 @@ export async function PATCH(
       return NextResponse.json({ error: '수정할 팀원을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Verify same hospital
+    // Verify same company
     if (targetUser.company_id !== currentUserProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
@@ -60,13 +60,13 @@ export async function PATCH(
     }
 
     // Validate role
-    const validRoles = ['marketing_staff', 'marketing_manager', 'hospital_admin', 'hospital_owner', 'viewer']
+    const validRoles = ['marketing_staff', 'marketing_manager', 'company_admin', 'company_owner', 'hospital_admin', 'hospital_owner', 'viewer']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: '유효하지 않은 권한입니다.' }, { status: 400 })
     }
 
-    // Prevent hospital_admin from changing hospital_owner role
-    if (targetUser.role === 'hospital_owner' && currentUserProfile.role !== 'hospital_owner') {
+    // Prevent company_admin from changing company_owner role
+    if (['company_owner', 'hospital_owner'].includes(targetUser.role) && !['company_owner', 'hospital_owner'].includes(currentUserProfile.role)) {
       return NextResponse.json({ error: '회사 관리자의 권한을 변경할 수 없습니다.' }, { status: 403 })
     }
 
@@ -127,8 +127,8 @@ export async function DELETE(
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Check if user has permission to delete (hospital_owner or hospital_admin)
-    if (!['hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
+    // Check if user has permission to delete (company_owner or company_admin)
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
       return NextResponse.json({ error: '팀원을 삭제할 권한이 없습니다.' }, { status: 403 })
     }
 
@@ -148,8 +148,8 @@ export async function DELETE(
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    // Prevent hospital_admin from deleting hospital_owner
-    if (targetUser.role === 'hospital_owner' && currentUserProfile.role !== 'hospital_owner') {
+    // Prevent company_admin from deleting company_owner
+    if (['company_owner', 'hospital_owner'].includes(targetUser.role) && !['company_owner', 'hospital_owner'].includes(currentUserProfile.role)) {
       return NextResponse.json({ error: '회사 관리자를 삭제할 수 없습니다.' }, { status: 403 })
     }
 

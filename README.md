@@ -1,6 +1,6 @@
-# 메디씽크 (MediSync)
+# 퍼널리 (Funnely)
 
-**병원 광고 통합 관리 플랫폼** | **프로젝트 진행률: 95%** 🎉
+**비즈니스 광고 통합 관리 플랫폼** | **프로젝트 진행률: 95%** 🎉
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-blue)](https://www.typescriptlang.org/)
@@ -21,7 +21,7 @@
 
 ## 📋 개요
 
-메디씽크는 병원의 마케팅 담당자가 **Meta Ads, Kakao Moment, Google Ads**를 한 곳에서 관리하고 분석할 수 있는 통합 SaaS 플랫폼입니다.
+퍼널리는 비즈니스의 마케팅 담당자가 **Meta Ads, Kakao Moment, Google Ads**를 한 곳에서 관리하고 분석할 수 있는 통합 SaaS 플랫폼입니다.
 
 ### 주요 기능
 
@@ -31,7 +31,7 @@
 - 📄 **리포트 내보내기**: Excel + PDF 형식 지원
 - 👥 **팀 관리**: 팀원 초대, 권한 관리, 5단계 권한 시스템
 - 🔔 **실시간 알림**: Supabase Realtime 기반 알림 시스템
-- 🔐 **안전한 권한 관리**: 병원별 데이터 격리 및 역할 기반 접근 제어
+- 🔐 **안전한 권한 관리**: 회사별 데이터 격리 및 역할 기반 접근 제어
 
 ---
 
@@ -47,7 +47,7 @@
 
 ```bash
 # 1. 저장소 클론
-cd ~/medisync
+cd ~/funnely
 
 # 2. 의존성 설치
 npm install
@@ -93,7 +93,7 @@ npm run dev
 ## 📁 프로젝트 구조
 
 ```
-medisync/
+funnely/
 ├── docs/                     # 프로젝트 문서
 │   ├── PROJECT_OVERVIEW.md
 │   ├── DATABASE_SCHEMA.md
@@ -125,7 +125,7 @@ medisync/
 
 ## 🔐 보안
 
-메디씽크는 의료 데이터 보안 규정(HIPAA, 개인정보보호법)을 준수합니다:
+퍼널리는 데이터 보안 규정(개인정보보호법)을 준수합니다:
 
 - ✅ End-to-end 암호화
 - ✅ Row Level Security (RLS)
@@ -199,8 +199,8 @@ medisync/
 ## 📞 연락처
 
 프로젝트 관련 문의:
-- 이메일: support@medisync.com
-- 이슈: [GitHub Issues](https://github.com/yourusername/medisync/issues)
+- 이메일: support@funnely.co.kr
+- 이슈: [GitHub Issues](https://github.com/yourusername/funnely/issues)
 
 ---
 
@@ -215,4 +215,4 @@ medisync/
 
 ---
 
-**메디씽크** - 병원 광고 관리를 더 쉽고 효율적으로 ✨
+**퍼널리** - 광고 관리를 더 쉽고 효율적으로 ✨

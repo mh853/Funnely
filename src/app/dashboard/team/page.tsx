@@ -32,7 +32,7 @@ export default async function TeamPage() {
   // Check if user has permission to manage team (admin만 팀원 초대 가능)
   const canManage =
     userProfile.simple_role === 'admin' ||
-    ['hospital_owner', 'hospital_admin'].includes(userProfile.role)
+    ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
 
   // Get all team members
   const { data: teamMembers } = await supabase

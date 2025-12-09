@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-interface Hospital {
+interface Company {
   id: string
   name: string
   business_number: string | null
@@ -13,22 +13,22 @@ interface Hospital {
   settings: any
 }
 
-interface HospitalSettingsFormProps {
-  hospital: Hospital
+interface CompanySettingsFormProps {
+  company: Company
   canEdit: boolean
 }
 
-export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSettingsFormProps) {
+export default function CompanySettingsForm({ company, canEdit }: CompanySettingsFormProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState(false)
 
   const [formData, setFormData] = useState({
-    name: hospital.name || '',
-    business_number: hospital.business_number?.startsWith('TEMP-') ? '' : (hospital.business_number || ''),
-    address: hospital.address || '',
-    phone: hospital.phone || '',
+    name: company.name || '',
+    business_number: company.business_number?.startsWith('TEMP-') ? '' : (company.business_number || ''),
+    address: company.address || '',
+    phone: company.phone || '',
   })
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +51,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
     try {
       const supabase = createClient()
 
-      // Update hospital info
+      // Update company info
       // business_number가 비어있으면 기존 값 유지 (NOT NULL 제약 조건)
       const updateData: Record<string, any> = {
         name: formData.name,
@@ -68,7 +68,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
       const { error: updateError } = await supabase
         .from('companies')
         .update(updateData)
-        .eq('id', hospital.id)
+        .eq('id', company.id)
 
       if (updateError) throw updateError
 
@@ -84,7 +84,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
     }
   }
 
-  const isTempBusinessNumber = hospital.business_number?.startsWith('TEMP-')
+  const isTempBusinessNumber = company.business_number?.startsWith('TEMP-')
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -106,7 +106,7 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
         </div>
       )}
 
-      {/* Hospital Name */}
+      {/* Company Name */}
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700">
           회사명 <span className="text-red-500">*</span>

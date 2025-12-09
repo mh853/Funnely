@@ -2,7 +2,7 @@
 
 ## 현재 상태
 
-메디씽크 프로젝트의 기반 구조가 완성되었습니다!
+퍼널리 프로젝트의 기반 구조가 완성되었습니다!
 
 ✅ **완료된 작업**:
 - Next.js 14 + TypeScript 프로젝트 초기화
@@ -18,7 +18,7 @@
 ### 1. 의존성 설치
 
 ```bash
-cd ~/medisync
+cd ~/funnely
 npm install
 ```
 
@@ -27,7 +27,7 @@ npm install
 1. [https://supabase.com](https://supabase.com) 접속
 2. "New Project" 클릭
 3. 프로젝트 정보 입력:
-   - Name: `medisync`
+   - Name: `funnely`
    - Password: 안전한 비밀번호
    - Region: `Northeast Asia (Seoul)`
 4. 프로젝트 생성 (약 2분)
@@ -103,7 +103,7 @@ npm run dev
 ### 즉시 시작 가능
 1. **인증 시스템** - Supabase Auth 설정 및 로그인/회원가입
 2. **대시보드 레이아웃** - 기본 네비게이션 및 사이드바
-3. **병원 관리** - 병원 등록 및 사용자 관리
+3. **회사 관리** - 회사 등록 및 사용자 관리
 
 ### 병렬 진행 (시간 소요)
 광고 플랫폼 개발자 계정 생성 및 검수:
@@ -160,4 +160,4 @@ npm install
 
 ---
 
-**메디씽크 팀과 함께 멋진 플랫폼을 만들어봅시다! 🚀**
+**퍼널리 팀과 함께 멋진 플랫폼을 만들어봅시다! 🚀**

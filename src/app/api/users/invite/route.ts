@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     // Check if user has permission to invite (admin only)
     const isAdmin =
       currentUserProfile.simple_role === 'admin' ||
-      ['hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
+      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
 
     if (!isAdmin) {
       return NextResponse.json({ error: '팀원을 초대할 권한이 없습니다.' }, { status: 403 })
@@ -132,7 +132,7 @@ export async function GET(request: Request) {
     const canView =
       currentUserProfile.simple_role === 'admin' ||
       currentUserProfile.simple_role === 'manager' ||
-      ['hospital_owner', 'hospital_admin', 'marketing_manager'].includes(currentUserProfile.role)
+      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(currentUserProfile.role)
 
     if (!canView) {
       return NextResponse.json({ error: '조회 권한이 없습니다.' }, { status: 403 })
@@ -198,7 +198,7 @@ export async function DELETE(request: Request) {
     // Check admin permission
     const isAdmin =
       currentUserProfile.simple_role === 'admin' ||
-      ['hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
+      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
 
     if (!isAdmin) {
       return NextResponse.json({ error: '초대를 취소할 권한이 없습니다.' }, { status: 403 })

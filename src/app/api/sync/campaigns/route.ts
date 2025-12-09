@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permission (only admins and managers can trigger sync)
-    const allowedRoles = ['hospital_owner', 'hospital_admin', 'marketing_manager']
+    const allowedRoles = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager']
     if (!allowedRoles.includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }

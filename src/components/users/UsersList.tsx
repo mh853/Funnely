@@ -138,6 +138,9 @@ export default function UsersList({ users, currentUserId, canManage }: UsersList
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
+    company_owner: '회사 관리자',
+    company_admin: '어드민',
+    // Legacy role names (for backward compatibility)
     hospital_owner: '회사 관리자',
     hospital_admin: '어드민',
     marketing_manager: '매니저',
@@ -149,6 +152,9 @@ function getRoleLabel(role: string): string {
 
 function getRoleBadgeColor(role: string): string {
   const colors: Record<string, string> = {
+    company_owner: 'bg-purple-100 text-purple-800',
+    company_admin: 'bg-blue-100 text-blue-800',
+    // Legacy role names (for backward compatibility)
     hospital_owner: 'bg-purple-100 text-purple-800',
     hospital_admin: 'bg-blue-100 text-blue-800',
     marketing_manager: 'bg-green-100 text-green-800',

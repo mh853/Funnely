@@ -1,6 +1,6 @@
 /**
  * Signup API Route
- * Handles complete user registration with hospital creation
+ * Handles complete user registration with company creation
  */
 
 import { createClient } from '@supabase/supabase-js'
@@ -24,7 +24,7 @@ function createAdminClient() {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, fullName, hospitalName, businessNumber } = body
+    const { email, password, fullName, companyName, businessNumber } = body
 
     // Validation
     if (!email || !password || !fullName) {
@@ -68,21 +68,21 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Create hospital
+    // 2. Create company
     // Generate temporary business number if not provided
     const tempBusinessNumber = businessNumber || `TEMP-${Date.now()}-${Math.random().toString(36).substring(7)}`
 
-    const { data: hospitalData, error: hospitalError } = await supabase
+    const { data: companyData, error: companyError } = await supabase
       .from('companies')
       .insert({
-        name: hospitalName || `${fullName}의 회사`,
+        name: companyName || `${fullName}의 회사`,
         business_number: tempBusinessNumber,
       } as any)
       .select()
       .single()
 
-    if (hospitalError) {
-      console.error('Hospital creation error:', hospitalError)
+    if (companyError) {
+      console.error('Company creation error:', companyError)
       // Rollback: Delete auth user
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
@@ -94,16 +94,16 @@ export async function POST(request: Request) {
     // 3. Create user profile in public.users
     const { error: userError } = await supabase.from('users').insert({
       id: authData.user.id,
-      company_id: (hospitalData as any).id,
+      company_id: (companyData as any).id,
       email,
       full_name: fullName,
-      role: 'hospital_owner', // First user becomes hospital owner
+      role: 'company_owner', // First user becomes company owner
     } as any)
 
     if (userError) {
       console.error('User profile creation error:', userError)
-      // Rollback: Delete hospital and auth user
-      await supabase.from('companies').delete().eq('id', (hospitalData as any).id)
+      // Rollback: Delete company and auth user
+      await supabase.from('companies').delete().eq('id', (companyData as any).id)
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
         { error: '사용자 프로필 생성에 실패했습니다.' },

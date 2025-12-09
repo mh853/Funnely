@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import HospitalSettingsForm from '@/components/settings/HospitalSettingsForm'
+import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
 import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
@@ -52,18 +52,18 @@ export default async function SettingsPage() {
     )
   }
 
-  // Get hospital info
-  const { data: hospital, error: hospitalError } = await supabase
+  // Get company info
+  const { data: company, error: companyError } = await supabase
     .from('companies')
     .select('*')
     .eq('id', userProfile.company_id)
     .single()
 
-  if (hospitalError) {
-    console.error('Hospital fetch error:', hospitalError)
+  if (companyError) {
+    console.error('Company fetch error:', companyError)
   }
 
-  if (!hospital) {
+  if (!company) {
     return (
       <div className="text-center py-12">
         <div className="rounded-md bg-yellow-50 p-4 max-w-md mx-auto">
@@ -77,8 +77,8 @@ export default async function SettingsPage() {
               <h3 className="text-sm font-medium text-yellow-800">회사 정보를 찾을 수 없습니다</h3>
               <div className="mt-2 text-sm text-yellow-700">
                 <p>회사 정보가 설정되지 않았습니다.</p>
-                {hospitalError && (
-                  <p className="mt-1 text-xs">오류: {hospitalError.message}</p>
+                {companyError && (
+                  <p className="mt-1 text-xs">오류: {companyError.message}</p>
                 )}
                 <p className="mt-2">관리자에게 문의하거나 다시 로그인해보세요.</p>
               </div>
@@ -89,8 +89,8 @@ export default async function SettingsPage() {
     )
   }
 
-  // Check if user has permission to edit hospital settings
-  const canEdit = ['hospital_owner', 'hospital_admin'].includes(userProfile.role)
+  // Check if user has permission to edit company settings
+  const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
   const isAdmin = userProfile.simple_role === 'admin'
 
   return (
@@ -188,7 +188,7 @@ export default async function SettingsPage() {
         )}
       </div>
 
-      {/* Hospital Settings */}
+      {/* Company Settings */}
       <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
         <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-100">
           <div className="flex items-center gap-3">
@@ -202,7 +202,7 @@ export default async function SettingsPage() {
           </div>
         </div>
         <div className="px-6 py-6">
-          <HospitalSettingsForm hospital={hospital} canEdit={canEdit} />
+          <CompanySettingsForm company={company} canEdit={canEdit} />
         </div>
       </div>
 
@@ -267,6 +267,9 @@ export default async function SettingsPage() {
 
 function getRoleLabel(role: string): string {
   const labels: Record<string, string> = {
+    company_owner: '회사 관리자',
+    company_admin: '회사 어드민',
+    // Legacy role names (for backward compatibility)
     hospital_owner: '회사 관리자',
     hospital_admin: '회사 어드민',
     marketing_manager: '마케팅 매니저',

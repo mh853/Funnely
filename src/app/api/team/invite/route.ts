@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check valid role
-    const validRoles = ['hospital_admin', 'marketing_manager', 'marketing_staff', 'viewer']
+    const validRoles = ['company_admin', 'hospital_admin', 'marketing_manager', 'marketing_staff', 'viewer']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: '잘못된 권한입니다.' }, { status: 400 })
     }

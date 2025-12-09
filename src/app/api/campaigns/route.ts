@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check permission
-    if (!['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '필수 항목을 모두 입력해주세요.' }, { status: 400 })
     }
 
-    // Verify ad account belongs to same hospital
+    // Verify ad account belongs to same company
     const { data: adAccount } = await supabase
       .from('ad_accounts')
       .select('company_id')

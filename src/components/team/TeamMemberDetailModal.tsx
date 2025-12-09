@@ -78,9 +78,9 @@ export default function TeamMemberDetailModal({
     setLoading(true)
     setMessage(null)
 
-    // simple_role을 legacy role로 매핑
-    const legacyRoleMap: Record<string, string> = {
-      admin: 'hospital_admin',
+    // simple_role을 role로 매핑
+    const roleMap: Record<string, string> = {
+      admin: 'company_admin',
       manager: 'marketing_manager',
       user: 'marketing_staff',
     }
@@ -94,7 +94,7 @@ export default function TeamMemberDetailModal({
       // Only update role if user can edit and it's different
       if (canEdit && selectedRole !== member.simple_role) {
         updateData.simple_role = selectedRole
-        updateData.role = legacyRoleMap[selectedRole] || 'marketing_staff'
+        updateData.role = roleMap[selectedRole] || 'marketing_staff'
       }
 
       const { error } = await supabase

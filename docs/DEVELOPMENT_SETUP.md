@@ -14,7 +14,7 @@
 
 ```bash
 # 프로젝트 클론
-cd ~/medisync
+cd ~/funnely
 
 # 의존성 설치
 npm install
@@ -31,7 +31,7 @@ pnpm install
 1. [supabase.com](https://supabase.com) 접속 및 회원가입
 2. "New Project" 클릭
 3. 프로젝트 정보 입력:
-   - Name: `medisync`
+   - Name: `funnely`
    - Database Password: 안전한 비밀번호 설정
    - Region: `Northeast Asia (Seoul)` 권장
 4. 프로젝트 생성 완료 (약 2분 소요)

@@ -30,7 +30,7 @@ export async function PATCH(
     }
 
     // Check permission
-    if (!['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -45,7 +45,7 @@ export async function PATCH(
       return NextResponse.json({ error: '캠페인을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Verify same hospital
+    // Verify same company
     if (campaign.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
@@ -123,7 +123,7 @@ export async function DELETE(
     }
 
     // Check permission
-    if (!['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -138,7 +138,7 @@ export async function DELETE(
       return NextResponse.json({ error: '캠페인을 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Verify same hospital
+    // Verify same company
     if (campaign.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
