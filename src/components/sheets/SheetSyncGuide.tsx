@@ -123,26 +123,26 @@ export default function SheetSyncGuide() {
             <ol className="space-y-3 text-sm text-gray-700">
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
-                <span>Google Sheets에서 오른쪽 상단의 <strong className="text-indigo-600">"공유"</strong> 버튼을 클릭하세요</span>
+                <span>Google Sheets에서 오른쪽 상단의 <strong className="text-indigo-600">&quot;공유&quot;</strong> 버튼을 클릭하세요</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
-                <span>"사용자 및 그룹 추가" 입력창에 위에서 복사한 이메일을 붙여넣으세요</span>
+                <span>&quot;사용자 및 그룹 추가&quot; 입력창에 위에서 복사한 이메일을 붙여넣으세요</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
-                <span>권한을 <strong className="text-indigo-600">"편집자"</strong>로 선택하세요</span>
+                <span>권한을 <strong className="text-indigo-600">&quot;편집자&quot;</strong>로 선택하세요</span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full flex items-center justify-center text-xs font-bold">4</span>
-                <span><strong className="text-indigo-600">"전송"</strong> 버튼을 클릭하세요</span>
+                <span><strong className="text-indigo-600">&quot;전송&quot;</strong> 버튼을 클릭하세요</span>
               </li>
             </ol>
           </div>
 
           <div className="flex items-start gap-2 text-sm text-amber-700 bg-amber-50 rounded-lg p-3 border border-amber-200">
             <span className="text-lg">⚠️</span>
-            <p><strong>중요!</strong> 이 단계를 건너뛰면 데이터를 가져올 수 없습니다. 반드시 "편집자" 권한으로 공유해주세요.</p>
+            <p><strong>중요!</strong> 이 단계를 건너뛰면 데이터를 가져올 수 없습니다. 반드시 &quot;편집자&quot; 권한으로 공유해주세요.</p>
           </div>
         </div>
       ),
@@ -156,7 +156,7 @@ export default function SheetSyncGuide() {
         <div className="space-y-4">
           <div className="bg-gray-50 rounded-lg p-4">
             <p className="text-sm text-gray-700 mb-3">
-              아래 "시트 연결" 버튼을 클릭하고 다음 정보를 입력하세요:
+              아래 &quot;시트 연결&quot; 버튼을 클릭하고 다음 정보를 입력하세요:
             </p>
             <ul className="space-y-2 text-sm text-gray-600">
               <li className="flex items-center gap-2">
@@ -165,7 +165,7 @@ export default function SheetSyncGuide() {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-4 w-4 text-green-500" />
-                <strong>시트 이름</strong>: 기본값 "Sheet1" 또는 실제 시트 탭 이름
+                <strong>시트 이름</strong>: 기본값 &quot;Sheet1&quot; 또는 실제 시트 탭 이름
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircleIcon className="h-4 w-4 text-green-500" />
@@ -186,15 +186,15 @@ export default function SheetSyncGuide() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   <tr>
-                    <td className="px-3 py-2 text-gray-700">A열이 "이름"이면</td>
+                    <td className="px-3 py-2 text-gray-700">A열이 &quot;이름&quot;이면</td>
                     <td className="px-3 py-2 font-mono bg-gray-50">이름</td>
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 text-gray-700">B열이 "연락처"이면</td>
+                    <td className="px-3 py-2 text-gray-700">B열이 &quot;연락처&quot;이면</td>
                     <td className="px-3 py-2 font-mono bg-gray-50">연락처</td>
                   </tr>
                   <tr>
-                    <td className="px-3 py-2 text-gray-700">C열이 "이메일"이면</td>
+                    <td className="px-3 py-2 text-gray-700">C열이 &quot;이메일&quot;이면</td>
                     <td className="px-3 py-2 font-mono bg-gray-50">이메일</td>
                   </tr>
                 </tbody>
@@ -204,7 +204,7 @@ export default function SheetSyncGuide() {
 
           <div className="flex items-start gap-2 text-sm text-green-700 bg-green-50 rounded-lg p-3">
             <span className="text-lg">✅</span>
-            <p>연결 완료 후 "지금 동기화" 버튼을 클릭하면 바로 데이터를 가져올 수 있습니다!</p>
+            <p>연결 완료 후 &quot;지금 동기화&quot; 버튼을 클릭하면 바로 데이터를 가져올 수 있습니다!</p>
           </div>
         </div>
       ),
@@ -334,7 +334,7 @@ export default function SheetSyncGuide() {
             </div>
             <div>
               <p className="font-medium text-green-800">준비 완료!</p>
-              <p className="text-sm text-green-600">아래에서 "시트 연결" 버튼을 클릭해서 연동을 완료하세요.</p>
+              <p className="text-sm text-green-600">아래에서 &quot;시트 연결&quot; 버튼을 클릭해서 연동을 완료하세요.</p>
             </div>
           </div>
         </div>

@@ -466,7 +466,7 @@ export default function SheetSyncSettings({
                   </div>
                 ) : (
                   <p className="text-xs text-gray-400 text-center py-2">
-                    시트에 다른 열이 있다면 "필드 추가"를 클릭하세요
+                    시트에 다른 열이 있다면 &quot;필드 추가&quot;를 클릭하세요
                   </p>
                 )}
               </div>
@@ -559,7 +559,7 @@ export default function SheetSyncSettings({
         <div className="text-center py-8 bg-gray-50 rounded-xl">
           <CloudArrowDownIcon className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500">연결된 시트가 없습니다</p>
-          <p className="text-sm text-gray-400">위의 "시트 연결" 버튼을 클릭하여 시작하세요</p>
+          <p className="text-sm text-gray-400">위의 &quot;시트 연결&quot; 버튼을 클릭하여 시작하세요</p>
         </div>
       )}
 
