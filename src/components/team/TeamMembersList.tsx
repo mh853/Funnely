@@ -77,19 +77,19 @@ export default function TeamMembersList({
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
             <tr>
-              <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
+              <th className="py-3.5 pl-6 pr-4 text-left text-sm font-semibold text-gray-900 sm:pl-8">
                 사용자
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
                 담당부서
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
                 유입 ID
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
                 권한
               </th>
-              <th className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 pr-8 text-left text-sm font-semibold text-gray-900">
                 가입일
               </th>
             </tr>
@@ -104,7 +104,7 @@ export default function TeamMembersList({
                   onClick={() => handleRowClick(member)}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 sm:pl-6">
+                  <td className="whitespace-nowrap py-4 pl-6 pr-4 sm:pl-8">
                     <div className="flex items-center">
                       <UserCircleIcon className="h-10 w-10 text-gray-400" />
                       <div className="ml-4">
@@ -118,12 +118,12 @@ export default function TeamMembersList({
                       </div>
                     </div>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <span className={member.department ? 'text-gray-700' : 'text-gray-400'}>
                       {member.department || '-'}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
                     {member.short_id ? (
                       <div className="flex items-center gap-1.5">
                         <code className="bg-gray-100 px-2 py-0.5 rounded text-xs font-mono text-gray-700">
@@ -145,7 +145,7 @@ export default function TeamMembersList({
                       <span className="text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm">
+                  <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <span
                       className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getSimpleRoleBadgeColor(
                         member.simple_role
@@ -154,7 +154,7 @@ export default function TeamMembersList({
                       {getSimpleRoleLabel(member.simple_role)}
                     </span>
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                  <td className="whitespace-nowrap px-6 py-4 pr-8 text-sm text-gray-500">
                     {formatDateTime(member.created_at)}
                   </td>
                 </tr>

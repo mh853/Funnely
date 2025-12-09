@@ -53,7 +53,7 @@ export default async function TeamPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-2 sm:px-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">팀 관리</h1>
           <p className="mt-1 text-sm text-gray-600">

@@ -452,7 +452,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Results Table */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="p-5">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">결과별 DB</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-bold text-gray-900">결과별 DB</h2>
+            <Link
+              href="/dashboard/reports/results"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1"
+            >
+              전체보기
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
 
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
