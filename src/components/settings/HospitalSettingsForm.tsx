@@ -52,15 +52,22 @@ export default function HospitalSettingsForm({ hospital, canEdit }: HospitalSett
       const supabase = createClient()
 
       // Update hospital info
+      // business_number가 비어있으면 기존 값 유지 (NOT NULL 제약 조건)
+      const updateData: Record<string, any> = {
+        name: formData.name,
+        address: formData.address || null,
+        phone: formData.phone || null,
+        updated_at: new Date().toISOString(),
+      }
+
+      // business_number가 입력된 경우에만 업데이트
+      if (formData.business_number.trim()) {
+        updateData.business_number = formData.business_number.trim()
+      }
+
       const { error: updateError } = await supabase
         .from('companies')
-        .update({
-          name: formData.name,
-          business_number: formData.business_number || null,
-          address: formData.address || null,
-          phone: formData.phone || null,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', hospital.id)
 
       if (updateError) throw updateError
