@@ -179,19 +179,11 @@ export default function ReportsClient({
       {/* Header */}
       <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="p-2 hover:bg-white/20 rounded-lg transition-colors"
-            >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold">결과별 DB 리포트</h1>
-              <p className="mt-1 text-sm text-indigo-100">
-                부서별, 담당자별 DB 현황을 분석합니다
-              </p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-bold">결과별 DB 리포트</h1>
+            <p className="mt-1 text-sm text-indigo-100">
+              부서별, 담당자별 DB 현황을 분석합니다
+            </p>
           </div>
 
           {/* 월 선택 */}
