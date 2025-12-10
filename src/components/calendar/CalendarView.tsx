@@ -636,50 +636,6 @@ export default function CalendarView({
             })}
           </div>
 
-          {/* Legend */}
-          <div className="mt-6 space-y-3">
-            <div className="flex items-center justify-center space-x-6">
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-blue-100 border-l-2 border-blue-500 rounded"></div>
-                <span className="text-sm text-gray-600">전화 상담</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-purple-100 border-l-2 border-purple-500 rounded"></div>
-                <span className="text-sm text-gray-600">회의</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-green-100 border-l-2 border-green-500 rounded"></div>
-                <span className="text-sm text-gray-600">대면 상담</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-yellow-100 border-l-2 border-yellow-500 rounded"></div>
-                <span className="text-sm text-gray-600">업무</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-gray-100 border-l-2 border-gray-500 rounded"></div>
-                <span className="text-sm text-gray-600">기타</span>
-              </div>
-            </div>
-            <div className="flex items-center justify-center space-x-6 pt-2 border-t border-gray-100">
-              <span className="text-xs text-gray-500 font-medium">DB 신청:</span>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-orange-100 border-l-2 border-orange-500 rounded"></div>
-                <span className="text-sm text-gray-600">신규</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-sky-100 border-l-2 border-sky-500 rounded"></div>
-                <span className="text-sm text-gray-600">연락완료</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-emerald-100 border-l-2 border-emerald-500 rounded"></div>
-                <span className="text-sm text-gray-600">상담예정</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 bg-teal-100 border-l-2 border-teal-500 rounded"></div>
-                <span className="text-sm text-gray-600">전환완료</span>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
