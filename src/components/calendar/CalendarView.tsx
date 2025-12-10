@@ -122,6 +122,12 @@ export default function CalendarView({
   const [updatingCallAssignee, setUpdatingCallAssignee] = useState(false)
   const [updatingCounselor, setUpdatingCounselor] = useState(false)
 
+  // 예약확정일 수정 상태
+  const [editingReservationDate, setEditingReservationDate] = useState(false)
+  const [reservationDateValue, setReservationDateValue] = useState('')
+  const [reservationTimeValue, setReservationTimeValue] = useState('')
+  const [updatingReservationDate, setUpdatingReservationDate] = useState(false)
+
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -420,6 +426,70 @@ export default function CalendarView({
       alert('상담 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselor(false)
+    }
+  }
+
+  // 예약확정일 수정 시작
+  const handleStartEditReservationDate = () => {
+    if (leadDetails?.contract_completed_at) {
+      const date = new Date(leadDetails.contract_completed_at)
+      setReservationDateValue(date.toISOString().split('T')[0])
+      const hours = date.getHours().toString().padStart(2, '0')
+      const minutes = date.getMinutes().toString().padStart(2, '0')
+      setReservationTimeValue(`${hours}:${minutes}`)
+    } else {
+      // 기본값: 오늘 날짜, 현재 시간
+      const now = new Date()
+      setReservationDateValue(now.toISOString().split('T')[0])
+      const hours = now.getHours().toString().padStart(2, '0')
+      const minutes = now.getMinutes().toString().padStart(2, '0')
+      setReservationTimeValue(`${hours}:${minutes}`)
+    }
+    setEditingReservationDate(true)
+  }
+
+  // 예약확정일 수정 저장
+  const handleReservationDateUpdate = async () => {
+    if (!selectedLead || !leadDetails || !reservationDateValue) return
+
+    setUpdatingReservationDate(true)
+    try {
+      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00`
+
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          status: 'contract_completed',
+          contract_completed_at: newContractCompletedAt,
+        }),
+      })
+
+      if (!response.ok) throw new Error('예약확정일 업데이트 실패')
+
+      // 로컬 상태 업데이트
+      const previousContractDate = leadDetails.contract_completed_at
+      setLeadDetails({
+        ...leadDetails,
+        contract_completed_at: newContractCompletedAt,
+        previous_contract_completed_at: previousContractDate || leadDetails.previous_contract_completed_at,
+        status: 'contract_completed'
+      })
+
+      // localLeads도 업데이트
+      setLocalLeads(prev => prev.map(l =>
+        l.id === selectedLead.id
+          ? { ...l, contract_completed_at: newContractCompletedAt, status: 'contract_completed' }
+          : l
+      ))
+
+      setEditingReservationDate(false)
+    } catch (error) {
+      console.error('Reservation date update error:', error)
+      alert('예약확정일 변경에 실패했습니다.')
+    } finally {
+      setUpdatingReservationDate(false)
     }
   }
 
@@ -1055,17 +1125,56 @@ export default function CalendarView({
                             {formatDateTime(leadDetails.created_at)}
                           </td>
                         </tr>
-                        {/* 예약 확정일 */}
+                        {/* 예약 확정일 - 수정 가능 */}
                         {leadDetails.contract_completed_at && (
-                          <tr>
-                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">예약 확정일</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              <div>
-                                {formatDate(leadDetails.contract_completed_at)}
-                              </div>
-                              {leadDetails.previous_contract_completed_at && (
-                                <div className="text-xs text-gray-400 mt-0.5">
-                                  이전: {formatDate(leadDetails.previous_contract_completed_at)}
+                          <tr className="group">
+                            <td className="px-4 py-3 bg-amber-50 text-sm font-medium text-amber-700">예약 확정일</td>
+                            <td className="px-4 py-3 bg-amber-50/50 text-sm text-gray-900">
+                              {editingReservationDate ? (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="date"
+                                    value={reservationDateValue}
+                                    onChange={(e) => setReservationDateValue(e.target.value)}
+                                    className="px-2 py-1 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                  />
+                                  <input
+                                    type="time"
+                                    value={reservationTimeValue}
+                                    onChange={(e) => setReservationTimeValue(e.target.value)}
+                                    className="px-2 py-1 border border-amber-300 rounded-lg text-sm focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                                  />
+                                  <button
+                                    onClick={handleReservationDateUpdate}
+                                    disabled={updatingReservationDate}
+                                    className="px-2 py-1 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 disabled:opacity-50 transition"
+                                  >
+                                    {updatingReservationDate ? '저장중...' : '저장'}
+                                  </button>
+                                  <button
+                                    onClick={() => setEditingReservationDate(false)}
+                                    disabled={updatingReservationDate}
+                                    className="px-2 py-1 bg-gray-200 text-gray-700 text-xs rounded-lg hover:bg-gray-300 disabled:opacity-50 transition"
+                                  >
+                                    취소
+                                  </button>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <div>{formatDate(leadDetails.contract_completed_at)}</div>
+                                    {leadDetails.previous_contract_completed_at && (
+                                      <div className="text-xs text-gray-400 mt-0.5">
+                                        이전: {formatDate(leadDetails.previous_contract_completed_at)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <button
+                                    onClick={handleStartEditReservationDate}
+                                    className="opacity-0 group-hover:opacity-100 text-xs text-amber-600 hover:text-amber-800 transition-opacity"
+                                  >
+                                    수정
+                                  </button>
                                 </div>
                               )}
                             </td>
