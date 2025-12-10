@@ -34,13 +34,15 @@ const navigation = [
   { name: 'DB 스케줄', href: '/dashboard/calendar', icon: CalendarIcon },
   { name: '예약 스케줄', href: '/dashboard/reservations', icon: CalendarIcon },
   { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon },
-  { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
-  { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
+  // [임시 비활성화] 캠페인, 광고 계정 - 나중에 복원 시 주석 해제
+  // { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
+  // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
   { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
   { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
-  { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
-  { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },
-  { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
+  // [설정 페이지로 통합] 구독 관리, 결제 내역, 팀 관리
+  // { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
+  // { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },
+  // { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
   { name: '설정', href: '/dashboard/settings', icon: CogIcon },
 ]
 

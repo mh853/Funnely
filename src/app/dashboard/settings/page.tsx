@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
-import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
@@ -186,6 +186,75 @@ export default async function SettingsPage() {
             </svg>
           </Link>
         )}
+      </div>
+
+      {/* Management Links - 구독, 결제, 팀 관리 */}
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">
+        <div className="bg-gradient-to-r from-slate-50 to-gray-50 px-6 py-4 border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <div className="bg-gray-100 rounded-lg p-2">
+              <Cog6ToothIcon className="h-5 w-5 text-gray-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">관리</h2>
+              <p className="text-sm text-gray-500">구독, 결제, 팀 관리</p>
+            </div>
+          </div>
+        </div>
+        <div className="p-4">
+          <div className="grid gap-3 grid-cols-1 sm:grid-cols-3">
+            {/* 구독 관리 */}
+            <Link
+              href="/dashboard/subscription"
+              className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-cyan-300 hover:bg-cyan-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+            >
+              <div className="flex-shrink-0 bg-cyan-100 rounded-lg p-2 group-hover:bg-cyan-200 transition-colors">
+                <CreditCardIcon className="h-5 w-5 text-cyan-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-gray-900 truncate">구독 관리</h3>
+                <p className="text-xs text-gray-500 truncate">플랜 및 구독 현황</p>
+              </div>
+              <svg className="h-4 w-4 text-gray-400 group-hover:text-cyan-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+
+            {/* 결제 내역 */}
+            <Link
+              href="/dashboard/payments"
+              className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-amber-300 hover:bg-amber-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+            >
+              <div className="flex-shrink-0 bg-amber-100 rounded-lg p-2 group-hover:bg-amber-200 transition-colors">
+                <CurrencyDollarIcon className="h-5 w-5 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-gray-900 truncate">결제 내역</h3>
+                <p className="text-xs text-gray-500 truncate">결제 및 청구서</p>
+              </div>
+              <svg className="h-4 w-4 text-gray-400 group-hover:text-amber-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+
+            {/* 팀 관리 */}
+            <Link
+              href="/dashboard/team"
+              className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-teal-300 hover:bg-teal-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+            >
+              <div className="flex-shrink-0 bg-teal-100 rounded-lg p-2 group-hover:bg-teal-200 transition-colors">
+                <UsersIcon className="h-5 w-5 text-teal-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-gray-900 truncate">팀 관리</h3>
+                <p className="text-xs text-gray-500 truncate">멤버 및 권한 관리</p>
+              </div>
+              <svg className="h-4 w-4 text-gray-400 group-hover:text-teal-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </Link>
+          </div>
+        </div>
       </div>
 
       {/* Company Settings */}
