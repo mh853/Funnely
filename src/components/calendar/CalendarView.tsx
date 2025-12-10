@@ -78,6 +78,11 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '예약 확정' },
   needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
+  // 필드 타입 (상태 변경 이력용)
+  call_assigned_to: { bg: 'bg-blue-100', text: 'text-blue-800', label: '콜 담당자 변경' },
+  counselor_assigned_to: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '상담 담당자 변경' },
+  contract_completed_at: { bg: 'bg-amber-100', text: 'text-amber-800', label: '예약 확정일 변경' },
+  notes: { bg: 'bg-gray-100', text: 'text-gray-800', label: '비고 변경' },
 }
 
 // 상태 변경 가능 목록
@@ -568,19 +573,6 @@ export default function CalendarView({
             </div>
           </div>
 
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={() => {
-                setSelectedEvent(null)
-                setSelectedDate(new Date())
-                setShowEventModal(true)
-              }}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
-            >
-              <PlusIcon className="-ml-1 mr-2 h-5 w-5" />
-              일정 추가
-            </button>
-          </div>
         </div>
       </div>
 
@@ -830,12 +822,12 @@ export default function CalendarView({
                               <div
                                 key={leadIdx}
                                 onClick={(e) => handleLeadClick(lead, e)}
-                                className={`p-1.5 mb-1 rounded text-xs cursor-pointer hover:shadow-md transition ${
+                                className={`p-1.5 mb-1 rounded text-xs cursor-pointer hover:shadow-md transition overflow-hidden ${
                                   LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
                                 } border-l-2`}
                               >
-                                <div className="font-medium truncate">{lead.name}</div>
-                                <div className="text-[10px] opacity-75 truncate">
+                                <div className="font-medium truncate max-w-full">{lead.name}</div>
+                                <div className="text-[10px] opacity-75 truncate max-w-full">
                                   {lead.preferred_time || formatTime(lead.created_at)}
                                 </div>
                               </div>
