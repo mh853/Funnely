@@ -880,16 +880,14 @@ export default function CalendarView({
                         )}
                         {/* 상태 */}
                         <tr>
-                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상태</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">상태</td>
+                          <td className="px-4 py-3 bg-purple-50/50">
                             <div className="relative inline-block">
                               <select
                                 value={leadDetails.status}
                                 onChange={(e) => handleStatusUpdate(e.target.value)}
                                 disabled={updatingStatus}
-                                className={`appearance-none pl-3 pr-8 py-1.5 rounded-full text-xs font-medium cursor-pointer border-0 focus:ring-2 focus:ring-emerald-500 ${
-                                  STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
-                                } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'}`}
+                                className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium cursor-pointer border border-purple-200 bg-white focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-[140px]"
                               >
                                 {STATUS_OPTIONS.map((option) => (
                                   <option key={option.value} value={option.value}>
@@ -897,10 +895,10 @@ export default function CalendarView({
                                   </option>
                                 ))}
                               </select>
-                              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 pointer-events-none text-current opacity-60" />
+                              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-gray-400" />
                               {updatingStatus && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-white/50 rounded-full">
-                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-600"></div>
                                 </div>
                               )}
                             </div>
