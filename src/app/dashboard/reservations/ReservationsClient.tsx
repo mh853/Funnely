@@ -15,6 +15,7 @@ import {
   ListBulletIcon,
   PlusIcon,
   ArrowDownTrayIcon,
+  UserIcon,
 } from '@heroicons/react/24/outline'
 import * as XLSX from 'xlsx'
 
@@ -55,6 +56,16 @@ interface ReservationsClientProps {
   initialLeads: Lead[]
   companyId: string
   teamMembers: TeamMember[]
+}
+
+// 캘린더 리드 상태별 색상 (CalendarView와 동일)
+const LEAD_STATUS_COLORS = {
+  new: 'bg-orange-100 border-orange-500 text-orange-900',
+  contacted: 'bg-sky-100 border-sky-500 text-sky-900',
+  qualified: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  converted: 'bg-teal-100 border-teal-500 text-teal-900',
+  contract_completed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  lost: 'bg-red-100 border-red-500 text-red-900',
 }
 
 // 상태별 스타일 정의 (모달 테이블용)
@@ -433,6 +444,12 @@ export default function ReservationsClient({
   const getLeadCountForDate = (year: number, month: number, day: number) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     return leadsByDate[dateStr]?.length || 0
+  }
+
+  // Get leads for a specific date (캘린더 셀에 표시용)
+  const getLeadsForDate = (year: number, month: number, day: number): Lead[] => {
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    return leadsByDate[dateStr] || []
   }
 
   // Handle calendar date click - 기존 예약 있으면 목록 보기, 없으면 새 예약 입력 모달
@@ -916,110 +933,100 @@ export default function ReservationsClient({
               </button>
             </div>
 
-            {/* Calendar Grid */}
-            <div className="border border-gray-200 rounded-xl overflow-hidden">
-              {/* Weekday Headers */}
-              <div className="grid grid-cols-7 bg-gray-50">
-                {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
-                  <div
-                    key={day}
-                    className={`py-2.5 text-center text-sm font-semibold ${
-                      idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'
-                    }`}
-                  >
-                    {day}
-                  </div>
-                ))}
-              </div>
+            {/* Weekday Headers */}
+            <div className="grid grid-cols-7 gap-px mb-2">
+              {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
+                <div
+                  key={day}
+                  className={`text-center text-sm font-medium py-2 ${
+                    idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : 'text-gray-700'
+                  }`}
+                >
+                  {day}
+                </div>
+              ))}
+            </div>
 
-              {/* Calendar Days */}
-              <div className="grid grid-cols-7">
-                {generateCalendarDays(
+            {/* Calendar Days */}
+            <div className="grid grid-cols-7 gap-px bg-gray-200">
+              {generateCalendarDays(
+                calendarCurrentMonth.getFullYear(),
+                calendarCurrentMonth.getMonth()
+              ).map((day, idx) => {
+                if (day === null) {
+                  return <div key={`empty-${idx}`} className="bg-gray-50 min-h-[120px]" />
+                }
+
+                const dayLeads = getLeadsForDate(
                   calendarCurrentMonth.getFullYear(),
-                  calendarCurrentMonth.getMonth()
-                ).map((day, idx) => {
-                  const leadCount = day
-                    ? getLeadCountForDate(
+                  calendarCurrentMonth.getMonth(),
+                  day
+                )
+                const isToday =
+                  new Date().toDateString() ===
+                  new Date(
+                    calendarCurrentMonth.getFullYear(),
+                    calendarCurrentMonth.getMonth(),
+                    day
+                  ).toDateString()
+                const dayOfWeek = idx % 7
+
+                // 최대 3개 표시, 나머지는 "더보기"
+                const displayedLeads = dayLeads.slice(0, 3)
+                const hiddenCount = dayLeads.length - displayedLeads.length
+
+                return (
+                  <div
+                    key={idx}
+                    onClick={() => {
+                      handleCalendarDateClick(
                         calendarCurrentMonth.getFullYear(),
                         calendarCurrentMonth.getMonth(),
                         day
                       )
-                    : 0
-                  const isToday =
-                    day &&
-                    new Date().toDateString() ===
-                      new Date(
-                        calendarCurrentMonth.getFullYear(),
-                        calendarCurrentMonth.getMonth(),
-                        day
-                      ).toDateString()
-                  const dayOfWeek = idx % 7
-
-                  return (
+                    }}
+                    className="bg-white min-h-[120px] p-2 cursor-pointer hover:bg-gray-50 transition"
+                  >
                     <div
-                      key={idx}
-                      onClick={() => {
-                        if (day) {
-                          handleCalendarDateClick(
-                            calendarCurrentMonth.getFullYear(),
-                            calendarCurrentMonth.getMonth(),
-                            day
-                          )
-                        }
-                      }}
-                      className={`
-                        min-h-[70px] p-2 border-t border-l border-gray-100
-                        ${day ? 'cursor-pointer hover:bg-emerald-50' : ''}
-                        ${isToday ? 'bg-emerald-50' : ''}
-                        ${!day ? 'bg-gray-50' : ''}
-                      `}
+                      className={`text-sm font-medium mb-1 ${
+                        isToday
+                          ? 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center'
+                          : dayOfWeek === 0
+                          ? 'text-red-600'
+                          : dayOfWeek === 6
+                          ? 'text-blue-600'
+                          : 'text-gray-900'
+                      }`}
                     >
-                      {day && (
-                        <>
-                          <div
-                            className={`text-sm font-medium mb-1 ${
-                              isToday
-                                ? 'text-emerald-600'
-                                : dayOfWeek === 0
-                                ? 'text-red-500'
-                                : dayOfWeek === 6
-                                ? 'text-blue-500'
-                                : 'text-gray-700'
-                            }`}
-                          >
-                            {day}
-                          </div>
-                          {leadCount > 0 && (
-                            <div className="flex items-center justify-center">
-                              <div className="bg-emerald-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">
-                                {leadCount}건
-                              </div>
-                            </div>
-                          )}
-                        </>
+                      {day}
+                    </div>
+
+                    {/* Leads */}
+                    <div className="space-y-1">
+                      {displayedLeads.map((lead) => (
+                        <div
+                          key={`lead-${lead.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleLeadClick(lead)
+                          }}
+                          className={`text-xs px-2 py-1 rounded border-l-2 truncate flex items-center gap-1 ${
+                            LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
+                          }`}
+                        >
+                          <UserIcon className="h-3 w-3 flex-shrink-0" />
+                          <span className="truncate">{lead.name}</span>
+                        </div>
+                      ))}
+                      {hiddenCount > 0 && (
+                        <div className="text-xs text-emerald-600 font-medium px-2 py-1 bg-emerald-50 rounded hover:bg-emerald-100 transition">
+                          +{hiddenCount}개 더보기
+                        </div>
                       )}
                     </div>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Legend */}
-            <div className="mt-3 flex items-center justify-center gap-6 text-sm text-gray-500">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-emerald-50 border border-emerald-200 rounded"></div>
-                <span>오늘</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="bg-emerald-500 text-white text-xs px-2 py-0.5 rounded-full">
-                  {getMonthlyContractCount(calendarCurrentMonth.getFullYear(), calendarCurrentMonth.getMonth())}건
-                </div>
-                <span>이번달 예약</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-400">|</span>
-                <span>날짜 클릭 시 예약 추가 가능</span>
-              </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>
