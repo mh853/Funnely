@@ -144,6 +144,11 @@ export default function CalendarView({
   const [reservationTimeValue, setReservationTimeValue] = useState('')
   const [updatingReservationDate, setUpdatingReservationDate] = useState(false)
 
+  // 드래그 앤 드롭 상태
+  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -462,6 +467,119 @@ export default function CalendarView({
       setReservationTimeValue(`${hours}:${minutes}`)
     }
     setEditingReservationDate(true)
+  }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragStart = (e: React.DragEvent, lead: Lead) => {
+    setDraggedLead(lead)
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', lead.id)
+    // 드래그 중 투명도 설정
+    const target = e.currentTarget as HTMLElement
+    setTimeout(() => {
+      target.style.opacity = '0.5'
+    }, 0)
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedLead(null)
+    setDragOverSlot(null)
+    setIsDragging(false)
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '1'
+  }
+
+  const handleDragOver = (e: React.DragEvent, slotId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverSlot !== slotId) {
+      setDragOverSlot(slotId)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // 자식 요소로 이동할 때는 무시
+    const relatedTarget = e.relatedTarget as HTMLElement
+    const currentTarget = e.currentTarget as HTMLElement
+    if (currentTarget.contains(relatedTarget)) return
+    setDragOverSlot(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date, targetTime: string) => {
+    e.preventDefault()
+    setDragOverSlot(null)
+
+    if (!draggedLead) return
+
+    const newPreferredDate = targetDate.toISOString().split('T')[0]
+    const newPreferredTime = targetTime
+
+    // 같은 위치면 무시
+    const currentDate = draggedLead.preferred_date || draggedLead.created_at.split('T')[0]
+    const currentTime = draggedLead.preferred_time || new Date(draggedLead.created_at).toTimeString().slice(0, 5)
+    if (currentDate === newPreferredDate && currentTime.slice(0, 2) === newPreferredTime.slice(0, 2)) {
+      return
+    }
+
+    // 낙관적 업데이트
+    const updatedLeads = localLeads.map(l =>
+      l.id === draggedLead.id
+        ? { ...l, preferred_date: newPreferredDate, preferred_time: newPreferredTime }
+        : l
+    )
+    setLocalLeads(updatedLeads)
+
+    try {
+      // contract_completed 상태인 경우 contract_completed_at 업데이트
+      const updatePayload: any = {
+        id: draggedLead.id,
+      }
+
+      if (draggedLead.status === 'contract_completed') {
+        updatePayload.status = 'contract_completed'
+        updatePayload.contract_completed_at = `${newPreferredDate}T${newPreferredTime}:00`
+      } else {
+        // preferred_date 필드가 있는 경우 (일반 리드)
+        // API에서 preferred_date 업데이트를 지원하지 않으면 별도 처리 필요
+        // 현재는 contract_completed_at만 업데이트 가능
+        // 예약확정 상태가 아닌 경우에도 예약일로 처리
+        updatePayload.status = 'contract_completed'
+        updatePayload.contract_completed_at = `${newPreferredDate}T${newPreferredTime}:00`
+      }
+
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      })
+
+      if (!response.ok) {
+        throw new Error('스케줄 업데이트 실패')
+      }
+
+      // 성공 시 상태도 업데이트
+      setLocalLeads(prev =>
+        prev.map(l =>
+          l.id === draggedLead.id
+            ? {
+                ...l,
+                preferred_date: newPreferredDate,
+                preferred_time: newPreferredTime,
+                contract_completed_at: `${newPreferredDate}T${newPreferredTime}:00`,
+                status: 'contract_completed'
+              }
+            : l
+        )
+      )
+
+      router.refresh()
+    } catch (error) {
+      console.error('Schedule update error:', error)
+      // 롤백
+      setLocalLeads(leads)
+      alert('스케줄 변경에 실패했습니다.')
+    }
   }
 
   // 예약확정일 수정 저장
@@ -801,7 +919,17 @@ export default function CalendarView({
                       return days.map((day, dayIdx) => {
                         const isToday = day.toDateString() === new Date().toDateString()
                         const slotHour = parseInt(timeSlot.split(':')[0])
+                        const slotId = `${day.toISOString().split('T')[0]}-${timeSlot}`
+                        const isDropTarget = dragOverSlot === slotId
                         const leadsInSlot = localLeads.filter(lead => {
+                          // contract_completed_at 기준으로 필터링 (예약 확정일)
+                          if (lead.contract_completed_at) {
+                            const d = new Date(lead.contract_completed_at)
+                            if (d.toDateString() !== day.toDateString()) return false
+                            const leadHour = d.getHours()
+                            return leadHour === slotHour
+                          }
+                          // preferred_date 기준
                           const leadDate = lead.preferred_date || lead.created_at
                           if (!leadDate) return false
                           const d = new Date(leadDate)
@@ -814,17 +942,25 @@ export default function CalendarView({
                         return (
                           <div
                             key={dayIdx}
-                            className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] ${
+                            onDragOver={(e) => handleDragOver(e, slotId)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, day, timeSlot)}
+                            className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] transition-all duration-200 ${
                               isToday ? 'bg-indigo-50/30' : ''
+                            } ${isDropTarget ? 'bg-indigo-100 ring-2 ring-indigo-400 ring-inset scale-[1.02]' : ''} ${
+                              isDragging && !isDropTarget ? 'hover:bg-gray-50' : ''
                             }`}
                           >
                             {leadsInSlot.map((lead, leadIdx) => (
                               <div
                                 key={leadIdx}
+                                draggable
+                                onDragStart={(e) => handleDragStart(e, lead)}
+                                onDragEnd={handleDragEnd}
                                 onClick={(e) => handleLeadClick(lead, e)}
-                                className={`p-1.5 mb-1 rounded text-xs cursor-pointer hover:shadow-md transition overflow-hidden ${
+                                className={`p-1.5 mb-1 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition overflow-hidden ${
                                   LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
-                                } border-l-2`}
+                                } border-l-2 ${draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
                               >
                                 <div className="font-medium truncate max-w-full">{lead.name}</div>
                                 <div className="text-[10px] opacity-75 truncate max-w-full">
@@ -832,6 +968,12 @@ export default function CalendarView({
                                 </div>
                               </div>
                             ))}
+                            {/* 빈 슬롯에 드롭 힌트 표시 */}
+                            {isDropTarget && leadsInSlot.length === 0 && (
+                              <div className="h-full min-h-[40px] flex items-center justify-center text-xs text-indigo-500 font-medium">
+                                여기에 놓기
+                              </div>
+                            )}
                           </div>
                         )
                       })

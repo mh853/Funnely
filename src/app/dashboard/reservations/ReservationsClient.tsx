@@ -156,6 +156,11 @@ export default function ReservationsClient({
   const [reservationTimeValue, setReservationTimeValue] = useState('')
   const [updatingReservationDate, setUpdatingReservationDate] = useState(false)
 
+  // 드래그 앤 드롭 상태
+  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
   // 디버깅용 로그
   console.log('ReservationsClient initialLeads:', initialLeads)
   console.log('ReservationsClient leads state:', leads)
@@ -420,6 +425,95 @@ export default function ReservationsClient({
   const getLeadCountForDay = (date: Date) => {
     const dateStr = date.toISOString().split('T')[0]
     return leadsByDate[dateStr]?.length || 0
+  }
+
+  // 드래그 앤 드롭 핸들러
+  const handleDragStart = (e: React.DragEvent, lead: Lead) => {
+    setDraggedLead(lead)
+    setIsDragging(true)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', lead.id)
+    // 드래그 중 투명도 설정
+    const target = e.currentTarget as HTMLElement
+    setTimeout(() => {
+      target.style.opacity = '0.5'
+    }, 0)
+  }
+
+  const handleDragEnd = (e: React.DragEvent) => {
+    setDraggedLead(null)
+    setDragOverSlot(null)
+    setIsDragging(false)
+    const target = e.currentTarget as HTMLElement
+    target.style.opacity = '1'
+  }
+
+  const handleDragOver = (e: React.DragEvent, slotId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    if (dragOverSlot !== slotId) {
+      setDragOverSlot(slotId)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    // 자식 요소로 이동할 때는 무시
+    const relatedTarget = e.relatedTarget as HTMLElement
+    const currentTarget = e.currentTarget as HTMLElement
+    if (currentTarget.contains(relatedTarget)) return
+    setDragOverSlot(null)
+  }
+
+  const handleDrop = async (e: React.DragEvent, targetDate: Date, targetTime: string) => {
+    e.preventDefault()
+    setDragOverSlot(null)
+
+    if (!draggedLead) return
+
+    const newContractCompletedAt = `${targetDate.toISOString().split('T')[0]}T${targetTime}:00`
+
+    // 같은 위치면 무시
+    if (draggedLead.contract_completed_at) {
+      const currentDate = new Date(draggedLead.contract_completed_at)
+      const currentDateStr = currentDate.toISOString().split('T')[0]
+      const currentHour = currentDate.getHours().toString().padStart(2, '0')
+      const targetDateStr = targetDate.toISOString().split('T')[0]
+      const targetHour = targetTime.split(':')[0]
+      if (currentDateStr === targetDateStr && currentHour === targetHour) {
+        return
+      }
+    }
+
+    // 낙관적 업데이트
+    const updatedLeads = leads.map(l =>
+      l.id === draggedLead.id
+        ? { ...l, contract_completed_at: newContractCompletedAt }
+        : l
+    )
+    setLeads(updatedLeads)
+
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: draggedLead.id,
+          status: 'contract_completed',
+          contract_completed_at: newContractCompletedAt,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('스케줄 업데이트 실패')
+      }
+
+      router.refresh()
+    } catch (error) {
+      console.error('Schedule update error:', error)
+      // 롤백
+      setLeads(initialLeads)
+      alert('스케줄 변경에 실패했습니다.')
+    }
   }
 
   // Generate calendar days for a given month
@@ -1141,12 +1235,17 @@ export default function ReservationsClient({
                       const isToday = day.toDateString() === new Date().toDateString()
                       const leadsInSlot = getLeadsForTimeSlot(day, timeSlot)
                       const dateStr = day.toISOString().split('T')[0]
+                      const slotId = `${dateStr}-${timeSlot}`
+                      const isDropTarget = dragOverSlot === slotId
 
                       return (
                         <div
                           key={dayIdx}
+                          onDragOver={(e) => handleDragOver(e, slotId)}
+                          onDragLeave={handleDragLeave}
+                          onDrop={(e) => handleDrop(e, day, timeSlot)}
                           onClick={() => {
-                            if (leadsInSlot.length === 0) {
+                            if (leadsInSlot.length === 0 && !isDragging) {
                               // 빈 슬롯 클릭 시 예약 추가 모달
                               setScheduleInputDate(dateStr)
                               setScheduleInputTime(timeSlot)
@@ -1168,9 +1267,11 @@ export default function ReservationsClient({
                                 })
                             }
                           }}
-                          className={`p-1 border-r border-gray-100 last:border-r-0 ${
+                          className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] transition-all duration-200 ${
                             isToday ? 'bg-emerald-50/50' : ''
-                          } ${leadsInSlot.length === 0 ? 'hover:bg-gray-50 cursor-pointer' : ''} transition-colors`}
+                          } ${leadsInSlot.length === 0 && !isDragging ? 'hover:bg-gray-50 cursor-pointer' : ''} ${
+                            isDropTarget ? 'bg-emerald-100 ring-2 ring-emerald-400 ring-inset scale-[1.02]' : ''
+                          } ${isDragging && !isDropTarget ? 'hover:bg-gray-50' : ''}`}
                         >
                           <div className="space-y-1">
                             {leadsInSlot.map((lead) => {
@@ -1183,11 +1284,16 @@ export default function ReservationsClient({
                               return (
                                 <div
                                   key={lead.id}
+                                  draggable
+                                  onDragStart={(e) => handleDragStart(e, lead)}
+                                  onDragEnd={handleDragEnd}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleLeadClick(lead)
                                   }}
-                                  className="group bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-md p-2 text-xs cursor-pointer hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm hover:shadow-md"
+                                  className={`group bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-md p-2 text-xs cursor-grab active:cursor-grabbing hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm hover:shadow-md ${
+                                    draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''
+                                  }`}
                                 >
                                   <div className="flex items-center justify-between mb-0.5">
                                     <span className="font-semibold truncate">{lead.name}</span>
@@ -1205,6 +1311,12 @@ export default function ReservationsClient({
                               )
                             })}
                           </div>
+                          {/* 빈 슬롯에 드롭 힌트 표시 */}
+                          {isDropTarget && leadsInSlot.length === 0 && (
+                            <div className="h-full min-h-[40px] flex items-center justify-center text-xs text-emerald-500 font-medium">
+                              여기에 놓기
+                            </div>
+                          )}
                         </div>
                       )
                     })}
@@ -1230,7 +1342,7 @@ export default function ReservationsClient({
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-gray-400">|</span>
-              <span>예약 클릭하여 상세 정보 보기</span>
+              <span>예약을 드래그하여 시간 변경</span>
             </div>
           </div>
         </div>
