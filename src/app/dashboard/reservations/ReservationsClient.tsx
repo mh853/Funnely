@@ -366,6 +366,10 @@ export default function ReservationsClient({
     setCalendarCurrentMonth(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1))
   }
 
+  const goToCurrentMonth = () => {
+    setCalendarCurrentMonth(new Date())
+  }
+
   // 주간 네비게이션
   const goToPrevWeek = () => {
     setWeekStartDate(prev => new Date(prev.getFullYear(), prev.getMonth(), prev.getDate() - 7))
@@ -910,29 +914,42 @@ export default function ReservationsClient({
       {/* Calendar View (기본 뷰) */}
       {viewMode === 'calendar' && (
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4">
-            {/* Month Navigation */}
-            <div className="flex items-center justify-between mb-4">
-              <button
-                onClick={goToPrevMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
-              </button>
-              <h4 className="text-xl font-bold text-gray-900">
-                {calendarCurrentMonth.toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                })}
-              </h4>
-              <button
-                onClick={goToNextMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition"
-              >
-                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
-              </button>
+          {/* Header - DB 스케줄 캘린더와 동일한 스타일 */}
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {calendarCurrentMonth.toLocaleDateString('ko-KR', {
+                    year: 'numeric',
+                    month: 'long',
+                  })}
+                </h2>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={goToPrevMonth}
+                    className="p-2 hover:bg-gray-100 rounded-md transition"
+                  >
+                    <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+                  </button>
+                  <button
+                    onClick={goToCurrentMonth}
+                    className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
+                  >
+                    오늘
+                  </button>
+                  <button
+                    onClick={goToNextMonth}
+                    className="p-2 hover:bg-gray-100 rounded-md transition"
+                  >
+                    <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+                  </button>
+                </div>
+              </div>
             </div>
+          </div>
 
+          {/* Calendar Grid */}
+          <div className="p-6">
             {/* Weekday Headers */}
             <div className="grid grid-cols-7 gap-px mb-2">
               {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
