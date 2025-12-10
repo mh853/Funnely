@@ -29,6 +29,36 @@ interface ResultRow {
   paymentCount: number
 }
 
+interface DepartmentRow {
+  department: string
+  total: number
+  pending: number
+  rejected: number
+  inProgress: number
+  completed: number
+  contractCompleted: number
+  needsFollowUp: number
+  other: number
+  paymentAmount: number
+  paymentCount: number
+}
+
+interface StaffRow {
+  staffId: string
+  staffName: string
+  department: string
+  total: number
+  pending: number
+  rejected: number
+  inProgress: number
+  completed: number
+  contractCompleted: number
+  needsFollowUp: number
+  other: number
+  paymentAmount: number
+  paymentCount: number
+}
+
 interface TeamMember {
   id: string
   full_name: string
@@ -37,6 +67,8 @@ interface TeamMember {
 
 interface ReportsClientProps {
   resultRows: ResultRow[]
+  departmentRows: DepartmentRow[]
+  staffRows: StaffRow[]
   summary: {
     totalDB: number
     completed: number
@@ -54,6 +86,8 @@ interface ReportsClientProps {
 
 export default function ReportsClient({
   resultRows,
+  departmentRows,
+  staffRows,
   summary,
   departments,
   teamMembers,
@@ -235,6 +269,30 @@ export default function ReportsClient({
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-lg p-4">
         <div className="flex flex-wrap items-end gap-3">
+          {/* 월 필터 */}
+          <div className="flex-shrink-0 w-44">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              📅 월 선택
+            </label>
+            <select
+              value={`${selectedYear}-${selectedMonth}`}
+              onChange={(e) => {
+                const [year, month] = e.target.value.split('-')
+                updateFilters({ year, month })
+              }}
+              className="w-full px-3 py-1.5 text-sm border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              {monthOptions.map((opt) => (
+                <option
+                  key={`${opt.year}-${opt.month}`}
+                  value={`${opt.year}-${opt.month}`}
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {/* 부서 필터 */}
           <div className="flex-shrink-0 w-40">
             <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -572,6 +630,379 @@ export default function ReportsClient({
                   </td>
                   <td className="px-3 py-2 text-sm text-right text-gray-600">
                     {resultRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+
+      {/* Department Results Table */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">
+            🏢 부서별 DB ({selectedMonth}월)
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                  부서
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  DB유입
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  상담전
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  거절
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  진행중
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  완료
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  예약확정
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  추가상담
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  기타
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  결제금액
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  결제횟수
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {departmentRows.length > 0 ? (
+                departmentRows.map((row) => (
+                  <tr
+                    key={row.department}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {row.department}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                      {row.total}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-orange-600">
+                      {row.pending}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.pending / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-red-600">
+                      {row.rejected}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.rejected / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
+                      {row.inProgress}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.inProgress / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
+                      {row.completed}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.completed / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
+                      {row.contractCompleted}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.contractCompleted / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
+                      {row.needsFollowUp}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.needsFollowUp / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
+                      {row.other}
+                      {row.total > 0 && row.other > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((row.other / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                      {row.paymentAmount > 0
+                        ? `${row.paymentAmount.toLocaleString()}원`
+                        : '-'}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-gray-600">
+                      {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={11}
+                    className="px-3 py-8 text-center text-sm text-gray-400"
+                  >
+                    데이터가 없습니다
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* 합계 행 */}
+            {departmentRows.length > 0 && (
+              <tfoot>
+                <tr className="bg-gray-50 font-semibold">
+                  <td className="px-3 py-2 text-sm text-gray-900">합계</td>
+                  <td className="px-3 py-2 text-sm text-center text-gray-900">
+                    {departmentRows.reduce((sum, r) => sum + r.total, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-orange-600">
+                    {departmentRows.reduce((sum, r) => sum + r.pending, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-red-600">
+                    {departmentRows.reduce((sum, r) => sum + r.rejected, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-sky-600">
+                    {departmentRows.reduce((sum, r) => sum + r.inProgress, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-green-600">
+                    {departmentRows.reduce((sum, r) => sum + r.completed, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-emerald-600">
+                    {departmentRows.reduce((sum, r) => sum + r.contractCompleted, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-yellow-600">
+                    {departmentRows.reduce((sum, r) => sum + r.needsFollowUp, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-gray-400">
+                    {departmentRows.reduce((sum, r) => sum + r.other, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-right text-blue-600">
+                    {departmentRows
+                      .reduce((sum, r) => sum + r.paymentAmount, 0)
+                      .toLocaleString()}
+                    원
+                  </td>
+                  <td className="px-3 py-2 text-sm text-right text-gray-600">
+                    {departmentRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
+
+      {/* Staff Results Table */}
+      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+        <div className="p-4 border-b border-gray-100">
+          <h2 className="text-base font-bold text-gray-900">
+            👤 담당자별 DB ({selectedMonth}월)
+          </h2>
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="min-w-full">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                  담당자
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                  부서
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  DB유입
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  상담전
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  거절
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  진행중
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  완료
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  예약확정
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  추가상담
+                </th>
+                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  기타
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  결제금액
+                </th>
+                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  결제횟수
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {staffRows.length > 0 ? (
+                staffRows.map((row) => (
+                  <tr
+                    key={row.staffId}
+                    className="hover:bg-gray-50 transition-colors"
+                  >
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                      {row.staffName}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-500">
+                      {row.department || '-'}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                      {row.total}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-orange-600">
+                      {row.pending}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.pending / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-red-600">
+                      {row.rejected}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.rejected / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
+                      {row.inProgress}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.inProgress / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
+                      {row.completed}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.completed / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
+                      {row.contractCompleted}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.contractCompleted / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
+                      {row.needsFollowUp}
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((row.needsFollowUp / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
+                      {row.other}
+                      {row.total > 0 && row.other > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((row.other / row.total) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                      {row.paymentAmount > 0
+                        ? `${row.paymentAmount.toLocaleString()}원`
+                        : '-'}
+                    </td>
+                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-gray-600">
+                      {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td
+                    colSpan={12}
+                    className="px-3 py-8 text-center text-sm text-gray-400"
+                  >
+                    데이터가 없습니다
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* 합계 행 */}
+            {staffRows.length > 0 && (
+              <tfoot>
+                <tr className="bg-gray-50 font-semibold">
+                  <td className="px-3 py-2 text-sm text-gray-900">합계</td>
+                  <td className="px-3 py-2 text-sm text-gray-500"></td>
+                  <td className="px-3 py-2 text-sm text-center text-gray-900">
+                    {staffRows.reduce((sum, r) => sum + r.total, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-orange-600">
+                    {staffRows.reduce((sum, r) => sum + r.pending, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-red-600">
+                    {staffRows.reduce((sum, r) => sum + r.rejected, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-sky-600">
+                    {staffRows.reduce((sum, r) => sum + r.inProgress, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-green-600">
+                    {staffRows.reduce((sum, r) => sum + r.completed, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-emerald-600">
+                    {staffRows.reduce((sum, r) => sum + r.contractCompleted, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-yellow-600">
+                    {staffRows.reduce((sum, r) => sum + r.needsFollowUp, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-center text-gray-400">
+                    {staffRows.reduce((sum, r) => sum + r.other, 0)}
+                  </td>
+                  <td className="px-3 py-2 text-sm text-right text-blue-600">
+                    {staffRows
+                      .reduce((sum, r) => sum + r.paymentAmount, 0)
+                      .toLocaleString()}
+                    원
+                  </td>
+                  <td className="px-3 py-2 text-sm text-right text-gray-600">
+                    {staffRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
                   </td>
                 </tr>
               </tfoot>

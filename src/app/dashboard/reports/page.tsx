@@ -166,6 +166,118 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     b.date.localeCompare(a.date)
   )
 
+  // 부서별 집계
+  const resultsByDepartment: Record<string, any> = {}
+
+  filteredLeads.forEach((lead) => {
+    // 담당자의 부서 찾기
+    const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
+    const deptName = assignedUser?.department || '미배정'
+
+    if (!resultsByDepartment[deptName]) {
+      resultsByDepartment[deptName] = {
+        department: deptName,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }
+    }
+
+    resultsByDepartment[deptName].total++
+
+    // Status
+    const status = lead.status || 'pending'
+    if (status === 'new' || status === 'pending') resultsByDepartment[deptName].pending++
+    else if (status === 'rejected') resultsByDepartment[deptName].rejected++
+    else if (status === 'contacted' || status === 'qualified') resultsByDepartment[deptName].inProgress++
+    else if (status === 'converted') resultsByDepartment[deptName].completed++
+    else if (status === 'contract_completed') resultsByDepartment[deptName].contractCompleted++
+    else if (status === 'needs_followup') resultsByDepartment[deptName].needsFollowUp++
+    else resultsByDepartment[deptName].other++
+  })
+
+  // 부서별 결제 데이터 집계
+  paymentData?.forEach((payment: any) => {
+    const leadId = payment.lead_id
+    const lead = filteredLeads.find(l => l.id === leadId)
+    if (lead) {
+      const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
+      const deptName = assignedUser?.department || '미배정'
+      if (resultsByDepartment[deptName]) {
+        resultsByDepartment[deptName].paymentAmount += payment.amount || 0
+        resultsByDepartment[deptName].paymentCount += 1
+      }
+    }
+  })
+
+  const departmentRows = Object.values(resultsByDepartment).sort((a: any, b: any) =>
+    b.total - a.total
+  )
+
+  // 담당자별 집계
+  const resultsByStaff: Record<string, any> = {}
+
+  filteredLeads.forEach((lead) => {
+    const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
+    const staffId = lead.call_assigned_to || 'unassigned'
+    const staffName = assignedUser?.full_name || '미배정'
+    const staffDept = assignedUser?.department || ''
+
+    if (!resultsByStaff[staffId]) {
+      resultsByStaff[staffId] = {
+        staffId,
+        staffName,
+        department: staffDept,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }
+    }
+
+    resultsByStaff[staffId].total++
+
+    // Status
+    const status = lead.status || 'pending'
+    if (status === 'new' || status === 'pending') resultsByStaff[staffId].pending++
+    else if (status === 'rejected') resultsByStaff[staffId].rejected++
+    else if (status === 'contacted' || status === 'qualified') resultsByStaff[staffId].inProgress++
+    else if (status === 'converted') resultsByStaff[staffId].completed++
+    else if (status === 'contract_completed') resultsByStaff[staffId].contractCompleted++
+    else if (status === 'needs_followup') resultsByStaff[staffId].needsFollowUp++
+    else resultsByStaff[staffId].other++
+  })
+
+  // 담당자별 결제 데이터 집계
+  paymentData?.forEach((payment: any) => {
+    const leadId = payment.lead_id
+    const lead = filteredLeads.find(l => l.id === leadId)
+    if (lead) {
+      const staffId = lead.call_assigned_to || 'unassigned'
+      if (resultsByStaff[staffId]) {
+        resultsByStaff[staffId].paymentAmount += payment.amount || 0
+        resultsByStaff[staffId].paymentCount += 1
+      }
+    }
+  })
+
+  const staffRows = Object.values(resultsByStaff).sort((a: any, b: any) =>
+    b.total - a.total
+  )
+
   // 요약 통계
   const summary = {
     totalDB: filteredLeads.length,
@@ -188,6 +300,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   return (
     <ReportsClient
       resultRows={resultRows}
+      departmentRows={departmentRows}
+      staffRows={staffRows}
       summary={summary}
       departments={departments}
       teamMembers={teamMembers || []}
