@@ -1098,17 +1098,42 @@ export default function LeadsClient({
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(lead.created_at)}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
-                      {lead.landing_pages?.title || '-'}
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900 max-w-[150px]">
+                      <span className="truncate block" title={lead.landing_pages?.title || ''}>
+                        {lead.landing_pages?.title ? (
+                          lead.landing_pages.title.length > 15
+                            ? `${lead.landing_pages.title.slice(0, 15)}...`
+                            : lead.landing_pages.title
+                        ) : '-'}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.device_type?.toUpperCase() || '-'}
+                      {lead.device_type
+                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+                        : '-'}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {lead.name}
+                      <span title={lead.name || ''}>
+                        {lead.name ? (
+                          lead.name.length > 5
+                            ? `${lead.name.slice(0, 5)}...`
+                            : lead.name
+                        ) : '-'}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.phone ? decryptPhone(lead.phone) : '-'}
+                      {(() => {
+                        if (!lead.phone) return '-'
+                        const decrypted = decryptPhone(lead.phone)
+                        // 전화번호 형태 체크 (숫자와 하이픈만 허용, 9자리 이상)
+                        const isValidPhone = /^[\d-]{9,}$/.test(decrypted)
+                        if (isValidPhone) {
+                          return decrypted
+                        } else {
+                          // 전화번호 형태가 아니면 11자 이후 말줄임
+                          return decrypted.length > 11 ? `${decrypted.slice(0, 11)}...` : decrypted
+                        }
+                      })()}
                     </td>
                     {/* 동적 custom_fields 데이터 (최대 2개 + ... 표시) */}
                     {customFieldColumns.length > 0 ? (
