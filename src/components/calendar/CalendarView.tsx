@@ -36,9 +36,10 @@ interface CalendarViewProps {
   teamMembers: any[]
   currentUserId: string
   statusFilter?: string
+  viewMode?: 'calendar' | 'list'
 }
 
-type ViewMode = 'month' | 'week' | 'day'
+type CalendarMode = 'month' | 'week' | 'day'
 
 const EVENT_COLORS = {
   call: 'bg-blue-100 border-blue-500 text-blue-900',
@@ -96,11 +97,20 @@ export default function CalendarView({
   teamMembers,
   currentUserId,
   statusFilter,
+  viewMode = 'calendar',
 }: CalendarViewProps) {
   const router = useRouter()
   const supabase = createClient()
   const [currentDate, setCurrentDate] = useState(new Date())
-  const [viewMode, setViewMode] = useState<ViewMode>('month')
+  const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
+
+  // 주간 리스트 뷰용 상태
+  const [weekStartDate, setWeekStartDate] = useState(() => {
+    const today = new Date()
+    const day = today.getDay()
+    const diff = today.getDate() - day
+    return new Date(today.setDate(diff))
+  })
   const [showEventModal, setShowEventModal] = useState(false)
   const [showDayDetailModal, setShowDayDetailModal] = useState(false)
   const [selectedEvent, setSelectedEvent] = useState<any>(null)
@@ -558,40 +568,6 @@ export default function CalendarView({
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* View mode selector */}
-            <div className="inline-flex rounded-md shadow-sm">
-              <button
-                onClick={() => setViewMode('month')}
-                className={`px-4 py-2 text-sm font-medium rounded-l-md border ${
-                  viewMode === 'month'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                월
-              </button>
-              <button
-                onClick={() => setViewMode('week')}
-                className={`px-4 py-2 text-sm font-medium border-t border-b ${
-                  viewMode === 'week'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                주
-              </button>
-              <button
-                onClick={() => setViewMode('day')}
-                className={`px-4 py-2 text-sm font-medium rounded-r-md border ${
-                  viewMode === 'day'
-                    ? 'bg-blue-600 text-white border-blue-600'
-                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                일
-              </button>
-            </div>
-
             <button
               onClick={() => {
                 setSelectedEvent(null)
@@ -608,7 +584,7 @@ export default function CalendarView({
       </div>
 
       {/* Calendar Grid - Month View */}
-      {viewMode === 'month' && (
+      {viewMode === 'calendar' && (
         <div className="p-6">
           {/* Weekday headers */}
           <div className="grid grid-cols-7 gap-px mb-2">
@@ -709,21 +685,168 @@ export default function CalendarView({
         </div>
       )}
 
-      {/* Week View - Coming Soon */}
-      {viewMode === 'week' && (
-        <div className="p-12 text-center">
-          <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">주간 보기</h3>
-          <p className="mt-1 text-sm text-gray-500">주간 보기 기능은 곧 제공될 예정입니다.</p>
-        </div>
-      )}
+      {/* Weekly List View */}
+      {viewMode === 'list' && (
+        <div className="p-4">
+          {/* Week Navigation */}
+          <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4">
+            <button
+              onClick={() => {
+                const newDate = new Date(weekStartDate)
+                newDate.setDate(newDate.getDate() - 7)
+                setWeekStartDate(newDate)
+              }}
+              className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
+            >
+              <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+            </button>
+            <div className="flex items-center gap-3">
+              <h4 className="text-lg font-bold text-gray-900">
+                {weekStartDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+              </h4>
+              <span className="text-sm text-gray-500">
+                {weekStartDate.getDate()}일 - {new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6).getDate()}일
+              </span>
+              <button
+                onClick={() => {
+                  const today = new Date()
+                  const day = today.getDay()
+                  const diff = today.getDate() - day
+                  setWeekStartDate(new Date(today.setDate(diff)))
+                }}
+                className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-full hover:bg-indigo-100 transition"
+              >
+                오늘
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                const newDate = new Date(weekStartDate)
+                newDate.setDate(newDate.getDate() + 7)
+                setWeekStartDate(newDate)
+              }}
+              className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
+            >
+              <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+            </button>
+          </div>
 
-      {/* Day View - Coming Soon */}
-      {viewMode === 'day' && (
-        <div className="p-12 text-center">
-          <ClockIcon className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">일간 보기</h3>
-          <p className="mt-1 text-sm text-gray-500">일간 보기 기능은 곧 제공될 예정입니다.</p>
+          {/* Weekly List Grid */}
+          <div className="overflow-x-auto">
+            <div className="min-w-[800px]">
+              {/* Day Headers */}
+              <div className="grid grid-cols-[80px_repeat(7,1fr)] border-b border-gray-200 bg-gray-50 sticky top-0 z-10 rounded-t-lg overflow-hidden">
+                <div className="p-2 text-center text-xs font-medium text-gray-500 border-r border-gray-200">
+                  시간
+                </div>
+                {(() => {
+                  const days: Date[] = []
+                  for (let i = 0; i < 7; i++) {
+                    const day = new Date(weekStartDate)
+                    day.setDate(weekStartDate.getDate() + i)
+                    days.push(day)
+                  }
+                  return days.map((day, idx) => {
+                    const isToday = day.toDateString() === new Date().toDateString()
+                    const dayOfWeek = day.getDay()
+                    const dayLeads = localLeads.filter(lead => {
+                      const leadDate = lead.preferred_date || lead.created_at
+                      if (!leadDate) return false
+                      const d = new Date(leadDate)
+                      return d.toDateString() === day.toDateString()
+                    })
+                    return (
+                      <div
+                        key={idx}
+                        className={`p-2 text-center border-r border-gray-200 last:border-r-0 ${
+                          isToday ? 'bg-indigo-50' : ''
+                        }`}
+                      >
+                        <div className={`text-xs font-medium ${
+                          dayOfWeek === 0 ? 'text-red-500' : dayOfWeek === 6 ? 'text-blue-500' : 'text-gray-500'
+                        }`}>
+                          {day.toLocaleDateString('ko-KR', { weekday: 'short' })}
+                        </div>
+                        <div className={`text-lg font-bold ${
+                          isToday ? 'text-indigo-600' :
+                          dayOfWeek === 0 ? 'text-red-600' :
+                          dayOfWeek === 6 ? 'text-blue-600' : 'text-gray-900'
+                        }`}>
+                          {day.getDate()}
+                        </div>
+                        {dayLeads.length > 0 && (
+                          <div className="mt-1">
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 text-[10px] font-semibold bg-indigo-500 text-white rounded-full">
+                              {dayLeads.length}건
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+
+              {/* Time Slots */}
+              <div className="divide-y divide-gray-100">
+                {['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map((timeSlot) => (
+                  <div key={timeSlot} className="grid grid-cols-[80px_repeat(7,1fr)] min-h-[60px]">
+                    {/* Time Label */}
+                    <div className="p-2 text-center text-xs font-medium text-gray-500 bg-gray-50 border-r border-gray-200 flex items-start justify-center pt-3">
+                      {timeSlot}
+                    </div>
+
+                    {/* Day Cells */}
+                    {(() => {
+                      const days: Date[] = []
+                      for (let i = 0; i < 7; i++) {
+                        const day = new Date(weekStartDate)
+                        day.setDate(weekStartDate.getDate() + i)
+                        days.push(day)
+                      }
+                      return days.map((day, dayIdx) => {
+                        const isToday = day.toDateString() === new Date().toDateString()
+                        const slotHour = parseInt(timeSlot.split(':')[0])
+                        const leadsInSlot = localLeads.filter(lead => {
+                          const leadDate = lead.preferred_date || lead.created_at
+                          if (!leadDate) return false
+                          const d = new Date(leadDate)
+                          if (d.toDateString() !== day.toDateString()) return false
+                          const leadTime = lead.preferred_time || d.toTimeString().slice(0, 5)
+                          const leadHour = parseInt(leadTime.split(':')[0])
+                          return leadHour === slotHour
+                        })
+
+                        return (
+                          <div
+                            key={dayIdx}
+                            className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] ${
+                              isToday ? 'bg-indigo-50/30' : ''
+                            }`}
+                          >
+                            {leadsInSlot.map((lead, leadIdx) => (
+                              <div
+                                key={leadIdx}
+                                onClick={(e) => handleLeadClick(lead, e)}
+                                className={`p-1.5 mb-1 rounded text-xs cursor-pointer hover:shadow-md transition ${
+                                  LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
+                                } border-l-2`}
+                              >
+                                <div className="font-medium truncate">{lead.name}</div>
+                                <div className="text-[10px] opacity-75 truncate">
+                                  {lead.preferred_time || formatTime(lead.created_at)}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })
+                    })()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 

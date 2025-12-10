@@ -1,6 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import CalendarView from '@/components/calendar/CalendarView'
+import CalendarViewWrapper from '@/components/calendar/CalendarViewWrapper'
 
 interface SearchParams {
   status?: string
@@ -78,29 +78,12 @@ export default async function CalendarPage({
     .order('full_name')
 
   return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">DB 스케줄</h1>
-            <p className="mt-1 text-sm text-indigo-100">
-              DB 상담 일정과 약속을 관리합니다
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar */}
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <CalendarView
-          events={events || []}
-          leads={leads || []}
-          teamMembers={teamMembers || []}
-          currentUserId={user.id}
-          statusFilter={statusFilter}
-        />
-      </div>
-    </div>
+    <CalendarViewWrapper
+      events={events || []}
+      leads={leads || []}
+      teamMembers={teamMembers || []}
+      currentUserId={user.id}
+      statusFilter={statusFilter}
+    />
   )
 }
