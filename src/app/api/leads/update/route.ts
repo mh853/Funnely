@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount } = body
+    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount, preferred_date, preferred_time } = body
 
     // Validate required fields
     if (!id) {
@@ -36,7 +36,7 @@ export async function PUT(request: NextRequest) {
     // Verify lead belongs to user's hospital
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, company_id, status, contract_completed_at, call_assigned_to, counselor_assigned_to, notes')
+      .select('id, company_id, status, contract_completed_at, call_assigned_to, counselor_assigned_to, notes, preferred_date, preferred_time')
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .single()
@@ -50,6 +50,8 @@ export async function PUT(request: NextRequest) {
     const previousCallAssignedTo = lead.call_assigned_to
     const previousCounselorAssignedTo = lead.counselor_assigned_to
     const previousNotes = lead.notes
+    const previousPreferredDate = lead.preferred_date
+    const previousPreferredTime = lead.preferred_time
 
     // Build update object
     const updateData: any = {
@@ -113,6 +115,14 @@ export async function PUT(request: NextRequest) {
 
     if (payment_amount !== undefined) {
       updateData.payment_amount = payment_amount
+    }
+
+    if (preferred_date !== undefined) {
+      updateData.preferred_date = preferred_date
+    }
+
+    if (preferred_time !== undefined) {
+      updateData.preferred_time = preferred_time
     }
 
     // Update lead
@@ -227,6 +237,35 @@ export async function PUT(request: NextRequest) {
         })
       } catch (logError) {
         console.error('Failed to log contract_completed_at change:', logError)
+      }
+    }
+
+    // preferred_date 또는 preferred_time 변경 로그 기록 (일정 변경)
+    const newPreferredDate = updateData.preferred_date
+    const newPreferredTime = updateData.preferred_time
+    const dateChanged = newPreferredDate !== undefined && newPreferredDate !== previousPreferredDate
+    const timeChanged = newPreferredTime !== undefined && newPreferredTime !== previousPreferredTime
+
+    if (dateChanged || timeChanged) {
+      try {
+        const previousSchedule = previousPreferredDate
+          ? `${previousPreferredDate} ${previousPreferredTime || '00:00'}`
+          : null
+        const newSchedule = newPreferredDate
+          ? `${newPreferredDate} ${newPreferredTime || '00:00'}`
+          : `${previousPreferredDate || ''} ${newPreferredTime || '00:00'}`
+
+        await supabase.from('lead_status_logs').insert({
+          lead_id: id,
+          company_id: userProfile.company_id,
+          changed_by: user.id,
+          field_type: 'schedule_change',
+          previous_value: previousSchedule,
+          new_value: newSchedule.trim(),
+          new_status: 'schedule_change', // NOT NULL 제약 충족
+        })
+      } catch (logError) {
+        console.error('Failed to log schedule change:', logError)
       }
     }
 

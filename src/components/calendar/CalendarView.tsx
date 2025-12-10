@@ -72,6 +72,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   new: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '상담 거절' },
+  contacting: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   converted: { bg: 'bg-green-100', text: 'text-green-800', label: '상담 완료' },
@@ -82,6 +83,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   call_assigned_to: { bg: 'bg-blue-100', text: 'text-blue-800', label: '콜 담당자 변경' },
   counselor_assigned_to: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '상담 담당자 변경' },
   contract_completed_at: { bg: 'bg-amber-100', text: 'text-amber-800', label: '예약 확정일 변경' },
+  schedule_change: { bg: 'bg-indigo-100', text: 'text-indigo-800', label: '일정 변경' },
   notes: { bg: 'bg-gray-100', text: 'text-gray-800', label: '비고 변경' },
 }
 
@@ -89,6 +91,7 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
 const STATUS_OPTIONS = [
   { value: 'new', label: '상담 전' },
   { value: 'rejected', label: '상담 거절' },
+  { value: 'contacting', label: '상담 진행중' },
   { value: 'contacted', label: '상담 진행중' },
   { value: 'converted', label: '상담 완료' },
   { value: 'contract_completed', label: '예약 확정' },
@@ -482,19 +485,13 @@ export default function CalendarView({
     setIsDragging(true)
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', lead.id)
-    // 드래그 중 투명도 설정
-    const target = e.currentTarget as HTMLElement
-    setTimeout(() => {
-      target.style.opacity = '0.5'
-    }, 0)
+    // CSS 클래스로 투명도 제어 (draggedLead 상태로 관리)
   }
 
-  const handleDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = () => {
     setDraggedLead(null)
     setDragOverSlot(null)
     setIsDragging(false)
-    const target = e.currentTarget as HTMLElement
-    target.style.opacity = '1'
   }
 
   const handleDragOver = (e: React.DragEvent, slotId: string) => {
@@ -519,6 +516,11 @@ export default function CalendarView({
 
     if (!draggedLead) return
 
+    // 드래그 상태를 먼저 초기화 (반투명 해제)
+    const droppedLead = draggedLead
+    setDraggedLead(null)
+    setIsDragging(false)
+
     // 로컬 날짜 문자열 생성 (YYYY-MM-DD 형식)
     const year = targetDate.getFullYear()
     const month = String(targetDate.getMonth() + 1).padStart(2, '0')
@@ -530,8 +532,8 @@ export default function CalendarView({
     const newContractCompletedAt = `${newPreferredDate}T${targetTime}:00+09:00`
 
     // 같은 위치면 무시 (로컬 타임존 기준)
-    if (draggedLead.contract_completed_at) {
-      const currentDate = new Date(draggedLead.contract_completed_at)
+    if (droppedLead.contract_completed_at) {
+      const currentDate = new Date(droppedLead.contract_completed_at)
       const currentYear = currentDate.getFullYear()
       const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0')
       const currentDay = String(currentDate.getDate()).padStart(2, '0')
@@ -543,31 +545,49 @@ export default function CalendarView({
       }
     } else {
       // preferred_date 또는 created_at 기준 비교
-      const currentDate = draggedLead.preferred_date || draggedLead.created_at.split('T')[0]
-      const currentTime = draggedLead.preferred_time || new Date(draggedLead.created_at).toTimeString().slice(0, 5)
+      const currentDate = droppedLead.preferred_date || droppedLead.created_at.split('T')[0]
+      const currentTime = droppedLead.preferred_time || new Date(droppedLead.created_at).toTimeString().slice(0, 5)
       if (currentDate === newPreferredDate && currentTime.slice(0, 2) === newPreferredTime.slice(0, 2)) {
         return
       }
     }
 
-    // 낙관적 업데이트 - 상태는 유지하면서 날짜/시간만 업데이트
-    const updatedLeads = localLeads.map(l =>
-      l.id === draggedLead.id
-        ? {
-            ...l,
-            preferred_date: newPreferredDate,
-            preferred_time: newPreferredTime,
-            contract_completed_at: newContractCompletedAt,
-          }
-        : l
-    )
+    // 낙관적 업데이트 - 상태에 따라 적절한 필드만 업데이트
+    const updatedLeads = localLeads.map(l => {
+      if (l.id !== droppedLead.id) return l
+
+      if (droppedLead.status === 'contract_completed') {
+        // 예약 확정 상태면 contract_completed_at 업데이트
+        return {
+          ...l,
+          contract_completed_at: newContractCompletedAt,
+        }
+      } else {
+        // 그 외 상태면 preferred_date, preferred_time만 업데이트
+        return {
+          ...l,
+          preferred_date: newPreferredDate,
+          preferred_time: newPreferredTime,
+        }
+      }
+    })
     setLocalLeads(updatedLeads)
 
     try {
-      // 상태는 변경하지 않고 contract_completed_at만 업데이트
+      // 상태에 따라 업데이트할 필드 결정
+      // - 예약 확정 상태: contract_completed_at 업데이트
+      // - 그 외 상태: preferred_date, preferred_time 업데이트 (contract_completed_at 없이)
       const updatePayload: any = {
-        id: draggedLead.id,
-        contract_completed_at: newContractCompletedAt,
+        id: droppedLead.id,
+      }
+
+      if (droppedLead.status === 'contract_completed') {
+        // 예약 확정 상태면 contract_completed_at 업데이트
+        updatePayload.contract_completed_at = newContractCompletedAt
+      } else {
+        // 그 외 상태면 preferred_date, preferred_time 업데이트
+        updatePayload.preferred_date = newPreferredDate
+        updatePayload.preferred_time = newPreferredTime
       }
 
       const response = await fetch('/api/leads/update', {
