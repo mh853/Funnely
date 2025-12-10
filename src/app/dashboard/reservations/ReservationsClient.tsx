@@ -300,8 +300,8 @@ export default function ReservationsClient({
 
     setUpdatingReservationDate(true)
     try {
-      // 날짜와 시간 결합
-      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00`
+      // 날짜와 시간 결합 (한국 시간대 명시)
+      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00+09:00`
 
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
@@ -409,7 +409,7 @@ export default function ReservationsClient({
 
   // 특정 날짜와 시간에 해당하는 리드 찾기
   const getLeadsForTimeSlot = (date: Date, timeSlot: string) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(date)
     const dayLeads = leadsByDate[dateStr] || []
 
     return dayLeads.filter(lead => {
@@ -423,7 +423,7 @@ export default function ReservationsClient({
 
   // 특정 날짜의 리드 수
   const getLeadCountForDay = (date: Date) => {
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = getLocalDateString(date)
     return leadsByDate[dateStr]?.length || 0
   }
 
@@ -470,16 +470,26 @@ export default function ReservationsClient({
 
     if (!draggedLead) return
 
-    const newContractCompletedAt = `${targetDate.toISOString().split('T')[0]}T${targetTime}:00`
+    // 로컬 날짜 문자열 생성 (YYYY-MM-DD 형식)
+    const year = targetDate.getFullYear()
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const day = String(targetDate.getDate()).padStart(2, '0')
+    const localDateStr = `${year}-${month}-${day}`
 
-    // 같은 위치면 무시
+    // 한국 시간대를 명시적으로 포함하여 저장
+    // PostgreSQL timestamptz가 올바른 시간으로 해석하도록 함
+    const newContractCompletedAt = `${localDateStr}T${targetTime}:00+09:00`
+
+    // 같은 위치면 무시 (로컬 타임존 기준)
     if (draggedLead.contract_completed_at) {
       const currentDate = new Date(draggedLead.contract_completed_at)
-      const currentDateStr = currentDate.toISOString().split('T')[0]
+      const currentYear = currentDate.getFullYear()
+      const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0')
+      const currentDay = String(currentDate.getDate()).padStart(2, '0')
+      const currentDateStr = `${currentYear}-${currentMonth}-${currentDay}`
       const currentHour = currentDate.getHours().toString().padStart(2, '0')
-      const targetDateStr = targetDate.toISOString().split('T')[0]
       const targetHour = targetTime.split(':')[0]
-      if (currentDateStr === targetDateStr && currentHour === targetHour) {
+      if (currentDateStr === localDateStr && currentHour === targetHour) {
         return
       }
     }
@@ -608,8 +618,8 @@ export default function ReservationsClient({
 
     setSavingSchedule(true)
     try {
-      // 날짜와 시간 결합하여 ISO 문자열 생성
-      const contractCompletedAt = `${scheduleInputDate}T${scheduleInputTime}:00`
+      // 날짜와 시간 결합하여 ISO 문자열 생성 (한국 시간대 명시)
+      const contractCompletedAt = `${scheduleInputDate}T${scheduleInputTime}:00+09:00`
 
       const updateBody: any = {
         id: scheduleInputLeadId,
@@ -921,13 +931,23 @@ export default function ReservationsClient({
     }
   }, [companyId, supabase])
 
+  // 로컬 날짜 문자열 생성 헬퍼 함수
+  const getLocalDateString = (date: Date) => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
   // 날짜별로 리드 그룹화
   const { leadsByDate, sortedDates } = useMemo(() => {
     const grouped: { [key: string]: Lead[] } = {}
 
     leads.forEach((lead) => {
       if (lead.contract_completed_at) {
-        const date = new Date(lead.contract_completed_at).toISOString().split('T')[0]
+        // 로컬 타임존 기준 날짜 문자열 생성
+        const leadDate = new Date(lead.contract_completed_at)
+        const date = getLocalDateString(leadDate)
         if (!grouped[date]) {
           grouped[date] = []
         }
@@ -1234,7 +1254,7 @@ export default function ReservationsClient({
                     {getWeekDays().map((day, dayIdx) => {
                       const isToday = day.toDateString() === new Date().toDateString()
                       const leadsInSlot = getLeadsForTimeSlot(day, timeSlot)
-                      const dateStr = day.toISOString().split('T')[0]
+                      const dateStr = getLocalDateString(day)
                       const slotId = `${dateStr}-${timeSlot}`
                       const isDropTarget = dragOverSlot === slotId
 
@@ -1360,7 +1380,7 @@ export default function ReservationsClient({
 
       {/* Lead Detail Modal - Shows lead information in table format like DB현황 */}
       {showLeadDetailModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
@@ -1374,10 +1394,18 @@ export default function ReservationsClient({
                     setShowLeadDetailModal(false)
                     setSelectedLead(null)
                     setLeadDetails(null)
+                    setReservationDateLogs([])
+                    setEditingReservationDate(false)
+                    // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
                   }}
                   className="p-2 hover:bg-white/20 rounded-full transition"
+                  title={showDateLeadsModal ? '목록으로 돌아가기' : '닫기'}
                 >
-                  <XMarkIcon className="h-5 w-5" />
+                  {showDateLeadsModal ? (
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  ) : (
+                    <XMarkIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -1776,10 +1804,11 @@ export default function ReservationsClient({
                   setLeadDetails(null)
                   setReservationDateLogs([])
                   setEditingReservationDate(false)
+                  // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
                 }}
                 className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
               >
-                닫기
+                {showDateLeadsModal ? '목록으로 돌아가기' : '닫기'}
               </button>
             </div>
           </div>
@@ -1954,8 +1983,7 @@ export default function ReservationsClient({
                       <div
                         key={lead.id}
                         onClick={() => {
-                          setShowDateLeadsModal(false)
-                          setSelectedDateForModal(null)
+                          // 날짜 리스트 모달을 닫지 않고 상세 모달만 열어서 뒤로가기 UX 개선
                           handleLeadClick(lead)
                         }}
                         className="bg-gray-50 rounded-xl p-4 hover:bg-emerald-50 cursor-pointer transition border border-gray-200 hover:border-emerald-300"

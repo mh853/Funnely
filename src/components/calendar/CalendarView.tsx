@@ -149,6 +149,13 @@ export default function CalendarView({
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
 
+  // 로컬 날짜 문자열 생성 헬퍼 함수
+  const getLocalDateString = (date: Date) => {
+    const y = date.getFullYear()
+    const m = String(date.getMonth() + 1).padStart(2, '0')
+    const d = String(date.getDate()).padStart(2, '0')
+    return `${y}-${m}-${d}`
+  }
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -512,40 +519,55 @@ export default function CalendarView({
 
     if (!draggedLead) return
 
-    const newPreferredDate = targetDate.toISOString().split('T')[0]
+    // 로컬 날짜 문자열 생성 (YYYY-MM-DD 형식)
+    const year = targetDate.getFullYear()
+    const month = String(targetDate.getMonth() + 1).padStart(2, '0')
+    const dayNum = String(targetDate.getDate()).padStart(2, '0')
+    const newPreferredDate = `${year}-${month}-${dayNum}`
     const newPreferredTime = targetTime
 
-    // 같은 위치면 무시
-    const currentDate = draggedLead.preferred_date || draggedLead.created_at.split('T')[0]
-    const currentTime = draggedLead.preferred_time || new Date(draggedLead.created_at).toTimeString().slice(0, 5)
-    if (currentDate === newPreferredDate && currentTime.slice(0, 2) === newPreferredTime.slice(0, 2)) {
-      return
+    // 한국 시간대를 명시적으로 포함하여 저장
+    const newContractCompletedAt = `${newPreferredDate}T${targetTime}:00+09:00`
+
+    // 같은 위치면 무시 (로컬 타임존 기준)
+    if (draggedLead.contract_completed_at) {
+      const currentDate = new Date(draggedLead.contract_completed_at)
+      const currentYear = currentDate.getFullYear()
+      const currentMonth = String(currentDate.getMonth() + 1).padStart(2, '0')
+      const currentDay = String(currentDate.getDate()).padStart(2, '0')
+      const currentDateStr = `${currentYear}-${currentMonth}-${currentDay}`
+      const currentHour = currentDate.getHours().toString().padStart(2, '0')
+      const targetHour = targetTime.split(':')[0]
+      if (currentDateStr === newPreferredDate && currentHour === targetHour) {
+        return
+      }
+    } else {
+      // preferred_date 또는 created_at 기준 비교
+      const currentDate = draggedLead.preferred_date || draggedLead.created_at.split('T')[0]
+      const currentTime = draggedLead.preferred_time || new Date(draggedLead.created_at).toTimeString().slice(0, 5)
+      if (currentDate === newPreferredDate && currentTime.slice(0, 2) === newPreferredTime.slice(0, 2)) {
+        return
+      }
     }
 
-    // 낙관적 업데이트
+    // 낙관적 업데이트 - 상태는 유지하면서 날짜/시간만 업데이트
     const updatedLeads = localLeads.map(l =>
       l.id === draggedLead.id
-        ? { ...l, preferred_date: newPreferredDate, preferred_time: newPreferredTime }
+        ? {
+            ...l,
+            preferred_date: newPreferredDate,
+            preferred_time: newPreferredTime,
+            contract_completed_at: newContractCompletedAt,
+          }
         : l
     )
     setLocalLeads(updatedLeads)
 
     try {
-      // contract_completed 상태인 경우 contract_completed_at 업데이트
+      // 상태는 변경하지 않고 contract_completed_at만 업데이트
       const updatePayload: any = {
         id: draggedLead.id,
-      }
-
-      if (draggedLead.status === 'contract_completed') {
-        updatePayload.status = 'contract_completed'
-        updatePayload.contract_completed_at = `${newPreferredDate}T${newPreferredTime}:00`
-      } else {
-        // preferred_date 필드가 있는 경우 (일반 리드)
-        // API에서 preferred_date 업데이트를 지원하지 않으면 별도 처리 필요
-        // 현재는 contract_completed_at만 업데이트 가능
-        // 예약확정 상태가 아닌 경우에도 예약일로 처리
-        updatePayload.status = 'contract_completed'
-        updatePayload.contract_completed_at = `${newPreferredDate}T${newPreferredTime}:00`
+        contract_completed_at: newContractCompletedAt,
       }
 
       const response = await fetch('/api/leads/update', {
@@ -557,21 +579,6 @@ export default function CalendarView({
       if (!response.ok) {
         throw new Error('스케줄 업데이트 실패')
       }
-
-      // 성공 시 상태도 업데이트
-      setLocalLeads(prev =>
-        prev.map(l =>
-          l.id === draggedLead.id
-            ? {
-                ...l,
-                preferred_date: newPreferredDate,
-                preferred_time: newPreferredTime,
-                contract_completed_at: `${newPreferredDate}T${newPreferredTime}:00`,
-                status: 'contract_completed'
-              }
-            : l
-        )
-      )
 
       router.refresh()
     } catch (error) {
@@ -588,7 +595,8 @@ export default function CalendarView({
 
     setUpdatingReservationDate(true)
     try {
-      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00`
+      // 한국 시간대 명시
+      const newContractCompletedAt = `${reservationDateValue}T${reservationTimeValue || '00:00'}:00+09:00`
 
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
@@ -919,7 +927,7 @@ export default function CalendarView({
                       return days.map((day, dayIdx) => {
                         const isToday = day.toDateString() === new Date().toDateString()
                         const slotHour = parseInt(timeSlot.split(':')[0])
-                        const slotId = `${day.toISOString().split('T')[0]}-${timeSlot}`
+                        const slotId = `${getLocalDateString(day)}-${timeSlot}`
                         const isDropTarget = dragOverSlot === slotId
                         const leadsInSlot = localLeads.filter(lead => {
                           // contract_completed_at 기준으로 필터링 (예약 확정일)
@@ -1456,45 +1464,69 @@ export default function CalendarView({
                         </div>
                       ) : statusLogs.length > 0 ? (
                         <div className="space-y-3 max-h-48 overflow-y-auto">
-                          {statusLogs.map((log, index) => (
-                            <div
-                              key={log.id}
-                              className="flex items-start gap-3 text-sm"
-                            >
-                              {/* 타임라인 인디케이터 */}
-                              <div className="flex flex-col items-center">
-                                <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
-                                {index < statusLogs.length - 1 && (
-                                  <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
-                                )}
-                              </div>
-                              {/* 로그 내용 */}
-                              <div className="flex-1 pb-3">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    STATUS_STYLES[log.previous_status]?.bg || 'bg-gray-100'
-                                  } ${STATUS_STYLES[log.previous_status]?.text || 'text-gray-700'}`}>
-                                    {STATUS_STYLES[log.previous_status]?.label || log.previous_status || '없음'}
-                                  </span>
-                                  <span className="text-gray-400">→</span>
-                                  <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                                    STATUS_STYLES[log.new_status]?.bg || 'bg-gray-100'
-                                  } ${STATUS_STYLES[log.new_status]?.text || 'text-gray-700'}`}>
-                                    {STATUS_STYLES[log.new_status]?.label || log.new_status}
-                                  </span>
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                  <span>{formatDateTime(log.created_at)}</span>
-                                  {log.changed_by_user && (
-                                    <>
-                                      <span className="text-gray-300">|</span>
-                                      <span>{log.changed_by_user.full_name}</span>
-                                    </>
+                          {statusLogs.map((log, index) => {
+                            // contract_completed_at 변경 시 현재 상태에 따라 라벨 동적 결정
+                            const getLogLabel = (status: string, fieldType?: string) => {
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                // 현재 리드 상태가 예약 확정이 아니면 "일정 변경"으로 표시
+                                if (leadDetails?.status !== 'contract_completed') {
+                                  return '일정 변경'
+                                }
+                                return '예약 확정일 변경'
+                              }
+                              return STATUS_STYLES[status]?.label || status || '없음'
+                            }
+
+                            const getLogStyle = (status: string, fieldType?: string) => {
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                // 현재 리드 상태가 예약 확정이 아니면 다른 스타일 사용
+                                if (leadDetails?.status !== 'contract_completed') {
+                                  return { bg: 'bg-indigo-100', text: 'text-indigo-800' }
+                                }
+                              }
+                              return STATUS_STYLES[status] || { bg: 'bg-gray-100', text: 'text-gray-700' }
+                            }
+
+                            return (
+                              <div
+                                key={log.id}
+                                className="flex items-start gap-3 text-sm"
+                              >
+                                {/* 타임라인 인디케이터 */}
+                                <div className="flex flex-col items-center">
+                                  <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                                  {index < statusLogs.length - 1 && (
+                                    <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
                                   )}
                                 </div>
+                                {/* 로그 내용 */}
+                                <div className="flex-1 pb-3">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.previous_status, log.field_type).bg
+                                    } ${getLogStyle(log.previous_status, log.field_type).text}`}>
+                                      {getLogLabel(log.previous_status, log.field_type)}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.new_status, log.field_type).bg
+                                    } ${getLogStyle(log.new_status, log.field_type).text}`}>
+                                      {getLogLabel(log.new_status, log.field_type)}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                    <span>{formatDateTime(log.created_at)}</span>
+                                    {log.changed_by_user && (
+                                      <>
+                                        <span className="text-gray-300">|</span>
+                                        <span>{log.changed_by_user.full_name}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : (
                         <p className="text-sm text-gray-400 text-center py-4">
