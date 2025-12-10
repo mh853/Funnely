@@ -8,7 +8,7 @@ import {
   ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import LandingPageEditor from '@/components/landing-pages/LandingPageEditor'
-import { getLandingPageUrl } from '@/lib/config'
+import { getLandingPageUrl, getLandingPageBaseUrl } from '@/lib/config'
 import RefLinkCopyButton from '@/components/landing-pages/RefLinkCopyButton'
 
 interface Props {
@@ -96,7 +96,8 @@ export default async function LandingPageDetailPage({ params }: Props) {
           {landingPage.status === 'published' && (
             <>
               <RefLinkCopyButton
-                baseUrl={getLandingPageUrl(landingPage.slug)}
+                baseUrl={getLandingPageBaseUrl()}
+                slug={landingPage.slug}
                 shortId={userShortId?.short_id}
               />
               <a

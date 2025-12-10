@@ -25,13 +25,14 @@ const formatPhoneNumber = (value: string): string => {
 
 interface PublicLandingPageProps {
   landingPage: LandingPage
+  initialRef?: string  // For new URL format: ?ref=shortId/slug
 }
 
 // Wrapper component that handles Suspense for useSearchParams
-export default function PublicLandingPage({ landingPage }: PublicLandingPageProps) {
+export default function PublicLandingPage({ landingPage, initialRef }: PublicLandingPageProps) {
   return (
     <Suspense fallback={<PublicLandingPageSkeleton />}>
-      <PublicLandingPageContent landingPage={landingPage} />
+      <PublicLandingPageContent landingPage={landingPage} initialRef={initialRef} />
     </Suspense>
   )
 }
@@ -46,10 +47,11 @@ function PublicLandingPageSkeleton() {
 }
 
 // Main content component that uses useSearchParams
-function PublicLandingPageContent({ landingPage }: PublicLandingPageProps) {
+function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPageProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const refParam = searchParams.get('ref')
+  // Support both new format (?ref=shortId/slug via initialRef) and legacy format (?ref=shortId)
+  const refParam = initialRef || searchParams.get('ref')
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)

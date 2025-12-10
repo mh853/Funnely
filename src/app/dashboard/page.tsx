@@ -77,6 +77,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .gte('leads.created_at', queryStart)
     .lt('leads.created_at', queryEnd)
 
+  // 랜딩페이지 전체 페이지뷰 조회 (views_count 합계)
+  const { data: landingPagesData } = await supabase
+    .from('landing_pages')
+    .select('id, title, slug, views_count, submissions_count')
+    .eq('company_id', userProfile?.company_id)
+    .order('views_count', { ascending: false })
+
+  // landingPagesData는 현재 사용하지 않음 (추후 랜딩페이지별 통계에 활용 가능)
+  void landingPagesData
+
+  // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
+  const { data: pageViewsData } = await supabase
+    .from('landing_page_analytics')
+    .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
+    .eq('landing_pages.company_id', userProfile?.company_id)
+    .gte('date', queryStart.split('T')[0])
+    .lt('date', queryEnd.split('T')[0])
+
+  // 페이지뷰를 날짜별로 집계
+  const pageViewsByDate: { [key: string]: { total: number; desktop: number; mobile: number; tablet: number } } = {}
+  pageViewsData?.forEach((pv: any) => {
+    const dateStr = pv.date
+    if (!pageViewsByDate[dateStr]) {
+      pageViewsByDate[dateStr] = { total: 0, desktop: 0, mobile: 0, tablet: 0 }
+    }
+    pageViewsByDate[dateStr].total += pv.page_views || 0
+    pageViewsByDate[dateStr].desktop += pv.desktop_views || 0
+    pageViewsByDate[dateStr].mobile += pv.mobile_views || 0
+    pageViewsByDate[dateStr].tablet += pv.tablet_views || 0
+  })
+
   // 현재 월 통계용 데이터 (Stats Cards는 항상 현재 월 기준)
   let todayCount = 0
   let yesterdayCount = 0
@@ -194,11 +225,24 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     }
   })
 
-  // 정렬된 선택된 월 차트 데이터 배열 생성
+  // 정렬된 선택된 월 차트 데이터 배열 생성 (DB 유입용)
   const sortedDailyStats = monthlyDates.map(({ date }) => ({
     date,
     count: dailyStats[date] || 0
   }))
+
+  // 페이지뷰 차트용 데이터 배열 생성 (트래픽 유입용 - 날짜별)
+  const sortedPageViewStats = monthlyDates.map(({ date, day }) => {
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    const pvData = pageViewsByDate[dateStr]
+    return {
+      date,
+      count: pvData?.total || 0
+    }
+  })
+
+  // 페이지뷰 총합 (선택된 월의 날짜별 합계)
+  const totalPageViews = sortedPageViewStats.reduce((sum, item) => sum + item.count, 0)
 
   const resultRows = Object.values(resultsByDate)
     .sort((a: any, b: any) => b.date.localeCompare(a.date))
@@ -326,20 +370,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <h2 className="text-lg font-bold text-gray-900">일자별 DB</h2>
             <p className="text-sm text-gray-500 mt-0.5">{selectedMonth}월 1일 ~ {daysInMonth}일</p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            {isCurrentMonth && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-violet-500 to-purple-500"></div>
-                <span className="text-gray-600">오늘</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-cyan-400 to-blue-500"></div>
-              <span className="text-gray-600">데이터</span>
-            </div>
-            <div className="px-2 py-1 bg-gray-100 rounded text-gray-600 font-medium">
-              총 {selectedMonthCount}건
-            </div>
+          <div className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-medium">
+            총 {selectedMonthCount}건
           </div>
         </div>
 
@@ -577,7 +609,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             href="/dashboard/leads"
             className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-2"
           >
-            전체 리드 보기
+            전체 DB 보기
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
@@ -585,31 +617,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </div>
 
-      {/* Traffic Source Chart - Modern Design */}
+      {/* Traffic Source Chart - 날짜별 페이지뷰 */}
       <div className="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-lg font-bold text-gray-900">트래픽 유입</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{selectedMonth}월 1일 ~ {daysInMonth}일</p>
+            <p className="text-sm text-gray-500 mt-0.5">{selectedMonth}월 1일 ~ {daysInMonth}일 (페이지뷰)</p>
           </div>
-          <div className="flex items-center gap-4 text-xs">
-            {isCurrentMonth && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-3 h-3 rounded-full bg-gradient-to-r from-emerald-500 to-teal-400"></div>
-                <span className="text-gray-600">오늘</span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 rounded-full bg-gradient-to-r from-teal-400 to-cyan-400"></div>
-              <span className="text-gray-600">데이터</span>
-            </div>
+          <div className="px-2 py-1 bg-gray-100 rounded text-xs text-gray-600 font-medium">
+            총 {totalPageViews.toLocaleString()}회
           </div>
         </div>
 
         {/* Chart with Y-axis */}
         <div className="relative h-72">
           {(() => {
-            const maxCount = Math.max(...sortedDailyStats.map(d => d.count), 1)
+            const maxCount = Math.max(...sortedPageViewStats.map(d => d.count), 1)
             const yAxisSteps = 5
             const stepValue = Math.ceil(maxCount / yAxisSteps)
             const adjustedMax = stepValue * yAxisSteps
@@ -641,13 +664,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 {/* Bars */}
                 <div className="absolute left-12 right-0 top-0 bottom-8 flex items-end gap-[2px]">
-                  {sortedDailyStats.map(({ date, count }, index) => {
+                  {sortedPageViewStats.map(({ date, count }) => {
                     const heightPercent = adjustedMax > 0 ? (count / adjustedMax) * 100 : 0
                     const isToday = isCurrentMonth && date === `${now.getMonth() + 1}/${now.getDate()}`
                     const hasData = count > 0
-                    // 날짜를 YYYY-MM-DD 형식으로 변환
-                    const day = parseInt(date.split('/')[1])
-                    const filterDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
 
                     return (
                       <div key={`traffic-${date}`} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
@@ -655,35 +675,27 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none">
                           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
                             <div className="font-semibold">{date}</div>
-                            <div className="text-gray-300">{count}건</div>
-                            {hasData && <div className="text-emerald-300 text-[10px] mt-1">클릭하여 상세보기</div>}
+                            <div className="text-gray-300">{count.toLocaleString()}회</div>
                           </div>
                           <div className="absolute left-1/2 transform -translate-x-1/2 -bottom-1 w-2 h-2 bg-gray-900 rotate-45"></div>
                         </div>
 
-                        {/* Bar with animation - Link로 감싸서 클릭 시 해당 날짜 DB현황으로 이동 */}
-                        {hasData ? (
-                          <Link
-                            href={`/dashboard/leads?date=${filterDate}`}
-                            className={`w-full rounded-t-sm transition-all duration-500 ease-out cursor-pointer relative overflow-hidden ${
-                              isToday
-                                ? 'bg-gradient-to-t from-emerald-600 via-teal-500 to-green-400 shadow-lg shadow-emerald-200'
-                                : 'bg-gradient-to-t from-teal-500 via-cyan-400 to-sky-300 hover:from-teal-600 hover:via-cyan-500 hover:to-sky-400'
-                            }`}
-                            style={{
-                              height: `${Math.max(heightPercent, 2)}%`,
-                              display: 'block',
-                            }}
-                          >
-                            {/* Shine effect */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                          </Link>
-                        ) : (
-                          <div
-                            className="w-full rounded-t-sm bg-gray-200 hover:bg-gray-300"
-                            style={{ height: '3px' }}
-                          />
-                        )}
+                        {/* Bar */}
+                        <div
+                          className={`w-full rounded-t-sm transition-all duration-500 ease-out relative overflow-hidden ${
+                            isToday
+                              ? 'bg-gradient-to-t from-violet-600 via-purple-500 to-fuchsia-400 shadow-lg shadow-purple-200'
+                              : hasData
+                                ? 'bg-gradient-to-t from-cyan-500 via-blue-400 to-sky-300 hover:from-cyan-600 hover:via-blue-500 hover:to-sky-400'
+                                : 'bg-gray-200 hover:bg-gray-300'
+                          }`}
+                          style={{
+                            height: hasData ? `${Math.max(heightPercent, 2)}%` : '3px',
+                          }}
+                        >
+                          {/* Shine effect */}
+                          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </div>
                       </div>
                     )
                   })}
@@ -691,14 +703,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                 {/* X-axis labels */}
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
-                  {sortedDailyStats.map(({ date }, index) => {
+                  {sortedPageViewStats.map(({ date }, index) => {
                     const isToday = isCurrentMonth && date === `${now.getMonth() + 1}/${now.getDate()}`
-                    const showLabel = index === 0 || (index + 1) % 5 === 0 || index === sortedDailyStats.length - 1
+                    const showLabel = index === 0 || (index + 1) % 5 === 0 || index === sortedPageViewStats.length - 1
 
                     return (
                       <div key={`traffic-label-${date}`} className="flex-1 min-w-[8px] flex justify-center">
                         {showLabel && (
-                          <span className={`text-[10px] ${isToday ? 'text-emerald-600 font-bold' : 'text-gray-400'}`}>
+                          <span className={`text-[10px] ${isToday ? 'text-purple-600 font-bold' : 'text-gray-400'}`}>
                             {date.split('/')[1]}일
                           </span>
                         )}
@@ -717,9 +729,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         <h2 className="text-lg font-bold text-gray-900 mb-4">트래픽 효율</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          {/* Traffic Source Table (Page Type) */}
+          {/* Traffic Source Table (Page Views by Date) */}
           <div>
-            <h3 className="text-base font-semibold text-gray-800 mb-3">트래픽 유입 (페이지별)</h3>
+            <h3 className="text-base font-semibold text-gray-800 mb-3">트래픽 유입 (페이지뷰)</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -728,50 +740,43 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">합계</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">PC</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Mobile</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet(기타)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {resultRows.length > 0 ? (
-                    resultRows.slice(0, 3).map((row: any) => {
-                      const total = row.total || 0
-                      const otherDevices = (row.tabletCount || 0) + (row.unknownDeviceCount || 0)
+                  {(() => {
+                    const pageViewRows = Object.entries(pageViewsByDate)
+                      .sort(([a], [b]) => b.localeCompare(a))
+                      .slice(0, 3)
 
-                      return (
-                        <tr key={`traffic-source-${row.date}`} className="hover:bg-gray-50 transition-colors">
+                    return pageViewRows.length > 0 ? (
+                      pageViewRows.map(([date, data]) => (
+                        <tr key={`page-view-${date}`} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-[20%]">
-                            <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
-                              {row.date}
-                            </Link>
+                            {date}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold w-[20%]">
-                            <Link href={`/dashboard/leads?date=${row.date}`} className="hover:text-indigo-600 hover:underline">
-                              {total}
-                            </Link>
+                            {data.total}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
-                            <Link href={`/dashboard/leads?date=${row.date}&deviceType=pc`} className="hover:text-indigo-600 hover:underline">
-                              {row.pcCount || 0}
-                            </Link>
+                            {data.desktop}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
-                            <Link href={`/dashboard/leads?date=${row.date}&deviceType=mobile`} className="hover:text-indigo-600 hover:underline">
-                              {row.mobileCount || 0}
-                            </Link>
+                            {data.mobile}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 w-[20%]">
-                            {otherDevices}
+                            {data.tablet}
                           </td>
                         </tr>
-                      )
-                    })
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
-                        데이터가 없습니다
-                      </td>
-                    </tr>
-                  )}
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-4 py-8 text-center text-sm text-gray-400">
+                          데이터가 없습니다
+                        </td>
+                      </tr>
+                    )
+                  })()}
                 </tbody>
               </table>
             </div>
@@ -839,15 +844,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         </div>
       </div>
 
-      {/* DB Confirmation Button */}
-      <div className="flex justify-center">
-        <Link
-          href="/dashboard/leads"
-          className="inline-flex items-center justify-center px-10 py-3 text-sm font-medium text-white bg-gradient-to-r from-gray-500 to-gray-600 rounded-full hover:from-gray-600 hover:to-gray-700 transition-all duration-300 shadow-lg hover:shadow-xl"
-        >
-          DB 확인
-        </Link>
-      </div>
     </div>
   )
 }

@@ -50,24 +50,45 @@ export async function POST(
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
+    // Get API credentials from database
+    const { data: credentialData, error: credError } = await supabase
+      .from('api_credentials')
+      .select('credentials')
+      .eq('company_id', userProfile.company_id)
+      .eq('platform', adAccount.platform)
+      .single()
+
+    if (credError || !credentialData) {
+      return NextResponse.json(
+        { error: 'API 인증 정보가 설정되지 않았습니다.' },
+        { status: 400 }
+      )
+    }
+
     // Refresh token based on platform
     let newAccessToken: string
     let expiresIn: number
+    let accountStatus: boolean | null = null
 
     switch (adAccount.platform) {
       case 'meta':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshMetaToken(
-          adAccount.access_token
+          adAccount.access_token,
+          credentialData.credentials as { app_id: string; app_secret: string }
         ))
+        // Meta: 토큰 갱신 후 계정 상태도 조회
+        accountStatus = await getMetaAccountStatus(newAccessToken, adAccount.account_id)
         break
       case 'kakao':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshKakaoToken(
-          adAccount.refresh_token
+          adAccount.refresh_token,
+          credentialData.credentials as { rest_api_key: string }
         ))
         break
       case 'google':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshGoogleToken(
-          adAccount.refresh_token
+          adAccount.refresh_token,
+          credentialData.credentials as { client_id: string; client_secret: string }
         ))
         break
       default:
@@ -77,13 +98,20 @@ export async function POST(
     // Update token in database
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
+    const updateData: Record<string, any> = {
+      access_token: newAccessToken,
+      token_expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    }
+
+    // Meta 계정인 경우 상태도 업데이트
+    if (accountStatus !== null) {
+      updateData.is_active = accountStatus
+    }
+
     const { error: updateError } = await supabase
       .from('ad_accounts')
-      .update({
-        access_token: newAccessToken,
-        token_expires_at: expiresAt,
-        updated_at: new Date().toISOString(),
-      })
+      .update(updateData)
       .eq('id', id)
 
     if (updateError) {
@@ -93,6 +121,7 @@ export async function POST(
     return NextResponse.json({
       message: '토큰이 갱신되었습니다.',
       expiresAt,
+      isActive: accountStatus,
     })
   } catch (error: any) {
     console.error('Refresh token error:', error)
@@ -103,23 +132,45 @@ export async function POST(
   }
 }
 
+// Meta 광고 계정 상태 조회
+async function getMetaAccountStatus(accessToken: string, accountId: string): Promise<boolean> {
+  try {
+    const response = await fetch(
+      `https://graph.facebook.com/v18.0/${accountId}?access_token=${accessToken}&fields=account_status`
+    )
+
+    if (!response.ok) {
+      console.error('Failed to fetch Meta account status')
+      return false
+    }
+
+    const data = await response.json()
+    // account_status: 1 = ACTIVE, 2 = DISABLED, 3 = UNSETTLED, etc.
+    console.log(`Meta account ${accountId} status:`, data.account_status)
+    return data.account_status === 1
+  } catch (error) {
+    console.error('Error fetching Meta account status:', error)
+    return false
+  }
+}
+
 async function refreshMetaToken(
-  accessToken: string | null
+  accessToken: string | null,
+  credentials: { app_id: string; app_secret: string }
 ): Promise<{ accessToken: string; expiresIn: number }> {
   if (!accessToken) {
     throw new Error('액세스 토큰이 없습니다.')
   }
 
   // NOTE: Meta long-lived tokens can be extended
-  const appId = process.env.META_APP_ID
-  const appSecret = process.env.META_APP_SECRET
-
   const response = await fetch(
-    `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${accessToken}`
+    `https://graph.facebook.com/v18.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${credentials.app_id}&client_secret=${credentials.app_secret}&fb_exchange_token=${accessToken}`
   )
 
   if (!response.ok) {
-    throw new Error('Meta 토큰 갱신에 실패했습니다.')
+    const errorData = await response.json()
+    console.error('Meta token refresh error:', errorData)
+    throw new Error(errorData.error?.message || 'Meta 토큰 갱신에 실패했습니다.')
   }
 
   const data = await response.json()
@@ -130,13 +181,12 @@ async function refreshMetaToken(
 }
 
 async function refreshKakaoToken(
-  refreshToken: string | null
+  refreshToken: string | null,
+  credentials: { rest_api_key: string }
 ): Promise<{ accessToken: string; expiresIn: number }> {
   if (!refreshToken) {
     throw new Error('리프레시 토큰이 없습니다.')
   }
-
-  const restApiKey = process.env.KAKAO_REST_API_KEY
 
   const response = await fetch('https://kauth.kakao.com/oauth/token', {
     method: 'POST',
@@ -145,13 +195,15 @@ async function refreshKakaoToken(
     },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: restApiKey || '',
+      client_id: credentials.rest_api_key,
       refresh_token: refreshToken,
     }),
   })
 
   if (!response.ok) {
-    throw new Error('Kakao 토큰 갱신에 실패했습니다.')
+    const errorData = await response.json()
+    console.error('Kakao token refresh error:', errorData)
+    throw new Error(errorData.error_description || 'Kakao 토큰 갱신에 실패했습니다.')
   }
 
   const data = await response.json()
@@ -162,14 +214,12 @@ async function refreshKakaoToken(
 }
 
 async function refreshGoogleToken(
-  refreshToken: string | null
+  refreshToken: string | null,
+  credentials: { client_id: string; client_secret: string }
 ): Promise<{ accessToken: string; expiresIn: number }> {
   if (!refreshToken) {
     throw new Error('리프레시 토큰이 없습니다.')
   }
-
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  const clientSecret = process.env.GOOGLE_CLIENT_SECRET
 
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
@@ -178,14 +228,16 @@ async function refreshGoogleToken(
     },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
-      client_id: clientId || '',
-      client_secret: clientSecret || '',
+      client_id: credentials.client_id,
+      client_secret: credentials.client_secret,
       refresh_token: refreshToken,
     }),
   })
 
   if (!response.ok) {
-    throw new Error('Google 토큰 갱신에 실패했습니다.')
+    const errorData = await response.json()
+    console.error('Google token refresh error:', errorData)
+    throw new Error(errorData.error_description || 'Google 토큰 갱신에 실패했습니다.')
   }
 
   const data = await response.json()

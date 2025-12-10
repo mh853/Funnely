@@ -30,8 +30,8 @@ export async function GET(
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // Check permission
-    if (!['hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
+    // Check permission (company_owner, company_admin, hospital_owner, hospital_admin for backward compat)
+    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

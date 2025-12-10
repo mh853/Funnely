@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import AdAccountsList from '@/components/ad-accounts/AdAccountsList'
 import ConnectAccountButton from '@/components/ad-accounts/ConnectAccountButton'
+import MetaConnectionSection from '@/components/ad-accounts/MetaConnectionSection'
 
 export default async function AdAccountsPage() {
   const supabase = await createClient()
@@ -36,22 +37,24 @@ export default async function AdAccountsPage() {
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
-  // Check if user can manage ad accounts
-  const canManage = ['hospital_owner', 'hospital_admin', 'marketing_manager'].includes(
+  // Check if user can manage ad accounts (company_owner, company_admin, hospital_owner, hospital_admin for backward compat)
+  const canManage = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(
     userProfile.role
   )
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">광고 계정</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Meta, Kakao, Google 광고 계정을 연동하고 관리합니다.
-          </p>
+      <div className="bg-gradient-to-r from-blue-500 to-cyan-600 rounded-xl p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">광고 계정 연동</h1>
+            <p className="mt-1 text-sm text-blue-100">
+              Meta, Kakao, Google 광고 계정을 연동하고 관리합니다.
+            </p>
+          </div>
+          {canManage && <ConnectAccountButton />}
         </div>
-        {canManage && <ConnectAccountButton />}
       </div>
 
       {/* Permission Warning */}
@@ -80,72 +83,63 @@ export default async function AdAccountsPage() {
         </div>
       )}
 
-      {/* Empty State */}
-      {(!adAccounts || adAccounts.length === 0) && (
-        <div className="text-center py-12 bg-white rounded-lg shadow">
-          <svg
-            className="mx-auto h-12 w-12 text-gray-400"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
-          <h3 className="mt-2 text-sm font-medium text-gray-900">
-            연동된 광고 계정이 없습니다
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            광고 플랫폼 계정을 연동하여 캠페인 관리를 시작하세요.
-          </p>
-          {canManage && (
-            <div className="mt-6">
-              <ConnectAccountButton />
-            </div>
-          )}
-        </div>
-      )}
+      {/* Meta Connection Guide - 연동된 Meta 계정이 없을 때 친절한 가이드 표시 */}
+      <MetaConnectionSection
+        hasMetaAccount={adAccounts?.some(acc => acc.platform === 'meta') || false}
+        canManage={canManage}
+      />
 
       {/* Ad Accounts List */}
       {adAccounts && adAccounts.length > 0 && (
         <AdAccountsList adAccounts={adAccounts} canManage={canManage} />
       )}
 
-      {/* Platform Guide */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-4 py-5 sm:p-6">
-          <h3 className="text-lg font-medium leading-6 text-gray-900 mb-4">
-            지원하는 광고 플랫폼
-          </h3>
+      {/* Platform Guide - 다른 플랫폼 안내 */}
+      <div className="bg-white shadow-lg rounded-xl overflow-hidden">
+        <div className="px-6 py-5">
+          <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gray-100">
+              <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                지원하는 광고 플랫폼
+              </h3>
+              <p className="text-sm text-gray-500">더 많은 플랫폼이 곧 추가됩니다</p>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             {/* Meta Ads */}
-            <div className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center mb-3">
-                <div className="flex-shrink-0 h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">f</span>
-                </div>
-                <h4 className="ml-3 text-sm font-medium text-gray-900">
-                  Meta Ads
-                </h4>
+            <div className="border-2 border-blue-200 bg-blue-50 rounded-xl p-4 relative">
+              <div className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-full">
+                추천
               </div>
-              <p className="text-sm text-gray-500">
-                Facebook과 Instagram 광고를 통합 관리합니다.
+              <div className="flex items-center mb-3">
+                <div className="flex-shrink-0 h-12 w-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                  <span className="text-white font-bold text-xl">f</span>
+                </div>
+                <div className="ml-3">
+                  <h4 className="text-sm font-semibold text-gray-900">Meta Ads</h4>
+                  <span className="text-xs text-blue-600 font-medium">연동 가능</span>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600">
+                Facebook과 Instagram 광고를 통합 관리합니다. 가장 많이 사용하는 플랫폼입니다.
               </p>
             </div>
 
             {/* Kakao Moment */}
-            <div className="border border-gray-200 rounded-lg p-4">
+            <div className="border border-gray-200 rounded-xl p-4 opacity-75">
               <div className="flex items-center mb-3">
-                <div className="flex-shrink-0 h-10 w-10 bg-yellow-400 rounded-lg flex items-center justify-center">
-                  <span className="text-gray-900 font-bold text-lg">K</span>
+                <div className="flex-shrink-0 h-12 w-12 bg-yellow-400 rounded-xl flex items-center justify-center">
+                  <span className="text-gray-900 font-bold text-xl">K</span>
                 </div>
-                <h4 className="ml-3 text-sm font-medium text-gray-900">
-                  Kakao Moment
-                </h4>
+                <div className="ml-3">
+                  <h4 className="text-sm font-semibold text-gray-900">Kakao Moment</h4>
+                  <span className="text-xs text-gray-400 font-medium">준비 중</span>
+                </div>
               </div>
               <p className="text-sm text-gray-500">
                 카카오톡 채널과 디스플레이 광고를 관리합니다.
@@ -153,14 +147,15 @@ export default async function AdAccountsPage() {
             </div>
 
             {/* Google Ads */}
-            <div className="border border-gray-200 rounded-lg p-4">
+            <div className="border border-gray-200 rounded-xl p-4 opacity-75">
               <div className="flex items-center mb-3">
-                <div className="flex-shrink-0 h-10 w-10 bg-red-600 rounded-lg flex items-center justify-center">
-                  <span className="text-white font-bold text-lg">G</span>
+                <div className="flex-shrink-0 h-12 w-12 bg-gradient-to-br from-blue-500 via-green-500 to-yellow-500 rounded-xl flex items-center justify-center">
+                  <span className="text-white font-bold text-xl">G</span>
                 </div>
-                <h4 className="ml-3 text-sm font-medium text-gray-900">
-                  Google Ads
-                </h4>
+                <div className="ml-3">
+                  <h4 className="text-sm font-semibold text-gray-900">Google Ads</h4>
+                  <span className="text-xs text-gray-400 font-medium">준비 중</span>
+                </div>
               </div>
               <p className="text-sm text-gray-500">
                 검색 광고와 디스플레이 네트워크를 관리합니다.

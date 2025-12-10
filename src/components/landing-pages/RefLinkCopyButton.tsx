@@ -5,15 +5,19 @@ import { LinkIcon, CheckIcon } from '@heroicons/react/24/outline'
 
 interface RefLinkCopyButtonProps {
   baseUrl: string
+  slug: string
   shortId?: string
 }
 
-export default function RefLinkCopyButton({ baseUrl, shortId }: RefLinkCopyButtonProps) {
+export default function RefLinkCopyButton({ baseUrl, slug, shortId }: RefLinkCopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    // ref 파라미터가 있는 URL 생성
-    const urlWithRef = shortId ? `${baseUrl}?ref=${shortId}` : baseUrl
+    // ref 파라미터가 slug 앞에 오는 URL 생성
+    // 형식: https://domain.com/landing?ref=abc123/slug
+    const urlWithRef = shortId
+      ? `${baseUrl}?ref=${shortId}/${slug}`
+      : `${baseUrl}/${slug}`
 
     try {
       await navigator.clipboard.writeText(urlWithRef)

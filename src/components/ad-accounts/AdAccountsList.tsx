@@ -14,7 +14,7 @@ interface AdAccount {
   platform: string
   account_id: string
   account_name: string
-  status: string
+  is_active: boolean
   access_token: string | null
   refresh_token: string | null
   token_expires_at: string | null
@@ -68,8 +68,8 @@ export default function AdAccountsList({
     )
   }
 
-  const getStatusBadge = (status: string) => {
-    if (status === 'active') {
+  const getStatusBadge = (isActive: boolean) => {
+    if (isActive) {
       return (
         <span className="inline-flex items-center text-sm text-green-700">
           <CheckCircleIcon className="h-5 w-5 mr-1" />
@@ -138,7 +138,7 @@ export default function AdAccountsList({
                     {account.account_id}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {getStatusBadge(account.status)}
+                    {getStatusBadge(account.is_active)}
                     {isTokenExpiringSoon(account.token_expires_at) && (
                       <div className="mt-1">
                         <span className="inline-flex items-center text-xs text-orange-600">

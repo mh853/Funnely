@@ -21,6 +21,14 @@ export function getLandingPageUrl(slug: string): string {
 }
 
 /**
+ * Get landing page base URL (without slug)
+ * Used for constructing URLs with ref parameter before slug
+ */
+export function getLandingPageBaseUrl(): string {
+  return `${config.app.domain}/landing`
+}
+
+/**
  * Get landing page path (for internal routing)
  */
 export function getLandingPagePath(slug: string): string {

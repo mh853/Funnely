@@ -1,5 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import CampaignsList from '@/components/campaigns/CampaignsList'
 import CreateCampaignButton from '@/components/campaigns/CreateCampaignButton'
 import SyncCampaignButton from '@/components/campaigns/SyncCampaignButton'
@@ -21,13 +22,13 @@ export default async function CampaignsPage() {
   if (!userProfile) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">사용자 정보를 불러올 수 없습니다.</p>
+        <p className="text-red-600">사용자 정보를 불러올 수 없습니다.</p>
       </div>
     )
   }
 
-  // Check if user can manage campaigns
-  const canManage = ['hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(
+  // Check if user can manage campaigns (company_owner, company_admin, hospital_owner, hospital_admin for backward compat)
+  const canManage = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager', 'marketing_staff'].includes(
     userProfile.role
   )
 
@@ -58,21 +59,23 @@ export default async function CampaignsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">캠페인 관리</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            광고 캠페인을 생성하고 성과를 관리합니다.
-          </p>
-        </div>
-        {canManage && adAccounts && adAccounts.length > 0 && (
-          <div className="flex items-center gap-3">
-            {adAccounts[0] && (
-              <SyncCampaignButton adAccountId={adAccounts[0].id} />
-            )}
-            <CreateCampaignButton adAccounts={adAccounts} />
+      <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">캠페인 관리</h1>
+            <p className="mt-1 text-sm text-purple-100">
+              광고 캠페인을 생성하고 성과를 관리합니다.
+            </p>
           </div>
-        )}
+          {canManage && adAccounts && adAccounts.length > 0 && (
+            <div className="flex items-center gap-3">
+              {adAccounts[0] && (
+                <SyncCampaignButton adAccountId={adAccounts[0].id} />
+              )}
+              <CreateCampaignButton adAccounts={adAccounts} />
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Permission Warning */}
