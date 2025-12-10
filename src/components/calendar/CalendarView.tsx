@@ -753,7 +753,7 @@ export default function CalendarView({
                       <div
                         key={lead.id}
                         onClick={(e) => {
-                          setShowDayDetailModal(false)
+                          // 날짜 모달을 닫지 않고 리드 상세 모달만 열어서 뒤로가기 UX 개선
                           handleLeadClick(lead, e)
                         }}
                         className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
@@ -800,8 +800,9 @@ export default function CalendarView({
       )}
 
       {/* Lead Detail Modal - Shows lead information in table format like DB현황 */}
+      {/* z-60으로 설정하여 날짜 모달(z-50) 위에 표시 - 닫으면 날짜 모달로 돌아감 */}
       {showLeadDetailModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
@@ -817,10 +818,16 @@ export default function CalendarView({
                     setLeadDetails(null)
                     setEditingStatus(false)
                     setStatusLogs([])
+                    // showDayDetailModal은 건드리지 않음 - 열려있으면 그대로 유지
                   }}
                   className="p-2 hover:bg-white/20 rounded-full transition"
+                  title={showDayDetailModal ? '목록으로 돌아가기' : '닫기'}
                 >
-                  <XMarkIcon className="h-5 w-5" />
+                  {showDayDetailModal ? (
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  ) : (
+                    <XMarkIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
             </div>
@@ -1156,10 +1163,18 @@ export default function CalendarView({
                   setLeadDetails(null)
                   setEditingStatus(false)
                   setStatusLogs([])
+                  // showDayDetailModal은 건드리지 않음 - 열려있으면 그대로 유지
                 }}
-                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
+                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition flex items-center gap-1"
               >
-                닫기
+                {showDayDetailModal ? (
+                  <>
+                    <ChevronLeftIcon className="h-4 w-4" />
+                    목록으로
+                  </>
+                ) : (
+                  '닫기'
+                )}
               </button>
             </div>
           </div>
