@@ -50,7 +50,6 @@ export default function LeadDetails({
   const [noteContent, setNoteContent] = useState('')
   const [status, setStatus] = useState(lead.status)
   const [priority, setPriority] = useState(lead.priority)
-  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || '')
 
   const handleUpdateStatus = async (newStatus: string) => {
     setLoading(true)
@@ -66,7 +65,6 @@ export default function LeadDetails({
           id: lead.id,
           status: newStatus,
           priority,
-          assigned_to: assignedTo || null,
         }),
       })
 
@@ -349,22 +347,7 @@ export default function LeadDetails({
               </select>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">담당자</label>
-              <select
-                value={assignedTo}
-                onChange={(e) => setAssignedTo(e.target.value)}
-                disabled={loading}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm disabled:opacity-50"
-              >
-                <option value="">미배정</option>
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} ({member.role})
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* 담당자 선택은 콜 담당자/상담 담당자로 대체됨 */}
 
             <button
               onClick={() =>

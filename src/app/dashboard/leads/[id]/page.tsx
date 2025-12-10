@@ -42,11 +42,8 @@ export default async function LeadDetailPage({ params }: Props) {
         title,
         slug
       ),
-      users!leads_assigned_to_fkey (
-        id,
-        name,
-        email
-      )
+      call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
+      counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name)
     `
     )
     .eq('id', params.id)

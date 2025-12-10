@@ -130,8 +130,9 @@ export default function ReservationsClient({
   const [scheduleSearchQuery, setScheduleSearchQuery] = useState('')
   const [scheduleInputCounselorId, setScheduleInputCounselorId] = useState<string>('')
 
-  // 상담담당자 변경 상태
+  // 담당자 변경 상태
   const [updatingCounselor, setUpdatingCounselor] = useState(false)
+  const [updatingCallAssignee, setUpdatingCallAssignee] = useState(false)
 
   // 예약일 변경 이력 상태
   const [reservationDateLogs, setReservationDateLogs] = useState<any[]>([])
@@ -228,6 +229,38 @@ export default function ReservationsClient({
       alert('상담담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselor(false)
+    }
+  }
+
+  // Handle call assignee update
+  const handleCallAssigneeChange = async (leadId: string, newAssigneeId: string) => {
+    setUpdatingCallAssignee(true)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: leadId,
+          call_assigned_to: newAssigneeId || null,
+        }),
+      })
+
+      if (!response.ok) throw new Error('콜 담당자 업데이트 실패')
+
+      // Update local state
+      const newAssignee = teamMembers.find(m => m.id === newAssigneeId)
+      if (leadDetails) {
+        setLeadDetails({
+          ...leadDetails,
+          call_assigned_to: newAssigneeId || null,
+          call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
+        })
+      }
+    } catch (error) {
+      console.error('Call assignee update error:', error)
+      alert('콜 담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingCallAssignee(false)
     }
   }
 
@@ -1339,22 +1372,33 @@ export default function ReservationsClient({
                     </div>
                     <table className="w-full">
                       <tbody className="divide-y divide-gray-200">
-                        {/* 콜 담당자 */}
+                        {/* 콜 담당자 - 드롭다운 (한번 클릭으로 선택 가능) */}
                         <tr>
-                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">콜 담당자</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">
-                            {leadDetails.call_assigned_user ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
-                                  <span className="text-xs font-medium text-blue-600">
-                                    {leadDetails.call_assigned_user.full_name?.charAt(0) || '?'}
-                                  </span>
+                          <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700 w-1/3">콜 담당자</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 bg-blue-50/50">
+                            <div className="relative">
+                              {updatingCallAssignee ? (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                  <span className="text-gray-500">저장 중...</span>
                                 </div>
-                                <span>{leadDetails.call_assigned_user.full_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-gray-400">미배정</span>
-                            )}
+                              ) : (
+                                <select
+                                  value={leadDetails.call_assigned_user?.id || ''}
+                                  onChange={(e) => handleCallAssigneeChange(leadDetails.id, e.target.value)}
+                                  disabled={updatingCallAssignee}
+                                  className="w-full max-w-[200px] rounded-lg border border-blue-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors appearance-none"
+                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                                >
+                                  <option value="">미배정</option>
+                                  {teamMembers.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {member.full_name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         {/* 상담 담당자 - 드롭다운 (한번 클릭으로 선택 가능) */}

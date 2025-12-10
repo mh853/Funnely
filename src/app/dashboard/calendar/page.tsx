@@ -55,7 +55,11 @@ export default async function CalendarPage({
   // Get leads for this hospital to display on calendar
   let leadsQuery = supabase
     .from('leads')
-    .select('id, name, phone, status, created_at, preferred_date, preferred_time, landing_page_id, contract_completed_at')
+    .select(`
+      id, name, phone, status, created_at, preferred_date, preferred_time, landing_page_id, contract_completed_at,
+      call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
+      counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name)
+    `)
     .eq('company_id', userProfile.company_id)
 
   // Apply status filter if provided (e.g., from reservations page)

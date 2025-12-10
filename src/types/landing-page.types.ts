@@ -265,7 +265,8 @@ export interface Lead {
   // 리드 관리
   status: LeadStatus;
   priority: LeadPriority;
-  assigned_to?: string;
+  call_assigned_to?: string;
+  counselor_assigned_to?: string;
   tags: string[];
 
   // 유입 분석

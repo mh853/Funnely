@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { decryptPhone } from '@/lib/encryption/phone'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
+import * as XLSX from 'xlsx'
 
 interface TeamMember {
   id: string
@@ -290,9 +291,22 @@ export default function LeadsClient({
   const [loadingAuditLogs, setLoadingAuditLogs] = useState(false)
   const [showAuditLogs, setShowAuditLogs] = useState(false)
 
-  // 담당자 변경 관련 상태
+  // 콜 담당자 변경 관련 상태
   const [editingAssigneeLeadId, setEditingAssigneeLeadId] = useState<string | null>(null)
   const [updatingAssigneeLeadId, setUpdatingAssigneeLeadId] = useState<string | null>(null)
+  const [assigneeDropdownPosition, setAssigneeDropdownPosition] = useState<{ top: number; left: number } | null>(null)
+  const assigneeDropdownRef = useRef<HTMLDivElement>(null)
+
+  // 상담 담당자 변경 관련 상태
+  const [editingCounselorLeadId, setEditingCounselorLeadId] = useState<string | null>(null)
+  const [updatingCounselorLeadId, setUpdatingCounselorLeadId] = useState<string | null>(null)
+  const [counselorDropdownPosition, setCounselorDropdownPosition] = useState<{ top: number; left: number } | null>(null)
+  const counselorDropdownRef = useRef<HTMLDivElement>(null)
+
+  // 변경 이력 관련 상태
+  const [changeLogs, setChangeLogs] = useState<any[]>([])
+  const [loadingChangeLogs, setLoadingChangeLogs] = useState(false)
+  const [showChangeLogs, setShowChangeLogs] = useState(false)
 
   // 결제 내역 조회 함수
   const fetchPayments = async (leadId: string, existingPaymentAmount?: number) => {
@@ -463,6 +477,63 @@ export default function LeadsClient({
     }
   }
 
+  // 변경 이력 조회 함수
+  const fetchChangeLogs = async (leadId: string) => {
+    setLoadingChangeLogs(true)
+    try {
+      const response = await fetch(`/api/leads/change-logs?lead_id=${leadId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setChangeLogs(data.data || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch change logs:', error)
+    } finally {
+      setLoadingChangeLogs(false)
+    }
+  }
+
+  // 필드 타입 한글 라벨
+  const getFieldTypeLabel = (fieldType: string) => {
+    const labels: Record<string, string> = {
+      status: '결과',
+      call_assigned_to: '콜 담당자',
+      counselor_assigned_to: '상담 담당자',
+      notes: '비고',
+      contract_completed_at: '계약완료일',
+    }
+    return labels[fieldType] || fieldType
+  }
+
+  // 값 표시 함수 (담당자 ID -> 이름 변환)
+  const getDisplayValue = (fieldType: string, value: string | null) => {
+    if (!value) return '미지정'
+
+    if (fieldType === 'call_assigned_to' || fieldType === 'counselor_assigned_to') {
+      const member = teamMembers.find(m => m.id === value)
+      return member?.full_name || '알 수 없음'
+    }
+
+    if (fieldType === 'status') {
+      const status = statusOptions.find(s => s.value === value)
+      return status?.label || value
+    }
+
+    if (fieldType === 'notes') {
+      return value.length > 30 ? value.substring(0, 30) + '...' : value
+    }
+
+    if (fieldType === 'contract_completed_at') {
+      return new Date(value).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+      })
+    }
+
+    return value
+  }
+
   // 행 클릭 핸들러 - 상세 모달 열기
   const handleRowClick = (lead: any, e: React.MouseEvent) => {
     // 상태 드롭다운 버튼 클릭은 무시
@@ -480,6 +551,9 @@ export default function LeadsClient({
     // 감사 로그 초기화
     setPaymentAuditLogs([])
     setShowAuditLogs(false)
+    // 변경 이력 초기화
+    setChangeLogs([])
+    setShowChangeLogs(false)
   }
 
   // 비고 저장 핸들러
@@ -562,15 +636,22 @@ export default function LeadsClient({
         }
       }
       if (editingAssigneeLeadId) {
-        if (!target.closest('.assignee-dropdown')) {
+        if (!target.closest('.assignee-dropdown') && !target.closest('.assignee-dropdown-menu')) {
           setEditingAssigneeLeadId(null)
+          setAssigneeDropdownPosition(null)
+        }
+      }
+      if (editingCounselorLeadId) {
+        if (!target.closest('.counselor-dropdown') && !target.closest('.counselor-dropdown-menu')) {
+          setEditingCounselorLeadId(null)
+          setCounselorDropdownPosition(null)
         }
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [editingLeadId, editingAssigneeLeadId])
+  }, [editingLeadId, editingAssigneeLeadId, editingCounselorLeadId])
 
   // 드롭다운 버튼 클릭 시 위치 계산 (화면 하단 가까우면 위로 펼침)
   const handleDropdownToggle = useCallback((leadId: string, event: React.MouseEvent<HTMLButtonElement>) => {
@@ -597,6 +678,50 @@ export default function LeadsClient({
       setEditingLeadId(leadId)
     }
   }, [editingLeadId])
+
+  // 콜 담당자 드롭다운 토글
+  const handleAssigneeDropdownToggle = useCallback((leadId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    if (editingAssigneeLeadId === leadId) {
+      setEditingAssigneeLeadId(null)
+      setAssigneeDropdownPosition(null)
+    } else {
+      const button = event.currentTarget
+      const rect = button.getBoundingClientRect()
+      setAssigneeDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      })
+      setEditingAssigneeLeadId(leadId)
+      // 다른 드롭다운 닫기
+      setEditingCounselorLeadId(null)
+      setCounselorDropdownPosition(null)
+      setEditingLeadId(null)
+      setDropdownPosition(null)
+    }
+  }, [editingAssigneeLeadId])
+
+  // 상담 담당자 드롭다운 토글
+  const handleCounselorDropdownToggle = useCallback((leadId: string, event: React.MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation()
+    if (editingCounselorLeadId === leadId) {
+      setEditingCounselorLeadId(null)
+      setCounselorDropdownPosition(null)
+    } else {
+      const button = event.currentTarget
+      const rect = button.getBoundingClientRect()
+      setCounselorDropdownPosition({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+      })
+      setEditingCounselorLeadId(leadId)
+      // 다른 드롭다운 닫기
+      setEditingAssigneeLeadId(null)
+      setAssigneeDropdownPosition(null)
+      setEditingLeadId(null)
+      setDropdownPosition(null)
+    }
+  }, [editingCounselorLeadId])
 
   // 계약완료 모달 열기 (날짜/시간 선택)
   const openContractModal = (leadId: string) => {
@@ -755,9 +880,50 @@ export default function LeadsClient({
       setEditingAssigneeLeadId(null)
     } catch (error) {
       console.error('Assignee update error:', error)
-      alert('담당자 변경에 실패했습니다.')
+      alert('콜 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingAssigneeLeadId(null)
+    }
+  }
+
+  // 상담 담당자 변경 핸들러
+  const handleCounselorChange = async (leadId: string, newCounselorId: string) => {
+    setUpdatingCounselorLeadId(leadId)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: leadId,
+          counselor_assigned_to: newCounselorId || null,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('상담 담당자 업데이트 실패')
+      }
+
+      // 로컬 상태 업데이트
+      const newCounselor = teamMembers.find(m => m.id === newCounselorId)
+      setLeads(prevLeads =>
+        prevLeads.map(lead =>
+          lead.id === leadId
+            ? {
+                ...lead,
+                counselor_assigned_to: newCounselorId || null,
+                counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
+              }
+            : lead
+        )
+      )
+      setEditingCounselorLeadId(null)
+    } catch (error) {
+      console.error('Counselor update error:', error)
+      alert('상담 담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingCounselorLeadId(null)
     }
   }
 
@@ -846,8 +1012,124 @@ export default function LeadsClient({
   }
 
   const handleExcelExport = () => {
-    // Excel export will be implemented later
-    alert('Excel 내보내기 기능은 곧 추가될 예정입니다.')
+    if (!leads || leads.length === 0) {
+      alert('내보낼 데이터가 없습니다.')
+      return
+    }
+
+    try {
+      // 엑셀 데이터 생성 (사용자 경험 최적화 - 한글 헤더, 정리된 순서)
+      const excelData = leads.map((lead: any, index: number) => {
+        // 상태 라벨 가져오기
+        const statusLabel = statusStyles[lead.status]?.label || lead.status || '-'
+
+        // 콜 담당자 이름 가져오기
+        const callAssignedUserName = lead.call_assigned_user?.full_name || '-'
+        // 상담 담당자 이름 가져오기
+        const counselorAssignedUserName = lead.counselor_assigned_user?.full_name || '-'
+
+        // custom_fields 데이터 파싱
+        let customFieldsData: { [key: string]: string } = {}
+        if (lead.custom_fields) {
+          try {
+            const fields = typeof lead.custom_fields === 'string'
+              ? JSON.parse(lead.custom_fields)
+              : lead.custom_fields
+            if (Array.isArray(fields)) {
+              fields.forEach((field: any) => {
+                if (field.label && field.value !== undefined) {
+                  customFieldsData[field.label] = String(field.value)
+                }
+              })
+            } else if (typeof fields === 'object') {
+              Object.entries(fields).forEach(([key, value]) => {
+                customFieldsData[key] = String(value || '')
+              })
+            }
+          } catch (e) {
+            // 파싱 실패 시 무시
+          }
+        }
+
+        return {
+          '번호': index + 1,
+          '등록일시': formatDateTime(lead.created_at),
+          '랜딩페이지': lead.landing_pages?.title || '-',
+          '이름': lead.name || '-',
+          '전화번호': lead.phone ? decryptPhone(lead.phone) : '-',
+          '이메일': lead.email || '-',
+          '기기': lead.device_type
+            ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+            : '-',
+          '상태': statusLabel,
+          '예약날짜': lead.contract_completed_at
+            ? new Date(lead.contract_completed_at).toISOString().split('T')[0]
+            : '-',
+          '결제금액': lead.lead_payments && lead.lead_payments.length > 0
+            ? lead.lead_payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toLocaleString() + '원'
+            : '-',
+          '비고': lead.memo || '-',
+          '콜 담당자': callAssignedUserName,
+          '상담 담당자': counselorAssignedUserName,
+          // UTM 파라미터
+          'utm_source': lead.utm_source || '-',
+          'utm_medium': lead.utm_medium || '-',
+          'utm_campaign': lead.utm_campaign || '-',
+          'utm_content': lead.utm_content || '-',
+          'utm_term': lead.utm_term || '-',
+          // 유입 분석
+          'Referrer': lead.referrer || '-',
+          'IP 주소': lead.ip_address || '-',
+          'User Agent': lead.user_agent || '-',
+          // 커스텀 필드들 (동적으로 추가)
+          ...customFieldsData,
+        }
+      })
+
+      // 워크시트 생성
+      const worksheet = XLSX.utils.json_to_sheet(excelData)
+
+      // 컬럼 너비 설정 (사용자 경험 향상)
+      const columnWidths = [
+        { wch: 5 },   // 번호
+        { wch: 18 },  // 등록일시
+        { wch: 20 },  // 랜딩페이지
+        { wch: 10 },  // 이름
+        { wch: 15 },  // 전화번호
+        { wch: 25 },  // 이메일
+        { wch: 8 },   // 기기
+        { wch: 12 },  // 상태
+        { wch: 12 },  // 예약날짜
+        { wch: 12 },  // 결제금액
+        { wch: 30 },  // 비고
+        { wch: 10 },  // 콜 담당자
+        { wch: 10 },  // 상담 담당자
+        { wch: 15 },  // utm_source
+        { wch: 15 },  // utm_medium
+        { wch: 20 },  // utm_campaign
+        { wch: 15 },  // utm_content
+        { wch: 15 },  // utm_term
+        { wch: 30 },  // Referrer
+        { wch: 15 },  // IP 주소
+        { wch: 50 },  // User Agent
+      ]
+      worksheet['!cols'] = columnWidths
+
+      // 워크북 생성
+      const workbook = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'DB 현황')
+
+      // 파일명 생성 (현재 날짜 포함)
+      const today = new Date()
+      const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`
+      const fileName = `DB현황_${dateStr}.xlsx`
+
+      // 파일 다운로드
+      XLSX.writeFile(workbook, fileName)
+    } catch (error) {
+      console.error('Excel export error:', error)
+      alert('엑셀 내보내기 중 오류가 발생했습니다.')
+    }
   }
 
   // 필터 해제 (전체 목록으로 이동 - 모든 날짜 범위 포함)
@@ -859,6 +1141,25 @@ export default function LeadsClient({
 
   return (
     <>
+      {/* Header */}
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">DB 현황</h1>
+            <p className="mt-1 text-sm text-indigo-100">
+              랜딩페이지에서 수집된 고객 DB를 관리하세요
+            </p>
+          </div>
+          <button
+            onClick={handleExcelExport}
+            className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
+          >
+            <ArrowDownTrayIcon className="h-5 w-5" />
+            Excel
+          </button>
+        </div>
+      </div>
+
       {/* 필터 알림 배너 (URL에서 status, deviceType, date가 설정된 경우) */}
       {(urlStatus || urlDeviceType || urlSingleDate) && !selectedLeadId && (
         <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
@@ -1040,30 +1341,14 @@ export default function LeadsClient({
                   기기
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  이름
+                  utm_source
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  전화번호
+                  utm_medium
                 </th>
-                {/* 동적 custom_fields 컬럼 (최대 2개 + ... 표시) */}
-                {customFieldColumns.length > 0 ? (
-                  <>
-                    {customFieldColumns.slice(0, 2).map((field) => (
-                      <th key={field.key} className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider max-w-[150px] truncate" title={field.label}>
-                        {field.label}
-                      </th>
-                    ))}
-                    {customFieldColumns.length > 2 && (
-                      <th className="px-4 py-2.5 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider" title={`외 ${customFieldColumns.length - 2}개 항목`}>
-                        +{customFieldColumns.length - 2}
-                      </th>
-                    )}
-                  </>
-                ) : (
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">
-                    추가 항목
-                  </th>
-                )}
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  utm_campaign
+                </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결과
                 </th>
@@ -1077,14 +1362,17 @@ export default function LeadsClient({
                   비고
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  담당자
+                  콜 담당자
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  상담 담당자
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={customFieldColumns.length > 0 ? 10 + Math.min(customFieldColumns.length, 2) + (customFieldColumns.length > 2 ? 1 : 0) : 13} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={12} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -1112,48 +1400,15 @@ export default function LeadsClient({
                         ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
                         : '-'}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm font-medium text-gray-900">
-                      <span title={lead.name || ''}>
-                        {lead.name ? (
-                          lead.name.length > 5
-                            ? `${lead.name.slice(0, 5)}...`
-                            : lead.name
-                        ) : '-'}
-                      </span>
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.utm_source || '-'}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {(() => {
-                        if (!lead.phone) return '-'
-                        const decrypted = decryptPhone(lead.phone)
-                        // 전화번호 형태 체크 (숫자와 하이픈만 허용, 9자리 이상)
-                        const isValidPhone = /^[\d-]{9,}$/.test(decrypted)
-                        if (isValidPhone) {
-                          return decrypted
-                        } else {
-                          // 전화번호 형태가 아니면 11자 이후 말줄임
-                          return decrypted.length > 11 ? `${decrypted.slice(0, 11)}...` : decrypted
-                        }
-                      })()}
+                      {lead.utm_medium || '-'}
                     </td>
-                    {/* 동적 custom_fields 데이터 (최대 2개 + ... 표시) */}
-                    {customFieldColumns.length > 0 ? (
-                      <>
-                        {customFieldColumns.slice(0, 2).map((field) => (
-                          <td key={field.key} className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[150px] truncate" title={getCustomFieldValue(lead, field.label) || undefined}>
-                            {getCustomFieldValue(lead, field.label) || '-'}
-                          </td>
-                        ))}
-                        {customFieldColumns.length > 2 && (
-                          <td className="px-4 py-2.5 whitespace-nowrap text-sm text-center text-indigo-500 cursor-pointer hover:text-indigo-700" onClick={(e) => { e.stopPropagation(); handleRowClick(lead, e); }}>
-                            ...
-                          </td>
-                        )}
-                      </>
-                    ) : (
-                      <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-400 italic">
-                        -
-                      </td>
-                    )}
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.utm_campaign || '-'}
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
                         {/* 상태 배지 (클릭 가능) */}
@@ -1215,58 +1470,48 @@ export default function LeadsClient({
                         {lead.notes || '-'}
                       </span>
                     </td>
+                    {/* 콜 담당자 */}
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      <div className="relative assignee-dropdown">
-                        {editingAssigneeLeadId === lead.id ? (
-                          <select
-                            value={lead.call_assigned_user?.id || ''}
-                            onChange={(e) => handleAssigneeChange(lead.id, e.target.value)}
-                            disabled={updatingAssigneeLeadId === lead.id}
-                            className="w-full max-w-[120px] rounded-lg border border-blue-300 px-2 py-1 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-                            autoFocus
-                          >
-                            <option value="">미지정</option>
-                            {teamMembers?.map((member) => (
-                              <option key={member.id} value={member.id}>
-                                {member.full_name}
-                              </option>
-                            ))}
-                          </select>
-                        ) : (
-                          <button
-                            onClick={() => setEditingAssigneeLeadId(lead.id)}
-                            disabled={updatingAssigneeLeadId === lead.id}
-                            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-all ${
-                              updatingAssigneeLeadId === lead.id
-                                ? 'opacity-50 cursor-wait'
-                                : 'hover:bg-blue-50 cursor-pointer'
-                            }`}
-                          >
-                            {updatingAssigneeLeadId === lead.id ? (
-                              <svg className="animate-spin h-4 w-4 text-blue-600" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                              </svg>
-                            ) : lead.call_assigned_user ? (
-                              <>
-                                <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-xs font-medium text-blue-600">
-                                    {lead.call_assigned_user.full_name?.charAt(0) || '?'}
-                                  </span>
-                                </div>
-                                <span className="truncate max-w-[80px]" title={lead.call_assigned_user.full_name}>
-                                  {lead.call_assigned_user.full_name}
-                                </span>
-                                <ChevronDownIcon className="h-3 w-3 text-gray-400" />
-                              </>
-                            ) : (
-                              <>
-                                <span className="text-gray-400">미지정</span>
-                                <ChevronDownIcon className="h-3 w-3 text-gray-400" />
-                              </>
-                            )}
-                          </button>
-                        )}
+                      <div className="relative inline-block assignee-dropdown">
+                        <button
+                          onClick={(e) => handleAssigneeDropdownToggle(lead.id, e)}
+                          disabled={updatingAssigneeLeadId === lead.id}
+                          className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 text-sm text-blue-700 cursor-pointer hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors min-w-[100px]"
+                        >
+                          {updatingAssigneeLeadId === lead.id ? (
+                            <svg className="animate-spin h-4 w-4 text-blue-600" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <>
+                              <span className="truncate">{lead.call_assigned_user?.full_name || '미지정'}</span>
+                              <ChevronDownIcon className="h-4 w-4 text-blue-400 flex-shrink-0" />
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </td>
+                    {/* 상담 담당자 */}
+                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      <div className="relative inline-block counselor-dropdown">
+                        <button
+                          onClick={(e) => handleCounselorDropdownToggle(lead.id, e)}
+                          disabled={updatingCounselorLeadId === lead.id}
+                          className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 text-sm text-emerald-700 cursor-pointer hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors min-w-[100px]"
+                        >
+                          {updatingCounselorLeadId === lead.id ? (
+                            <svg className="animate-spin h-4 w-4 text-emerald-600" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                            </svg>
+                          ) : (
+                            <>
+                              <span className="truncate">{lead.counselor_assigned_user?.full_name || '미지정'}</span>
+                              <ChevronDownIcon className="h-4 w-4 text-emerald-400 flex-shrink-0" />
+                            </>
+                          )}
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1361,15 +1606,125 @@ export default function LeadsClient({
         document.body
       )}
 
+      {/* 콜 담당자 Portal 드롭다운 메뉴 */}
+      {editingAssigneeLeadId && assigneeDropdownPosition && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={assigneeDropdownRef}
+          className="assignee-dropdown-menu fixed z-50 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-80 overflow-y-auto"
+          style={{
+            top: assigneeDropdownPosition.top,
+            left: assigneeDropdownPosition.left,
+          }}
+        >
+          {/* 미지정 옵션 */}
+          <button
+            onClick={() => {
+              handleAssigneeChange(editingAssigneeLeadId, '')
+              setEditingAssigneeLeadId(null)
+              setAssigneeDropdownPosition(null)
+            }}
+            disabled={updatingAssigneeLeadId === editingAssigneeLeadId}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+              !leads.find(l => l.id === editingAssigneeLeadId)?.call_assigned_user?.id ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+            }`}
+          >
+            <span>미지정</span>
+            {!leads.find(l => l.id === editingAssigneeLeadId)?.call_assigned_user?.id && (
+              <CheckIcon className="h-4 w-4 text-blue-600" />
+            )}
+          </button>
+          {/* 팀원 목록 */}
+          {teamMembers.map((member) => {
+            const currentLead = leads.find(l => l.id === editingAssigneeLeadId)
+            const isSelected = currentLead?.call_assigned_user?.id === member.id
+            return (
+              <button
+                key={member.id}
+                onClick={() => {
+                  handleAssigneeChange(editingAssigneeLeadId, member.id)
+                  setEditingAssigneeLeadId(null)
+                  setAssigneeDropdownPosition(null)
+                }}
+                disabled={updatingAssigneeLeadId === editingAssigneeLeadId}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                  isSelected ? 'bg-blue-50 text-blue-700' : 'text-gray-700'
+                }`}
+              >
+                <span>{member.full_name}</span>
+                {isSelected && (
+                  <CheckIcon className="h-4 w-4 text-blue-600" />
+                )}
+              </button>
+            )
+          })}
+        </div>,
+        document.body
+      )}
+
+      {/* 상담 담당자 Portal 드롭다운 메뉴 */}
+      {editingCounselorLeadId && counselorDropdownPosition && typeof document !== 'undefined' && createPortal(
+        <div
+          ref={counselorDropdownRef}
+          className="counselor-dropdown-menu fixed z-50 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-80 overflow-y-auto"
+          style={{
+            top: counselorDropdownPosition.top,
+            left: counselorDropdownPosition.left,
+          }}
+        >
+          {/* 미지정 옵션 */}
+          <button
+            onClick={() => {
+              handleCounselorChange(editingCounselorLeadId, '')
+              setEditingCounselorLeadId(null)
+              setCounselorDropdownPosition(null)
+            }}
+            disabled={updatingCounselorLeadId === editingCounselorLeadId}
+            className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+              !leads.find(l => l.id === editingCounselorLeadId)?.counselor_assigned_user?.id ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'
+            }`}
+          >
+            <span>미지정</span>
+            {!leads.find(l => l.id === editingCounselorLeadId)?.counselor_assigned_user?.id && (
+              <CheckIcon className="h-4 w-4 text-emerald-600" />
+            )}
+          </button>
+          {/* 팀원 목록 */}
+          {teamMembers.map((member) => {
+            const currentLead = leads.find(l => l.id === editingCounselorLeadId)
+            const isSelected = currentLead?.counselor_assigned_user?.id === member.id
+            return (
+              <button
+                key={member.id}
+                onClick={() => {
+                  handleCounselorChange(editingCounselorLeadId, member.id)
+                  setEditingCounselorLeadId(null)
+                  setCounselorDropdownPosition(null)
+                }}
+                disabled={updatingCounselorLeadId === editingCounselorLeadId}
+                className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
+                  isSelected ? 'bg-emerald-50 text-emerald-700' : 'text-gray-700'
+                }`}
+              >
+                <span>{member.full_name}</span>
+                {isSelected && (
+                  <CheckIcon className="h-4 w-4 text-emerald-600" />
+                )}
+              </button>
+            )
+          })}
+        </div>,
+        document.body
+      )}
+
       {/* 계약완료 날짜/시간 선택 모달 */}
       {contractModalLeadId && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
             {/* 헤더 */}
             <div className="p-5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
               <h3 className="text-lg font-bold flex items-center gap-2">
                 <CalendarDaysIcon className="h-6 w-6" />
-                계약 완료 일정 등록
+                예약 완료 일정 등록
               </h3>
               <p className="text-sm text-emerald-100 mt-1">
                 예약 일정에 표시될 날짜와 시간을 선택하세요
@@ -1513,7 +1868,7 @@ export default function LeadsClient({
                 ) : (
                   <>
                     <CheckIcon className="h-5 w-5" />
-                    계약 완료
+                    저장
                   </>
                 )}
               </button>
@@ -1595,22 +1950,64 @@ export default function LeadsClient({
                       <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">기기</td>
                       <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.device_type?.toUpperCase() || '-'}</td>
                     </tr>
-                    {/* 담당자 */}
+                    {/* 콜 담당자 */}
                     <tr>
-                      <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">담당자</td>
+                      <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">콜 담당자</td>
                       <td className="px-4 py-3 text-sm text-gray-900 bg-blue-50/50">
-                        {selectedLead.call_assigned_user ? (
-                          <div className="flex items-center gap-2">
-                            <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                              <span className="text-sm font-medium text-blue-600">
-                                {selectedLead.call_assigned_user.full_name?.charAt(0) || '?'}
-                              </span>
-                            </div>
-                            <span className="font-medium">{selectedLead.call_assigned_user.full_name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-gray-400">미지정</span>
-                        )}
+                        <select
+                          value={selectedLead.call_assigned_user?.id || ''}
+                          onChange={(e) => {
+                            const newId = e.target.value
+                            handleAssigneeChange(selectedLead.id, newId)
+                            const newAssignee = teamMembers.find(m => m.id === newId)
+                            setSelectedLead({
+                              ...selectedLead,
+                              call_assigned_to: newId || null,
+                              call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
+                            })
+                          }}
+                          disabled={updatingAssigneeLeadId === selectedLead.id}
+                          className={`w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${
+                            updatingAssigneeLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : ''
+                          }`}
+                        >
+                          <option value="">미지정</option>
+                          {teamMembers?.map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.full_name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                    </tr>
+                    {/* 상담 담당자 */}
+                    <tr>
+                      <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">상담 담당자</td>
+                      <td className="px-4 py-3 text-sm text-gray-900 bg-emerald-50/50">
+                        <select
+                          value={selectedLead.counselor_assigned_user?.id || ''}
+                          onChange={(e) => {
+                            const newId = e.target.value
+                            handleCounselorChange(selectedLead.id, newId)
+                            const newCounselor = teamMembers.find(m => m.id === newId)
+                            setSelectedLead({
+                              ...selectedLead,
+                              counselor_assigned_to: newId || null,
+                              counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
+                            })
+                          }}
+                          disabled={updatingCounselorLeadId === selectedLead.id}
+                          className={`w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white ${
+                            updatingCounselorLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : ''
+                          }`}
+                        >
+                          <option value="">미지정</option>
+                          {teamMembers?.map((member) => (
+                            <option key={member.id} value={member.id}>
+                              {member.full_name}
+                            </option>
+                          ))}
+                        </select>
                       </td>
                     </tr>
                     {/* DB 수집 항목들 - 이름, 전화번호, 이메일, 커스텀필드 (같은 색상으로 그룹핑) */}
@@ -1948,6 +2345,97 @@ export default function LeadsClient({
                           <div className="text-center py-2 text-gray-400 text-xs">변경 이력이 없습니다</div>
                         )}
                       </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* 변경 이력 섹션 */}
+              <div className="border-2 border-gray-100 rounded-xl p-4 bg-gray-50/30">
+                <button
+                  onClick={() => {
+                    if (!showChangeLogs && changeLogs.length === 0) {
+                      fetchChangeLogs(selectedLead.id)
+                    }
+                    setShowChangeLogs(!showChangeLogs)
+                  }}
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors w-full"
+                >
+                  <svg
+                    className={`h-4 w-4 transition-transform ${showChangeLogs ? 'rotate-90' : ''}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                  <span>변경 이력</span>
+                </button>
+
+                {showChangeLogs && (
+                  <div className="mt-3 bg-white rounded-lg border border-gray-100 max-h-64 overflow-y-auto">
+                    {loadingChangeLogs ? (
+                      <div className="text-center py-4 text-gray-400 text-sm">로딩 중...</div>
+                    ) : changeLogs.length > 0 ? (
+                      <div className="divide-y divide-gray-100">
+                        {changeLogs.map((log, index) => {
+                          const fieldType = log.field_type || 'status'
+                          const previousValue = fieldType === 'status' ? log.previous_status : log.previous_value
+                          const newValue = fieldType === 'status' ? log.new_status : log.new_value
+
+                          // 필드 타입별 스타일
+                          const fieldStyles: Record<string, { bg: string; text: string; border: string }> = {
+                            status: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
+                            call_assigned_to: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
+                            counselor_assigned_to: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
+                            notes: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
+                            contract_completed_at: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
+                          }
+                          const style = fieldStyles[fieldType] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' }
+
+                          // 날짜 포맷팅
+                          const formattedDate = new Date(log.created_at).toLocaleDateString('ko-KR', {
+                            month: 'long',
+                            day: 'numeric',
+                          })
+
+                          return (
+                            <div key={log.id || index} className={`px-4 py-3 ${style.bg} border-l-4 ${style.border}`}>
+                              {/* 메인 문장 - 작은 글씨 */}
+                              <p className="text-xs text-gray-600 leading-relaxed">
+                                <span className="font-medium text-gray-700">{formattedDate}</span>
+                                <span className="text-gray-500">에 </span>
+                                <span className={`font-semibold ${style.text}`}>{getFieldTypeLabel(fieldType)}</span>
+                                <span className="text-gray-500"> 항목을 </span>
+                                <span className="font-medium text-gray-700">{log.changed_by_user?.full_name || '알 수 없음'}</span>
+                                <span className="text-gray-500"> 님이 수정하셨습니다.</span>
+                              </p>
+
+                              {/* 세부 변경내용 - 더 작은 글씨 */}
+                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-400">
+                                <span>
+                                  {new Date(log.created_at).toLocaleTimeString('ko-KR', {
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                  })}
+                                </span>
+                                <span className="text-gray-300">|</span>
+                                <span className="line-through">
+                                  {getDisplayValue(fieldType, previousValue)}
+                                </span>
+                                <svg className="h-2.5 w-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                                </svg>
+                                <span className="text-gray-500 font-medium">
+                                  {getDisplayValue(fieldType, newValue)}
+                                </span>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <div className="text-center py-4 text-gray-400 text-sm">변경 이력이 없습니다</div>
                     )}
                   </div>
                 )}

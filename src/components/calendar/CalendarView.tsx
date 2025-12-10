@@ -118,6 +118,10 @@ export default function CalendarView({
   const [statusLogs, setStatusLogs] = useState<any[]>([])
   const [loadingStatusLogs, setLoadingStatusLogs] = useState(false)
 
+  // 콜/상담 담당자 수정 상태
+  const [updatingCallAssignee, setUpdatingCallAssignee] = useState(false)
+  const [updatingCounselor, setUpdatingCounselor] = useState(false)
+
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {
@@ -352,6 +356,70 @@ export default function CalendarView({
       alert('상태 업데이트에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
+    }
+  }
+
+  // 콜 담당자 변경 핸들러
+  const handleCallAssigneeChange = async (newAssigneeId: string) => {
+    if (!selectedLead || !leadDetails) return
+
+    setUpdatingCallAssignee(true)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          call_assigned_to: newAssigneeId || null,
+        }),
+      })
+
+      if (!response.ok) throw new Error('콜 담당자 업데이트 실패')
+
+      // 로컬 상태 업데이트
+      const newAssignee = teamMembers.find(m => m.id === newAssigneeId)
+      setLeadDetails({
+        ...leadDetails,
+        call_assigned_to: newAssigneeId || null,
+        call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
+      })
+    } catch (error) {
+      console.error('Call assignee update error:', error)
+      alert('콜 담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingCallAssignee(false)
+    }
+  }
+
+  // 상담 담당자 변경 핸들러
+  const handleCounselorChange = async (newCounselorId: string) => {
+    if (!selectedLead || !leadDetails) return
+
+    setUpdatingCounselor(true)
+    try {
+      const response = await fetch('/api/leads/update', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedLead.id,
+          counselor_assigned_to: newCounselorId || null,
+        }),
+      })
+
+      if (!response.ok) throw new Error('상담 담당자 업데이트 실패')
+
+      // 로컬 상태 업데이트
+      const newCounselor = teamMembers.find(m => m.id === newCounselorId)
+      setLeadDetails({
+        ...leadDetails,
+        counselor_assigned_to: newCounselorId || null,
+        counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
+      })
+    } catch (error) {
+      console.error('Counselor update error:', error)
+      alert('상담 담당자 변경에 실패했습니다.')
+    } finally {
+      setUpdatingCounselor(false)
     }
   }
 
@@ -875,22 +943,58 @@ export default function CalendarView({
                             </div>
                           </td>
                         </tr>
-                        {/* 담당자 */}
+                        {/* 콜 담당자 */}
                         <tr>
-                          <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">담당자</td>
+                          <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">콜 담당자</td>
                           <td className="px-4 py-3 bg-blue-50/50">
-                            {leadDetails.call_assigned_user ? (
-                              <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <span className="text-sm font-medium text-blue-600">
-                                    {leadDetails.call_assigned_user.full_name?.charAt(0) || '?'}
-                                  </span>
+                            <div className="relative inline-block">
+                              <select
+                                value={leadDetails.call_assigned_to || ''}
+                                onChange={(e) => handleCallAssigneeChange(e.target.value)}
+                                disabled={updatingCallAssignee}
+                                className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium cursor-pointer border border-blue-200 bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]"
+                              >
+                                <option value="">미지정</option>
+                                {teamMembers.map((member) => (
+                                  <option key={member.id} value={member.id}>
+                                    {member.full_name}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-gray-400" />
+                              {updatingCallAssignee && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
                                 </div>
-                                <span className="text-sm font-medium text-gray-900">{leadDetails.call_assigned_user.full_name}</span>
-                              </div>
-                            ) : (
-                              <span className="text-sm text-gray-400">미지정</span>
-                            )}
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 상담 담당자 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">상담 담당자</td>
+                          <td className="px-4 py-3 bg-emerald-50/50">
+                            <div className="relative inline-block">
+                              <select
+                                value={leadDetails.counselor_assigned_to || ''}
+                                onChange={(e) => handleCounselorChange(e.target.value)}
+                                disabled={updatingCounselor}
+                                className="appearance-none pl-3 pr-8 py-1.5 rounded-lg text-sm font-medium cursor-pointer border border-emerald-200 bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 min-w-[140px]"
+                              >
+                                <option value="">미지정</option>
+                                {teamMembers.map((member) => (
+                                  <option key={member.id} value={member.id}>
+                                    {member.full_name}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDownIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none text-gray-400" />
+                              {updatingCounselor && (
+                                <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                </div>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         {/* 희망 상담일 */}

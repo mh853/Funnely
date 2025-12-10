@@ -1,6 +1,5 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import LeadsClient from './LeadsClient'
 
 interface SearchParams {
@@ -112,7 +111,8 @@ export default async function LeadsPage({
         slug,
         collect_fields
       ),
-      call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name)
+      call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
+      counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name)
     `,
       { count: 'exact' }
     )
@@ -184,31 +184,9 @@ export default async function LeadsPage({
     .eq('is_active', true)
     .order('sort_order')
 
-  const handleExcelExport = async () => {
-    'use server'
-    // Excel export implementation will be added later
-  }
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">DB 현황</h1>
-            <p className="mt-1 text-sm text-indigo-100">
-              랜딩페이지에서 수집된 고객 DB를 관리하세요
-            </p>
-          </div>
-          <button
-            onClick={handleExcelExport}
-            className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5" />
-            Excel
-          </button>
-        </div>
-      </div>
+      {/* Header는 LeadsClient에서 Excel 버튼과 함께 렌더링 */}
 
       <LeadsClient
         leads={leads || []}
