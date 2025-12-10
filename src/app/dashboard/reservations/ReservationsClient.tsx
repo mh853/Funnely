@@ -111,11 +111,12 @@ export default function ReservationsClient({
   // 뷰 모드 상태 (calendar가 기본값)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
-  // 주간 캘린더 뷰 상태
+  // 주간 캘린더 뷰 상태 (월요일 시작)
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date()
     const dayOfWeek = today.getDay() // 0 = Sunday
-    const diff = today.getDate() - dayOfWeek
+    // 월요일을 시작으로 (일요일=0이면 -6, 그 외에는 1-dayOfWeek)
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
     return new Date(today.getFullYear(), today.getMonth(), diff)
   })
 
@@ -366,7 +367,8 @@ export default function ReservationsClient({
   const goToCurrentWeek = () => {
     const today = new Date()
     const dayOfWeek = today.getDay()
-    const diff = today.getDate() - dayOfWeek
+    // 월요일 시작으로 (일요일=0이면 -6, 그 외에는 1-dayOfWeek)
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
     setWeekStartDate(new Date(today.getFullYear(), today.getMonth(), diff))
   }
 

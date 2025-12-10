@@ -104,12 +104,13 @@ export default function CalendarView({
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
 
-  // 주간 리스트 뷰용 상태
+  // 주간 리스트 뷰용 상태 (월요일 시작)
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date()
     const day = today.getDay()
-    const diff = today.getDate() - day
-    return new Date(today.setDate(diff))
+    // 월요일을 시작으로 (일요일=0이면 -6, 그 외에는 1-day)
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1)
+    return new Date(today.getFullYear(), today.getMonth(), diff)
   })
   const [showEventModal, setShowEventModal] = useState(false)
   const [showDayDetailModal, setShowDayDetailModal] = useState(false)
@@ -711,8 +712,9 @@ export default function CalendarView({
                 onClick={() => {
                   const today = new Date()
                   const day = today.getDay()
-                  const diff = today.getDate() - day
-                  setWeekStartDate(new Date(today.setDate(diff)))
+                  // 월요일 시작으로 (일요일=0이면 -6, 그 외에는 1-day)
+                  const diff = today.getDate() - day + (day === 0 ? -6 : 1)
+                  setWeekStartDate(new Date(today.getFullYear(), today.getMonth(), diff))
                 }}
                 className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-full hover:bg-indigo-100 transition"
               >
