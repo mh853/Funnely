@@ -1337,16 +1337,22 @@ export default function LeadsClient({
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   랜딩페이지 이름
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  이름
+                </th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  전화번호
+                </th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   기기
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   utm_source
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   utm_medium
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   utm_campaign
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -1372,7 +1378,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={12} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={14} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -1395,19 +1401,43 @@ export default function LeadsClient({
                         ) : '-'}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-900 max-w-[80px]">
+                      <span className="truncate block" title={lead.name || ''}>
+                        {lead.name ? (
+                          lead.name.length > 5
+                            ? `${lead.name.slice(0, 5)}...`
+                            : lead.name
+                        ) : '-'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-900 max-w-[110px]">
+                      <span className="truncate block" title={lead.phone ? decryptPhone(lead.phone) : ''}>
+                        {lead.phone ? (
+                          decryptPhone(lead.phone).length > 13
+                            ? `${decryptPhone(lead.phone).slice(0, 13)}...`
+                            : decryptPhone(lead.phone)
+                        ) : '-'}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.device_type
                         ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
                         : '-'}
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.utm_source || '-'}
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
+                      <span className="truncate block" title={lead.utm_source || ''}>
+                        {lead.utm_source || '-'}
+                      </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.utm_medium || '-'}
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
+                      <span className="truncate block" title={lead.utm_medium || ''}>
+                        {lead.utm_medium || '-'}
+                      </span>
                     </td>
-                    <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.utm_campaign || '-'}
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[120px]">
+                      <span className="truncate block" title={lead.utm_campaign || ''}>
+                        {lead.utm_campaign || '-'}
+                      </span>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
