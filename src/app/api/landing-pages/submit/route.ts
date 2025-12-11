@@ -90,17 +90,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Convert referrer short_id to actual user UUID
-    let actualReferrerUserId: string | undefined = undefined
+    // Convert referrer short_id to actual company UUID
+    let actualReferrerCompanyId: string | undefined = undefined
     if (referrer_user_id) {
-      const { data: referrerUser } = await supabase
-        .from('users')
+      // ref 파라미터가 회사의 short_id를 담고 있음
+      const { data: referrerCompany } = await supabase
+        .from('companies')
         .select('id')
         .eq('short_id', referrer_user_id)
         .single()
 
-      if (referrerUser) {
-        actualReferrerUserId = referrerUser.id
+      if (referrerCompany) {
+        actualReferrerCompanyId = referrerCompany.id
       }
     }
 
@@ -196,7 +197,7 @@ export async function POST(request: NextRequest) {
         utm_content: utm_params?.utm_content,
         utm_term: utm_params?.utm_term,
         referrer: metadata?.referrer,
-        referrer_user_id: actualReferrerUserId, // ref 파라미터(short_id)로 조회한 실제 user UUID
+        referrer_company_id: actualReferrerCompanyId, // ref 파라미터(short_id)로 조회한 실제 company UUID
         ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
         user_agent: metadata?.user_agent,
         device_type: detectDeviceType(metadata?.user_agent),

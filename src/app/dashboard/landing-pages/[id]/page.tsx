@@ -36,11 +36,11 @@ export default async function LandingPageDetailPage({ params }: Props) {
     )
   }
 
-  // Get user short_id for ref parameter
-  const { data: userShortId } = await supabase
-    .from('users')
+  // Get company short_id for ref parameter
+  const { data: companyShortId } = await supabase
+    .from('companies')
     .select('short_id')
-    .eq('id', user.id)
+    .eq('id', userProfile.company_id)
     .single()
 
   // Get landing page
@@ -98,7 +98,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
               <RefLinkCopyButton
                 baseUrl={getLandingPageBaseUrl()}
                 slug={landingPage.slug}
-                shortId={userShortId?.short_id}
+                shortId={companyShortId?.short_id}
               />
               <a
                 href={getLandingPageUrl(landingPage.slug)}

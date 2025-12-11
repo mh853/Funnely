@@ -386,7 +386,7 @@ export interface FormSubmission {
     utm_content?: string;
     utm_term?: string;
   };
-  referrer_user_id?: string; // ref 파라미터로 전달된 유입 담당자 ID
+  referrer_user_id?: string; // ref 파라미터로 전달된 company short_id (API에서 referrer_company_id로 변환)
   metadata?: {
     referrer?: string;
     ip_address?: string;

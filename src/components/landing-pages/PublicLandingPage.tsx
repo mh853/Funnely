@@ -173,8 +173,8 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         utm_content: urlParams.get('utm_content') || undefined,
         utm_term: urlParams.get('utm_term') || undefined,
       }
-      // ref 파라미터: 유입 경로 추적 (담당자 ID)
-      const refUserId = urlParams.get('ref') || undefined
+      // ref 파라미터: 유입 경로 추적 (회사 ID)
+      const refCompanyId = refParam || urlParams.get('ref') || undefined
 
       // 폼 데이터 구성
       const formData: Record<string, any> = {
@@ -203,7 +203,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           landing_page_id: landingPage.id,
           form_data: formData,
           utm_params: utmParams,
-          referrer_user_id: refUserId, // ref 파라미터로 전달된 유입 담당자 ID
+          referrer_user_id: refCompanyId, // ref 파라미터로 전달된 유입 회사 ID (API에서 company short_id로 조회)
           metadata: {
             referrer: document.referrer,
             user_agent: navigator.userAgent,

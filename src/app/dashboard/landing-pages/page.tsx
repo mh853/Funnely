@@ -35,14 +35,14 @@ export default async function LandingPagesPage({
     )
   }
 
-  // Get user short_id for ref parameter
-  const { data: userShortIdData } = await supabase
-    .from('users')
+  // Get company short_id for ref parameter
+  const { data: companyShortIdData } = await supabase
+    .from('companies')
     .select('short_id')
-    .eq('id', user.id)
+    .eq('id', userProfile.company_id)
     .single()
 
-  const userShortId = userShortIdData?.short_id || null
+  const companyShortId = companyShortIdData?.short_id || null
 
   // Get period filter (default to all)
   const resolvedSearchParams = await searchParams
@@ -214,7 +214,7 @@ export default async function LandingPagesPage({
           {/* 모바일 카드 뷰 */}
           <div className="sm:hidden space-y-4">
             {landingPagesWithStats.map((page) => (
-              <LandingPageMobileCard key={page.id} page={page} userShortId={userShortId} />
+              <LandingPageMobileCard key={page.id} page={page} companyShortId={companyShortId} />
             ))}
           </div>
 
@@ -288,7 +288,7 @@ export default async function LandingPagesPage({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {landingPagesWithStats.map((page, index) => (
-                    <LandingPageTableRow key={page.id} page={page} index={index} userShortId={userShortId} />
+                    <LandingPageTableRow key={page.id} page={page} index={index} companyShortId={companyShortId} />
                   ))}
                 </tbody>
               </table>

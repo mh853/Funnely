@@ -18,15 +18,15 @@ interface LandingPageMobileCardProps {
     rejectedCount: number
     contractCount: number
   }
-  userShortId?: string | null
+  companyShortId?: string | null
 }
 
-export default function LandingPageMobileCard({ page, userShortId }: LandingPageMobileCardProps) {
+export default function LandingPageMobileCard({ page, companyShortId }: LandingPageMobileCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const formattedDate = formatDate(page.created_at)
-  const refParam = userShortId ? `?ref=${userShortId}` : ''
+  const refParam = companyShortId ? `?ref=${companyShortId}` : ''
   const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
 
   return (
