@@ -110,6 +110,24 @@ export async function POST(request: NextRequest) {
       .update(phone.replace(/\D/g, ''))
       .digest('hex')
 
+    // Check for duplicate submission within 3 hours
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+    const { data: existingLead } = await supabase
+      .from('leads')
+      .select('id')
+      .eq('phone_hash', phoneHash)
+      .eq('company_id', landingPage.company_id)
+      .gte('created_at', threeHoursAgo)
+      .limit(1)
+      .maybeSingle()
+
+    if (existingLead) {
+      return NextResponse.json(
+        { error: { message: '이미 신청완료 되었습니다.' } },
+        { status: 409 }
+      )
+    }
+
     // Extract custom fields from form_data based on collect_fields configuration
     // form_data contains keys like "질문명": "답변값" for custom fields
     const customFields: Array<{ label: string; value: string }> = []
