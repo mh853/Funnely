@@ -13,7 +13,7 @@ SELECT
   -- User statistics
   COUNT(DISTINCT u.id) as total_users,
   COUNT(DISTINCT CASE WHEN u.is_active = true THEN u.id END) as active_users,
-  COUNT(DISTINCT CASE WHEN u.last_sign_in_at > NOW() - INTERVAL '30 days' THEN u.id END) as active_users_30d,
+  COUNT(DISTINCT CASE WHEN u.last_login > NOW() - INTERVAL '30 days' THEN u.id END) as active_users_30d,
 
   -- Lead statistics
   COUNT(DISTINCT l.id) as total_leads,
@@ -39,7 +39,7 @@ SELECT
   COUNT(DISTINCT st.id) FILTER (WHERE st.priority = 'urgent' AND st.status != 'closed') as urgent_tickets,
 
   -- Last activity
-  MAX(u.last_sign_in_at) as last_user_activity,
+  MAX(u.last_login) as last_user_activity,
   MAX(l.created_at) as last_lead_created,
 
   -- Stats update timestamp
