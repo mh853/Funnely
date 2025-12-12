@@ -125,9 +125,9 @@ export async function GET(
         last_login_at: user.last_login, // 실제 컬럼명은 last_login
         created_at: user.created_at,
         company: {
-          id: user.companies.id,
-          name: user.companies.name,
-          is_active: user.companies.is_active,
+          id: (user.companies as any).id,
+          name: (user.companies as any).name,
+          is_active: (user.companies as any).is_active,
         },
         stats: {
           total_leads: totalLeads || 0,
@@ -135,14 +135,14 @@ export async function GET(
           leads_this_month: leadsThisMonth || 0,
           pages_published: pagesPublished || 0,
         },
-        recent_activities: (activities || []).map((activity) => ({
+        recent_activities: (activities || []).map((activity: any) => ({
           id: activity.id,
           action: activity.action,
           description: activity.description,
           metadata: activity.metadata,
           ip_address: activity.ip_address,
           created_at: activity.created_at,
-        })),
+        })) as any,
         permissions,
       },
     }

@@ -26,7 +26,7 @@ interface DashboardStats {
     status: 'active' | 'inactive'
   }>
   systemAlerts: Array<{
-    type: string
+    type: 'urgent_ticket' | 'unpaid_subscription' | 'system_health'
     count?: number
     severity: 'low' | 'medium' | 'high'
     message: string
