@@ -105,3 +105,73 @@ export interface CompanyActivitiesResponse {
   activities: Activity[]
   pagination: PaginationInfo
 }
+
+// User Management Types
+export interface UserListItem {
+  id: string
+  full_name: string
+  email: string
+  phone: string | null
+  role: 'admin' | 'manager' | 'staff' | 'viewer'
+  is_active: boolean
+  last_login_at: string | null
+  created_at: string
+  company: {
+    id: string
+    name: string
+  }
+  stats: {
+    total_leads: number
+    total_landing_pages: number
+  }
+}
+
+export interface UserDetail extends UserListItem {
+  company: {
+    id: string
+    name: string
+    is_active: boolean
+  }
+  stats: {
+    total_leads: number
+    total_landing_pages: number
+    leads_this_month: number
+    pages_published: number
+  }
+  recent_activities: Activity[]
+  permissions: string[]
+}
+
+export interface UserActivity {
+  id: string
+  action: string
+  description: string
+  metadata: Record<string, any>
+  ip_address: string
+  created_at: string
+}
+
+export interface UsersListResponse {
+  users: UserListItem[]
+  pagination: PaginationInfo
+  summary: {
+    total_users: number
+    active_users: number
+    inactive_users: number
+    by_role: Record<string, number>
+    by_company: Array<{
+      company_id: string
+      company_name: string
+      count: number
+    }>
+  }
+}
+
+export interface UserDetailResponse {
+  user: UserDetail
+}
+
+export interface UserActivitiesResponse {
+  activities: UserActivity[]
+  pagination: PaginationInfo
+}
