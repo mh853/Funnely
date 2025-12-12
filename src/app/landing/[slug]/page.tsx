@@ -43,18 +43,24 @@ export async function generateStaticParams() {
 }
 
 // Shared function to fetch landing page (prevents duplicate queries)
-async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
+async function fetchLandingPage(slug: string): Promise<any> {
   const supabase = getServiceRoleClient()
 
   const { data, error } = await supabase
     .from('landing_pages')
-    .select('*')
+    .select(`
+      *,
+      companies!inner(
+        id,
+        tracking_pixels(*)
+      )
+    `)
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
 
   if (error || !data) return null
-  return data as LandingPageType
+  return data
 }
 
 // Generate metadata for SEO

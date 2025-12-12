@@ -4,6 +4,7 @@ import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Script from 'next/script'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -24,7 +25,7 @@ const formatPhoneNumber = (value: string): string => {
 }
 
 interface PublicLandingPageProps {
-  landingPage: LandingPage
+  landingPage: any  // Includes landing page + companies.tracking_pixels
   initialRef?: string  // For new URL format: ?ref=shortId/slug
 }
 
@@ -183,7 +184,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }
 
       // 커스텀 필드 추가
-      customFields.forEach((field) => {
+      customFields.forEach((field: { id: string; type: string; question: string; options?: string[] }) => {
         const fieldKey = field.id || field.question
         if (customFieldValues[fieldKey]) {
           formData[field.question || fieldKey] = customFieldValues[fieldKey]
@@ -236,8 +237,8 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const isSectionEnabled = useMemo(() => {
     const enabledSections = new Set(
       landingPage.sections
-        .filter(s => s.enabled !== false)
-        .map(s => s.type)
+        .filter((s: { enabled?: boolean; type: string }) => s.enabled !== false)
+        .map((s: { type: string }) => s.type)
     )
     return (sectionType: string) => enabledSections.has(sectionType as any)
   }, [landingPage.sections])
@@ -311,17 +312,119 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     )
   }
 
+  // Get tracking pixels
+  const trackingPixels = landingPage.companies?.tracking_pixels?.[0]
+
   return (
-    <div className="min-h-screen bg-white relative">
-      {/* Sticky Top Buttons */}
-      {renderStickyButtons('top')}
+    <>
+      {/* Facebook Pixel */}
+      {trackingPixels?.is_active && trackingPixels?.facebook_pixel_id && (
+        <>
+          <Script
+            id="facebook-pixel"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                !function(f,b,e,v,n,t,s)
+                {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+                n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+                if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+                n.queue=[];t=b.createElement(e);t.async=!0;
+                t.src=v;s=b.getElementsByTagName(e)[0];
+                s.parentNode.insertBefore(t,s)}(window, document,'script',
+                'https://connect.facebook.net/en_US/fbevents.js');
+                fbq('init', '${trackingPixels.facebook_pixel_id}');
+                fbq('track', 'PageView');
+              `,
+            }}
+          />
+          <noscript>
+            <img
+              height="1"
+              width="1"
+              style={{ display: 'none' }}
+              src={`https://www.facebook.com/tr?id=${trackingPixels.facebook_pixel_id}&ev=PageView&noscript=1`}
+              alt=""
+            />
+          </noscript>
+        </>
+      )}
+
+      {/* Google Analytics 4 */}
+      {trackingPixels?.is_active && trackingPixels?.google_analytics_id && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_analytics_id}`}
+            strategy="afterInteractive"
+          />
+          <Script
+            id="google-analytics"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${trackingPixels.google_analytics_id}');
+              `,
+            }}
+          />
+        </>
+      )}
+
+      {/* Google Ads */}
+      {trackingPixels?.is_active && trackingPixels?.google_ads_id && (
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
+          strategy="afterInteractive"
+        />
+      )}
+
+      {/* Kakao Pixel */}
+      {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
+        <Script
+          id="kakao-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(e,n,t,a,o,i){e[a]=e[a]||function(){(e[a].q=e[a].q||[]).push(arguments)},
+              e[a].l=1*new Date,o=n.createElement(t),i=n.getElementsByTagName(t)[0],
+              o.async=1,o.src="https://track.adtouch.kakao.com/kakao_track.js?pixel_id=${trackingPixels.kakao_pixel_id}",
+              i.parentNode.insertBefore(o,i)}(window,document,"script","kakaoPixel");
+              kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
+            `,
+          }}
+        />
+      )}
+
+      {/* Naver Pixel */}
+      {trackingPixels?.is_active && trackingPixels?.naver_pixel_id && (
+        <Script
+          id="naver-pixel"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(a,b,c,d,e,f,g){a.NaverPixel=e,a[e]||(a[e]=function(){(a[e].q=a[e].q||[]).push(arguments)}),
+              a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
+              f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
+              "https://wcs.naver.net/wcslog.js","naver_pixel");
+              naver_pixel('init', '${trackingPixels.naver_pixel_id}');
+              naver_pixel('track', 'PageView');
+            `,
+          }}
+        />
+      )}
+
+      <div className="min-h-screen bg-white relative">
+        {/* Sticky Top Buttons */}
+        {renderStickyButtons('top')}
 
       {/* Scrollable Content */}
       <div className="px-6 py-8 space-y-8">
         {/* Hero Images */}
         {isSectionEnabled('hero_image') && landingPage.images && landingPage.images.length > 0 && (
           <div className="space-y-0">
-            {landingPage.images.map((image, idx) => (
+            {landingPage.images.map((image: string, idx: number) => (
               <div key={idx} className="overflow-hidden">
                 <img
                   src={image}
@@ -418,7 +521,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 </div>
               )}
               {/* Custom Fields */}
-              {customFields.map((field, index) => {
+              {customFields.map((field: { id: string; type: string; question: string; options?: string[] }, index: number) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>
@@ -615,7 +718,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               )}
 
               {/* Custom Fields */}
-              {customFields.map((field, index) => {
+              {customFields.map((field: { id: string; type: string; question: string; options?: string[] }, index: number) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>
@@ -769,5 +872,6 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         </div>
       )}
     </div>
+    </>
   )
 }

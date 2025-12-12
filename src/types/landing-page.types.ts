@@ -431,3 +431,20 @@ export interface CallCenterStats {
   avg_response_time: number; // in minutes
   conversion_rate: number;
 }
+
+// ============================================================================
+// TRACKING PIXELS TYPES
+// ============================================================================
+
+export interface TrackingPixels {
+  id: string;
+  company_id: string;
+  facebook_pixel_id?: string;
+  google_analytics_id?: string;
+  google_ads_id?: string;
+  kakao_pixel_id?: string;
+  naver_pixel_id?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}

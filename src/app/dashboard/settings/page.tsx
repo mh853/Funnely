@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
-import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
@@ -131,7 +131,24 @@ export default async function SettingsPage() {
       )}
 
       {/* Quick Settings Links - 1행 그리드 */}
-      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-1'}`}>
+      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'}`}>
+        {/* Tracking Pixels */}
+        <Link
+          href="/dashboard/settings/tracking-pixels"
+          className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-rose-300 hover:bg-rose-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+        >
+          <div className="flex-shrink-0 bg-rose-100 rounded-lg p-2 group-hover:bg-rose-200 transition-colors">
+            <ChartBarIcon className="h-5 w-5 text-rose-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">픽셀 관리</h3>
+            <p className="text-xs text-gray-500 truncate">Facebook, Google, Kakao</p>
+          </div>
+          <svg className="h-4 w-4 text-gray-400 group-hover:text-rose-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
         {/* API Credentials */}
         <Link
           href="/dashboard/settings/api-credentials"
