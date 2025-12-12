@@ -161,7 +161,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       <div className="space-y-6">
         {/* 헤더 */}
         <div>
-        <Link href="/support">
+        <Link href="/dashboard/support">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             목록으로 돌아가기

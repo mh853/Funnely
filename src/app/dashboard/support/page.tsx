@@ -321,7 +321,7 @@ export default function SupportPage() {
             const messageCount = ticket.messages?.[0]?.count || 0
 
             return (
-              <Link key={ticket.id} href={`/support/${ticket.id}`}>
+              <Link key={ticket.id} href={`/dashboard/support/${ticket.id}`}>
                 <Card className="hover:shadow-md transition-shadow cursor-pointer">
                   <CardContent className="pt-6">
                     <div className="flex items-start justify-between">
