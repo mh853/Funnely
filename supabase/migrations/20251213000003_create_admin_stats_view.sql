@@ -6,10 +6,13 @@ SELECT
   c.id as company_id,
   c.name as company_name,
   c.created_at as joined_at,
-  c.is_active,
+
+  -- Company is considered active if it has any active users
+  BOOL_OR(u.is_active) as is_active,
 
   -- User statistics
   COUNT(DISTINCT u.id) as total_users,
+  COUNT(DISTINCT CASE WHEN u.is_active = true THEN u.id END) as active_users,
   COUNT(DISTINCT CASE WHEN u.last_sign_in_at > NOW() - INTERVAL '30 days' THEN u.id END) as active_users_30d,
 
   -- Lead statistics
@@ -47,7 +50,7 @@ LEFT JOIN users u ON u.company_id = c.id
 LEFT JOIN leads l ON l.company_id = c.id
 LEFT JOIN landing_pages lp ON lp.company_id = c.id
 LEFT JOIN support_tickets st ON st.company_id = c.id
-GROUP BY c.id, c.name, c.created_at, c.is_active;
+GROUP BY c.id, c.name, c.created_at;
 
 -- Create unique index on company_id for CONCURRENTLY refresh
 CREATE UNIQUE INDEX IF NOT EXISTS idx_admin_company_stats_company
