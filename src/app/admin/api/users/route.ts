@@ -30,10 +30,9 @@ export async function GET(request: Request) {
         id,
         full_name,
         email,
-        phone,
         role,
         is_active,
-        last_login_at,
+        last_login,
         created_at,
         company_id,
         companies!inner(
@@ -83,15 +82,15 @@ export async function GET(request: Request) {
       query = query.gte('created_at', startDate.toISOString())
     }
 
-    // 검색 (이름, 이메일, 전화번호)
+    // 검색 (이름, 이메일)
     if (search) {
       query = query.or(
-        `full_name.ilike.%${search}%,email.ilike.%${search}%,phone.ilike.%${search}%`
+        `full_name.ilike.%${search}%,email.ilike.%${search}%`
       )
     }
 
     // 정렬
-    const validSortColumns = ['created_at', 'last_login_at', 'full_name']
+    const validSortColumns = ['created_at', 'last_login', 'full_name']
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at'
     query = query.order(sortColumn, {
       ascending: sortOrder === 'asc',
@@ -129,10 +128,10 @@ export async function GET(request: Request) {
           id: user.id,
           full_name: user.full_name,
           email: user.email,
-          phone: user.phone,
+          phone: null, // phone 컬럼이 users 테이블에 없음
           role: user.role,
           is_active: user.is_active,
-          last_login_at: user.last_login_at,
+          last_login_at: user.last_login, // 실제 컬럼명은 last_login
           created_at: user.created_at,
           company: {
             id: user.companies.id,

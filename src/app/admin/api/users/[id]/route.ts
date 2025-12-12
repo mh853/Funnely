@@ -21,11 +21,10 @@ export async function GET(
         id,
         full_name,
         email,
-        phone,
         role,
         is_active,
         created_at,
-        last_login_at,
+        last_login,
         company_id,
         companies!inner(
           id,
@@ -114,10 +113,10 @@ export async function GET(
         id: user.id,
         full_name: user.full_name,
         email: user.email,
-        phone: user.phone,
+        phone: null, // phone 컬럼이 users 테이블에 없음
         role: user.role,
         is_active: user.is_active,
-        last_login_at: user.last_login_at,
+        last_login_at: user.last_login, // 실제 컬럼명은 last_login
         created_at: user.created_at,
         company: {
           id: user.companies.id,
