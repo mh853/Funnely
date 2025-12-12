@@ -18,6 +18,7 @@ import {
   PresentationChartLineIcon,
   CreditCardIcon,
   CurrencyDollarIcon,
+  ChatBubbleLeftRightIcon,
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -39,6 +40,7 @@ const navigation = [
   // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
   { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
   { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
+  { name: '기술 지원', href: '/support', icon: ChatBubbleLeftRightIcon },
   // [설정 페이지로 통합] 구독 관리, 결제 내역, 팀 관리
   // { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
   // { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },

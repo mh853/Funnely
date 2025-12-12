@@ -20,8 +20,8 @@ export async function GET(request: Request) {
       .select(
         `
         *,
-        company:companies!company_subscriptions_company_id_fkey(id, name, email),
-        plan:subscription_plans!company_subscriptions_plan_id_fkey(id, name, price_monthly, price_yearly, max_users, max_leads)
+        company:companies(id, name, business_number, phone),
+        plan:subscription_plans(id, name, price_monthly, price_yearly, max_users, max_leads)
       `,
         { count: 'exact' }
       )
@@ -42,6 +42,7 @@ export async function GET(request: Request) {
     const { data: subscriptions, error, count } = await query
 
     if (error) {
+      console.error('Subscriptions query error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

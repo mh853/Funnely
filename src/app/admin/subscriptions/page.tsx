@@ -27,7 +27,8 @@ interface Subscription {
   company: {
     id: string
     name: string
-    email: string
+    business_number: string
+    phone: string
   }
   plan: {
     id: string
