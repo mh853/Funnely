@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard,
   Building2,
+  Users,
   HeadphonesIcon,
   BarChart3,
   Settings,
@@ -27,22 +28,28 @@ const navItems: NavItem[] = [
     description: '전체 시스템 현황',
   },
   {
+    icon: BarChart3,
+    label: '향상된 대시보드',
+    href: '/admin/dashboard-new',
+    description: '성장 추이 및 분석',
+  },
+  {
     icon: Building2,
     label: '회사 관리',
     href: '/admin/companies',
     description: '모든 회사 조회 및 관리',
   },
   {
+    icon: Users,
+    label: '사용자 관리',
+    href: '/admin/users',
+    description: '모든 사용자 조회 및 관리',
+  },
+  {
     icon: HeadphonesIcon,
     label: '문의 관리',
     href: '/admin/support',
     description: '고객 문의사항 처리',
-  },
-  {
-    icon: BarChart3,
-    label: '분석',
-    href: '/admin/analytics',
-    description: '매출 및 사용량 분석',
   },
   {
     icon: Settings,
