@@ -16,7 +16,7 @@ export default async function AdminLayout({
 
   // Ensure profile exists with required fields
   const userProfile = {
-    name: adminUser.profile.name || 'Admin User',
+    name: adminUser.profile.full_name || 'Admin User',
     email: adminUser.profile.email || adminUser.user.email || 'admin@example.com',
   }
 

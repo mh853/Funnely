@@ -13,6 +13,6 @@ WHERE email = 'your-email@example.com';
 -- WHERE id = 'user-uuid-here';
 
 -- Verify the update
-SELECT id, email, name, is_super_admin
+SELECT id, email, full_name, is_super_admin
 FROM users
 WHERE is_super_admin = true;
