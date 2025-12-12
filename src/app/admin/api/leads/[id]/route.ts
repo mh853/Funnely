@@ -12,13 +12,13 @@ export async function GET(
     const leadId = params.id
     const supabase = await createClient()
 
-    // Get lead detail
+    // Get lead detail - specify which foreign key relationship to use
     const { data: lead, error: leadError } = await supabase
       .from('leads')
       .select(
         `
         *,
-        companies!inner(id, name, slug),
+        companies!leads_company_id_fkey(id, name, slug),
         landing_pages(id, title, slug),
         users(id, full_name, email)
       `

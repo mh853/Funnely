@@ -18,7 +18,7 @@ export async function GET(request: Request) {
     const supabase = await createClient()
     const offset = (page - 1) * limit
 
-    // Base query
+    // Base query - specify which foreign key relationship to use
     let query = supabase
       .from('leads')
       .select(
@@ -36,7 +36,7 @@ export async function GET(request: Request) {
         utm_source,
         utm_medium,
         utm_campaign,
-        companies!inner(id, name),
+        companies!leads_company_id_fkey(id, name),
         landing_pages(id, title)
       `,
         { count: 'exact' }
