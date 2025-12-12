@@ -59,8 +59,11 @@ export async function middleware(request: NextRequest) {
     }
   )
 
-  // Protected routes
-  const protectedPaths = ['/dashboard']
+  // Admin routes - require super admin privileges
+  const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
+
+  // Protected routes - require authentication
+  const protectedPaths = ['/dashboard', '/admin']
   const isProtectedPath = protectedPaths.some(path =>
     request.nextUrl.pathname.startsWith(path)
   )
@@ -74,6 +77,22 @@ export async function middleware(request: NextRequest) {
       redirectUrl.pathname = '/auth/login'
       redirectUrl.searchParams.set('redirectTo', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
+    }
+
+    // Additional check for admin routes
+    if (isAdminPath) {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('is_super_admin')
+        .eq('id', user.id)
+        .single()
+
+      if (!userProfile?.is_super_admin) {
+        // Redirect non-super-admins to dashboard
+        const redirectUrl = request.nextUrl.clone()
+        redirectUrl.pathname = '/dashboard'
+        return NextResponse.redirect(redirectUrl)
+      }
     }
   } else {
     // For non-protected routes, just refresh session if expired
