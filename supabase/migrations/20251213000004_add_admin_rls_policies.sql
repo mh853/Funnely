@@ -2,7 +2,8 @@
 -- Allows super admins to view all company data
 
 -- Companies table: Super admins can view all companies
-CREATE POLICY IF NOT EXISTS "Super admins can view all companies"
+DROP POLICY IF EXISTS "Super admins can view all companies" ON companies;
+CREATE POLICY "Super admins can view all companies"
   ON companies
   FOR SELECT
   TO authenticated
@@ -15,7 +16,8 @@ CREATE POLICY IF NOT EXISTS "Super admins can view all companies"
   );
 
 -- Users table: Super admins can view all users
-CREATE POLICY IF NOT EXISTS "Super admins can view all users"
+DROP POLICY IF EXISTS "Super admins can view all users" ON users;
+CREATE POLICY "Super admins can view all users"
   ON users
   FOR SELECT
   TO authenticated
@@ -28,7 +30,8 @@ CREATE POLICY IF NOT EXISTS "Super admins can view all users"
   );
 
 -- Leads table: Super admins can view all leads
-CREATE POLICY IF NOT EXISTS "Super admins can view all leads"
+DROP POLICY IF EXISTS "Super admins can view all leads" ON leads;
+CREATE POLICY "Super admins can view all leads"
   ON leads
   FOR SELECT
   TO authenticated
@@ -41,7 +44,8 @@ CREATE POLICY IF NOT EXISTS "Super admins can view all leads"
   );
 
 -- Landing pages table: Super admins can view all landing pages
-CREATE POLICY IF NOT EXISTS "Super admins can view all landing pages"
+DROP POLICY IF EXISTS "Super admins can view all landing pages" ON landing_pages;
+CREATE POLICY "Super admins can view all landing pages"
   ON landing_pages
   FOR SELECT
   TO authenticated
