@@ -14,10 +14,16 @@ export default async function AdminLayout({
     redirect('/dashboard')
   }
 
+  // Ensure profile exists with required fields
+  const userProfile = {
+    name: adminUser.profile.name || 'Admin User',
+    email: adminUser.profile.email || adminUser.user.email || 'admin@example.com',
+  }
+
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar Navigation */}
-      <AdminNav user={adminUser.profile} />
+      <AdminNav user={userProfile} />
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
@@ -36,7 +42,7 @@ export default async function AdminLayout({
               <div className="flex items-center gap-4">
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">
-                    {adminUser.profile.name}
+                    {userProfile.name}
                   </p>
                   <p className="text-xs text-gray-500">슈퍼 어드민</p>
                 </div>
