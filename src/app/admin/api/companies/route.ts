@@ -28,18 +28,22 @@ export async function GET(request: Request) {
         id,
         name,
         is_active,
+        business_number,
+        phone,
+        address,
         created_at,
         users!inner(
           id,
           full_name,
           email,
-          role
+          role,
+          is_active
         )
       `,
         { count: 'exact' }
       )
 
-    // 활성 상태 필터
+    // 활성 상태 필터 (companies.is_active 기준으로 필터링)
     if (status === 'active') {
       query = query.eq('is_active', true)
     } else if (status === 'inactive') {
@@ -120,7 +124,7 @@ export async function GET(request: Request) {
           id: company.id,
           name: company.name,
           slug: company.id, // Use ID as slug since slug column doesn't exist
-          is_active: company.is_active,
+          is_active: company.is_active, // companies.is_active for subscription management
           created_at: company.created_at,
           admin_user: {
             id: adminUser?.id || '',
