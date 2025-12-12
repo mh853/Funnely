@@ -6,6 +6,7 @@ import {
   LayoutDashboard,
   Building2,
   Users,
+  FileText,
   HeadphonesIcon,
   BarChart3,
   Settings,
@@ -44,6 +45,12 @@ const navItems: NavItem[] = [
     label: '사용자 관리',
     href: '/admin/users',
     description: '모든 사용자 조회 및 관리',
+  },
+  {
+    icon: FileText,
+    label: '리드 관리',
+    href: '/admin/leads',
+    description: '모든 리드 조회 및 관리',
   },
   {
     icon: HeadphonesIcon,
