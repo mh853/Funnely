@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import AdminNav from './components/AdminNav'
+import NotificationBell from './components/NotificationBell'
 
 export default async function AdminLayout({
   children,
@@ -40,6 +41,7 @@ export default async function AdminLayout({
                 </p>
               </div>
               <div className="flex items-center gap-4">
+                <NotificationBell />
                 <div className="text-right">
                   <p className="text-sm font-medium text-gray-900">
                     {userProfile.name}

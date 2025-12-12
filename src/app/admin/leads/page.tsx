@@ -80,7 +80,7 @@ export default function LeadsPage() {
   const [data, setData] = useState<LeadsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all')
   const [page, setPage] = useState(1)
 
   useEffect(() => {
@@ -95,7 +95,7 @@ export default function LeadsPage() {
         limit: '20',
       })
       if (search) params.set('search', search)
-      if (statusFilter) params.set('status', statusFilter)
+      if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
 
       const response = await fetch(`/admin/api/leads?${params}`)
       if (!response.ok) throw new Error('Failed to fetch leads')
@@ -199,7 +199,7 @@ export default function LeadsPage() {
                 <SelectValue placeholder="상태 선택" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">전체 상태</SelectItem>
+                <SelectItem value="all">전체 상태</SelectItem>
                 <SelectItem value="new">신규</SelectItem>
                 <SelectItem value="contacted">연락완료</SelectItem>
                 <SelectItem value="qualified">적격</SelectItem>

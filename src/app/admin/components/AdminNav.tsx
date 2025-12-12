@@ -10,6 +10,13 @@ import {
   HeadphonesIcon,
   BarChart3,
   Settings,
+  TrendingUp,
+  FileBarChart,
+  Bell,
+  Target,
+  CreditCard,
+  DollarSign,
+  Activity,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -51,6 +58,48 @@ const navItems: NavItem[] = [
     label: '리드 관리',
     href: '/admin/leads',
     description: '모든 리드 조회 및 관리',
+  },
+  {
+    icon: TrendingUp,
+    label: '고급 분석',
+    href: '/admin/analytics',
+    description: '비즈니스 성과 분석',
+  },
+  {
+    icon: FileBarChart,
+    label: '리포트',
+    href: '/admin/reports',
+    description: '리포트 생성 및 관리',
+  },
+  {
+    icon: Bell,
+    label: '알림 센터',
+    href: '/admin/notifications',
+    description: '알림 조회 및 관리',
+  },
+  {
+    icon: Target,
+    label: '성과 목표',
+    href: '/admin/goals',
+    description: '목표 설정 및 진행 추적',
+  },
+  {
+    icon: CreditCard,
+    label: '구독 관리',
+    href: '/admin/subscriptions',
+    description: '회사별 구독 상태 관리',
+  },
+  {
+    icon: DollarSign,
+    label: '매출 관리',
+    href: '/admin/billing',
+    description: 'MRR/ARR 및 결제 현황',
+  },
+  {
+    icon: Activity,
+    label: '시스템 모니터링',
+    href: '/admin/monitoring',
+    description: '성능 및 에러 모니터링',
   },
   {
     icon: HeadphonesIcon,
