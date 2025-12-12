@@ -157,9 +157,10 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   const statusColor = STATUS_COLORS[ticket.status]
 
   return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div>
+    <div className="px-4 sm:px-6 lg:px-8">
+      <div className="space-y-6">
+        {/* 헤더 */}
+        <div>
         <Link href="/support">
           <Button variant="ghost" className="mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -316,6 +317,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   )
 }

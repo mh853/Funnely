@@ -155,15 +155,16 @@ export default function SupportPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">기술 지원</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            기술적인 문의사항을 접수하고 답변을 확인하세요
-          </p>
-        </div>
+    <div className="px-4 sm:px-6 lg:px-8">
+      <div className="space-y-6">
+        {/* 헤더 */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">기술 지원</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              기술적인 문의사항을 접수하고 답변을 확인하세요
+            </p>
+          </div>
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -364,6 +365,7 @@ export default function SupportPage() {
             )
           })
         )}
+      </div>
       </div>
     </div>
   )
