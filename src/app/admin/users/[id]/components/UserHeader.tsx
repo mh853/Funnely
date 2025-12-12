@@ -7,22 +7,13 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { UserDetail } from '@/types/admin'
+import { getRoleLabel } from '@/lib/admin/role-utils'
 
 interface UserHeaderProps {
   user: UserDetail
   onToggleStatus: () => void
   onResetPassword: () => void
   isUpdating: boolean
-}
-
-function getRoleLabel(role: string) {
-  const labels: Record<string, string> = {
-    admin: '관리자',
-    manager: '매니저',
-    staff: '스태프',
-    viewer: '뷰어',
-  }
-  return labels[role] || role
 }
 
 export default function UserHeader({

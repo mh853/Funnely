@@ -107,12 +107,23 @@ export interface CompanyActivitiesResponse {
 }
 
 // User Management Types
+export type UserRole =
+  | 'company_owner'
+  | 'company_admin'
+  | 'marketing_manager'
+  | 'marketing_staff'
+  | 'viewer'
+  // Legacy roles (backward compatibility)
+  | 'admin'
+  | 'manager'
+  | 'staff'
+
 export interface UserListItem {
   id: string
   full_name: string
   email: string
   phone: string | null
-  role: 'admin' | 'manager' | 'staff' | 'viewer'
+  role: UserRole
   is_active: boolean
   last_login_at: string | null
   created_at: string

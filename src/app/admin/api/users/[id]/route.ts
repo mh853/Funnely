@@ -91,16 +91,22 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(5)
 
-    // 권한 정보 (현재는 role 기반, 나중에 확장 가능)
+    // 권한 정보 (role 기반)
     const permissions: string[] = []
     switch (user.role) {
-      case 'admin':
+      case 'company_owner':
+        permissions.push('manage_users', 'manage_leads', 'manage_pages', 'view_reports', 'manage_billing')
+        break
+      case 'company_admin':
+      case 'admin': // Legacy
         permissions.push('manage_users', 'manage_leads', 'manage_pages', 'view_reports')
         break
-      case 'manager':
+      case 'marketing_manager':
+      case 'manager': // Legacy
         permissions.push('manage_leads', 'manage_pages', 'view_reports')
         break
-      case 'staff':
+      case 'marketing_staff':
+      case 'staff': // Legacy
         permissions.push('manage_leads', 'view_pages')
         break
       case 'viewer':

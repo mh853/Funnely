@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { UsersListResponse, UserListItem } from '@/types/admin'
+import { getRoleLabel, getRoleBadgeColor, ROLE_FILTER_OPTIONS } from '@/lib/admin/role-utils'
 
 export default function UsersPage() {
   const router = useRouter()
@@ -98,35 +99,7 @@ export default function UsersPage() {
     setPage(1)
   }
 
-  function getRoleBadgeColor(role: string) {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-700'
-      case 'manager':
-        return 'bg-blue-100 text-blue-700'
-      case 'staff':
-        return 'bg-green-100 text-green-700'
-      case 'viewer':
-        return 'bg-gray-100 text-gray-700'
-      default:
-        return 'bg-gray-100 text-gray-700'
-    }
-  }
 
-  function getRoleLabel(role: string) {
-    switch (role) {
-      case 'admin':
-        return '관리자'
-      case 'manager':
-        return '매니저'
-      case 'staff':
-        return '스태프'
-      case 'viewer':
-        return '뷰어'
-      default:
-        return role
-    }
-  }
 
   return (
     <div className="space-y-6">
@@ -173,47 +146,20 @@ export default function UsersPage() {
           </div>
 
           {/* 역할 필터 */}
-          <div className="flex gap-2">
-            <button
-              onClick={() => handleRoleChange('all')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                role === 'all'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              전체
-            </button>
-            <button
-              onClick={() => handleRoleChange('admin')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                role === 'admin'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              관리자
-            </button>
-            <button
-              onClick={() => handleRoleChange('manager')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                role === 'manager'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              매니저
-            </button>
-            <button
-              onClick={() => handleRoleChange('staff')}
-              className={`px-3 py-1 text-sm rounded-md ${
-                role === 'staff'
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              스태프
-            </button>
+          <div className="flex gap-2 flex-wrap">
+            {ROLE_FILTER_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleRoleChange(option.value)}
+                className={`px-3 py-1 text-sm rounded-md ${
+                  role === option.value
+                    ? 'bg-blue-100 text-blue-700'
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
           </div>
 
           {/* 활성 상태 필터 */}

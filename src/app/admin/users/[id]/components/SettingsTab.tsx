@@ -3,6 +3,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import type { UserDetail } from '@/types/admin'
+import { getRoleLabel, ROLE_OPTIONS } from '@/lib/admin/role-utils'
 
 interface SettingsTabProps {
   user: UserDetail
@@ -14,22 +15,12 @@ export default function SettingsTab({ user, onRoleChange, isUpdating }: Settings
   function handleRoleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newRole = e.target.value
     if (newRole !== user.role) {
-      if (confirm(`역할을 ${getRoleLabel(newRole)}로 변경하시겠습니까?`)) {
+      if (confirm(`역할을 ${getRoleLabel(newRole as any)}로 변경하시겠습니까?`)) {
         onRoleChange(newRole)
       } else {
         e.target.value = user.role
       }
     }
-  }
-
-  function getRoleLabel(role: string) {
-    const labels: Record<string, string> = {
-      admin: '관리자',
-      manager: '매니저',
-      staff: '스태프',
-      viewer: '뷰어',
-    }
-    return labels[role] || role
   }
 
   return (
@@ -50,10 +41,11 @@ export default function SettingsTab({ user, onRoleChange, isUpdating }: Settings
               disabled={isUpdating}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="admin">관리자 (Admin)</option>
-              <option value="manager">매니저 (Manager)</option>
-              <option value="staff">스태프 (Staff)</option>
-              <option value="viewer">뷰어 (Viewer)</option>
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
             <p className="text-xs text-gray-500 mt-2">
               역할에 따라 시스템 내에서 수행할 수 있는 작업이 달라집니다.
@@ -63,20 +55,11 @@ export default function SettingsTab({ user, onRoleChange, isUpdating }: Settings
           <div className="pt-4 border-t border-gray-200">
             <h4 className="text-sm font-medium text-gray-900 mb-3">역할별 권한</h4>
             <div className="space-y-2 text-sm text-gray-600">
-              <div>
-                <span className="font-medium">관리자:</span> 사용자 관리, 리드 관리,
-                페이지 관리, 리포트 조회
-              </div>
-              <div>
-                <span className="font-medium">매니저:</span> 리드 관리, 페이지 관리,
-                리포트 조회
-              </div>
-              <div>
-                <span className="font-medium">스태프:</span> 리드 관리, 페이지 조회
-              </div>
-              <div>
-                <span className="font-medium">뷰어:</span> 리드 조회, 페이지 조회
-              </div>
+              {ROLE_OPTIONS.map((option) => (
+                <div key={option.value}>
+                  <span className="font-medium">{option.label}:</span> {option.description}
+                </div>
+              ))}
             </div>
           </div>
         </CardContent>
