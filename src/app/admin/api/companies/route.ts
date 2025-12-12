@@ -27,7 +27,6 @@ export async function GET(request: Request) {
         `
         id,
         name,
-        slug,
         is_active,
         created_at,
         users!inner(
@@ -120,7 +119,7 @@ export async function GET(request: Request) {
         return {
           id: company.id,
           name: company.name,
-          slug: company.slug,
+          slug: company.id, // Use ID as slug since slug column doesn't exist
           is_active: company.is_active,
           created_at: company.created_at,
           admin_user: {

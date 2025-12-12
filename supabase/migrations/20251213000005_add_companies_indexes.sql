@@ -11,9 +11,6 @@ CREATE INDEX IF NOT EXISTS idx_companies_is_active ON companies(is_active);
 -- 회사명 전체 텍스트 검색 (ilike 검색 성능 향상)
 CREATE INDEX IF NOT EXISTS idx_companies_name_search ON companies USING gin(to_tsvector('simple', name));
 
--- 슬러그 조회 (URL 라우팅 성능)
-CREATE INDEX IF NOT EXISTS idx_companies_slug ON companies(slug);
-
 -- users 테이블 인덱스
 -- 회사별 사용자 조회 (이미 있을 수 있지만 확인)
 CREATE INDEX IF NOT EXISTS idx_users_company_id ON users(company_id);

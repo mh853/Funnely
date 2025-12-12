@@ -20,7 +20,6 @@ export async function GET(
         `
         id,
         name,
-        slug,
         is_active,
         created_at,
         phone,
@@ -140,7 +139,7 @@ export async function GET(
       company: {
         id: company.id,
         name: company.name,
-        slug: company.slug,
+        slug: company.id, // Use ID as slug since slug column doesn't exist
         is_active: company.is_active,
         created_at: company.created_at,
         phone: company.phone,

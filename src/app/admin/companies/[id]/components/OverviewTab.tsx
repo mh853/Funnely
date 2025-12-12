@@ -91,8 +91,8 @@ export default function OverviewTab({ company }: OverviewTabProps) {
               <p className="text-sm font-medium text-gray-900">{company.name}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500">슬러그</p>
-              <p className="text-sm font-medium text-gray-900">{company.slug}</p>
+              <p className="text-sm text-gray-500">회사 ID</p>
+              <p className="text-sm font-medium text-gray-900 font-mono text-xs">{company.id}</p>
             </div>
             <div>
               <p className="text-sm text-gray-500">전화번호</p>

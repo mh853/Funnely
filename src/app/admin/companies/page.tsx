@@ -230,7 +230,7 @@ export default function CompaniesPage() {
                       <td className="px-6 py-4">
                         <div>
                           <div className="font-medium text-gray-900">{company.name}</div>
-                          <div className="text-sm text-gray-500">{company.slug}</div>
+                          <div className="text-sm text-gray-500">ID: {company.id.substring(0, 8)}...</div>
                         </div>
                       </td>
                       <td className="px-6 py-4">
