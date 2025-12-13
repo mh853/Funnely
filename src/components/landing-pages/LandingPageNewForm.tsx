@@ -242,11 +242,16 @@ export default function LandingPageNewForm({
           return
         }
 
-        const { data: policy } = await supabase
+        const { data: policy, error } = await supabase
           .from('privacy_policies')
           .select('*')
           .eq('company_id', companyId)
-          .single()
+          .maybeSingle()  // single() 대신 maybeSingle() 사용 - 0개 또는 1개 허용
+
+        if (error) {
+          console.error('Error loading privacy policy:', error)
+          return
+        }
 
         if (policy) {
           setPrivacyContent(policy.privacy_consent_content)
@@ -1037,19 +1042,30 @@ export default function LandingPageNewForm({
       if (landingPage) {
         // 수정 모드 - company_id와 created_by는 제외
         const { company_id, ...updateData } = dataToSave
-        console.log('Updating landing page with data:', updateData)
-        const { error: updateError } = await supabase
+        console.log('🔍 [DEBUG] Updating landing page with data:', updateData)
+        console.log('🔍 [DEBUG] Timer data:', {
+          timer_enabled: updateData.timer_enabled,
+          timer_text: updateData.timer_text,
+          timer_deadline: updateData.timer_deadline,
+          timer_color: updateData.timer_color,
+          timer_sticky_position: updateData.timer_sticky_position,
+        })
+
+        const { data: updateResult, error: updateError } = await supabase
           .from('landing_pages')
           .update({
             ...updateData,
             updated_at: new Date().toISOString(),
           })
           .eq('id', landingPage.id)
+          .select()
 
         if (updateError) {
-          console.error('Update error:', updateError)
+          console.error('❌ [ERROR] Update error:', updateError)
           throw updateError
         }
+
+        console.log('✅ [SUCCESS] Update successful, result:', updateResult)
       } else {
         // 생성 모드
         const { error: insertError } = await supabase
