@@ -54,6 +54,15 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   // Support both new format (?ref=shortId/slug via initialRef) and legacy format (?ref=shortId)
   const refParam = initialRef || searchParams.get('ref')
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 })
+
+  // Debug: Log timer data from landingPage
+  console.log('🔍 [DEBUG] PublicLandingPage timer data:', {
+    timer_enabled: landingPage?.timer_enabled,
+    timer_text: landingPage?.timer_text,
+    timer_deadline: landingPage?.timer_deadline,
+    timer_color: landingPage?.timer_color,
+    timer_sticky_position: landingPage?.timer_sticky_position,
+  })
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)

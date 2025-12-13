@@ -72,6 +72,16 @@ export default function LandingPageNewForm({
   const supabase = createClient()
   const isEditMode = !!landingPage
 
+  // Debug: Log landingPage props on component mount
+  console.log('🔍 [DEBUG] LandingPageNewForm mounted with landingPage:', landingPage)
+  console.log('🔍 [DEBUG] Timer data from props:', {
+    timer_enabled: landingPage?.timer_enabled,
+    timer_text: landingPage?.timer_text,
+    timer_deadline: landingPage?.timer_deadline,
+    timer_color: landingPage?.timer_color,
+    timer_sticky_position: landingPage?.timer_sticky_position,
+  })
+
   // Helper function to parse custom fields from DB
   const parseCustomFields = (collectFields: any): CustomField[] => {
     if (!collectFields || !Array.isArray(collectFields)) return []
@@ -120,6 +130,14 @@ export default function LandingPageNewForm({
   const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
   const [timerText, setTimerText] = useState(landingPage?.timer_text || '특별 할인 마감까지')
   const [timerCountdown, setTimerCountdown] = useState('00:00:00')
+
+  // Debug: Log initialized timer state
+  console.log('🔍 [DEBUG] Timer state initialized:', {
+    timerEnabled,
+    timerText,
+    timerDeadline,
+    timerColor,
+  })
   const [callButtonEnabled, setCallButtonEnabled] = useState(landingPage?.call_button_enabled ?? true)
   const [callButtonPhone, setCallButtonPhone] = useState(landingPage?.call_button_phone || '')
   const [callButtonColor, setCallButtonColor] = useState(landingPage?.call_button_color || '#10b981')
