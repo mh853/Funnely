@@ -1400,6 +1400,27 @@ export default function LandingPageNewForm({
                 <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
               </label>
             </div>
+            <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={collectData}
+                  onChange={() => setCollectData(true)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!collectData}
+                  onChange={() => setCollectData(false)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
+              </label>
+            </div>
           </div>
           <div className="space-y-4">
             {/* Collection Mode Description */}
@@ -1428,32 +1449,8 @@ export default function LandingPageNewForm({
             )}
 
             {/* Collection Settings (Common for both options) */}
-            {collectionMode && (
+            {collectionMode && collectData && (
               <>
-                {/* Enable/Disable Toggle */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4 pb-4 border-b border-gray-200">
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={collectData}
-                      onChange={() => setCollectData(true)}
-                      className="w-5 h-5 text-indigo-600"
-                    />
-                    <span className="font-semibold text-gray-900">사용함</span>
-                  </label>
-                  <label className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      checked={!collectData}
-                      onChange={() => setCollectData(false)}
-                      className="w-5 h-5 text-gray-400"
-                    />
-                    <span className="font-semibold text-gray-600">사용 안함</span>
-                  </label>
-                </div>
-
-                {/* Fixed Fields + Custom Fields */}
-                {collectData && (
               <div className="space-y-4">
                 {/* Fixed Fields: Name and Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -1572,7 +1569,6 @@ export default function LandingPageNewForm({
                   )}
                 </div>
               </div>
-                )}
               </>
             )}
           </div>
