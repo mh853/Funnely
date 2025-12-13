@@ -24,6 +24,8 @@ export default function TrackingPixelsClient({
   const [googleAdsId, setGoogleAdsId] = useState(initialData?.google_ads_id || '')
   const [kakaoPixelId, setKakaoPixelId] = useState(initialData?.kakao_pixel_id || '')
   const [naverPixelId, setNaverPixelId] = useState(initialData?.naver_pixel_id || '')
+  const [tiktokPixelId, setTiktokPixelId] = useState(initialData?.tiktok_pixel_id || '')
+  const [karrotPixelId, setKarrotPixelId] = useState(initialData?.karrot_pixel_id || '')
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
 
   const handleSave = async () => {
@@ -38,6 +40,8 @@ export default function TrackingPixelsClient({
         google_ads_id: googleAdsId || null,
         kakao_pixel_id: kakaoPixelId || null,
         naver_pixel_id: naverPixelId || null,
+        tiktok_pixel_id: tiktokPixelId || null,
+        karrot_pixel_id: karrotPixelId || null,
         is_active: isActive,
       }
 
@@ -220,6 +224,52 @@ export default function TrackingPixelsClient({
           />
           <p className="mt-1 text-xs text-gray-500">
             네이버 검색광고 {'>'} 도구 {'>'} 전환추적에서 확인
+          </p>
+        </div>
+
+        {/* TikTok Pixel */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-black" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64 2.93 2.93 0 01.88.13V9.4a6.84 6.84 0 00-1-.05A6.33 6.33 0 005 20.1a6.34 6.34 0 0010.86-4.43v-7a8.16 8.16 0 004.77 1.52v-3.4a4.85 4.85 0 01-1-.1z"/>
+            </svg>
+            <label className="block text-sm font-medium text-gray-700">
+              TikTok Pixel ID
+            </label>
+          </div>
+          <input
+            type="text"
+            value={tiktokPixelId}
+            onChange={(e) => setTiktokPixelId(e.target.value)}
+            placeholder="예: C1234ABCD5EFGH67IJKL"
+            maxLength={30}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            TikTok Ads Manager {'>'} Assets {'>'} Events에서 확인
+          </p>
+        </div>
+
+        {/* Karrot Market Pixel */}
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <svg className="h-5 w-5 text-orange-500" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm-1-13h2v6h-2zm0 8h2v2h-2z"/>
+            </svg>
+            <label className="block text-sm font-medium text-gray-700">
+              당근마켓 Pixel ID
+            </label>
+          </div>
+          <input
+            type="text"
+            value={karrotPixelId}
+            onChange={(e) => setKarrotPixelId(e.target.value)}
+            placeholder="예: karrot_12345"
+            maxLength={30}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          />
+          <p className="mt-1 text-xs text-gray-500">
+            당근마켓 비즈니스 {'>'} 광고 관리 {'>'} 전환 추적에서 확인
           </p>
         </div>
 

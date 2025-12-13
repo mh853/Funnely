@@ -444,6 +444,8 @@ export interface TrackingPixels {
   google_ads_id?: string;
   kakao_pixel_id?: string;
   naver_pixel_id?: string;
+  tiktok_pixel_id?: string;
+  karrot_pixel_id?: string;
   is_active: boolean;
   created_at: string;
   updated_at: string;
