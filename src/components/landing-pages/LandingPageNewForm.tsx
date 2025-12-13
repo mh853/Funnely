@@ -1384,27 +1384,6 @@ export default function LandingPageNewForm({
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
-                  checked={collectionMode === 'inline'}
-                  onChange={() => setCollectionMode('inline')}
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
-                />
-                <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션1: 페이지 내 수집</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={collectionMode === 'external'}
-                  onChange={() => setCollectionMode('external')}
-                  className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600"
-                />
-                <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
-              </label>
-            </div>
-            <div className="h-4 w-px bg-gray-300 hidden sm:block"></div>
-            <div className="flex items-center gap-3 sm:gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
                   checked={collectData}
                   onChange={() => setCollectData(true)}
                   className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
@@ -1422,19 +1401,43 @@ export default function LandingPageNewForm({
               </label>
             </div>
           </div>
-          <div className="space-y-4">
-            {/* Collection Mode Description */}
-            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 sm:p-4 mb-4">
-              {collectionMode === 'inline' ? (
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-semibold text-indigo-700">옵션1:</span> 랜딩 페이지에서 바로 정보 수집
-                </p>
-              ) : (
-                <p className="text-xs sm:text-sm text-gray-600">
-                  <span className="font-semibold text-purple-700">옵션2:</span> 별도 페이지에서 상세 정보 수집
-                </p>
-              )}
-            </div>
+
+          {collectData && (
+            <div className="space-y-4">
+              {/* Collection Mode Selection */}
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 pb-4 border-b border-gray-200">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={collectionMode === 'inline'}
+                    onChange={() => setCollectionMode('inline')}
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
+                  />
+                  <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션1: 페이지 내 수집</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={collectionMode === 'external'}
+                    onChange={() => setCollectionMode('external')}
+                    className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600"
+                  />
+                  <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
+                </label>
+              </div>
+
+              {/* Collection Mode Description */}
+              <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 sm:p-4">
+                {collectionMode === 'inline' ? (
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    <span className="font-semibold text-indigo-700">옵션1:</span> 랜딩 페이지에서 바로 정보 수집
+                  </p>
+                ) : (
+                  <p className="text-xs sm:text-sm text-gray-600">
+                    <span className="font-semibold text-purple-700">옵션2:</span> 별도 페이지에서 상세 정보 수집
+                  </p>
+                )}
+              </div>
 
             {/* External Page Info (Option 2 only) */}
             {collectionMode === 'external' && (
@@ -1448,9 +1451,8 @@ export default function LandingPageNewForm({
               </div>
             )}
 
-            {/* Collection Settings (Common for both options) */}
-            {collectionMode && collectData && (
-              <>
+              {/* Collection Settings (Common for both options) */}
+              {collectionMode && (
               <div className="space-y-4">
                 {/* Fixed Fields: Name and Phone */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
@@ -1569,9 +1571,9 @@ export default function LandingPageNewForm({
                   )}
                 </div>
               </div>
-              </>
-            )}
-          </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Realtime Status Section */}
