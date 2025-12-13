@@ -1275,30 +1275,30 @@ export default function LandingPageNewForm({
 
         {/* Description Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
-            랜딩페이지 설명
-          </h2>
-
-          {/* Radio Buttons */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4">
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={descriptionEnabled}
-                onChange={() => setDescriptionEnabled(true)}
-                className="w-5 h-5 text-indigo-600"
-              />
-              <span className="font-semibold text-gray-900">사용함</span>
-            </label>
-            <label className="flex items-center gap-3 cursor-pointer">
-              <input
-                type="radio"
-                checked={!descriptionEnabled}
-                onChange={() => setDescriptionEnabled(false)}
-                className="w-5 h-5 text-gray-400"
-              />
-              <span className="font-semibold text-gray-600">사용 안함</span>
-            </label>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              랜딩페이지 설명
+            </h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={descriptionEnabled}
+                  onChange={() => setDescriptionEnabled(true)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={!descriptionEnabled}
+                  onChange={() => setDescriptionEnabled(false)}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
+                />
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
+              </label>
+            </div>
           </div>
 
           {/* Textarea (conditional) */}
@@ -1315,12 +1315,12 @@ export default function LandingPageNewForm({
 
         {/* Images Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
-            이미지/영상 등록
-          </h2>
-          <div className="space-y-4">
-            <label className="inline-flex items-center px-4 sm:px-6 py-2.5 sm:py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2 text-sm sm:text-base">
-              <PhotoIcon className="h-5 w-5" />
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+              이미지/영상 등록
+            </h2>
+            <label className="inline-flex items-center px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2 text-sm sm:text-base">
+              <PhotoIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               파일 업로드
               <input
                 type="file"
@@ -1330,6 +1330,8 @@ export default function LandingPageNewForm({
                 className="hidden"
               />
             </label>
+          </div>
+          <div className="space-y-4">
 
             {images.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -1376,37 +1378,41 @@ export default function LandingPageNewForm({
 
         {/* DB Collection Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">DB 수집 항목</h2>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">DB 수집 항목</h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={collectionMode === 'inline'}
+                  onChange={() => setCollectionMode('inline')}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
+                />
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션1: 페이지 내 수집</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  checked={collectionMode === 'external'}
+                  onChange={() => setCollectionMode('external')}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600"
+                />
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
+              </label>
+            </div>
+          </div>
           <div className="space-y-4">
-            {/* Collection Mode Selection */}
+            {/* Collection Mode Description */}
             <div className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-3 sm:p-4 mb-4">
-              <h3 className="text-sm font-bold text-gray-900 mb-3">수집 방식 선택</h3>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                <label className="flex items-start sm:items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={collectionMode === 'inline'}
-                    onChange={() => setCollectionMode('inline')}
-                    className="w-5 h-5 text-indigo-600 mt-0.5 sm:mt-0"
-                  />
-                  <div>
-                    <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션1: 페이지 내 수집</span>
-                    <p className="text-xs text-gray-600">랜딩 페이지에서 바로 정보 수집</p>
-                  </div>
-                </label>
-                <label className="flex items-start sm:items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={collectionMode === 'external'}
-                    onChange={() => setCollectionMode('external')}
-                    className="w-5 h-5 text-purple-600 mt-0.5 sm:mt-0"
-                  />
-                  <div>
-                    <span className="font-semibold text-gray-900 text-sm sm:text-base">옵션2: 외부 페이지 수집</span>
-                    <p className="text-xs text-gray-600">별도 페이지에서 상세 정보 수집</p>
-                  </div>
-                </label>
-              </div>
+              {collectionMode === 'inline' ? (
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-semibold text-indigo-700">옵션1:</span> 랜딩 페이지에서 바로 정보 수집
+                </p>
+              ) : (
+                <p className="text-xs sm:text-sm text-gray-600">
+                  <span className="font-semibold text-purple-700">옵션2:</span> 별도 페이지에서 상세 정보 수집
+                </p>
+              )}
             </div>
 
             {/* External Page Info (Option 2 only) */}
@@ -1574,47 +1580,34 @@ export default function LandingPageNewForm({
 
         {/* Realtime Status Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">실시간 현황 사용</h2>
-
-          {/* Conditional Notice */}
-          {!collectData && (
-            <div className="mb-4 p-4 bg-yellow-50 border-2 border-yellow-200 rounded-xl">
-              <p className="text-sm text-yellow-800 flex items-center gap-2">
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                DB 수집 항목을 사용해야 실시간 현황을 사용할 수 있습니다.
-              </p>
-            </div>
-          )}
-
-          <div className="space-y-4">
-            {/* Radio Buttons */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">실시간 현황 사용</h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className={`flex items-center gap-2 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
                   checked={realtimeEnabled}
                   onChange={() => collectData && setRealtimeEnabled(true)}
                   disabled={!collectData}
-                  className="w-5 h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <span className="font-semibold text-gray-900">사용함</span>
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
               </label>
-              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+              <label className={`flex items-center gap-2 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
                 <input
                   type="radio"
                   checked={!realtimeEnabled}
                   onChange={() => collectData && setRealtimeEnabled(false)}
                   disabled={!collectData}
-                  className="w-5 h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
                 />
-                <span className="font-semibold text-gray-600">사용 안함</span>
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
               </label>
             </div>
+          </div>
 
-            {/* Realtime Settings (only when enabled and collectData is true) */}
-            {realtimeEnabled && collectData && (
+          {/* Realtime Settings (only when enabled and collectData is true) */}
+          {realtimeEnabled && collectData && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -1681,7 +1674,31 @@ export default function LandingPageNewForm({
 
         {/* CTA Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">하단 CTA 버튼</h2>
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">하단 CTA 버튼</h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className={`flex items-center gap-2 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <input
+                  type="radio"
+                  checked={ctaEnabled}
+                  onChange={() => collectData && setCtaEnabled(true)}
+                  disabled={!collectData}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
+              </label>
+              <label className={`flex items-center gap-2 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
+                <input
+                  type="radio"
+                  checked={!ctaEnabled}
+                  onChange={() => collectData && setCtaEnabled(false)}
+                  disabled={!collectData}
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                />
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
+              </label>
+            </div>
+          </div>
 
           {/* Conditional Notice */}
           {!collectData && (
@@ -1695,32 +1712,8 @@ export default function LandingPageNewForm({
             </div>
           )}
 
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 pb-4 border-b border-gray-200">
-              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-                <input
-                  type="radio"
-                  checked={ctaEnabled}
-                  onChange={() => collectData && setCtaEnabled(true)}
-                  disabled={!collectData}
-                  className="w-5 h-5 text-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <span className="font-semibold text-gray-900">사용함</span>
-              </label>
-              <label className={`flex items-center gap-3 ${collectData ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'}`}>
-                <input
-                  type="radio"
-                  checked={!ctaEnabled}
-                  onChange={() => collectData && setCtaEnabled(false)}
-                  disabled={!collectData}
-                  className="w-5 h-5 text-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-                />
-                <span className="font-semibold text-gray-600">사용 안함</span>
-              </label>
-            </div>
-
-            {/* CTA Settings (only when enabled and collectData is true) */}
-            {ctaEnabled && collectData && (
+          {/* CTA Settings (only when enabled and collectData is true) */}
+          {ctaEnabled && collectData && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-20">
@@ -1806,30 +1799,31 @@ export default function LandingPageNewForm({
 
         {/* Timer Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">타이머 사용</h2>
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">타이머 사용</h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={timerEnabled}
                   onChange={() => setTimerEnabled(true)}
-                  className="w-5 h-5 text-indigo-600"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
                 />
-                <span className="font-semibold text-gray-900">사용함</span>
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={!timerEnabled}
                   onChange={() => setTimerEnabled(false)}
-                  className="w-5 h-5 text-gray-400"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
                 />
-                <span className="font-semibold text-gray-600">사용 안함</span>
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
               </label>
             </div>
+          </div>
 
-            {timerEnabled && (
+          {timerEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-24">
@@ -1908,30 +1902,31 @@ export default function LandingPageNewForm({
 
         {/* Call Button Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">전화 연결 버튼</h2>
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-              <label className="flex items-center gap-3 cursor-pointer">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900">전화 연결 버튼</h2>
+            <div className="flex items-center gap-3 sm:gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={callButtonEnabled}
                   onChange={() => setCallButtonEnabled(true)}
-                  className="w-5 h-5 text-indigo-600"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
                 />
-                <span className="font-semibold text-gray-900">사용함</span>
+                <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
               </label>
-              <label className="flex items-center gap-3 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer">
                 <input
                   type="radio"
                   checked={!callButtonEnabled}
                   onChange={() => setCallButtonEnabled(false)}
-                  className="w-5 h-5 text-gray-400"
+                  className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400"
                 />
-                <span className="font-semibold text-gray-600">사용 안함</span>
+                <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
               </label>
             </div>
+          </div>
 
-            {callButtonEnabled && (
+          {callButtonEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-24">
