@@ -786,15 +786,35 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {(() => {
-                    const pageViewRows = Object.entries(pageViewsByDate)
-                      .sort(([a], [b]) => b.localeCompare(a))
-                      .slice(0, 3)
+                    // 최근 7일의 모든 날짜 생성 (pageViewsByDate 용)
+                    const last7DaysPageView: string[] = []
+                    for (let i = 0; i < 7; i++) {
+                      const date = new Date(now)
+                      date.setDate(date.getDate() - i)
+                      const dateStr = date.toISOString().split('T')[0]
+                      last7DaysPageView.push(dateStr)
+                    }
+
+                    // 최근 7일 데이터 생성 (데이터가 없는 날짜는 0으로 채움)
+                    const pageViewRows = last7DaysPageView.map(dateStr => {
+                      if (pageViewsByDate[dateStr]) {
+                        return { date: dateStr, ...pageViewsByDate[dateStr] }
+                      } else {
+                        return {
+                          date: dateStr,
+                          total: 0,
+                          desktop: 0,
+                          mobile: 0,
+                          tablet: 0
+                        }
+                      }
+                    })
 
                     return pageViewRows.length > 0 ? (
-                      pageViewRows.map(([date, data]) => (
-                        <tr key={`page-view-${date}`} className="hover:bg-gray-50 transition-colors">
+                      pageViewRows.map((data) => (
+                        <tr key={`page-view-${data.date}`} className="hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 w-[20%]">
-                            {date}
+                            {data.date}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-semibold w-[20%]">
                             {data.total}
@@ -839,7 +859,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {resultRows.length > 0 ? (
-                    resultRows.slice(0, 3).map((row: any) => {
+                    resultRows.map((row: any) => {
                       const total = row.total || 0
                       const otherDevices = (row.tabletCount || 0) + (row.unknownDeviceCount || 0)
 
