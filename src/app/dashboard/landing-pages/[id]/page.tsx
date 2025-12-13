@@ -58,6 +58,14 @@ export default async function LandingPageDetailPage({ params }: Props) {
     .eq('company_id', userProfile.company_id)
     .single()
 
+  // Debug: Log timer data
+  console.log('Landing page loaded:', {
+    id: landingPage?.id,
+    timer_text: landingPage?.timer_text,
+    timer_deadline: landingPage?.timer_deadline,
+    timer_enabled: landingPage?.timer_enabled,
+  })
+
   if (error || !landingPage) {
     return (
       <div className="text-center py-12">
