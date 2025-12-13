@@ -1057,10 +1057,10 @@ export default function LeadsClient({
           '랜딩페이지': lead.landing_pages?.title || '-',
           '이름': lead.name || '-',
           '전화번호': lead.phone ? decryptPhone(lead.phone) : '-',
-          '결과': statusLabel,
           '기기': lead.device_type
             ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
             : '-',
+          '결과': statusLabel,
           '예약날짜': lead.contract_completed_at
             ? new Date(lead.contract_completed_at).toISOString().split('T')[0]
             : '-',
@@ -1095,8 +1095,8 @@ export default function LeadsClient({
         { wch: 20 },  // 랜딩페이지
         { wch: 10 },  // 이름
         { wch: 15 },  // 전화번호
-        { wch: 12 },  // 결과
         { wch: 8 },   // 기기
+        { wch: 12 },  // 결과
         { wch: 12 },  // 예약날짜
         { wch: 12 },  // 결제금액
         { wch: 30 },  // 비고
@@ -1342,11 +1342,11 @@ export default function LeadsClient({
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   전화번호
                 </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  결과
-                </th>
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   기기
+                </th>
+                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  결과
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   예약날짜
@@ -1418,6 +1418,11 @@ export default function LeadsClient({
                         ) : '-'}
                       </span>
                     </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.device_type
+                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+                        : '-'}
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
                         {/* 상태 배지 (클릭 가능) */}
@@ -1448,11 +1453,6 @@ export default function LeadsClient({
                           )}
                         </button>
                       </div>
-                    </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.device_type
-                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
-                        : '-'}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.contract_completed_at ? (
