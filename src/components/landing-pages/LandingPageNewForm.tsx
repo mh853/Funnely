@@ -16,23 +16,20 @@ import {
 
 // Timer calculation utility
 const calculateTimeRemaining = (deadline: string): string => {
-  if (!deadline) return '00:00:00'
+  if (!deadline) return 'D-0일 00:00:00'
 
   const now = new Date().getTime()
   const target = new Date(deadline).getTime()
   const diff = target - now
 
-  if (diff <= 0) return '00:00:00'
+  if (diff <= 0) return 'D-0일 00:00:00'
 
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
   const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
   const seconds = Math.floor((diff % (1000 * 60)) / 1000)
 
-  if (days > 0) {
-    return `${days}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-  }
-  return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+  return `D-${days}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
 interface LandingPageNewFormProps {
@@ -121,6 +118,7 @@ export default function LandingPageNewForm({
   const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? true)
   const [timerDeadline, setTimerDeadline] = useState(landingPage?.timer_deadline || '')
   const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
+  const [timerText, setTimerText] = useState(landingPage?.timer_text || '특별 할인 마감까지')
   const [timerCountdown, setTimerCountdown] = useState('00:00:00')
   const [callButtonEnabled, setCallButtonEnabled] = useState(landingPage?.call_button_enabled ?? true)
   const [callButtonPhone, setCallButtonPhone] = useState(landingPage?.call_button_phone || '')
@@ -472,11 +470,17 @@ export default function LandingPageNewForm({
         if (!timerEnabled) return null
         return (
           <div className="rounded-lg p-3 border-2" style={{ borderColor: timerColor, backgroundColor: `${timerColor}10` }}>
-            <div className="flex items-center justify-center gap-2">
-              <ClockIcon className="h-4 w-4" style={{ color: timerColor }} />
-              <span className="text-xs font-bold" style={{ color: timerColor }}>
-                {timerCountdown}
-              </span>
+            <div className="flex flex-col items-center gap-1">
+              {timerText && (
+                <div className="text-xs font-medium" style={{ color: timerColor }}>
+                  {timerText}
+                </div>
+              )}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold" style={{ color: timerColor }}>
+                  {timerCountdown}
+                </span>
+              </div>
             </div>
           </div>
         )
@@ -658,11 +662,17 @@ export default function LandingPageNewForm({
         if (!timerEnabled) return null
         return (
           <div className="rounded-xl p-6 border-2" style={{ borderColor: timerColor, backgroundColor: `${timerColor}10` }}>
-            <div className="flex items-center justify-center gap-3">
-              <ClockIcon className="h-6 w-6" style={{ color: timerColor }} />
-              <span className="text-lg font-bold" style={{ color: timerColor }}>
-                {timerCountdown}
-              </span>
+            <div className="flex flex-col items-center gap-2">
+              {timerText && (
+                <div className="text-sm font-medium" style={{ color: timerColor }}>
+                  {timerText}
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-lg font-bold" style={{ color: timerColor }}>
+                  {timerCountdown}
+                </span>
+              </div>
             </div>
           </div>
         )
@@ -1006,6 +1016,7 @@ export default function LandingPageNewForm({
         cta_color: ctaColor,
         cta_sticky_position: ctaStickyPosition,
         timer_enabled: timerEnabled,
+        timer_text: timerText || null,
         timer_deadline: timerDeadline || null, // 빈 문자열을 null로 변환
         timer_color: timerColor,
         timer_sticky_position: timerStickyPosition,
@@ -1814,40 +1825,8 @@ export default function LandingPageNewForm({
           <div>
             {timerEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-sm font-medium text-gray-700 sm:w-24">
-                    마감 날짜/시간
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={timerDeadline}
-                    onChange={(e) => setTimerDeadline(e.target.value)}
-                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-                  <label className="text-sm font-medium text-gray-700 sm:w-24">
-                    타이머 색상
-                  </label>
-                  <div className="flex items-center gap-3 flex-1">
-                    <input
-                      type="color"
-                      value={timerColor}
-                      onChange={(e) => setTimerColor(e.target.value)}
-                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-200 cursor-pointer flex-shrink-0"
-                    />
-                    <input
-                      type="text"
-                      value={timerColor}
-                      onChange={(e) => setTimerColor(e.target.value)}
-                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
-                      placeholder="#ef4444"
-                    />
-                  </div>
-                </div>
-
-                {/* Timer Sticky Position Settings */}
-                <div className="space-y-2 pt-4 border-t border-gray-200">
+                {/* Timer Sticky Position Settings - 위로 이동 */}
+                <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
                     화면 고정 위치
                   </label>
@@ -1883,6 +1862,55 @@ export default function LandingPageNewForm({
                   <p className="text-xs text-gray-500 mt-2">
                     💡 타이머를 화면 상단 또는 하단에 고정하여 스크롤 시에도 항상 표시되도록 설정할 수 있습니다
                   </p>
+                </div>
+
+                {/* 타이머 텍스트 */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pt-4 border-t border-gray-200">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
+                    타이머 텍스트
+                  </label>
+                  <input
+                    type="text"
+                    value={timerText}
+                    onChange={(e) => setTimerText(e.target.value)}
+                    placeholder="예: 특별 할인 마감까지"
+                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  />
+                </div>
+
+                {/* 마감 날짜/시간 */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
+                    마감 날짜/시간
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={timerDeadline}
+                    onChange={(e) => setTimerDeadline(e.target.value)}
+                    className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                  />
+                </div>
+
+                {/* 타이머 색상 */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                  <label className="text-sm font-medium text-gray-700 sm:w-24">
+                    타이머 색상
+                  </label>
+                  <div className="flex items-center gap-3 flex-1">
+                    <input
+                      type="color"
+                      value={timerColor}
+                      onChange={(e) => setTimerColor(e.target.value)}
+                      className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg border-2 border-gray-200 cursor-pointer flex-shrink-0"
+                    />
+                    <input
+                      type="text"
+                      value={timerColor}
+                      onChange={(e) => setTimerColor(e.target.value)}
+                      className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 font-mono text-sm"
+                      placeholder="#ef4444"
+                    />
+                  </div>
                 </div>
               </div>
             )}

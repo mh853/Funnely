@@ -195,6 +195,7 @@ export interface LandingPage {
 
   // Timer Settings
   timer_enabled?: boolean;
+  timer_text?: string;
   timer_deadline?: string;
   timer_color?: string;
   timer_sticky_position?: 'none' | 'top' | 'bottom';

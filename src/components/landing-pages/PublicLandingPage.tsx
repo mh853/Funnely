@@ -229,7 +229,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
   // Memoize timer countdown string to prevent unnecessary recalculations
   const timerCountdown = useMemo(
-    () => `${String(timeLeft.days).padStart(2, '0')}일 ${String(timeLeft.hours).padStart(2, '0')}시 ${String(timeLeft.minutes).padStart(2, '0')}분 ${String(timeLeft.seconds).padStart(2, '0')}초`,
+    () => `D-${timeLeft.days}일 ${String(timeLeft.hours).padStart(2, '0')}:${String(timeLeft.minutes).padStart(2, '0')}:${String(timeLeft.seconds).padStart(2, '0')}`,
     [timeLeft]
   )
 
@@ -252,13 +252,22 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       buttons.push(
         <div
           key="timer"
-          className="w-full py-4 text-lg rounded-xl font-bold shadow-xl text-center"
+          className="w-full py-4 rounded-xl shadow-xl text-center"
           style={{
             backgroundColor: landingPage.timer_color || '#EF4444',
             color: 'white'
           }}
         >
-          ⏰ {timerCountdown}
+          <div className="flex flex-col items-center gap-1">
+            {landingPage.timer_text && (
+              <div className="text-sm font-medium">
+                {landingPage.timer_text}
+              </div>
+            )}
+            <div className="text-lg font-bold">
+              {timerCountdown}
+            </div>
+          </div>
         </div>
       )
     }
