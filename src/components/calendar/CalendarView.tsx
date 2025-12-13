@@ -426,6 +426,31 @@ export default function CalendarView({
         call_assigned_to: newAssigneeId || null,
         call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
       })
+
+      // 상태변경이력 새로고침
+      try {
+        const supabase = createClient()
+        const { data: newLogs } = await supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            field_type,
+            previous_value,
+            new_value,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', selectedLead.id)
+          .order('created_at', { ascending: false })
+
+        if (newLogs) {
+          setStatusLogs(newLogs)
+        }
+      } catch (logError) {
+        console.error('Error refreshing status logs:', logError)
+      }
     } catch (error) {
       console.error('Call assignee update error:', error)
       alert('콜 담당자 변경에 실패했습니다.')
@@ -458,6 +483,31 @@ export default function CalendarView({
         counselor_assigned_to: newCounselorId || null,
         counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
       })
+
+      // 상태변경이력 새로고침
+      try {
+        const supabase = createClient()
+        const { data: newLogs } = await supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            field_type,
+            previous_value,
+            new_value,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', selectedLead.id)
+          .order('created_at', { ascending: false })
+
+        if (newLogs) {
+          setStatusLogs(newLogs)
+        }
+      } catch (logError) {
+        console.error('Error refreshing status logs:', logError)
+      }
     } catch (error) {
       console.error('Counselor update error:', error)
       alert('상담 담당자 변경에 실패했습니다.')
