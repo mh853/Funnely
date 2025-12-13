@@ -420,10 +420,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={date} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
-                        {/* Data Label - 막대 위에 표시 */}
+                        {/* Data Label - 막대 바로 위에 표시 */}
                         {count > 0 && (
-                          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                            <span className="text-[10px] font-semibold text-gray-700">{count}</span>
+                          <div className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 pointer-events-none">
+                            <span className="text-xs font-bold text-gray-800">{count}</span>
                           </div>
                         )}
 
@@ -678,10 +678,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={`traffic-${date}`} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
-                        {/* Data Label - 막대 위에 표시 */}
+                        {/* Data Label - 막대 바로 위에 표시 */}
                         {count > 0 && (
-                          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                            <span className="text-[10px] font-semibold text-gray-700">{count}</span>
+                          <div className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 pointer-events-none">
+                            <span className="text-xs font-bold text-gray-800">{count}</span>
                           </div>
                         )}
 
