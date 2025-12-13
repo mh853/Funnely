@@ -69,8 +69,8 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       </button>
 
       {/* Navigation - Icons Only */}
-      <nav className="flex flex-1 flex-col">
-        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+      <nav className="flex flex-col">
+        <ul role="list" className="flex flex-col gap-y-7">
           <li>
             <ul role="list" className="space-y-1">
               {navigation.map((item) => {
@@ -135,8 +135,8 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       )}
 
       {/* Navigation */}
-      <nav className="flex flex-1 flex-col">
-        <ul role="list" className="flex flex-1 flex-col gap-y-7">
+      <nav className="flex flex-col">
+        <ul role="list" className="flex flex-col gap-y-7">
           <li>
             <ul role="list" className="-mx-2 space-y-1">
               {navigation.map((item) => {
