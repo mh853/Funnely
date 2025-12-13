@@ -68,7 +68,7 @@ const LEAD_STATUS_COLORS = {
   lost: 'bg-red-100 border-red-500 text-red-900',
 }
 
-// 상태별 스타일 정의 (모달 테이블용)
+// 상태별 스타일 정의 (모달 테이블용 및 변경이력용)
 const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string } } = {
   new: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
@@ -79,6 +79,11 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   contract_completed: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '예약 확정' },
   needs_followup: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: '추가상담 필요' },
   other: { bg: 'bg-gray-100', text: 'text-gray-800', label: '기타' },
+  // 필드 타입 (변경 이력용)
+  call_assigned_to: { bg: 'bg-blue-100', text: 'text-blue-800', label: '콜 담당자 변경' },
+  counselor_assigned_to: { bg: 'bg-emerald-100', text: 'text-emerald-800', label: '상담 담당자 변경' },
+  contract_completed_at: { bg: 'bg-amber-100', text: 'text-amber-800', label: '예약일 변경' },
+  notes: { bg: 'bg-gray-100', text: 'text-gray-800', label: '비고 변경' },
 }
 
 // 상태 변경 가능 목록
@@ -146,9 +151,9 @@ export default function ReservationsClient({
   const [updatingCounselor, setUpdatingCounselor] = useState(false)
   const [updatingCallAssignee, setUpdatingCallAssignee] = useState(false)
 
-  // 예약일 변경 이력 상태
-  const [reservationDateLogs, setReservationDateLogs] = useState<any[]>([])
-  const [loadingDateLogs, setLoadingDateLogs] = useState(false)
+  // 변경 이력 상태 (통합)
+  const [statusLogs, setStatusLogs] = useState<any[]>([])
+  const [loadingStatusLogs, setLoadingStatusLogs] = useState(false)
 
   // 예약일 수정 상태
   const [editingReservationDate, setEditingReservationDate] = useState(false)
@@ -170,11 +175,11 @@ export default function ReservationsClient({
     setSelectedLead(lead)
     setShowLeadDetailModal(true)
     setLoadingLeadDetails(true)
-    setLoadingDateLogs(true)
-    setReservationDateLogs([])
+    setLoadingStatusLogs(true)
+    setStatusLogs([])
 
     try {
-      // 리드 상세 정보와 예약일 변경 로그를 병렬로 가져옴
+      // 리드 상세 정보와 변경 이력을 병렬로 가져옴
       const [leadResult, logsResult] = await Promise.all([
         supabase
           .from('leads')
@@ -191,13 +196,16 @@ export default function ReservationsClient({
           .eq('id', lead.id)
           .single(),
         supabase
-          .from('reservation_date_logs')
+          .from('lead_status_logs')
           .select(`
             id,
-            previous_date,
-            new_date,
+            previous_status,
+            new_status,
+            field_type,
+            previous_value,
+            new_value,
             created_at,
-            changed_by_user:users!reservation_date_logs_changed_by_fkey(id, full_name)
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
           `)
           .eq('lead_id', lead.id)
           .order('created_at', { ascending: false })
@@ -207,13 +215,13 @@ export default function ReservationsClient({
       setLeadDetails(leadResult.data)
 
       if (!logsResult.error && logsResult.data) {
-        setReservationDateLogs(logsResult.data)
+        setStatusLogs(logsResult.data)
       }
     } catch (error) {
       console.error('Error fetching lead details:', error)
     } finally {
       setLoadingLeadDetails(false)
-      setLoadingDateLogs(false)
+      setLoadingStatusLogs(false)
     }
   }
 
@@ -240,6 +248,31 @@ export default function ReservationsClient({
           counselor_assigned_to: newCounselorId || null,
           counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
         })
+      }
+
+      // Refresh change history logs
+      try {
+        const supabase = createClient()
+        const { data: newLogs } = await supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            field_type,
+            previous_value,
+            new_value,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: false })
+
+        if (newLogs) {
+          setStatusLogs(newLogs)
+        }
+      } catch (logError) {
+        console.error('Error refreshing status logs:', logError)
       }
     } catch (error) {
       console.error('Counselor update error:', error)
@@ -272,6 +305,31 @@ export default function ReservationsClient({
           call_assigned_to: newAssigneeId || null,
           call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
         })
+      }
+
+      // Refresh change history logs
+      try {
+        const supabase = createClient()
+        const { data: newLogs } = await supabase
+          .from('lead_status_logs')
+          .select(`
+            id,
+            previous_status,
+            new_status,
+            field_type,
+            previous_value,
+            new_value,
+            created_at,
+            changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
+          `)
+          .eq('lead_id', leadId)
+          .order('created_at', { ascending: false })
+
+        if (newLogs) {
+          setStatusLogs(newLogs)
+        }
+      } catch (logError) {
+        console.error('Error refreshing status logs:', logError)
       }
     } catch (error) {
       console.error('Call assignee update error:', error)
@@ -330,21 +388,24 @@ export default function ReservationsClient({
         )
       )
 
-      // Refresh reservation date logs
+      // Refresh change history logs
       const { data: newLogs } = await supabase
-        .from('reservation_date_logs')
+        .from('lead_status_logs')
         .select(`
           id,
-          previous_date,
-          new_date,
+          previous_status,
+          new_status,
+          field_type,
+          previous_value,
+          new_value,
           created_at,
-          changed_by_user:users!reservation_date_logs_changed_by_fkey(id, full_name)
+          changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
         `)
         .eq('lead_id', leadDetails.id)
         .order('created_at', { ascending: false })
 
       if (newLogs) {
-        setReservationDateLogs(newLogs)
+        setStatusLogs(newLogs)
       }
 
       setEditingReservationDate(false)
@@ -1394,7 +1455,7 @@ export default function ReservationsClient({
                     setShowLeadDetailModal(false)
                     setSelectedLead(null)
                     setLeadDetails(null)
-                    setReservationDateLogs([])
+                    setStatusLogs([])
                     setEditingReservationDate(false)
                     // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
                   }}
@@ -1725,64 +1786,120 @@ export default function ReservationsClient({
                     </table>
                   </div>
 
-                  {/* 예약일 변경 이력 */}
+                  {/* 변경 이력 (통합) */}
                   <div className="bg-gray-50 rounded-xl overflow-hidden">
-                    <div className="px-4 py-2 bg-amber-100">
-                      <h4 className="text-sm font-medium text-amber-800">예약일 변경 이력</h4>
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">변경 이력</h4>
                     </div>
                     <div className="p-4">
-                      {loadingDateLogs ? (
+                      {loadingStatusLogs ? (
                         <div className="flex items-center justify-center py-4">
-                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-600"></div>
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
                           <span className="ml-2 text-sm text-gray-500">로딩 중...</span>
                         </div>
-                      ) : reservationDateLogs.length > 0 ? (
+                      ) : statusLogs.length > 0 ? (
                         <div className="space-y-3 max-h-48 overflow-y-auto">
-                          {reservationDateLogs.map((log, index) => (
-                            <div
-                              key={log.id}
-                              className="flex items-start gap-3 text-sm"
-                            >
-                              {/* 타임라인 인디케이터 */}
-                              <div className="flex flex-col items-center">
-                                <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-amber-500' : 'bg-gray-300'}`}></div>
-                                {index < reservationDateLogs.length - 1 && (
-                                  <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
-                                )}
-                              </div>
-                              {/* 로그 내용 */}
-                              <div className="flex-1 pb-3">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  {log.previous_date ? (
-                                    <>
-                                      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-700">
-                                        {formatDateTime(log.previous_date)}
-                                      </span>
-                                      <span className="text-gray-400">→</span>
-                                    </>
-                                  ) : (
-                                    <span className="text-xs text-gray-400 mr-1">최초 설정:</span>
+                          {statusLogs.map((log, index) => {
+                            // 로그 라벨 결정
+                            const getLogLabel = (status: string, fieldType?: string, value?: string | null) => {
+                              // 담당자 변경 로그
+                              if (fieldType === 'call_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              // 예약일 변경
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                return value ? formatDateTime(value) : '(삭제)'
+                              }
+                              // 비고 변경
+                              if (fieldType === 'notes') {
+                                return value || '(비고 삭제)'
+                              }
+                              // 상태 변경
+                              return STATUS_STYLES[status]?.label || status || '없음'
+                            }
+
+                            const getLogStyle = (status: string, fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') {
+                                return STATUS_STYLES.call_assigned_to || { bg: 'bg-blue-100', text: 'text-blue-800' }
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                return STATUS_STYLES.counselor_assigned_to || { bg: 'bg-emerald-100', text: 'text-emerald-800' }
+                              }
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                return { bg: 'bg-amber-100', text: 'text-amber-800' }
+                              }
+                              if (fieldType === 'notes') {
+                                return { bg: 'bg-gray-100', text: 'text-gray-700' }
+                              }
+                              return STATUS_STYLES[status] || { bg: 'bg-gray-100', text: 'text-gray-700' }
+                            }
+
+                            // 로그 타입별 제목 표시
+                            const getLogTypeLabel = (fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') return '콜 담당자'
+                              if (fieldType === 'counselor_assigned_to') return '상담 담당자'
+                              if (fieldType === 'notes') return '비고'
+                              if (fieldType === 'contract_completed_at') return '예약일'
+                              return '상태'
+                            }
+
+                            return (
+                              <div
+                                key={log.id}
+                                className="flex items-start gap-3 text-sm"
+                              >
+                                {/* 타임라인 인디케이터 */}
+                                <div className="flex flex-col items-center">
+                                  <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                                  {index < statusLogs.length - 1 && (
+                                    <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
                                   )}
-                                  <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                                    {formatDateTime(log.new_date)}
-                                  </span>
                                 </div>
-                                <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
-                                  <span>{formatDateTime(log.created_at)}</span>
-                                  {log.changed_by_user && (
-                                    <>
-                                      <span className="text-gray-300">|</span>
-                                      <span>{log.changed_by_user.full_name}</span>
-                                    </>
-                                  )}
+                                {/* 로그 내용 */}
+                                <div className="flex-1 pb-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {getLogTypeLabel(log.field_type)}:
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* 이전 값 */}
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.previous_status, log.field_type).bg
+                                    } ${getLogStyle(log.previous_status, log.field_type).text}`}>
+                                      {getLogLabel(log.previous_status, log.field_type, log.previous_value)}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    {/* 새 값 */}
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.new_status, log.field_type).bg
+                                    } ${getLogStyle(log.new_status, log.field_type).text}`}>
+                                      {getLogLabel(log.new_status, log.field_type, log.new_value)}
+                                    </span>
+                                  </div>
+                                  {/* 메타 정보 */}
+                                  <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                    <span>{formatDateTime(log.created_at)}</span>
+                                    {log.changed_by_user && (
+                                      <>
+                                        <span className="text-gray-300">|</span>
+                                        <span>{log.changed_by_user.full_name}</span>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       ) : (
                         <p className="text-sm text-gray-400 text-center py-4">
-                          예약일 변경 이력이 없습니다
+                          변경 이력이 없습니다
                         </p>
                       )}
                     </div>
@@ -1802,7 +1919,7 @@ export default function ReservationsClient({
                   setShowLeadDetailModal(false)
                   setSelectedLead(null)
                   setLeadDetails(null)
-                  setReservationDateLogs([])
+                  setStatusLogs([])
                   setEditingReservationDate(false)
                   // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
                 }}
