@@ -244,9 +244,40 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // 페이지뷰 총합 (선택된 월의 날짜별 합계)
   const totalPageViews = sortedPageViewStats.reduce((sum, item) => sum + item.count, 0)
 
-  const resultRows = Object.values(resultsByDate)
-    .sort((a: any, b: any) => b.date.localeCompare(a.date))
-    .slice(0, 5)
+  // 최근 7일의 모든 날짜 생성 (현재 날짜 기준)
+  const last7Days: string[] = []
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(now)
+    date.setDate(date.getDate() - i)
+    const dateStr = date.toISOString().split('T')[0]
+    last7Days.push(dateStr)
+  }
+
+  // 최근 7일 데이터 생성 (데이터가 없는 날짜는 0으로 채움)
+  const resultRows = last7Days.map(dateStr => {
+    if (resultsByDate[dateStr]) {
+      return resultsByDate[dateStr]
+    } else {
+      // 데이터가 없는 날짜는 기본값으로 생성
+      return {
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        tabletCount: 0,
+        unknownDeviceCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }
+    }
+  })
 
   return (
     <div className="space-y-4">
