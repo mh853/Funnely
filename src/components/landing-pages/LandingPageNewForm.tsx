@@ -1037,6 +1037,7 @@ export default function LandingPageNewForm({
       if (landingPage) {
         // 수정 모드 - company_id와 created_by는 제외
         const { company_id, ...updateData } = dataToSave
+        console.log('Updating landing page with data:', updateData)
         const { error: updateError } = await supabase
           .from('landing_pages')
           .update({
@@ -1045,7 +1046,10 @@ export default function LandingPageNewForm({
           })
           .eq('id', landingPage.id)
 
-        if (updateError) throw updateError
+        if (updateError) {
+          console.error('Update error:', updateError)
+          throw updateError
+        }
       } else {
         // 생성 모드
         const { error: insertError } = await supabase
@@ -1075,9 +1079,11 @@ export default function LandingPageNewForm({
         }
       }
 
+      console.log('Save successful, redirecting...')
       router.push('/dashboard/landing-pages')
       router.refresh()
     } catch (err: any) {
+      console.error('Save failed:', err)
       setError(err.message || '저장에 실패했습니다')
     } finally {
       setSaving(false)
