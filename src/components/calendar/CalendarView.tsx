@@ -303,6 +303,9 @@ export default function CalendarView({
             id,
             previous_status,
             new_status,
+            field_type,
+            previous_value,
+            new_value,
             created_at,
             changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
           `)
@@ -376,6 +379,9 @@ export default function CalendarView({
             id,
             previous_status,
             new_status,
+            field_type,
+            previous_value,
+            new_value,
             created_at,
             changed_by_user:users!lead_status_logs_changed_by_fkey(id, full_name)
           `)
@@ -1485,26 +1491,64 @@ export default function CalendarView({
                       ) : statusLogs.length > 0 ? (
                         <div className="space-y-3 max-h-48 overflow-y-auto">
                           {statusLogs.map((log, index) => {
-                            // contract_completed_at 변경 시 현재 상태에 따라 라벨 동적 결정
-                            const getLogLabel = (status: string, fieldType?: string) => {
+                            // 담당자 변경 로그인 경우 사용자 ID를 full_name으로 변환하는 헬퍼
+                            const getUserName = async (userId: string | null) => {
+                              if (!userId) return '미지정'
+                              const member = teamMembers.find(m => m.id === userId)
+                              return member?.full_name || userId
+                            }
+
+                            // 로그 라벨 결정
+                            const getLogLabel = (status: string, fieldType?: string, value?: string | null) => {
+                              // 담당자 변경 로그
+                              if (fieldType === 'call_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              // 일정 변경
                               if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
-                                // 현재 리드 상태가 예약 확정이 아니면 "일정 변경"으로 표시
                                 if (leadDetails?.status !== 'contract_completed') {
                                   return '일정 변경'
                                 }
                                 return '예약 확정일 변경'
                               }
+                              // 비고 변경
+                              if (fieldType === 'notes') {
+                                return value || '(비고 삭제)'
+                              }
+                              // 상태 변경
                               return STATUS_STYLES[status]?.label || status || '없음'
                             }
 
                             const getLogStyle = (status: string, fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') {
+                                return STATUS_STYLES.call_assigned_to || { bg: 'bg-blue-100', text: 'text-blue-800' }
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                return STATUS_STYLES.counselor_assigned_to || { bg: 'bg-emerald-100', text: 'text-emerald-800' }
+                              }
                               if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
-                                // 현재 리드 상태가 예약 확정이 아니면 다른 스타일 사용
                                 if (leadDetails?.status !== 'contract_completed') {
                                   return { bg: 'bg-indigo-100', text: 'text-indigo-800' }
                                 }
                               }
+                              if (fieldType === 'notes') {
+                                return { bg: 'bg-gray-100', text: 'text-gray-700' }
+                              }
                               return STATUS_STYLES[status] || { bg: 'bg-gray-100', text: 'text-gray-700' }
+                            }
+
+                            // 로그 타입별 제목 표시
+                            const getLogTypeLabel = (fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') return '콜 담당자'
+                              if (fieldType === 'counselor_assigned_to') return '상담 담당자'
+                              if (fieldType === 'notes') return '비고'
+                              if (fieldType === 'contract_completed_at') return '일정'
+                              return '상태'
                             }
 
                             return (
@@ -1521,17 +1565,22 @@ export default function CalendarView({
                                 </div>
                                 {/* 로그 내용 */}
                                 <div className="flex-1 pb-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {getLogTypeLabel(log.field_type)}:
+                                    </span>
+                                  </div>
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                                       getLogStyle(log.previous_status, log.field_type).bg
                                     } ${getLogStyle(log.previous_status, log.field_type).text}`}>
-                                      {getLogLabel(log.previous_status, log.field_type)}
+                                      {getLogLabel(log.previous_status, log.field_type, log.previous_value)}
                                     </span>
                                     <span className="text-gray-400">→</span>
                                     <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
                                       getLogStyle(log.new_status, log.field_type).bg
                                     } ${getLogStyle(log.new_status, log.field_type).text}`}>
-                                      {getLogLabel(log.new_status, log.field_type)}
+                                      {getLogLabel(log.new_status, log.field_type, log.new_value)}
                                     </span>
                                   </div>
                                   <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
