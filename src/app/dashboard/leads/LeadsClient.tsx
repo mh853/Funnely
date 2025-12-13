@@ -1053,15 +1053,14 @@ export default function LeadsClient({
 
         return {
           '번호': index + 1,
-          '등록일시': formatDateTime(lead.created_at),
+          '날짜': formatDateTime(lead.created_at),
           '랜딩페이지': lead.landing_pages?.title || '-',
           '이름': lead.name || '-',
           '전화번호': lead.phone ? decryptPhone(lead.phone) : '-',
-          '이메일': lead.email || '-',
+          '결과': statusLabel,
           '기기': lead.device_type
             ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
             : '-',
-          '상태': statusLabel,
           '예약날짜': lead.contract_completed_at
             ? new Date(lead.contract_completed_at).toISOString().split('T')[0]
             : '-',
@@ -1071,13 +1070,13 @@ export default function LeadsClient({
           '비고': lead.memo || '-',
           '콜 담당자': callAssignedUserName,
           '상담 담당자': counselorAssignedUserName,
-          // UTM 파라미터
-          'utm_source': lead.utm_source || '-',
-          'utm_medium': lead.utm_medium || '-',
-          'utm_campaign': lead.utm_campaign || '-',
+          'UTM_Source': lead.utm_source || '-',
+          'UTM_Medium': lead.utm_medium || '-',
+          'UTM_Campaign': lead.utm_campaign || '-',
+          // 추가 정보 (엑셀에만 포함)
+          '이메일': lead.email || '-',
           'utm_content': lead.utm_content || '-',
           'utm_term': lead.utm_term || '-',
-          // 유입 분석
           'Referrer': lead.referrer || '-',
           'IP 주소': lead.ip_address || '-',
           'User Agent': lead.user_agent || '-',
@@ -1092,21 +1091,21 @@ export default function LeadsClient({
       // 컬럼 너비 설정 (사용자 경험 향상)
       const columnWidths = [
         { wch: 5 },   // 번호
-        { wch: 18 },  // 등록일시
+        { wch: 18 },  // 날짜
         { wch: 20 },  // 랜딩페이지
         { wch: 10 },  // 이름
         { wch: 15 },  // 전화번호
-        { wch: 25 },  // 이메일
+        { wch: 12 },  // 결과
         { wch: 8 },   // 기기
-        { wch: 12 },  // 상태
         { wch: 12 },  // 예약날짜
         { wch: 12 },  // 결제금액
         { wch: 30 },  // 비고
         { wch: 10 },  // 콜 담당자
         { wch: 10 },  // 상담 담당자
-        { wch: 15 },  // utm_source
-        { wch: 15 },  // utm_medium
-        { wch: 20 },  // utm_campaign
+        { wch: 15 },  // UTM_Source
+        { wch: 15 },  // UTM_Medium
+        { wch: 20 },  // UTM_Campaign
+        { wch: 25 },  // 이메일
         { wch: 15 },  // utm_content
         { wch: 15 },  // utm_term
         { wch: 30 },  // Referrer
@@ -1343,20 +1342,11 @@ export default function LeadsClient({
                 <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   전화번호
                 </th>
-                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  기기
-                </th>
-                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  utm_source
-                </th>
-                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  utm_medium
-                </th>
-                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  utm_campaign
-                </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결과
+                </th>
+                <th className="px-3 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  기기
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   예약날짜
@@ -1372,6 +1362,15 @@ export default function LeadsClient({
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   상담 담당자
+                </th>
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  UTM_Source
+                </th>
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  UTM_Medium
+                </th>
+                <th className="px-2 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  UTM_Campaign
                 </th>
               </tr>
             </thead>
@@ -1419,26 +1418,6 @@ export default function LeadsClient({
                         ) : '-'}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.device_type
-                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
-                        : '-'}
-                    </td>
-                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
-                      <span className="truncate block" title={lead.utm_source || ''}>
-                        {lead.utm_source || '-'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
-                      <span className="truncate block" title={lead.utm_medium || ''}>
-                        {lead.utm_medium || '-'}
-                      </span>
-                    </td>
-                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[120px]">
-                      <span className="truncate block" title={lead.utm_campaign || ''}>
-                        {lead.utm_campaign || '-'}
-                      </span>
-                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
                       <div className="relative inline-block status-dropdown">
                         {/* 상태 배지 (클릭 가능) */}
@@ -1469,6 +1448,11 @@ export default function LeadsClient({
                           )}
                         </button>
                       </div>
+                    </td>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
+                      {lead.device_type
+                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+                        : '-'}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.contract_completed_at ? (
@@ -1543,6 +1527,21 @@ export default function LeadsClient({
                           )}
                         </button>
                       </div>
+                    </td>
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
+                      <span className="truncate block" title={lead.utm_source || ''}>
+                        {lead.utm_source || '-'}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[100px]">
+                      <span className="truncate block" title={lead.utm_medium || ''}>
+                        {lead.utm_medium || '-'}
+                      </span>
+                    </td>
+                    <td className="px-2 py-2.5 whitespace-nowrap text-sm text-gray-600 max-w-[120px]">
+                      <span className="truncate block" title={lead.utm_campaign || ''}>
+                        {lead.utm_campaign || '-'}
+                      </span>
                     </td>
                   </tr>
                 ))
