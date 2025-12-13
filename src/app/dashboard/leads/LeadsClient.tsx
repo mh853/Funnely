@@ -1456,16 +1456,7 @@ export default function LeadsClient({
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.contract_completed_at ? (
-                        <div>
-                          <div>
-                            {new Date(lead.contract_completed_at).toISOString().split('T')[0]}
-                          </div>
-                          {lead.previous_contract_completed_at && (
-                            <div className="text-xs text-gray-400 mt-0.5">
-                              이전: {new Date(lead.previous_contract_completed_at).toISOString().split('T')[0]}
-                            </div>
-                          )}
-                        </div>
+                        new Date(lead.contract_completed_at).toISOString().split('T')[0]
                       ) : (
                         '-'
                       )}
@@ -2125,11 +2116,6 @@ export default function LeadsClient({
                             hour: '2-digit',
                             minute: '2-digit'
                           })}
-                          {selectedLead.previous_contract_completed_at && (
-                            <span className="block text-xs text-emerald-600 mt-0.5">
-                              이전: {new Date(selectedLead.previous_contract_completed_at).toLocaleDateString('ko-KR')}
-                            </span>
-                          )}
                         </td>
                       </tr>
                     )}
