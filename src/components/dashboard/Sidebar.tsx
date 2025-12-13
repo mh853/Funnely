@@ -222,7 +222,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       </Transition.Root>
 
       {/* Desktop sidebar */}
-      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300 ${collapsed ? 'lg:w-20' : 'lg:w-64'}`}>
+      <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300 ${collapsed ? 'lg:w-20' : 'lg:w-52'}`}>
         {collapsed ? <CollapsedSidebarContent /> : <ExpandedSidebarContent />}
       </div>
     </>
