@@ -1606,8 +1606,9 @@ export default function LandingPageNewForm({
             </div>
           </div>
 
-          {/* Realtime Settings (only when enabled and collectData is true) */}
-          {realtimeEnabled && collectData && (
+          <div>
+            {/* Realtime Settings (only when enabled and collectData is true) */}
+            {realtimeEnabled && collectData && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-gray-700">
@@ -1712,8 +1713,9 @@ export default function LandingPageNewForm({
             </div>
           )}
 
-          {/* CTA Settings (only when enabled and collectData is true) */}
-          {ctaEnabled && collectData && (
+          <div>
+            {/* CTA Settings (only when enabled and collectData is true) */}
+            {ctaEnabled && collectData && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-20">
@@ -1823,7 +1825,8 @@ export default function LandingPageNewForm({
             </div>
           </div>
 
-          {timerEnabled && (
+          <div>
+            {timerEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-24">
@@ -1926,7 +1929,8 @@ export default function LandingPageNewForm({
             </div>
           </div>
 
-          {callButtonEnabled && (
+          <div>
+            {callButtonEnabled && (
               <div className="space-y-4 pt-4 border-t border-gray-200">
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
                   <label className="text-sm font-medium text-gray-700 sm:w-24">
