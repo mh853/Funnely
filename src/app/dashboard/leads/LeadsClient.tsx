@@ -500,7 +500,7 @@ export default function LeadsClient({
       call_assigned_to: '콜 담당자',
       counselor_assigned_to: '상담 담당자',
       notes: '비고',
-      contract_completed_at: '계약완료일',
+      contract_completed_at: '예약 날짜',
     }
     return labels[fieldType] || fieldType
   }
@@ -1960,7 +1960,7 @@ export default function LeadsClient({
                 </select>
                 {selectedLead.contract_completed_at && (
                   <p className="mt-2 text-xs text-emerald-600 font-medium">
-                    계약일: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
+                    예약일: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
                   </p>
                 )}
               </div>
@@ -2112,10 +2112,10 @@ export default function LeadsClient({
                         </td>
                       </tr>
                     )}
-                    {/* 계약 완료일 */}
+                    {/* 예약 날짜 */}
                     {selectedLead.contract_completed_at && (
                       <tr>
-                        <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">계약 완료일</td>
+                        <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">예약 날짜</td>
                         <td className="px-4 py-3 text-sm text-emerald-900 bg-emerald-50/50">
                           {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR', {
                             year: 'numeric',
