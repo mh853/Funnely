@@ -46,7 +46,14 @@ export default async function LandingPageDetailPage({ params }: Props) {
   // Get landing page
   const { data: landingPage, error } = await supabase
     .from('landing_pages')
-    .select('*')
+    .select(`
+      *,
+      timer_text,
+      timer_deadline,
+      timer_color,
+      timer_enabled,
+      timer_sticky_position
+    `)
     .eq('id', params.id)
     .eq('company_id', userProfile.company_id)
     .single()

@@ -32,20 +32,20 @@ export default function PrivacyPolicyPage() {
         return
       }
 
-      const { data: profile } = await supabase
-        .from('user_profiles')
+      const { data: userProfile } = await supabase
+        .from('users')
         .select('company_id')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .single()
 
-      if (!profile) return
+      if (!userProfile) return
 
-      setCompanyId(profile.company_id)
+      setCompanyId(userProfile.company_id)
 
       const { data: policy } = await supabase
         .from('privacy_policies')
         .select('*')
-        .eq('company_id', profile.company_id)
+        .eq('company_id', userProfile.company_id)
         .single()
 
       if (policy) {
