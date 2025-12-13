@@ -125,11 +125,12 @@ export async function PUT(request: NextRequest) {
       updateData.preferred_time = preferred_time
     }
 
-    // Update lead
+    // Update lead (must include company_id for RLS policies)
     const { data: updatedLead, error: updateError } = await supabase
       .from('leads')
       .update(updateData)
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
       .select()
       .single()
 
