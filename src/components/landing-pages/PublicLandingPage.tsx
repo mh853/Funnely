@@ -518,11 +518,15 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               backgroundColor: `${landingPage.timer_color || '#EF4444'}10`
             }}
           >
-            <div className="flex items-center justify-center gap-3">
-              <ClockIcon className="h-6 w-6" style={{ color: landingPage.timer_color || '#EF4444' }} />
-              <span className="text-lg font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
+            <div className="flex flex-col items-center gap-2">
+              {landingPage.timer_text && (
+                <div className="text-sm font-medium" style={{ color: landingPage.timer_color || '#EF4444' }}>
+                  {landingPage.timer_text}
+                </div>
+              )}
+              <div className="text-lg font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
                 {timerCountdown}
-              </span>
+              </div>
             </div>
           </div>
         )}
