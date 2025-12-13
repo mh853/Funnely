@@ -420,6 +420,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={date} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
+                        {/* Data Label - 막대 위에 표시 */}
+                        {count > 0 && (
+                          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none">
+                            <span className="text-[10px] font-semibold text-gray-700">{count}</span>
+                          </div>
+                        )}
+
                         {/* Tooltip */}
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none">
                           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
@@ -671,6 +678,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={`traffic-${date}`} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
+                        {/* Data Label - 막대 위에 표시 */}
+                        {count > 0 && (
+                          <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none">
+                            <span className="text-[10px] font-semibold text-gray-700">{count}</span>
+                          </div>
+                        )}
+
                         {/* Tooltip */}
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none">
                           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
