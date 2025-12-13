@@ -512,20 +512,22 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         {/* Timer (only if not sticky) */}
         {isSectionEnabled('timer') && landingPage.timer_enabled && landingPage.timer_sticky_position === 'none' && (
           <div
-            className="rounded-xl p-6 border-2 shadow-lg"
+            className="rounded-lg p-3 border-2"
             style={{
               borderColor: landingPage.timer_color || '#EF4444',
               backgroundColor: `${landingPage.timer_color || '#EF4444'}10`
             }}
           >
-            <div className="flex flex-col items-center gap-2">
+            <div className="flex flex-col items-center gap-1">
               {landingPage.timer_text && (
-                <div className="text-sm font-medium" style={{ color: landingPage.timer_color || '#EF4444' }}>
+                <div className="text-xs font-medium" style={{ color: landingPage.timer_color || '#EF4444' }}>
                   {landingPage.timer_text}
                 </div>
               )}
-              <div className="text-lg font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
-                {timerCountdown}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
+                  {timerCountdown}
+                </span>
               </div>
             </div>
           </div>
