@@ -420,13 +420,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={date} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
-                        {/* Data Label - 막대 바로 위에 표시 */}
-                        {count > 0 && (
-                          <div className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                            <span className="text-xs font-bold text-gray-800">{count}</span>
-                          </div>
-                        )}
-
                         {/* Tooltip */}
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none">
                           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
@@ -441,7 +434,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                         {count > 0 ? (
                           <Link
                             href={`/dashboard/leads?date=${filterDate}`}
-                            className={`w-full rounded-t-sm transition-all duration-500 ease-out cursor-pointer relative overflow-hidden ${
+                            className={`w-full rounded-t-sm transition-all duration-500 ease-out cursor-pointer relative overflow-visible ${
                               isToday
                                 ? 'bg-gradient-to-t from-violet-600 via-purple-500 to-fuchsia-400 shadow-lg shadow-purple-200'
                                 : 'bg-gradient-to-t from-cyan-500 via-blue-400 to-sky-300 hover:from-cyan-600 hover:via-blue-500 hover:to-sky-400'
@@ -451,6 +444,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                               display: 'block',
                             }}
                           >
+                            {/* Data Label - 막대 바로 위에 표시 */}
+                            <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                              <span className="text-xs font-bold text-gray-800">{count}</span>
+                            </div>
                             {/* Shine effect */}
                             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                           </Link>
@@ -678,13 +675,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                     return (
                       <div key={`traffic-${date}`} className="flex-1 min-w-[8px] group relative h-full flex flex-col justify-end">
-                        {/* Data Label - 막대 바로 위에 표시 */}
-                        {count > 0 && (
-                          <div className="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 pointer-events-none">
-                            <span className="text-xs font-bold text-gray-800">{count}</span>
-                          </div>
-                        )}
-
                         {/* Tooltip */}
                         <div className="absolute -top-10 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 z-20 pointer-events-none">
                           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
@@ -696,7 +686,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
                         {/* Bar */}
                         <div
-                          className={`w-full rounded-t-sm transition-all duration-500 ease-out relative overflow-hidden ${
+                          className={`w-full rounded-t-sm transition-all duration-500 ease-out relative overflow-visible ${
                             isToday
                               ? 'bg-gradient-to-t from-violet-600 via-purple-500 to-fuchsia-400 shadow-lg shadow-purple-200'
                               : hasData
@@ -707,6 +697,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                             height: hasData ? `${Math.max(heightPercent, 2)}%` : '3px',
                           }}
                         >
+                          {/* Data Label - 막대 바로 위에 표시 */}
+                          {count > 0 && (
+                            <div className="absolute -top-5 left-1/2 transform -translate-x-1/2 pointer-events-none whitespace-nowrap">
+                              <span className="text-xs font-bold text-gray-800">{count}</span>
+                            </div>
+                          )}
                           {/* Shine effect */}
                           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
