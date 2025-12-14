@@ -29,7 +29,7 @@ async function fetchLandingPage(slug: string) {
 
   const { data, error } = await supabase
     .from('landing_pages')
-    .select('id, slug, title, success_message, completion_info_message, primary_color, company_id')
+    .select('id, slug, title, success_message, completion_info_message, primary_color, company_id, completion_bg_image, completion_bg_color')
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
@@ -72,48 +72,47 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   const primaryColor = landingPage?.primary_color || '#3B82F6'
   const successMessage = landingPage?.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
   const completionInfoMessage = landingPage?.completion_info_message || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'
+  const completionBgImage = landingPage?.completion_bg_image
+  const completionBgColor = landingPage?.completion_bg_color || '#5b8def'
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       <div className="max-w-md w-full">
         {/* Success Card */}
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          {/* Header with gradient */}
+          {/* Header with background image or color */}
           <div
-            className="py-8 px-6 text-center"
+            className="py-12 px-6 text-center relative"
             style={{
-              background: `linear-gradient(135deg, ${primaryColor} 0%, ${adjustColor(primaryColor, -20)} 100%)`
+              backgroundImage: completionBgImage ? `url(${completionBgImage})` : 'none',
+              backgroundColor: completionBgImage ? 'transparent' : completionBgColor,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
             }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white/20 rounded-full mb-4">
-              <CheckCircleIcon className="w-12 h-12 text-white" />
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 shadow-lg">
+              <CheckCircleIcon className="w-12 h-12 text-green-500" />
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2">
-              신청 완료!
+            <h1 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
+              {landingPage?.title || '랜딩 페이지'}
             </h1>
-            <p className="text-white/90 text-sm">
-              성공적으로 접수되었습니다
+            <p className="text-lg font-semibold text-white drop-shadow-md">
+              {successMessage}
             </p>
           </div>
 
           {/* Content */}
           <div className="p-8 text-center">
-            <div className="mb-6">
-              <p className="text-gray-700 text-lg leading-relaxed">
-                {successMessage}
-              </p>
-            </div>
-
             {/* Info Box */}
-            <div className="bg-gray-50 rounded-xl p-5 mb-6">
+            <div className="bg-blue-50 rounded-xl p-5 mb-6 border-2 border-blue-200">
               <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
                   <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </div>
-                <div className="text-left">
-                  <p className="text-sm text-gray-600 whitespace-pre-line">
+                <div className="text-left flex-1">
+                  <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
                     {completionInfoMessage}
                   </p>
                 </div>
