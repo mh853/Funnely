@@ -72,16 +72,6 @@ export default function LandingPageNewForm({
   const supabase = createClient()
   const isEditMode = !!landingPage
 
-  // Debug: Log landingPage props on component mount
-  console.log('🔍 [DEBUG] LandingPageNewForm mounted with landingPage:', landingPage)
-  console.log('🔍 [DEBUG] Timer data from props:', {
-    timer_enabled: landingPage?.timer_enabled,
-    timer_text: landingPage?.timer_text,
-    timer_deadline: landingPage?.timer_deadline,
-    timer_color: landingPage?.timer_color,
-    timer_sticky_position: landingPage?.timer_sticky_position,
-  })
-
   // Helper function to parse custom fields from DB
   const parseCustomFields = (collectFields: any): CustomField[] => {
     if (!collectFields || !Array.isArray(collectFields)) return []
@@ -126,18 +116,22 @@ export default function LandingPageNewForm({
   const [ctaText, setCtaText] = useState(landingPage?.cta_text || '')
   const [ctaColor, setCtaColor] = useState(landingPage?.cta_color || '#6366f1')
   const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? true)
-  const [timerDeadline, setTimerDeadline] = useState(landingPage?.timer_deadline || '')
+  // Convert UTC timestamp to local datetime-local format (KST)
+  const [timerDeadline, setTimerDeadline] = useState(() => {
+    if (!landingPage?.timer_deadline) return ''
+    // Convert UTC to local time for datetime-local input
+    const utcDate = new Date(landingPage.timer_deadline)
+    const year = utcDate.getFullYear()
+    const month = String(utcDate.getMonth() + 1).padStart(2, '0')
+    const day = String(utcDate.getDate()).padStart(2, '0')
+    const hours = String(utcDate.getHours()).padStart(2, '0')
+    const minutes = String(utcDate.getMinutes()).padStart(2, '0')
+    // "2025-12-31T20:07" (KST = UTC+9)
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+  })
   const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
   const [timerText, setTimerText] = useState(landingPage?.timer_text || '특별 할인 마감까지')
   const [timerCountdown, setTimerCountdown] = useState('00:00:00')
-
-  // Debug: Log initialized timer state
-  console.log('🔍 [DEBUG] Timer state initialized:', {
-    timerEnabled,
-    timerText,
-    timerDeadline,
-    timerColor,
-  })
   const [callButtonEnabled, setCallButtonEnabled] = useState(landingPage?.call_button_enabled ?? true)
   const [callButtonPhone, setCallButtonPhone] = useState(landingPage?.call_button_phone || '')
   const [callButtonColor, setCallButtonColor] = useState(landingPage?.call_button_color || '#10b981')
@@ -1060,21 +1054,25 @@ export default function LandingPageNewForm({
       if (landingPage) {
         // 수정 모드 - company_id와 created_by는 제외
         const { company_id, ...updateData } = dataToSave
-        console.log('🔍 [DEBUG] Updating landing page with data:', updateData)
-        console.log('🔍 [DEBUG] Timer data:', {
-          timer_enabled: updateData.timer_enabled,
-          timer_text: updateData.timer_text,
-          timer_deadline: updateData.timer_deadline,
-          timer_color: updateData.timer_color,
-          timer_sticky_position: updateData.timer_sticky_position,
-        })
 
+        // Prepare final update payload
+        const finalUpdateData = {
+          ...updateData,
+          updated_at: new Date().toISOString(),
+        }
+
+        // Check authentication before UPDATE
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+        if (!session) {
+          console.error('❌ [ERROR] No active session - user not authenticated!')
+          throw new Error('인증이 만료되었습니다. 다시 로그인해주세요.')
+        }
+
+        // Update landing page (RLS handles company_id filtering)
         const { data: updateResult, error: updateError } = await supabase
           .from('landing_pages')
-          .update({
-            ...updateData,
-            updated_at: new Date().toISOString(),
-          })
+          .update(finalUpdateData)
           .eq('id', landingPage.id)
           .select()
 
@@ -1083,7 +1081,9 @@ export default function LandingPageNewForm({
           throw updateError
         }
 
-        console.log('✅ [SUCCESS] Update successful, result:', updateResult)
+        if (!updateResult || updateResult.length === 0) {
+          console.error('⚠️ [WARNING] UPDATE affected 0 rows - RLS may be blocking the update')
+        }
       } else {
         // 생성 모드
         const { error: insertError } = await supabase
@@ -2333,13 +2333,13 @@ export default function LandingPageNewForm({
 
       {/* Interactive Preview Sidebar with Resizable Handle */}
       <div
-        className="hidden lg:flex flex-shrink-0 relative"
+        className="hidden lg:flex flex-shrink-0"
         style={{ width: sidebarWidth }}
       >
         {/* Resize Handle */}
         <div
           onMouseDown={handleMouseDown}
-          className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize group z-10 flex items-center justify-center
+          className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize group z-20 flex items-center justify-center
             ${isResizing ? 'bg-indigo-500' : 'hover:bg-indigo-400'} transition-colors`}
         >
           <div className={`w-0.5 h-12 rounded-full transition-all
@@ -2347,7 +2347,10 @@ export default function LandingPageNewForm({
           />
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg p-6 sticky top-6 ml-2 flex-1">
+        {/* Sticky Container */}
+        <div className="sticky top-6 self-start w-full ml-2">
+          {/* Height Constraint Wrapper */}
+          <div className="h-[calc(100vh-3rem)] flex flex-col bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <EyeIcon className="h-6 w-6 text-indigo-600" />
@@ -2366,20 +2369,21 @@ export default function LandingPageNewForm({
             </button>
           </div>
 
-          {/* Mobile Phone Preview Frame */}
-          <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl mx-auto max-w-full">
-            <div className="bg-white rounded-2xl overflow-hidden">
-              {/* Phone Status Bar */}
-              <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200">
-              <span className="text-xs font-medium text-gray-600">9:41</span>
-              <div className="flex items-center gap-1">
-                <div className="w-4 h-3 border border-gray-400 rounded-sm"></div>
-                <div className="w-1 h-3 bg-gray-400 rounded-sm"></div>
-              </div>
-            </div>
+          {/* Mobile Phone Preview Frame - Flex Item */}
+          <div className="flex-1 flex items-center justify-center overflow-hidden">
+            <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl w-full max-w-[400px] h-full max-h-[700px] flex flex-col">
+              <div className="bg-white rounded-2xl overflow-hidden flex-1 flex flex-col min-h-0">
+                {/* Phone Status Bar */}
+                <div className="bg-gray-50 px-4 py-2 flex items-center justify-between border-b border-gray-200 flex-shrink-0">
+                  <span className="text-xs font-medium text-gray-600">9:41</span>
+                  <div className="flex items-center gap-1">
+                    <div className="w-4 h-3 border border-gray-400 rounded-sm"></div>
+                    <div className="w-1 h-3 bg-gray-400 rounded-sm"></div>
+                  </div>
+                </div>
 
-            {/* Preview Content - Scrollable */}
-            <div className="overflow-y-auto bg-white relative h-[600px]">
+                {/* Preview Content - Scrollable */}
+                <div className="flex-1 overflow-y-auto bg-white relative min-h-0">
               {/* Sticky Top Buttons */}
               {renderStickyButtons('top', false)}
 
@@ -2448,14 +2452,15 @@ export default function LandingPageNewForm({
                 )}
               </div>
 
-              {/* Sticky Bottom Buttons */}
-              {renderStickyButtons('bottom', false)}
+                  {/* Sticky Bottom Buttons */}
+                  {renderStickyButtons('bottom', false)}
+                </div>
+              </div>
             </div>
           </div>
-          </div>
 
-          {/* Preview Help Text */}
-          <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl">
+          {/* Preview Help Text - Fixed at Bottom */}
+          <div className="mt-4 p-3 bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl flex-shrink-0">
             <div className="flex items-start gap-2">
               <svg className="h-5 w-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2470,6 +2475,7 @@ export default function LandingPageNewForm({
                 </ul>
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
