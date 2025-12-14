@@ -177,6 +177,16 @@ export default function LandingPageNewForm({
   const [completionInfoMessage, setCompletionInfoMessage] = useState(
     landingPage?.completion_info_message || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'
   )
+  const [completionBgImage, setCompletionBgImage] = useState<string | null>(
+    landingPage?.completion_bg_image || null
+  )
+  const [completionBgColor, setCompletionBgColor] = useState(
+    landingPage?.completion_bg_color || '#5b8def'
+  )
+  const [uploadingCompletionBg, setUploadingCompletionBg] = useState(false)
+
+  // Preview tab state
+  const [previewTab, setPreviewTab] = useState<'landing' | 'completion'>('landing')
 
   // Deployment state
   const [isActive, setIsActive] = useState(landingPage?.is_active ?? true)
@@ -1047,6 +1057,8 @@ export default function LandingPageNewForm({
         marketing_content: marketingContent || null, // 빈 문자열을 null로 변환
         success_message: successMessage || null,
         completion_info_message: completionInfoMessage || null,
+        completion_bg_image: completionBgImage || null,
+        completion_bg_color: completionBgColor,
         is_active: isActive,
         status: isActive ? 'published' : 'draft', // is_active에 따라 status 설정
       }
@@ -1236,6 +1248,93 @@ export default function LandingPageNewForm({
 
   const removeImage = (index: number) => {
     setImages(images.filter((_, i) => i !== index))
+  }
+
+  // Completion background image upload
+  const handleCompletionBgImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      alert('JPG, PNG, WebP 형식의 이미지만 업로드 가능합니다.')
+      return
+    }
+
+    // Validate file size (2MB limit)
+    if (file.size > 2 * 1024 * 1024) {
+      alert('이미지 크기는 2MB 이하여야 합니다.')
+      return
+    }
+
+    setUploadingCompletionBg(true)
+    try {
+      // Compress image before upload
+      const compressedBlob = await compressImage(file, 1200, 0.85)
+
+      // Generate unique filename
+      const fileExt = file.type.split('/')[1]
+      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
+      const filePath = `completion-backgrounds/${companyId}/${fileName}`
+
+      // Upload to Supabase Storage
+      const { error: uploadError } = await supabase.storage
+        .from('landing-page-images')
+        .upload(filePath, compressedBlob, {
+          cacheControl: '3600',
+          upsert: false,
+          contentType: file.type
+        })
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError)
+        throw uploadError
+      }
+
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('landing-page-images')
+        .getPublicUrl(filePath)
+
+      setCompletionBgImage(publicUrl)
+    } catch (error) {
+      console.error('Error uploading completion background:', error)
+      alert('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
+    } finally {
+      setUploadingCompletionBg(false)
+    }
+  }
+
+  // Remove completion background image
+  const handleRemoveCompletionBgImage = async () => {
+    if (!completionBgImage) return
+
+    try {
+      // Extract file path from public URL
+      const url = new URL(completionBgImage)
+      const pathParts = url.pathname.split('/')
+      const bucketIndex = pathParts.findIndex(p => p === 'landing-page-images')
+      if (bucketIndex === -1) {
+        throw new Error('Invalid image URL format')
+      }
+      const filePath = pathParts.slice(bucketIndex + 1).join('/')
+
+      // Delete from storage
+      const { error: deleteError } = await supabase.storage
+        .from('landing-page-images')
+        .remove([filePath])
+
+      if (deleteError) {
+        console.error('Delete error:', deleteError)
+        // Don't throw - even if delete fails, we should clear the UI
+      }
+
+      setCompletionBgImage(null)
+    } catch (error) {
+      console.error('Error removing completion background:', error)
+      // Still clear the image from state even if deletion fails
+      setCompletionBgImage(null)
+    }
   }
 
   // Handle mouse resize for sidebar
@@ -2072,7 +2171,10 @@ export default function LandingPageNewForm({
         {/* Privacy Consent Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">개인정보 동의</h2>
+            <div className="flex items-baseline gap-2">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">개인정보 동의</h2>
+              <span className="text-xs text-gray-500">*DB 수집 시 활용</span>
+            </div>
             <Link
               href="/dashboard/settings/privacy-policy"
               className="px-3 sm:px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 w-full sm:w-auto"
@@ -2130,18 +2232,6 @@ export default function LandingPageNewForm({
                 내용 미리보기
               </button>
             </div>
-
-            <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-              <p className="text-sm text-blue-800 flex items-start gap-2">
-                <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <span>
-                  동의 내용은 <strong>설정 {'>'} 개인정보 처리 방침</strong>에서 수정할 수 있습니다.
-                  DB 수집 시 자동으로 동의 여부가 함께 저장됩니다.
-                </span>
-              </p>
-            </div>
           </div>
         </div>
 
@@ -2196,6 +2286,109 @@ export default function LandingPageNewForm({
                 완료 페이지의 파란색 정보 박스에 표시됩니다. 줄바꿈이 적용됩니다.
               </p>
             </div>
+
+            {/* 배경 이미지 업로드 */}
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                배경 이미지
+                <span className="ml-2 text-xs font-normal text-gray-500">
+                  완료 페이지 상단 배경 (선택사항)
+                </span>
+              </label>
+
+              {!completionBgImage ? (
+                <div className="space-y-2">
+                  <div className="relative">
+                    <input
+                      type="file"
+                      id="completion-bg-upload"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={handleCompletionBgImageUpload}
+                      disabled={uploadingCompletionBg}
+                      className="hidden"
+                    />
+                    <label
+                      htmlFor="completion-bg-upload"
+                      className={`flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-xl cursor-pointer transition-all ${
+                        uploadingCompletionBg
+                          ? 'border-gray-200 bg-gray-50'
+                          : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-indigo-400'
+                      }`}
+                    >
+                      {uploadingCompletionBg ? (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+                          <p className="text-sm text-gray-500">업로드 중...</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <PhotoIcon className="h-10 w-10 text-gray-400" />
+                          <div className="text-center">
+                            <p className="text-sm text-gray-600 font-medium">클릭하여 이미지 업로드</p>
+                            <p className="text-xs text-gray-500 mt-1">JPG, PNG, WebP (최대 2MB)</p>
+                          </div>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <p className="text-xs text-blue-700 flex items-start gap-2">
+                      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        권장 크기: 1200 x 600px / 이미지를 업로드하지 않으면 기본 배경색이 사용됩니다.
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="relative rounded-xl overflow-hidden border-2 border-gray-200">
+                  <img
+                    src={completionBgImage}
+                    alt="완료 페이지 배경"
+                    className="w-full h-40 object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveCompletionBgImage}
+                    className="absolute top-2 right-2 p-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-colors"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                  <div className="absolute bottom-2 left-2 bg-black/60 px-3 py-1 rounded-lg">
+                    <p className="text-xs text-white">배경 이미지 적용됨</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* 배경 색상 (이미지 미사용 시) */}
+            {!completionBgImage && (
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  배경 색상
+                  <span className="ml-2 text-xs font-normal text-gray-500">
+                    이미지가 없을 때 사용되는 배경색
+                  </span>
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="color"
+                    value={completionBgColor}
+                    onChange={(e) => setCompletionBgColor(e.target.value)}
+                    className="w-16 h-10 rounded-lg border-2 border-gray-300 cursor-pointer"
+                  />
+                  <input
+                    type="text"
+                    value={completionBgColor}
+                    onChange={(e) => setCompletionBgColor(e.target.value)}
+                    placeholder="#5b8def"
+                    className="flex-1 px-4 py-2 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all text-sm"
+                  />
+                </div>
+              </div>
+            )}
 
             {/* Preview */}
             <div className="p-4 bg-gray-50 rounded-xl border-2 border-gray-200">
@@ -2369,6 +2562,30 @@ export default function LandingPageNewForm({
             </button>
           </div>
 
+          {/* Tab Navigation */}
+          <div className="flex gap-2 mb-4 border-b-2 border-gray-200">
+            <button
+              onClick={() => setPreviewTab('landing')}
+              className={`flex-1 px-4 py-2 font-medium text-sm transition-all ${
+                previewTab === 'landing'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 -mb-[2px]'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              랜딩 페이지
+            </button>
+            <button
+              onClick={() => setPreviewTab('completion')}
+              className={`flex-1 px-4 py-2 font-medium text-sm transition-all ${
+                previewTab === 'completion'
+                  ? 'text-indigo-600 border-b-2 border-indigo-600 -mb-[2px]'
+                  : 'text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              완료 페이지
+            </button>
+          </div>
+
           {/* Mobile Phone Preview Frame - Flex Item */}
           <div className="flex-1 flex items-center justify-center overflow-hidden">
             <div className="bg-gray-900 rounded-3xl p-3 shadow-2xl w-full max-w-[400px] h-full max-h-[700px] flex flex-col">
@@ -2384,76 +2601,144 @@ export default function LandingPageNewForm({
 
                 {/* Preview Content - Scrollable */}
                 <div className="flex-1 overflow-y-auto bg-white relative min-h-0">
-              {/* Sticky Top Buttons */}
-              {renderStickyButtons('top', false)}
+                  {previewTab === 'landing' ? (
+                    <>
+                      {/* Sticky Top Buttons */}
+                      {renderStickyButtons('top', false)}
 
-              {/* Scrollable Content */}
-              <div className="p-4 space-y-4">
-                {sections
-                  .filter(section => {
-                    // Filter out disabled sections
-                    const content = getPreviewContent(section)
-                    if (content === null) return false
+                      {/* Scrollable Content */}
+                      <div className="p-4 space-y-4">
+                        {sections
+                          .filter(section => {
+                            // Filter out disabled sections
+                            const content = getPreviewContent(section)
+                            if (content === null) return false
 
-                    // Filter out sticky buttons
-                    if (section.type === 'timer' && timerStickyPosition !== 'none') return false
-                    if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
-                    if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
+                            // Filter out sticky buttons
+                            if (section.type === 'timer' && timerStickyPosition !== 'none') return false
+                            if (section.type === 'cta_button' && ctaStickyPosition !== 'none') return false
+                            if (section.type === 'call_button' && callButtonStickyPosition !== 'none') return false
 
-                    return true
-                  })
-                  .map((section, index) => {
-                  const content = getPreviewContent(section)
-                  if (!content) return null
+                            return true
+                          })
+                          .map((section, index) => {
+                          const content = getPreviewContent(section)
+                          if (!content) return null
 
-                  return (
+                          return (
+                            <div
+                              key={section.id}
+                              draggable
+                              onDragStart={() => handleDragStart(index)}
+                              onDragOver={(e) => handleDragOver(e, index)}
+                              onDragEnd={handleDragEnd}
+                              className={`group relative cursor-move transition-all duration-200 ${
+                                draggedIndex === index
+                                  ? 'opacity-50 scale-95'
+                                  : 'opacity-100 scale-100'
+                              } hover:ring-2 hover:ring-indigo-400 rounded-lg`}
+                            >
+                              {/* Drag Handle */}
+                              <div className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg">
+                                  <Bars3Icon className="h-4 w-4" />
+                                </div>
+                              </div>
+
+                              {/* Section Label Badge */}
+                              <div className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
+                                  {section.label}
+                                </span>
+                              </div>
+
+                              {/* Section Content */}
+                              <div className="relative">{content}</div>
+                            </div>
+                          )
+                        })}
+
+                        {/* Empty State */}
+                        {sections.every(section => getPreviewContent(section) === null) && (
+                          <div className="h-full flex items-center justify-center">
+                            <div className="text-center">
+                              <PhotoIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+                              <p className="text-sm text-gray-400">
+                                항목을 추가하여<br />미리보기를 확인하세요
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Sticky Bottom Buttons */}
+                      {renderStickyButtons('bottom', false)}
+                    </>
+                  ) : (
+                    /* Completion Page Preview */
                     <div
-                      key={section.id}
-                      draggable
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      className={`group relative cursor-move transition-all duration-200 ${
-                        draggedIndex === index
-                          ? 'opacity-50 scale-95'
-                          : 'opacity-100 scale-100'
-                      } hover:ring-2 hover:ring-indigo-400 rounded-lg`}
+                      className="h-full flex flex-col"
+                      style={{
+                        backgroundImage: completionBgImage ? `url(${completionBgImage})` : 'none',
+                        backgroundColor: completionBgImage ? 'transparent' : completionBgColor,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }}
                     >
-                      {/* Drag Handle */}
-                      <div className="absolute -left-2 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="bg-indigo-500 text-white rounded-full p-1 shadow-lg">
-                          <Bars3Icon className="h-4 w-4" />
+                      {/* Top Section with Background */}
+                      <div className="flex-1 flex items-center justify-center p-6">
+                        <div className="text-center">
+                          {/* Success Icon */}
+                          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-lg mb-4">
+                            <svg className="h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                          </div>
+
+                          {/* Success Title */}
+                          <h2 className="text-xl font-bold text-white mb-2 drop-shadow-lg">
+                            {title || '랜딩 페이지'}
+                          </h2>
+
+                          {/* Success Message */}
+                          <p className="text-lg font-semibold text-white drop-shadow-md">
+                            {successMessage || '신청이 완료되었습니다. 곧 연락드리겠습니다.'}
+                          </p>
                         </div>
                       </div>
 
-                      {/* Section Label Badge */}
-                      <div className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                        <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
-                          {section.label}
-                        </span>
+                      {/* Bottom White Section */}
+                      <div className="bg-white p-6 space-y-4 rounded-t-3xl flex-shrink-0">
+                        {/* Info Message Box */}
+                        <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
+                          <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
+                                {completionInfoMessage || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Close Button */}
+                        <button
+                          onClick={() => alert('미리보기 모드입니다')}
+                          className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
+                        >
+                          닫기
+                        </button>
+
+                        <p className="text-xs text-center text-gray-500">
+                          💡 이것은 완료 페이지 미리보기입니다.
+                        </p>
                       </div>
-
-                      {/* Section Content */}
-                      <div className="relative">{content}</div>
                     </div>
-                  )
-                })}
-
-                {/* Empty State */}
-                {sections.every(section => getPreviewContent(section) === null) && (
-                  <div className="h-full flex items-center justify-center">
-                    <div className="text-center">
-                      <PhotoIcon className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-                      <p className="text-sm text-gray-400">
-                        항목을 추가하여<br />미리보기를 확인하세요
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-                  {/* Sticky Bottom Buttons */}
-                  {renderStickyButtons('bottom', false)}
+                  )}
                 </div>
               </div>
             </div>
