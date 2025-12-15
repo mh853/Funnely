@@ -9,8 +9,9 @@ interface Props {
   params: Promise<{ slug: string }>
 }
 
-// ISR: Revalidate every 60 seconds for faster updates
-export const revalidate = 60
+// Dynamic rendering to reflect is_active changes immediately
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 // Create a Supabase client with service role for public landing pages
 // Service role bypasses RLS - safe for server components only
