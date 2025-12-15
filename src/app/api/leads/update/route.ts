@@ -15,7 +15,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount, preferred_date, preferred_time } = body
+    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount, preferred_date, preferred_time, cancel_reason } = body
 
     // Validate required fields
     if (!id) {
@@ -139,14 +139,23 @@ export async function PUT(request: NextRequest) {
     // 상태가 변경된 경우 로그 기록
     if (status !== undefined && status !== previousStatus) {
       try {
-        await supabase.from('lead_status_logs').insert({
+        const logData: any = {
           lead_id: id,
           company_id: userProfile.company_id,
           previous_status: previousStatus,
           new_status: status,
+          previous_value: previousStatus,
+          new_value: status,
           changed_by: user.id,
           field_type: 'status',
-        })
+        }
+
+        // 예약 취소인 경우 cancel_reason을 notes에 추가
+        if (cancel_reason) {
+          logData.notes = cancel_reason
+        }
+
+        await supabase.from('lead_status_logs').insert(logData)
       } catch (logError) {
         // 로그 기록 실패해도 메인 업데이트는 성공으로 처리
         console.error('Failed to log status change:', logError)

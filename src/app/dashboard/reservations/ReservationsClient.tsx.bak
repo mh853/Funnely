@@ -1441,22 +1441,498 @@ export default function ReservationsClient({
         </button>
       </div>
 
-      {/* 통합 상세 모달 */}
-      <UnifiedDetailModal
-        isOpen={showLeadDetailModal}
-        onClose={() => {
-          setShowLeadDetailModal(false)
-          setSelectedLead(null)
-          setLeadDetails(null)
-          setStatusLogs([])
-          setEditingReservationDate(false)
-        }}
-        lead={leadDetails}
-        teamMembers={teamMembers}
-        statusOptions={STATUS_OPTIONS}
-        statusStyles={STATUS_STYLES}
-        onUpdate={() => router.refresh()}
-      />
+      {/* Lead Detail Modal - Shows lead information in table format like DB현황 */}
+      {showLeadDetailModal && selectedLead && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-bold">예약 상세 정보</h3>
+                  <p className="text-sm text-emerald-100">예약 확정 고객 정보</p>
+                </div>
+                <button
+                  onClick={() => {
+                    setShowLeadDetailModal(false)
+                    setSelectedLead(null)
+                    setLeadDetails(null)
+                    setStatusLogs([])
+                    setEditingReservationDate(false)
+                    // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
+                  }}
+                  className="p-2 hover:bg-white/20 rounded-full transition"
+                  title={showDateLeadsModal ? '목록으로 돌아가기' : '닫기'}
+                >
+                  {showDateLeadsModal ? (
+                    <ChevronLeftIcon className="h-5 w-5" />
+                  ) : (
+                    <XMarkIcon className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 overflow-y-auto max-h-[70vh]">
+              {loadingLeadDetails ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                  <span className="ml-3 text-gray-600">로딩 중...</span>
+                </div>
+              ) : leadDetails ? (
+                <div className="space-y-6">
+                  {/* 기본 정보 테이블 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 이름 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">이름</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.name || '-'}</td>
+                        </tr>
+                        {/* 전화번호 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">전화번호</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <span>{(() => {
+                                try {
+                                  return decryptPhone(leadDetails.phone)
+                                } catch {
+                                  return leadDetails.phone || '-'
+                                }
+                              })()}</span>
+                              <a
+                                href={`tel:${leadDetails.phone}`}
+                                className="p-1 text-emerald-600 hover:bg-emerald-50 rounded"
+                              >
+                                <PhoneIcon className="h-4 w-4" />
+                              </a>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 이메일 */}
+                        {leadDetails.email && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">이메일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.email}</td>
+                          </tr>
+                        )}
+                        {/* 상태 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상태</td>
+                          <td className="px-4 py-3">
+                            <div className="relative">
+                              <select
+                                value={leadDetails.status}
+                                onChange={(e) => handleStatusUpdate(e.target.value)}
+                                disabled={updatingStatus}
+                                className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 cursor-pointer appearance-none pr-8 ${
+                                  STATUS_STYLES[leadDetails.status]?.bg || 'bg-gray-100'
+                                } ${STATUS_STYLES[leadDetails.status]?.text || 'text-gray-800'} border-gray-300 font-medium`}
+                              >
+                                {STATUS_OPTIONS.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                                {updatingStatus ? (
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                ) : (
+                                  <ChevronDownIcon className="h-4 w-4 text-gray-500" />
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 희망 상담일 */}
+                        {leadDetails.preferred_date && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">희망 상담일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {formatDate(leadDetails.preferred_date)}
+                              {leadDetails.preferred_time && ` ${leadDetails.preferred_time}`}
+                            </td>
+                          </tr>
+                        )}
+                        {/* 상담 항목 */}
+                        {leadDetails.consultation_items && leadDetails.consultation_items.length > 0 && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">상담 항목</td>
+                            <td className="px-4 py-3">
+                              <div className="flex flex-wrap gap-1">
+                                {leadDetails.consultation_items.map((item: string, index: number) => (
+                                  <span
+                                    key={index}
+                                    className="inline-flex px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800"
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                        {/* 메시지 */}
+                        {leadDetails.message && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">메시지</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">{leadDetails.message}</td>
+                          </tr>
+                        )}
+                        {/* 비고 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">비고</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 whitespace-pre-wrap">
+                            {leadDetails.notes || <span className="text-gray-400">-</span>}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 담당자 정보 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">담당자 정보</h4>
+                    </div>
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 콜 담당자 - 드롭다운 (한번 클릭으로 선택 가능) */}
+                        <tr>
+                          <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700 w-1/3">콜 담당자</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 bg-blue-50/50">
+                            <div className="relative">
+                              {updatingCallAssignee ? (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                                  <span className="text-gray-500">저장 중...</span>
+                                </div>
+                              ) : (
+                                <select
+                                  value={leadDetails.call_assigned_user?.id || ''}
+                                  onChange={(e) => handleCallAssigneeChange(leadDetails.id, e.target.value)}
+                                  disabled={updatingCallAssignee}
+                                  className="w-full max-w-[200px] rounded-lg border border-blue-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white cursor-pointer hover:border-blue-400 transition-colors appearance-none"
+                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                                >
+                                  <option value="">미배정</option>
+                                  {teamMembers.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {member.full_name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                        {/* 상담 담당자 - 드롭다운 (한번 클릭으로 선택 가능) */}
+                        <tr>
+                          <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">상담 담당자</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 bg-emerald-50/50">
+                            <div className="relative">
+                              {updatingCounselor ? (
+                                <div className="flex items-center gap-2 px-2 py-1">
+                                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600"></div>
+                                  <span className="text-gray-500">저장 중...</span>
+                                </div>
+                              ) : (
+                                <select
+                                  value={leadDetails.counselor_assigned_user?.id || ''}
+                                  onChange={(e) => handleCounselorChange(leadDetails.id, e.target.value)}
+                                  disabled={updatingCounselor}
+                                  className="w-full max-w-[200px] rounded-lg border border-emerald-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white cursor-pointer hover:border-emerald-400 transition-colors appearance-none"
+                                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em', paddingRight: '2.5rem' }}
+                                >
+                                  <option value="">미배정</option>
+                                  {teamMembers.map((member) => (
+                                    <option key={member.id} value={member.id}>
+                                      {member.full_name}
+                                    </option>
+                                  ))}
+                                </select>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 추가 정보 */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">유입 정보</h4>
+                    </div>
+                    <table className="w-full">
+                      <tbody className="divide-y divide-gray-200">
+                        {/* 랜딩 페이지 */}
+                        {leadDetails.landing_pages && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700 w-1/3">랜딩 페이지</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {Array.isArray(leadDetails.landing_pages)
+                                ? leadDetails.landing_pages[0]?.title || '-'
+                                : leadDetails.landing_pages.title || '-'}
+                            </td>
+                          </tr>
+                        )}
+                        {/* UTM Source */}
+                        {leadDetails.utm_source && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Source</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_source}</td>
+                          </tr>
+                        )}
+                        {/* UTM Medium */}
+                        {leadDetails.utm_medium && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Medium</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_medium}</td>
+                          </tr>
+                        )}
+                        {/* UTM Campaign */}
+                        {leadDetails.utm_campaign && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">UTM Campaign</td>
+                            <td className="px-4 py-3 text-sm text-gray-900">{leadDetails.utm_campaign}</td>
+                          </tr>
+                        )}
+                        {/* Referrer */}
+                        {leadDetails.referrer && (
+                          <tr>
+                            <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">Referrer</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 break-all">{leadDetails.referrer}</td>
+                          </tr>
+                        )}
+                        {/* 신청일시 */}
+                        <tr>
+                          <td className="px-4 py-3 bg-gray-100 text-sm font-medium text-gray-700">신청일시</td>
+                          <td className="px-4 py-3 text-sm text-gray-900">
+                            {formatDateTime(leadDetails.created_at)}
+                          </td>
+                        </tr>
+                        {/* 예약 확정일 - 수정 가능 */}
+                        {leadDetails.contract_completed_at && (
+                          <tr>
+                            <td className="px-4 py-3 bg-amber-50 text-sm font-medium text-amber-700">예약 확정일</td>
+                            <td className="px-4 py-3 text-sm text-gray-900 bg-amber-50/50">
+                              {editingReservationDate ? (
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <input
+                                      type="date"
+                                      value={reservationDateValue}
+                                      onChange={(e) => setReservationDateValue(e.target.value)}
+                                      min="2020-01-01"
+                                      max="2099-12-31"
+                                      className="rounded-lg border border-amber-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                      disabled={updatingReservationDate}
+                                    />
+                                    <input
+                                      type="time"
+                                      value={reservationTimeValue}
+                                      onChange={(e) => setReservationTimeValue(e.target.value)}
+                                      className="rounded-lg border border-amber-300 px-2 py-1.5 text-sm focus:ring-2 focus:ring-amber-500 focus:border-transparent"
+                                      disabled={updatingReservationDate}
+                                    />
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={handleReservationDateUpdate}
+                                      disabled={updatingReservationDate || !reservationDateValue}
+                                      className="px-3 py-1 text-xs font-medium text-white bg-amber-600 rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                                    >
+                                      {updatingReservationDate ? (
+                                        <span className="flex items-center gap-1">
+                                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+                                          저장 중...
+                                        </span>
+                                      ) : '저장'}
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingReservationDate(false)}
+                                      disabled={updatingReservationDate}
+                                      className="px-3 py-1 text-xs font-medium text-gray-600 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50 transition"
+                                    >
+                                      취소
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <button
+                                  onClick={handleStartEditReservationDate}
+                                  className="flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-amber-100 transition group"
+                                >
+                                  <div>
+                                    <div className="font-medium text-amber-800">
+                                      {formatDateTime(leadDetails.contract_completed_at)}
+                                    </div>
+                                    {leadDetails.previous_contract_completed_at && (
+                                      <div className="text-xs text-gray-400 mt-0.5">
+                                        이전: {formatDateTime(leadDetails.previous_contract_completed_at)}
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="text-xs text-amber-600 opacity-0 group-hover:opacity-100 transition">수정</span>
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* 변경 이력 (통합) */}
+                  <div className="bg-gray-50 rounded-xl overflow-hidden">
+                    <div className="px-4 py-2 bg-gray-200">
+                      <h4 className="text-sm font-medium text-gray-700">변경 이력</h4>
+                    </div>
+                    <div className="p-4">
+                      {loadingStatusLogs ? (
+                        <div className="flex items-center justify-center py-4">
+                          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-emerald-600"></div>
+                          <span className="ml-2 text-sm text-gray-500">로딩 중...</span>
+                        </div>
+                      ) : statusLogs.length > 0 ? (
+                        <div className="space-y-3 max-h-48 overflow-y-auto">
+                          {statusLogs.map((log, index) => {
+                            // 로그 라벨 결정
+                            const getLogLabel = (status: string, fieldType?: string, value?: string | null) => {
+                              // 담당자 변경 로그
+                              if (fieldType === 'call_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                const member = teamMembers.find(m => m.id === value)
+                                return member?.full_name || value || '미지정'
+                              }
+                              // 예약일 변경
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                return value ? formatDateTime(value) : '(삭제)'
+                              }
+                              // 비고 변경
+                              if (fieldType === 'notes') {
+                                return value || '(비고 삭제)'
+                              }
+                              // 상태 변경
+                              return STATUS_STYLES[status]?.label || status || '없음'
+                            }
+
+                            const getLogStyle = (status: string, fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') {
+                                return STATUS_STYLES.call_assigned_to || { bg: 'bg-blue-100', text: 'text-blue-800' }
+                              }
+                              if (fieldType === 'counselor_assigned_to') {
+                                return STATUS_STYLES.counselor_assigned_to || { bg: 'bg-emerald-100', text: 'text-emerald-800' }
+                              }
+                              if (fieldType === 'contract_completed_at' || status === 'contract_completed_at') {
+                                return { bg: 'bg-amber-100', text: 'text-amber-800' }
+                              }
+                              if (fieldType === 'notes') {
+                                return { bg: 'bg-gray-100', text: 'text-gray-700' }
+                              }
+                              return STATUS_STYLES[status] || { bg: 'bg-gray-100', text: 'text-gray-700' }
+                            }
+
+                            // 로그 타입별 제목 표시
+                            const getLogTypeLabel = (fieldType?: string) => {
+                              if (fieldType === 'call_assigned_to') return '콜 담당자'
+                              if (fieldType === 'counselor_assigned_to') return '상담 담당자'
+                              if (fieldType === 'notes') return '비고'
+                              if (fieldType === 'contract_completed_at') return '예약일'
+                              return '상태'
+                            }
+
+                            return (
+                              <div
+                                key={log.id}
+                                className="flex items-start gap-3 text-sm"
+                              >
+                                {/* 타임라인 인디케이터 */}
+                                <div className="flex flex-col items-center">
+                                  <div className={`w-2.5 h-2.5 rounded-full ${index === 0 ? 'bg-emerald-500' : 'bg-gray-300'}`}></div>
+                                  {index < statusLogs.length - 1 && (
+                                    <div className="w-0.5 h-full min-h-[20px] bg-gray-200 mt-1"></div>
+                                  )}
+                                </div>
+                                {/* 로그 내용 */}
+                                <div className="flex-1 pb-3">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="text-xs font-medium text-gray-600">
+                                      {getLogTypeLabel(log.field_type)}:
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    {/* 이전 값 */}
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.previous_status, log.field_type).bg
+                                    } ${getLogStyle(log.previous_status, log.field_type).text}`}>
+                                      {getLogLabel(log.previous_status, log.field_type, log.previous_value)}
+                                    </span>
+                                    <span className="text-gray-400">→</span>
+                                    {/* 새 값 */}
+                                    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
+                                      getLogStyle(log.new_status, log.field_type).bg
+                                    } ${getLogStyle(log.new_status, log.field_type).text}`}>
+                                      {getLogLabel(log.new_status, log.field_type, log.new_value)}
+                                    </span>
+                                  </div>
+                                  {/* 메타 정보 */}
+                                  <div className="mt-1 text-xs text-gray-500 flex items-center gap-2">
+                                    <span>{formatDateTime(log.created_at)}</span>
+                                    {log.changed_by_user && (
+                                      <>
+                                        <span className="text-gray-300">|</span>
+                                        <span>{log.changed_by_user.full_name}</span>
+                                      </>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-400 text-center py-4">
+                          변경 이력이 없습니다
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12 text-gray-500">
+                  <p>정보를 불러올 수 없습니다.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowLeadDetailModal(false)
+                  setSelectedLead(null)
+                  setLeadDetails(null)
+                  setStatusLogs([])
+                  setEditingReservationDate(false)
+                  // showDateLeadsModal은 건드리지 않음 - 열려있으면 그대로 유지해서 목록으로 돌아감
+                }}
+                className="px-4 py-2 text-sm text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition"
+              >
+                {showDateLeadsModal ? '목록으로 돌아가기' : '닫기'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* All Leads Modal - 날짜별 전체 리스트 */}
       {showAllLeadsModal && (

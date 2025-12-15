@@ -56,7 +56,12 @@ export default async function CalendarPage({
   let leadsQuery = supabase
     .from('leads')
     .select(`
-      id, name, phone, status, created_at, preferred_date, preferred_time, landing_page_id, contract_completed_at,
+      *,
+      landing_pages (
+        id,
+        title,
+        slug
+      ),
       call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
       counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name)
     `)

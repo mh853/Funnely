@@ -3,11 +3,14 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 import { decryptPhone } from '@/lib/encryption/phone'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
 import * as XLSX from 'xlsx'
+import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
+import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
+import AddLeadModal from '@/components/shared/AddLeadModal'
 
 interface TeamMember {
   id: string
@@ -51,6 +54,7 @@ const COLOR_CLASS_MAP: { [key: string]: { bg: string; text: string } } = {
 const DEFAULT_STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string } } = {
   new: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
   pending: { bg: 'bg-orange-100', text: 'text-orange-800', label: '상담 전' },
+  contacting: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   rejected: { bg: 'bg-red-100', text: 'text-red-800', label: '상담 거절' },
   contacted: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
   qualified: { bg: 'bg-sky-100', text: 'text-sky-800', label: '상담 진행중' },
@@ -277,6 +281,9 @@ export default function LeadsClient({
   const [savingNotes, setSavingNotes] = useState(false)
   const [paymentAmount, setPaymentAmount] = useState('')
   const [savingPaymentAmount, setSavingPaymentAmount] = useState(false)
+
+  // 리드 추가 모달 상태
+  const [showAddLeadModal, setShowAddLeadModal] = useState(false)
 
   // 결제 내역 관련 상태
   const [payments, setPayments] = useState<any[]>([])
@@ -524,10 +531,12 @@ export default function LeadsClient({
     }
 
     if (fieldType === 'contract_completed_at') {
-      return new Date(value).toLocaleDateString('ko-KR', {
+      return new Date(value).toLocaleString('ko-KR', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
       })
     }
 
@@ -669,10 +678,11 @@ export default function LeadsClient({
       const shouldOpenUpward = spaceBelow < dropdownHeight && rect.top > dropdownHeight
 
       setDropdownPosition({
+        // fixed 포지션에서는 getBoundingClientRect()의 뷰포트 좌표를 그대로 사용
         top: shouldOpenUpward
-          ? rect.top + window.scrollY - dropdownHeight - 4
-          : rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+          ? rect.top - dropdownHeight
+          : rect.bottom,
+        left: rect.left,
         openUpward: shouldOpenUpward,
       })
       setEditingLeadId(leadId)
@@ -689,8 +699,9 @@ export default function LeadsClient({
       const button = event.currentTarget
       const rect = button.getBoundingClientRect()
       setAssigneeDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        // fixed 포지션에서는 getBoundingClientRect()의 뷰포트 좌표를 그대로 사용
+        top: rect.bottom,
+        left: rect.left,
       })
       setEditingAssigneeLeadId(leadId)
       // 다른 드롭다운 닫기
@@ -711,8 +722,9 @@ export default function LeadsClient({
       const button = event.currentTarget
       const rect = button.getBoundingClientRect()
       setCounselorDropdownPosition({
-        top: rect.bottom + window.scrollY + 4,
-        left: rect.left + window.scrollX,
+        // fixed 포지션에서는 getBoundingClientRect()의 뷰포트 좌표를 그대로 사용
+        top: rect.bottom,
+        left: rect.left,
       })
       setEditingCounselorLeadId(leadId)
       // 다른 드롭다운 닫기
@@ -934,11 +946,12 @@ export default function LeadsClient({
     const labels: { [key: string]: string } = {
       new: '상담 전',
       pending: '상담 전',
+      contacting: '상담 진행중',
       rejected: '상담 거절',
       contacted: '상담 진행중',
       qualified: '상담 진행중',
       converted: '상담 완료',
-      contract_completed: '계약 완료',
+      contract_completed: '예약 확정',
       needs_followup: '추가상담 필요',
       other: '기타',
     }
@@ -1053,7 +1066,7 @@ export default function LeadsClient({
 
         return {
           '번호': index + 1,
-          '날짜': formatDateTime(lead.created_at),
+          'DB 신청일': formatDateTime(lead.created_at),
           '랜딩페이지': lead.landing_pages?.title || '-',
           '이름': lead.name || '-',
           '전화번호': lead.phone ? decryptPhone(lead.phone) : '-',
@@ -1061,9 +1074,7 @@ export default function LeadsClient({
             ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
             : '-',
           '결과': statusLabel,
-          '예약날짜': lead.contract_completed_at
-            ? new Date(lead.contract_completed_at).toISOString().split('T')[0]
-            : '-',
+          '예약일': formatDateTime(lead.contract_completed_at),
           '결제금액': lead.lead_payments && lead.lead_payments.length > 0
             ? lead.lead_payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toLocaleString() + '원'
             : '-',
@@ -1091,13 +1102,13 @@ export default function LeadsClient({
       // 컬럼 너비 설정 (사용자 경험 향상)
       const columnWidths = [
         { wch: 5 },   // 번호
-        { wch: 18 },  // 날짜
+        { wch: 18 },  // DB 신청일
         { wch: 20 },  // 랜딩페이지
         { wch: 10 },  // 이름
         { wch: 15 },  // 전화번호
         { wch: 8 },   // 기기
         { wch: 12 },  // 결과
-        { wch: 12 },  // 예약날짜
+        { wch: 12 },  // 예약일
         { wch: 12 },  // 결제금액
         { wch: 30 },  // 비고
         { wch: 10 },  // 콜 담당자
@@ -1149,13 +1160,22 @@ export default function LeadsClient({
               랜딩페이지에서 수집된 고객 DB를 관리하세요
             </p>
           </div>
-          <button
-            onClick={handleExcelExport}
-            className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
-          >
-            <ArrowDownTrayIcon className="h-5 w-5" />
-            Excel
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowAddLeadModal(true)}
+              className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
+            >
+              <UserPlusIcon className="h-5 w-5" />
+              리드 추가
+            </button>
+            <button
+              onClick={handleExcelExport}
+              className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
+            >
+              <ArrowDownTrayIcon className="h-5 w-5" />
+              Excel
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1331,7 +1351,7 @@ export default function LeadsClient({
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  날짜
+                  DB 신청일
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   랜딩페이지 이름
@@ -1349,7 +1369,7 @@ export default function LeadsClient({
                   결과
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                  예약날짜
+                  예약일
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   결제금액
@@ -1455,16 +1475,12 @@ export default function LeadsClient({
                       </div>
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.contract_completed_at ? (
-                        new Date(lead.contract_completed_at).toISOString().split('T')[0]
-                      ) : (
-                        '-'
-                      )}
+                      {formatDateTime(lead.contract_completed_at)}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
-                      {lead.payment_amount ? (
+                      {lead.lead_payments && lead.lead_payments.length > 0 ? (
                         <span className="font-medium text-emerald-600">
-                          {Number(lead.payment_amount).toLocaleString()}원
+                          {lead.lead_payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toLocaleString()}원
                         </span>
                       ) : (
                         '-'
@@ -1897,578 +1913,38 @@ export default function LeadsClient({
         </div>
       )}
 
-      {/* 상세 정보 모달 */}
-      {showDetailModal && selectedLead && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto">
-            {/* 헤더 */}
-            <div className="p-5 bg-gradient-to-r from-indigo-500 to-purple-600 text-white">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                  DB 신청 상세 정보
-                </h3>
-                <button
-                  onClick={() => setShowDetailModal(false)}
-                  className="p-1 hover:bg-white/20 rounded-lg transition-colors"
-                >
-                  <XMarkIcon className="h-5 w-5" />
-                </button>
-              </div>
-              <p className="text-sm text-indigo-100 mt-1">
-                {formatDateTime(selectedLead.created_at)}
-              </p>
-            </div>
+      {/* 통합 상세 모달 */}
+      <UnifiedDetailModal
+        isOpen={showDetailModal}
+        onClose={() => setShowDetailModal(false)}
+        lead={selectedLead}
+        teamMembers={teamMembers}
+        statusOptions={statusOptions}
+        statusStyles={statusStyles}
+        onUpdate={() => router.refresh()}
+      />
 
-            {/* 본문 */}
-            <div className="p-5 space-y-5">
-              {/* 결과 드롭다운 - 바로 수정 가능 */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">결과</label>
-                <select
-                  value={selectedLead.status}
-                  onChange={(e) => {
-                    const newStatus = e.target.value
-                    if (newStatus === 'contract_completed') {
-                      // 계약 완료는 날짜 선택 모달 필요
-                      openContractModal(selectedLead.id)
-                    } else {
-                      handleStatusChange(selectedLead.id, newStatus)
-                      setSelectedLead({ ...selectedLead, status: newStatus })
-                    }
-                  }}
-                  disabled={updatingLeadId === selectedLead.id}
-                  className={`w-full px-4 py-3 border-2 rounded-xl text-sm font-semibold transition-all focus:ring-2 focus:ring-indigo-200 ${
-                    statusStyles[selectedLead.status]?.bg || 'bg-gray-100'
-                  } ${statusStyles[selectedLead.status]?.text || 'text-gray-800'} ${
-                    updatingLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : 'cursor-pointer'
-                  }`}
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {selectedLead.contract_completed_at && (
-                  <p className="mt-2 text-xs text-emerald-600 font-medium">
-                    예약일: {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR')}
-                  </p>
-                )}
-              </div>
+      {/* 예약완료일정등록 모달 */}
+      <ScheduleRegistrationModal
+        isOpen={contractModalLeadId !== null}
+        onClose={() => {
+          setContractModalLeadId(null)
+          setContractDate('')
+          setContractTime('')
+        }}
+        leadId={contractModalLeadId || ''}
+        onConfirm={confirmContractComplete}
+      />
 
-              {/* 모든 정보를 테이블로 표시 */}
-              <div className="border rounded-xl overflow-hidden">
-                <table className="w-full">
-                  <tbody className="divide-y divide-gray-100">
-                    {/* 랜딩페이지 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600 w-28">랜딩페이지</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.landing_pages?.title || '-'}</td>
-                    </tr>
-                    {/* 기기 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">기기</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.device_type?.toUpperCase() || '-'}</td>
-                    </tr>
-                    {/* 콜 담당자 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-blue-50 text-sm font-medium text-blue-700">콜 담당자</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 bg-blue-50/50">
-                        <select
-                          value={selectedLead.call_assigned_user?.id || ''}
-                          onChange={(e) => {
-                            const newId = e.target.value
-                            handleAssigneeChange(selectedLead.id, newId)
-                            const newAssignee = teamMembers.find(m => m.id === newId)
-                            setSelectedLead({
-                              ...selectedLead,
-                              call_assigned_to: newId || null,
-                              call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
-                            })
-                          }}
-                          disabled={updatingAssigneeLeadId === selectedLead.id}
-                          className={`w-full rounded-lg border border-blue-200 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white ${
-                            updatingAssigneeLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : ''
-                          }`}
-                        >
-                          <option value="">미지정</option>
-                          {teamMembers?.map((member) => (
-                            <option key={member.id} value={member.id}>
-                              {member.full_name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                    {/* 상담 담당자 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">상담 담당자</td>
-                      <td className="px-4 py-3 text-sm text-gray-900 bg-emerald-50/50">
-                        <select
-                          value={selectedLead.counselor_assigned_user?.id || ''}
-                          onChange={(e) => {
-                            const newId = e.target.value
-                            handleCounselorChange(selectedLead.id, newId)
-                            const newCounselor = teamMembers.find(m => m.id === newId)
-                            setSelectedLead({
-                              ...selectedLead,
-                              counselor_assigned_to: newId || null,
-                              counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
-                            })
-                          }}
-                          disabled={updatingCounselorLeadId === selectedLead.id}
-                          className={`w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent bg-white ${
-                            updatingCounselorLeadId === selectedLead.id ? 'opacity-50 cursor-wait' : ''
-                          }`}
-                        >
-                          <option value="">미지정</option>
-                          {teamMembers?.map((member) => (
-                            <option key={member.id} value={member.id}>
-                              {member.full_name}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                    </tr>
-                    {/* DB 수집 항목들 - 이름, 전화번호, 이메일, 커스텀필드 (같은 색상으로 그룹핑) */}
-                    {/* 이름 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">이름</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.name || '-'}</td>
-                    </tr>
-                    {/* 전화번호 */}
-                    <tr>
-                      <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">전화번호</td>
-                      <td className="px-4 py-3 text-sm text-gray-900">
-                        {selectedLead.phone ? decryptPhone(selectedLead.phone) : '-'}
-                      </td>
-                    </tr>
-                    {/* 이메일 */}
-                    {selectedLead.email && (
-                      <tr>
-                        <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">이메일</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.email}</td>
-                      </tr>
-                    )}
-                    {/* 커스텀 필드 (JSONB 형태 - 무제한) */}
-                    {selectedLead.custom_fields && Array.isArray(selectedLead.custom_fields) && selectedLead.custom_fields.length > 0 ? (
-                      selectedLead.custom_fields.map((field: { label: string; value: string }, index: number) => (
-                        <tr key={`custom-field-${index}`}>
-                          <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">{field.label}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900">{field.value}</td>
-                        </tr>
-                      ))
-                    ) : null}
-                    {/* 레거시 커스텀 필드 (custom_field_1~5) - 기존 데이터 호환용 */}
-                    {(!selectedLead.custom_fields || selectedLead.custom_fields.length === 0) && (
-                      <>
-                        {selectedLead.custom_field_1 && (
-                          <tr>
-                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 1</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_1}</td>
-                          </tr>
-                        )}
-                        {selectedLead.custom_field_2 && (
-                          <tr>
-                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 2</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_2}</td>
-                          </tr>
-                        )}
-                        {selectedLead.custom_field_3 && (
-                          <tr>
-                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 3</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_3}</td>
-                          </tr>
-                        )}
-                        {selectedLead.custom_field_4 && (
-                          <tr>
-                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 4</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_4}</td>
-                          </tr>
-                        )}
-                        {selectedLead.custom_field_5 && (
-                          <tr>
-                            <td className="px-4 py-3 bg-purple-50 text-sm font-medium text-purple-700">항목 5</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.custom_field_5}</td>
-                          </tr>
-                        )}
-                      </>
-                    )}
-                    {/* 희망 상담일 */}
-                    {selectedLead.preferred_date && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">희망 상담일</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">
-                          {new Date(selectedLead.preferred_date).toLocaleDateString('ko-KR')}
-                        </td>
-                      </tr>
-                    )}
-                    {/* 예약 날짜 */}
-                    {selectedLead.contract_completed_at && (
-                      <tr>
-                        <td className="px-4 py-3 bg-emerald-50 text-sm font-medium text-emerald-700">예약 날짜</td>
-                        <td className="px-4 py-3 text-sm text-emerald-900 bg-emerald-50/50">
-                          {new Date(selectedLead.contract_completed_at).toLocaleDateString('ko-KR', {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric',
-                            weekday: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })}
-                        </td>
-                      </tr>
-                    )}
-                    {/* UTM Source */}
-                    {selectedLead.utm_source && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Source</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_source}</td>
-                      </tr>
-                    )}
-                    {/* UTM Medium */}
-                    {selectedLead.utm_medium && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Medium</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_medium}</td>
-                      </tr>
-                    )}
-                    {/* UTM Campaign */}
-                    {selectedLead.utm_campaign && (
-                      <tr>
-                        <td className="px-4 py-3 bg-gray-50 text-sm font-medium text-gray-600">UTM Campaign</td>
-                        <td className="px-4 py-3 text-sm text-gray-900">{selectedLead.utm_campaign}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 비고 섹션 - 바로 편집 가능 */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-sm font-medium text-gray-700">비고</label>
-                  <button
-                    onClick={handleSaveNotes}
-                    disabled={savingNotes || notesValue === (selectedLead.notes || '')}
-                    className={`flex items-center gap-1 text-xs px-3 py-1 rounded-lg font-medium transition-all ${
-                      notesValue !== (selectedLead.notes || '')
-                        ? 'text-white bg-indigo-600 hover:bg-indigo-700'
-                        : 'text-gray-400 bg-gray-100 cursor-not-allowed'
-                    }`}
-                  >
-                    {savingNotes ? (
-                      <>
-                        <svg className="animate-spin h-3 w-3" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                        </svg>
-                        저장 중...
-                      </>
-                    ) : (
-                      <>
-                        <CheckIcon className="h-3.5 w-3.5" />
-                        저장
-                      </>
-                    )}
-                  </button>
-                </div>
-                <textarea
-                  value={notesValue}
-                  onChange={(e) => setNotesValue(e.target.value)}
-                  placeholder="비고를 입력하세요..."
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-gray-900 text-sm resize-none"
-                />
-              </div>
-
-              {/* 결제 내역 섹션 */}
-              <div className="border-2 border-emerald-100 rounded-xl p-4 bg-emerald-50/30">
-                <div className="flex items-center justify-between mb-3">
-                  <label className="text-sm font-semibold text-emerald-700">결제 내역</label>
-                  <div className="text-sm font-bold text-emerald-600">
-                    합계: {paymentsTotalAmount.toLocaleString()}원
-                  </div>
-                </div>
-
-                {/* 새 결제 추가 폼 */}
-                <div className="flex gap-2 mb-3">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={newPaymentAmount}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^0-9]/g, '')
-                        setNewPaymentAmount(value ? Number(value).toLocaleString() : '')
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && newPaymentAmount && !addingPayment) {
-                          e.preventDefault()
-                          handleAddPayment()
-                        }
-                      }}
-                      placeholder="금액"
-                      className="w-full px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
-                    />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">원</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={newPaymentNotes}
-                    onChange={(e) => setNewPaymentNotes(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newPaymentAmount && !addingPayment) {
-                        e.preventDefault()
-                        handleAddPayment()
-                      }
-                    }}
-                    placeholder="비고 (선택)"
-                    className="flex-1 px-3 py-2 border-2 rounded-lg text-sm focus:ring-2 focus:ring-emerald-200 focus:border-emerald-400"
-                  />
-                  <button
-                    onClick={handleAddPayment}
-                    disabled={addingPayment || !newPaymentAmount}
-                    className="px-4 py-2 bg-emerald-500 text-white rounded-lg text-sm font-medium hover:bg-emerald-600 transition-colors disabled:opacity-50 whitespace-nowrap"
-                  >
-                    {addingPayment ? '추가 중...' : '추가'}
-                  </button>
-                </div>
-
-                {/* 결제 내역 리스트 */}
-                {loadingPayments ? (
-                  <div className="text-center py-4 text-gray-500 text-sm">로딩 중...</div>
-                ) : payments.length > 0 ? (
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {payments.map((payment) => (
-                      <div
-                        key={payment.id}
-                        className="flex items-center justify-between bg-white rounded-lg px-3 py-2 border border-gray-100"
-                      >
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 text-sm">
-                            {/* 날짜 */}
-                            {payment.payment_date ? (
-                              <span className="text-gray-600">
-                                {new Date(payment.payment_date).toLocaleDateString('ko-KR', {
-                                  year: 'numeric',
-                                  month: '2-digit',
-                                  day: '2-digit',
-                                }).replace(/\. /g, '-').replace('.', '')}
-                              </span>
-                            ) : (
-                              <span className="text-gray-400">날짜 없음</span>
-                            )}
-                            <span className="text-gray-300">|</span>
-                            {/* 금액 */}
-                            <span className="font-semibold text-gray-900">
-                              {Number(payment.amount).toLocaleString()}원
-                            </span>
-                            {/* 비고 */}
-                            {payment.notes && (
-                              <>
-                                <span className="text-gray-300">|</span>
-                                <span className="text-gray-500 truncate max-w-[150px]" title={payment.notes}>
-                                  {payment.notes}
-                                </span>
-                              </>
-                            )}
-                            {/* 레거시 뱃지 */}
-                            {payment.isLegacy && (
-                              <span className="text-xs text-amber-500 bg-amber-50 px-2 py-0.5 rounded ml-1">
-                                기존
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                        {payment.isLegacy ? (
-                          <button
-                            onClick={handleDeleteLegacyPayment}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                            title="기존 데이터 삭제"
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleDeletePayment(payment.id)}
-                            className="text-gray-400 hover:text-red-500 transition-colors p-1"
-                            title="삭제"
-                          >
-                            <XMarkIcon className="h-4 w-4" />
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-4 text-gray-400 text-sm">결제 내역이 없습니다</div>
-                )}
-
-                {/* 감사 로그 섹션 - 관리자 전용 */}
-                {isAdmin && (
-                  <div className="mt-3 border-t border-emerald-200 pt-3">
-                    <button
-                      onClick={() => {
-                        if (!showAuditLogs && paymentAuditLogs.length === 0) {
-                          fetchPaymentAuditLogs(selectedLead.id)
-                        }
-                        setShowAuditLogs(!showAuditLogs)
-                      }}
-                      className="flex items-center gap-2 text-xs text-gray-500 hover:text-gray-700 transition-colors"
-                    >
-                      <svg
-                        className={`h-3 w-3 transition-transform ${showAuditLogs ? 'rotate-90' : ''}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
-                      <span>변경 이력 (관리자 전용)</span>
-                    </button>
-
-                    {showAuditLogs && (
-                      <div className="mt-2 bg-gray-50 rounded-lg p-2 max-h-32 overflow-y-auto">
-                        {loadingAuditLogs ? (
-                          <div className="text-center py-2 text-gray-400 text-xs">로딩 중...</div>
-                        ) : paymentAuditLogs.length > 0 ? (
-                          <div className="space-y-1">
-                            {paymentAuditLogs.map((log, index) => (
-                              <div key={index} className="text-xs text-gray-500 flex items-start gap-2">
-                                <span className="text-gray-400 whitespace-nowrap">
-                                  {new Date(log.created_at).toLocaleDateString('ko-KR', {
-                                    month: '2-digit',
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                                <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
-                                  log.action === 'create' ? 'bg-green-100 text-green-700' :
-                                  log.action === 'update' ? 'bg-blue-100 text-blue-700' :
-                                  'bg-red-100 text-red-700'
-                                }`}>
-                                  {log.action === 'create' ? '생성' : log.action === 'update' ? '수정' : '삭제'}
-                                </span>
-                                <span className="flex-1">
-                                  {log.user_name || '알 수 없음'}: {log.description}
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        ) : (
-                          <div className="text-center py-2 text-gray-400 text-xs">변경 이력이 없습니다</div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* 변경 이력 섹션 */}
-              <div className="border-2 border-gray-100 rounded-xl p-4 bg-gray-50/30">
-                <button
-                  onClick={() => {
-                    if (!showChangeLogs && changeLogs.length === 0) {
-                      fetchChangeLogs(selectedLead.id)
-                    }
-                    setShowChangeLogs(!showChangeLogs)
-                  }}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors w-full"
-                >
-                  <svg
-                    className={`h-4 w-4 transition-transform ${showChangeLogs ? 'rotate-90' : ''}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                  <span>변경 이력</span>
-                </button>
-
-                {showChangeLogs && (
-                  <div className="mt-3 bg-white rounded-lg border border-gray-100 max-h-64 overflow-y-auto">
-                    {loadingChangeLogs ? (
-                      <div className="text-center py-4 text-gray-400 text-sm">로딩 중...</div>
-                    ) : changeLogs.length > 0 ? (
-                      <div className="divide-y divide-gray-100">
-                        {changeLogs.map((log, index) => {
-                          const fieldType = log.field_type || 'status'
-                          const previousValue = fieldType === 'status' ? log.previous_status : log.previous_value
-                          const newValue = fieldType === 'status' ? log.new_status : log.new_value
-
-                          // 필드 타입별 스타일
-                          const fieldStyles: Record<string, { bg: string; text: string; border: string }> = {
-                            status: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-                            call_assigned_to: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' },
-                            counselor_assigned_to: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-                            notes: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-                            contract_completed_at: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
-                          }
-                          const style = fieldStyles[fieldType] || { bg: 'bg-gray-50', text: 'text-gray-700', border: 'border-gray-200' }
-
-                          // 날짜 포맷팅
-                          const formattedDate = new Date(log.created_at).toLocaleDateString('ko-KR', {
-                            month: 'long',
-                            day: 'numeric',
-                          })
-
-                          return (
-                            <div key={log.id || index} className={`px-4 py-3 ${style.bg} border-l-4 ${style.border}`}>
-                              {/* 메인 문장 - 작은 글씨 */}
-                              <p className="text-xs text-gray-600 leading-relaxed">
-                                <span className="font-medium text-gray-700">{formattedDate}</span>
-                                <span className="text-gray-500">에 </span>
-                                <span className={`font-semibold ${style.text}`}>{getFieldTypeLabel(fieldType)}</span>
-                                <span className="text-gray-500"> 항목을 </span>
-                                <span className="font-medium text-gray-700">{log.changed_by_user?.full_name || '알 수 없음'}</span>
-                                <span className="text-gray-500"> 님이 수정하셨습니다.</span>
-                              </p>
-
-                              {/* 세부 변경내용 - 더 작은 글씨 */}
-                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-400">
-                                <span>
-                                  {new Date(log.created_at).toLocaleTimeString('ko-KR', {
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                  })}
-                                </span>
-                                <span className="text-gray-300">|</span>
-                                <span className="line-through">
-                                  {getDisplayValue(fieldType, previousValue)}
-                                </span>
-                                <svg className="h-2.5 w-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                                </svg>
-                                <span className="text-gray-500 font-medium">
-                                  {getDisplayValue(fieldType, newValue)}
-                                </span>
-                              </div>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-4 text-gray-400 text-sm">변경 이력이 없습니다</div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* 푸터 */}
-            <div className="p-5 bg-gray-50 border-t">
-              <button
-                onClick={() => setShowDetailModal(false)}
-                className="w-full py-3 px-4 rounded-xl font-medium text-gray-700 bg-white border-2 border-gray-200 hover:bg-gray-100 transition-all"
-              >
-                닫기
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* 리드 추가 모달 */}
+      <AddLeadModal
+        isOpen={showAddLeadModal}
+        onClose={() => setShowAddLeadModal(false)}
+        onSuccess={() => {
+          setShowAddLeadModal(false)
+          router.refresh()
+        }}
+      />
     </>
   )
 }

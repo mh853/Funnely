@@ -112,7 +112,12 @@ export default async function LeadsPage({
         collect_fields
       ),
       call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
-      counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name)
+      counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name),
+      lead_payments (
+        id,
+        amount,
+        payment_date
+      )
     `,
       { count: 'exact' }
     )
