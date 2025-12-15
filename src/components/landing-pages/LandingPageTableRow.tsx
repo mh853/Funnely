@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
 import { formatDate } from '@/lib/utils/date'
+import { createClient } from '@/lib/supabase/client'
+import { useRouter } from 'next/navigation'
 
 interface LandingPageTableRowProps {
   page: {
@@ -24,10 +26,38 @@ interface LandingPageTableRowProps {
 
 export default function LandingPageTableRow({ page, index, companyShortId }: LandingPageTableRowProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [isActive, setIsActive] = useState(page.is_active)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const router = useRouter()
+  const supabase = createClient()
 
   const formattedDate = formatDate(page.created_at)
   const refParam = companyShortId ? `?ref=${companyShortId}` : ''
   const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
+
+  const handleToggleStatus = async () => {
+    if (isUpdating) return
+
+    setIsUpdating(true)
+    const newStatus = !isActive
+
+    try {
+      const { error } = await supabase
+        .from('landing_pages')
+        .update({ is_active: newStatus })
+        .eq('id', page.id)
+
+      if (error) throw error
+
+      setIsActive(newStatus)
+      router.refresh()
+    } catch (error) {
+      console.error('Failed to update status:', error)
+      alert('상태 업데이트에 실패했습니다.')
+    } finally {
+      setIsUpdating(false)
+    }
+  }
 
   return (
     <>
@@ -55,17 +85,21 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
           </div>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
-          {page.is_active ? (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800 gap-1">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-              배포중
-            </span>
-          ) : (
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-600 gap-1">
-              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full"></span>
-              비활성
-            </span>
-          )}
+          <button
+            onClick={handleToggleStatus}
+            disabled={isUpdating}
+            className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+              isActive ? 'bg-green-500' : 'bg-gray-300'
+            }`}
+            role="switch"
+            aria-checked={isActive}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                isActive ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
           <span className="text-sm font-semibold text-gray-900">
@@ -78,24 +112,24 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
           </span>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-red-100 text-red-800">
-            {page.rejectedCount.toLocaleString()}
-          </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-sm font-semibold text-gray-900">
+              {page.rejectedCount.toLocaleString()}
+            </span>
+            <span className="text-xs font-medium text-red-600">
+              ({page.dbInflow > 0 ? `${((page.rejectedCount / page.dbInflow) * 100).toFixed(0)}%` : '0%'})
+            </span>
+          </div>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
-          <span className="text-sm font-semibold text-red-600">
-            {page.dbInflow > 0 ? `${((page.rejectedCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
-          </span>
-        </td>
-        <td className="px-4 py-2.5 whitespace-nowrap text-center">
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800">
-            {page.contractCount.toLocaleString()}
-          </span>
-        </td>
-        <td className="px-4 py-2.5 whitespace-nowrap text-center">
-          <span className="text-sm font-semibold text-emerald-600">
-            {page.dbInflow > 0 ? `${((page.contractCount / page.dbInflow) * 100).toFixed(1)}%` : '-'}
-          </span>
+          <div className="flex flex-col items-center gap-0.5">
+            <span className="text-sm font-semibold text-gray-900">
+              {page.contractCount.toLocaleString()}
+            </span>
+            <span className="text-xs font-medium text-green-600">
+              ({page.dbInflow > 0 ? `${((page.contractCount / page.dbInflow) * 100).toFixed(0)}%` : '0%'})
+            </span>
+          </div>
         </td>
         <td className="px-4 py-2.5 whitespace-nowrap text-center">
           <div className="flex items-center justify-center gap-1.5">
