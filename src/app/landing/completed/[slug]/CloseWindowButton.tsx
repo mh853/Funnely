@@ -8,11 +8,22 @@ interface CloseWindowButtonProps {
 
 export default function CloseWindowButton({ primaryColor }: CloseWindowButtonProps) {
   const handleClose = () => {
+    // Try to close the window
     window.close()
-    // window.close()가 작동하지 않을 경우 (직접 URL 입력 등)
-    // 사용자에게 안내 메시지 표시
+
+    // If window.close() doesn't work (e.g., page opened directly),
+    // try alternative methods
     setTimeout(() => {
-      alert('브라우저의 탭 닫기 버튼을 사용하여 창을 닫아주세요.')
+      // Check if window is still open
+      if (!window.closed) {
+        // For iOS Safari and some browsers, try closing via history
+        if (window.history.length > 1) {
+          window.history.back()
+        } else {
+          // Last resort: navigate to a blank page (cleaner than alert)
+          window.location.href = 'about:blank'
+        }
+      }
     }, 100)
   }
 

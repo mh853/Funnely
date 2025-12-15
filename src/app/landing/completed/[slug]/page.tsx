@@ -4,6 +4,10 @@ import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import CloseWindowButton from './CloseWindowButton'
 
+// Force dynamic rendering to always fetch fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 interface Props {
   params: Promise<{ slug: string }>
   searchParams: Promise<{ ref?: string }>
@@ -27,9 +31,9 @@ function getServiceRoleClient() {
 async function fetchLandingPage(slug: string) {
   const supabase = getServiceRoleClient()
 
-  const { data, error } = await supabase
+  const { data, error} = await supabase
     .from('landing_pages')
-    .select('id, slug, title, success_message, completion_info_message, primary_color, company_id, completion_bg_image, completion_bg_color')
+    .select('id, slug, title, success_message, completion_info_message, theme, company_id, completion_bg_image, completion_bg_color')
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
@@ -69,7 +73,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   const landingPage = await fetchLandingPage(slug)
 
   // 랜딩페이지를 찾지 못해도 기본 완료 페이지 표시 (404 대신)
-  const primaryColor = landingPage?.primary_color || '#3B82F6'
+  const primaryColor = (landingPage?.theme as any)?.primaryColor || '#3B82F6'
   const successMessage = landingPage?.success_message || '신청이 완료되었습니다. 곧 연락드리겠습니다.'
   const completionInfoMessage = landingPage?.completion_info_message || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'
   const completionBgImage = landingPage?.completion_bg_image
@@ -82,7 +86,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header with background image or color */}
           <div
-            className="py-12 px-6 text-center relative"
+            className="h-48 relative"
             style={{
               backgroundImage: completionBgImage ? `url(${completionBgImage})` : 'none',
               backgroundColor: completionBgImage ? 'transparent' : completionBgColor,
@@ -90,19 +94,19 @@ export default async function CompletedPage({ params, searchParams }: Props) {
               backgroundPosition: 'center',
             }}
           >
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full mb-4 shadow-lg">
-              <CheckCircleIcon className="w-12 h-12 text-green-500" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="inline-flex items-center justify-center w-20 h-20 bg-white rounded-full shadow-lg">
+                <CheckCircleIcon className="w-12 h-12 text-green-500" />
+              </div>
             </div>
-            <h1 className="text-2xl font-bold text-white mb-2 drop-shadow-lg">
-              {landingPage?.title || '랜딩 페이지'}
-            </h1>
-            <p className="text-lg font-semibold text-white drop-shadow-md">
-              {successMessage}
-            </p>
           </div>
 
           {/* Content */}
           <div className="p-8 text-center">
+            {/* Success Message */}
+            <h2 className="text-lg font-bold text-gray-900 mb-6">
+              {successMessage}
+            </h2>
             {/* Info Box */}
             <div className="bg-blue-50 rounded-xl p-5 mb-6 border-2 border-blue-200">
               <div className="flex items-start gap-3">
@@ -119,19 +123,8 @@ export default async function CompletedPage({ params, searchParams }: Props) {
               </div>
             </div>
 
-            {/* Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              {landingPage && (
-                <Link
-                  href={`/landing/${slug}${ref ? `?ref=${ref}` : ''}`}
-                  className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-gray-700 bg-gray-100 transition-all hover:bg-gray-200"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  페이지로 돌아가기
-                </Link>
-              )}
+            {/* Close Button */}
+            <div className="flex justify-center">
               <CloseWindowButton primaryColor={primaryColor} />
             </div>
           </div>
