@@ -2676,8 +2676,8 @@ export default function LandingPageNewForm({
                     </>
                   ) : (
                     /* Completion Page Preview */
-                    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
-                      <div className="bg-white rounded-xl m-3 shadow-xl overflow-hidden flex flex-col">
+                    <div className="h-full flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 p-3">
+                      <div className="bg-white rounded-xl shadow-xl overflow-hidden flex flex-col w-full">
                         {/* Header with background image or color */}
                         <div
                           className="h-36 relative flex-shrink-0"
