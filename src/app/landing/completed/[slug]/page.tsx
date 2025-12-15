@@ -51,14 +51,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const landingPage = await fetchLandingPage(slug)
 
-  if (!landingPage) {
-    return {
-      title: '신청 완료',
-    }
-  }
-
   return {
-    title: `신청 완료 - ${landingPage.title}`,
+    title: '신청 완료',
     description: '신청이 성공적으로 완료되었습니다.',
     robots: {
       index: false,
