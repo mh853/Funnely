@@ -2676,66 +2676,63 @@ export default function LandingPageNewForm({
                     </>
                   ) : (
                     /* Completion Page Preview */
-                    <div
-                      className="h-full flex flex-col"
-                      style={{
-                        backgroundImage: completionBgImage ? `url(${completionBgImage})` : 'none',
-                        backgroundColor: completionBgImage ? 'transparent' : completionBgColor,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                      }}
-                    >
-                      {/* Top Section with Background */}
-                      <div className="flex-1 flex items-center justify-center p-6">
-                        <div className="text-center">
-                          {/* Success Icon */}
-                          <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-lg mb-4">
-                            <svg className="h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          </div>
-
-                          {/* Success Title */}
-                          <h2 className="text-xl font-bold text-white mb-2 drop-shadow-lg">
-                            {title || '랜딩 페이지'}
-                          </h2>
-
-                          {/* Success Message */}
-                          <p className="text-lg font-semibold text-white drop-shadow-md">
-                            {successMessage || '신청이 완료되었습니다. 곧 연락드리겠습니다.'}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Bottom White Section */}
-                      <div className="bg-white p-6 space-y-4 rounded-t-3xl flex-shrink-0">
-                        {/* Info Message Box */}
-                        <div className="bg-blue-50 rounded-xl p-4 border-2 border-blue-200">
-                          <div className="flex items-start gap-3">
-                            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+                      <div className="bg-white rounded-2xl m-4 shadow-xl overflow-hidden flex-1 flex flex-col">
+                        {/* Header with background image or color */}
+                        <div
+                          className="h-40 relative flex-shrink-0"
+                          style={{
+                            backgroundImage: completionBgImage ? `url(${completionBgImage})` : 'none',
+                            backgroundColor: completionBgImage ? 'transparent' : completionBgColor,
+                            backgroundSize: 'cover',
+                            backgroundPosition: 'center',
+                          }}
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-full shadow-lg">
+                              <svg className="h-10 w-10 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                               </svg>
                             </div>
-                            <div className="flex-1">
-                              <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-                                {completionInfoMessage || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'}
-                              </p>
-                            </div>
                           </div>
                         </div>
 
-                        {/* Close Button */}
-                        <button
-                          onClick={() => alert('미리보기 모드입니다')}
-                          className="w-full py-3 bg-gray-100 text-gray-700 font-semibold rounded-xl hover:bg-gray-200 transition-colors"
-                        >
-                          닫기
-                        </button>
+                        {/* Content */}
+                        <div className="p-6 flex-1 flex flex-col justify-center">
+                          {/* Success Message */}
+                          <h2 className="text-base font-bold text-gray-900 mb-4 text-center">
+                            {successMessage || '신청이 완료되었습니다. 곧 연락드리겠습니다.'}
+                          </h2>
 
-                        <p className="text-xs text-center text-gray-500">
-                          💡 이것은 완료 페이지 미리보기입니다.
-                        </p>
+                          {/* Info Box */}
+                          <div className="bg-blue-50 rounded-xl p-4 mb-4 border-2 border-blue-200">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-shrink-0 w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+                                <svg className="w-3 h-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-xs text-gray-700 whitespace-pre-line leading-relaxed">
+                                  {completionInfoMessage || '담당자가 빠른 시일 내에 연락드릴 예정입니다.\n문의사항이 있으시면 언제든지 연락해 주세요.'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Close Button */}
+                          <div className="flex justify-center">
+                            <button
+                              onClick={() => alert('미리보기 모드입니다')}
+                              className="inline-flex items-center justify-center px-6 py-3 rounded-xl font-medium text-white transition-all hover:opacity-90 hover:shadow-lg bg-indigo-600"
+                            >
+                              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              창 닫기
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
