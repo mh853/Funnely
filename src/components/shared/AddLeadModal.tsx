@@ -178,7 +178,7 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
                   {/* 안내 메시지 */}
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-xs text-blue-800">
-                      💡 추가된 리드는 "상담 전" 상태로 저장됩니다.
+                      💡 추가된 리드는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
                     </p>
                   </div>
                 </form>
