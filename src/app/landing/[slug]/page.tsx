@@ -35,6 +35,7 @@ export async function generateStaticParams() {
     .from('landing_pages')
     .select('slug')
     .eq('status', 'published')
+    .eq('is_active', true)
     .limit(10) // Pre-generate top 10 landing pages
 
   return (landingPages || []).map((page) => ({
@@ -57,6 +58,7 @@ async function fetchLandingPage(slug: string): Promise<any> {
     `)
     .eq('slug', slug)
     .eq('status', 'published')
+    .eq('is_active', true)
     .single()
 
   if (error || !data) return null
