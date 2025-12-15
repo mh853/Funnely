@@ -1379,6 +1379,38 @@ export default function LandingPageNewForm({
     <div id="landing-page-container" className="flex flex-col lg:flex-row gap-4 sm:gap-6">
       {/* Main Form */}
       <div className="flex-1 min-w-0 space-y-4 sm:space-y-6">
+        {/* Deployment Toggle - Top */}
+        <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                상태
+              </h2>
+              <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                isActive
+                  ? 'bg-green-100 text-green-700'
+                  : 'bg-gray-100 text-gray-600'
+              }`}>
+                {isActive ? 'ON' : 'OFF'}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsActive(!isActive)}
+              className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
+                isActive ? 'bg-green-500' : 'bg-gray-300'
+              }`}
+              role="switch"
+              aria-checked={isActive}
+            >
+              <span
+                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
+                  isActive ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
         {/* URL Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
@@ -2426,60 +2458,6 @@ export default function LandingPageNewForm({
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
-
-        {/* Deployment Settings */}
-        <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-2xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="flex-shrink-0 pt-1">
-              <input
-                type="checkbox"
-                id="deployment-toggle"
-                checked={isActive}
-                onChange={(e) => setIsActive(e.target.checked)}
-                className="w-5 h-5 text-green-600 border-gray-300 rounded focus:ring-green-500 focus:ring-2 cursor-pointer"
-              />
-            </div>
-            <div className="flex-1">
-              <label htmlFor="deployment-toggle" className="flex items-center gap-2 cursor-pointer">
-                <h3 className="text-lg font-bold text-gray-900">
-                  {isActive ? '🟢 배포 중' : '⚫ 비활성'}
-                </h3>
-              </label>
-              <p className="text-sm text-gray-600 mt-1">
-                {isActive
-                  ? '이 랜딩페이지는 현재 배포되어 있습니다. 사용자가 URL을 통해 접근할 수 있습니다.'
-                  : '이 랜딩페이지는 비활성 상태입니다. URL 접근이 차단됩니다.'}
-              </p>
-              {isActive && (
-                <div className="mt-3 bg-white/80 rounded-lg p-3 border border-green-200">
-                  <p className="text-xs font-semibold text-gray-700 mb-1">내 배포 URL {companyShortId && <span className="text-green-600">(ref={companyShortId})</span>}</p>
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <code className="text-xs sm:text-sm text-green-700 font-mono bg-green-100 px-2 py-1.5 rounded w-full sm:flex-1 overflow-x-auto break-all">
-                      {(() => {
-                        const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
-                        const refParam = companyShortId ? `?ref=${companyShortId}` : ''
-                        return `${baseUrl}/landing/${slug || 'your-slug'}${refParam}`
-                      })()}
-                    </code>
-                    <button
-                      onClick={() => {
-                        const baseUrl = (process.env.NEXT_PUBLIC_URL || 'https://funnely.co.kr').replace(/https:\/\/https:\/\//, 'https://').replace(/\/$/, '')
-                        const refParam = companyShortId ? `?ref=${companyShortId}` : ''
-                        const url = `${baseUrl}/landing/${slug}${refParam}`
-                        navigator.clipboard.writeText(url)
-                        alert('URL이 클립보드에 복사되었습니다!')
-                      }}
-                      disabled={!slug}
-                      className="w-full sm:w-auto px-3 py-2 sm:py-1 bg-green-600 text-white text-sm sm:text-xs rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap flex-shrink-0"
-                    >
-                      URL 복사
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
 
         {/* Action Buttons */}
         <div className="flex gap-3 sm:gap-4">
