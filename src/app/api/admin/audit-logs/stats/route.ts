@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         action,
         user_id,
         created_at,
-        user:user_id(email, profiles(full_name))
+        user:users!user_id(email, profiles(full_name))
       `
       )
       .gte('created_at', startDateTime.toISOString())
@@ -72,10 +72,12 @@ export async function GET(request: NextRequest) {
       (logs || []).reduce((acc, log) => {
         if (log.user_id) {
           if (!acc[log.user_id]) {
+            // Type assertion for user object from Supabase join
+            const user = log.user as any
             acc[log.user_id] = {
               userId: log.user_id,
-              userName: log.user?.profiles?.full_name || log.user?.email || 'Unknown',
-              userEmail: log.user?.email || null,
+              userName: user?.profiles?.full_name || user?.email || 'Unknown',
+              userEmail: user?.email || null,
               count: 0,
             }
           }
