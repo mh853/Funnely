@@ -57,13 +57,59 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get landing page to retrieve company_id and collect_fields
-    const { data: landingPage, error: lpError } = await supabase
-      .from('landing_pages')
-      .select('company_id, status, collect_fields')
-      .eq('id', landing_page_id)
-      .single()
+    // Extract contact information first (needed for validation)
+    const name = form_data.name || form_data.이름 || ''
+    const phone = form_data.phone || form_data.전화번호 || ''
+    const email = form_data.email || form_data.이메일 || undefined
 
+    if (!name || !phone) {
+      return NextResponse.json(
+        { error: { message: '이름과 전화번호는 필수입니다' } },
+        { status: 400 }
+      )
+    }
+
+    // Hash phone number for duplicate detection
+    const phoneHash = crypto
+      .createHash('sha256')
+      .update(phone.replace(/\D/g, ''))
+      .digest('hex')
+
+    // Parallel query execution - 모든 독립적인 쿼리를 동시에 실행
+    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
+
+    const [
+      { data: landingPage, error: lpError },
+      { data: referrerCompany },
+      { data: existingLead }
+    ] = await Promise.all([
+      // 1. Landing page 조회
+      supabase
+        .from('landing_pages')
+        .select('company_id, status, collect_fields')
+        .eq('id', landing_page_id)
+        .single(),
+
+      // 2. Referrer company 조회 (referrer_user_id가 있을 때만)
+      referrer_user_id
+        ? supabase
+            .from('companies')
+            .select('id')
+            .eq('short_id', referrer_user_id)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+
+      // 3. 중복 체크 (landing_page_id로 임시 조회, 이후 company_id로 재검증)
+      supabase
+        .from('leads')
+        .select('id, company_id')
+        .eq('phone_hash', phoneHash)
+        .gte('created_at', threeHoursAgo)
+        .limit(1)
+        .maybeSingle()
+    ])
+
+    // Landing page 검증
     if (lpError || !landingPage) {
       return NextResponse.json(
         { error: { message: '랜딩 페이지를 찾을 수 없습니다' } },
@@ -78,51 +124,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract contact information
-    const name = form_data.name || form_data.이름 || ''
-    const phone = form_data.phone || form_data.전화번호 || ''
-    const email = form_data.email || form_data.이메일 || undefined
+    // Referrer company ID 설정
+    const actualReferrerCompanyId = referrerCompany?.id
 
-    if (!name || !phone) {
-      return NextResponse.json(
-        { error: { message: '이름과 전화번호는 필수입니다' } },
-        { status: 400 }
-      )
-    }
-
-    // Convert referrer short_id to actual company UUID
-    let actualReferrerCompanyId: string | undefined = undefined
-    if (referrer_user_id) {
-      // ref 파라미터가 회사의 short_id를 담고 있음
-      const { data: referrerCompany } = await supabase
-        .from('companies')
-        .select('id')
-        .eq('short_id', referrer_user_id)
-        .single()
-
-      if (referrerCompany) {
-        actualReferrerCompanyId = referrerCompany.id
-      }
-    }
-
-    // Hash phone number for duplicate detection
-    const phoneHash = crypto
-      .createHash('sha256')
-      .update(phone.replace(/\D/g, ''))
-      .digest('hex')
-
-    // Check for duplicate submission within 3 hours
-    const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
-    const { data: existingLead } = await supabase
-      .from('leads')
-      .select('id')
-      .eq('phone_hash', phoneHash)
-      .eq('company_id', landingPage.company_id)
-      .gte('created_at', threeHoursAgo)
-      .limit(1)
-      .maybeSingle()
-
-    if (existingLead) {
+    // 중복 체크 (같은 회사 내에서만)
+    if (existingLead && existingLead.company_id === landingPage.company_id) {
       return NextResponse.json(
         { error: { message: '이미 신청완료 되었습니다.' } },
         { status: 409 }

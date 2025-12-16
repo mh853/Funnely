@@ -144,6 +144,15 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     return () => clearInterval(interval)
   }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, demoRealtimeData.length])
 
+  // 완료 페이지 프리페칭 (사용자가 폼과 상호작용하기 시작하면 prefetch)
+  useEffect(() => {
+    // nameInput 또는 phoneInput이 입력되면 완료 페이지 미리 로딩
+    if (nameInput.length > 0 || phoneInput.length > 0) {
+      const refQuery = refParam ? `?ref=${refParam}` : ''
+      router.prefetch(`/landing/completed/${landingPage.slug}${refQuery}`)
+    }
+  }, [nameInput, phoneInput, landingPage.slug, refParam, router])
+
   // 폼 제출 핸들러
   const handleFormSubmit = async () => {
     setSubmitError(null)
@@ -285,9 +294,12 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             }
           }}
           disabled={isSubmitting}
-          className="w-full py-4 text-lg rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50"
+          className="w-full py-4 text-lg rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
           style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
         >
+          {isSubmitting && (
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+          )}
           {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
         </button>
       )
@@ -684,9 +696,12 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 }
               }}
               disabled={isSubmitting}
-              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50"
+              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
             >
+              {isSubmitting && (
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+              )}
               {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
             </button>
           </div>
@@ -868,9 +883,12 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               <button
                 onClick={handleFormSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50"
+                className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
                 style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
               >
+                {isSubmitting && (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                )}
                 {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
               </button>
             </div>
