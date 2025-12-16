@@ -22,12 +22,12 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex min-h-screen bg-gray-50">
       {/* Sidebar Navigation */}
       <AdminNav user={userProfile} />
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1">
         {/* Header */}
         <header className="bg-white border-b border-gray-200 sticky top-0 z-10">
           <div className="px-8 py-4">
