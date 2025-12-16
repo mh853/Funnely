@@ -17,6 +17,7 @@ import {
   CreditCard,
   DollarSign,
   Activity,
+  Shield,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -106,6 +107,12 @@ const navItems: NavItem[] = [
     label: '문의 관리',
     href: '/admin/support',
     description: '고객 문의사항 처리',
+  },
+  {
+    icon: Shield,
+    label: '감사 로그',
+    href: '/admin/audit-logs',
+    description: '모든 관리자 작업 추적',
   },
   {
     icon: Settings,
