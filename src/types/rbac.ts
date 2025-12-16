@@ -80,6 +80,7 @@ export const PERMISSIONS = {
   // 지원 및 고객 성공
   MANAGE_SUPPORT: 'manage_support',
   VIEW_HEALTH_SCORES: 'view_health_scores',
+  CALCULATE_HEALTH_SCORES: 'calculate_health_scores',
   MANAGE_ONBOARDING: 'manage_onboarding',
 
   // 시스템 설정
@@ -188,6 +189,12 @@ export const PERMISSION_INFO: Record<string, PermissionInfo> = {
     description: '고객사 건강도 점수 조회',
     category: '고객 성공',
   },
+  [PERMISSIONS.CALCULATE_HEALTH_SCORES]: {
+    code: PERMISSIONS.CALCULATE_HEALTH_SCORES,
+    name: '건강도 계산',
+    description: '고객사 건강도 점수 계산 및 갱신',
+    category: '고객 성공',
+  },
   [PERMISSIONS.MANAGE_ONBOARDING]: {
     code: PERMISSIONS.MANAGE_ONBOARDING,
     name: '온보딩 관리',
@@ -264,6 +271,7 @@ export const PERMISSION_CATEGORIES = [
     permissions: [
       PERMISSIONS.MANAGE_SUPPORT,
       PERMISSIONS.VIEW_HEALTH_SCORES,
+      PERMISSIONS.CALCULATE_HEALTH_SCORES,
       PERMISSIONS.MANAGE_ONBOARDING,
     ],
   },

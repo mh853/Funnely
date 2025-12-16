@@ -145,6 +145,11 @@ export const AUDIT_ACTIONS = {
   ROLE_DELETE: 'role.delete',
   ROLE_ASSIGN: 'role.assign',
   ROLE_UNASSIGN: 'role.unassign',
+
+  // 건강도 관리
+  HEALTH_SCORE_CREATE: 'health_score.create',
+  HEALTH_SCORE_UPDATE: 'health_score.update',
+  HEALTH_SCORE_CALCULATE: 'health_score.calculate',
 } as const
 
 /**
@@ -160,6 +165,7 @@ export const ENTITY_TYPES = {
   SUPPORT_TICKET: 'support_ticket',
   ANNOUNCEMENT: 'announcement',
   SETTINGS: 'settings',
+  HEALTH_SCORE: 'health_score',
 } as const
 
 /**
