@@ -1,22 +1,22 @@
 # 어드민 시스템 고도화 구현 진행 상황
 
-## 📊 전체 진행률: 8%
+## 📊 전체 진행률: 12%
 
 **시작일**: 2025-12-16
 **예상 완료일**: 2026-03-16 (13주)
-**현재 상태**: Phase 1 진행 중 (기초 인프라 - 50% 완료)
+**현재 상태**: Phase 1 진행 중 (기초 인프라 - 75% 완료)
 
 ---
 
 ## 🎯 Phase 별 진행 상황
 
-### Phase 1: 기초 인프라 (2/4 완료)
+### Phase 1: 기초 인프라 (3/4 완료)
 **예상 기간**: 1-2주
-**진행률**: 50%
+**진행률**: 75%
 
 - [x] 1.1 데이터베이스 스키마 마이그레이션
 - [x] 1.2 감사 로그 시스템
-- [ ] 1.3 역할 기반 접근 제어 (RBAC)
+- [x] 1.3 역할 기반 접근 제어 (RBAC)
 - [ ] 1.4 기본 API 엔드포인트
 
 ### Phase 2: 고객 성공 관리 (0/4 완료)
@@ -183,18 +183,108 @@
 
 ---
 
+#### Phase 1.3: 역할 기반 접근 제어 (RBAC)
+**작업 시작**: 2025-12-16
+**상태**: ✅ 완료
+
+**완료 항목**:
+1. ✅ 설계 문서 작성
+   - 파일: `claudedocs/phase1-3-design.md`
+   - 시스템 아키텍처, 데이터 모델, API 설계
+   - 권한 체계 및 보안 고려사항
+
+2. ✅ TypeScript 타입 및 상수 정의
+   - 파일: `src/types/rbac.ts`
+   - AdminRole, AdminRoleAssignment 인터페이스
+   - PERMISSIONS 상수 (20+ 권한)
+   - PERMISSION_INFO, PERMISSION_CATEGORIES
+   - 권한 체크 헬퍼 함수
+
+3. ✅ RBAC 미들웨어 구현
+   - 파일: `src/lib/admin/rbac-middleware.ts`
+   - getUserPermissions() - 5분 TTL 캐시 포함
+   - hasPermission(), hasAnyPermission(), hasAllPermissions()
+   - requirePermission() - API 라우트 권한 체크
+   - canAssignRole(), canModifyRole(), canDeleteRole() - 권한 에스컬레이션 방지
+   - getUserRoles(), getUserWithRoles()
+
+4. ✅ API 엔드포인트 구현
+   - `src/app/api/admin/roles/route.ts` (GET, POST)
+   - `src/app/api/admin/roles/[id]/route.ts` (GET, PUT, DELETE)
+   - `src/app/api/admin/users/[userId]/roles/route.ts` (GET, POST)
+   - `src/app/api/admin/users/[userId]/roles/[roleId]/route.ts` (DELETE)
+   - `src/app/api/admin/permissions/route.ts` (GET)
+
+5. ✅ Admin UI 구현
+   - `src/app/admin/settings/roles/page.tsx` (역할 관리 페이지)
+   - 역할 목록 테이블 (이름, 설명, 권한 수, 사용자 수)
+   - 기본 역할 배지 표시
+   - 수정/삭제 액션 (권한 체크 포함)
+   - 통계 카드 (전체/기본/커스텀 역할 수)
+
+6. ✅ 권한 체크 훅
+   - `src/hooks/usePermissions.ts`
+   - usePermissions() 커스텀 훅
+   - withPermission(), withAnyPermission() HOC
+
+7. ✅ 네비게이션 메뉴 추가
+   - AdminNav에 "역할 관리" 메뉴 추가 (Shield 아이콘)
+   - `/admin/settings/roles` 경로
+
+8. ✅ 감사 로그 통합
+   - AUDIT_ACTIONS에 역할 관련 액션 추가:
+     - ROLE_CREATE, ROLE_UPDATE, ROLE_DELETE
+     - ROLE_ASSIGN, ROLE_UNASSIGN
+   - 모든 역할 관리 API에 감사 로그 생성
+
+9. ✅ 문서화
+   - `claudedocs/phase1-3-usage.md` (상세 사용 가이드)
+   - UI 사용법, API 사용법, 권한 목록
+   - 보안 고려사항, 모범 사례, 성능 최적화
+
+**생성된 파일** (8개):
+- src/types/rbac.ts
+- src/lib/admin/rbac-middleware.ts
+- src/app/api/admin/roles/route.ts
+- src/app/api/admin/roles/[id]/route.ts
+- src/app/api/admin/users/[userId]/roles/route.ts
+- src/app/api/admin/users/[userId]/roles/[roleId]/route.ts
+- src/app/api/admin/permissions/route.ts
+- src/app/admin/settings/roles/page.tsx
+- src/hooks/usePermissions.ts
+- claudedocs/phase1-3-design.md
+- claudedocs/phase1-3-usage.md
+
+**수정된 파일** (2개):
+- src/lib/admin/audit-middleware.ts (AUDIT_ACTIONS 추가)
+- src/app/admin/components/AdminNav.tsx (역할 관리 메뉴)
+
+**주요 기능**:
+- 20+ 세분화된 권한 체계
+- 4개 기본 역할 (super_admin, cs_manager, finance, analyst)
+- 권한 캐싱 (5분 TTL)
+- 권한 에스컬레이션 방지
+- 기본 역할 보호 (삭제/코드 수정 불가)
+- 모든 작업 감사 로깅
+
+**완료 일시**: 2025-12-16
+
+**다음 Phase**: Phase 1.4 - 기본 API 엔드포인트
+
+---
+
 ## 🔄 현재 작업 중
 
-**Phase 1.2: 감사 로그 시스템** - ✅ 완료
+**Phase 1.3: RBAC 시스템** - ✅ 완료
 
-**상태**: Phase 1.2 완전 구현 완료 및 커밋
+**상태**: Phase 1.3 완전 구현 완료, 커밋 대기
 - ✅ 설계 완료
 - ✅ 백엔드 구현 완료
 - ✅ 프론트엔드 구현 완료
 - ✅ 문서화 완료
-- ✅ Git 커밋 및 푸시 완료
+- ⏳ Git 커밋 및 푸시 대기
 
-**다음 작업**: Phase 1.3 - 역할 기반 접근 제어 (RBAC)
+**다음 작업**: Git 커밋 및 푸시 후 Phase 1.4 진행 또는 사용자 확인 대기
 
 ---
 

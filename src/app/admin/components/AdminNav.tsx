@@ -115,6 +115,12 @@ const navItems: NavItem[] = [
     description: '모든 관리자 작업 추적',
   },
   {
+    icon: Shield,
+    label: '역할 관리',
+    href: '/admin/settings/roles',
+    description: '관리자 역할 및 권한 관리',
+  },
+  {
     icon: Settings,
     label: '설정',
     href: '/admin/settings',

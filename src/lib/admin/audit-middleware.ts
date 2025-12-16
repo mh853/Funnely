@@ -138,6 +138,13 @@ export const AUDIT_ACTIONS = {
   BULK_OPERATION_START: 'bulk.operation_start',
   BULK_OPERATION_COMPLETE: 'bulk.operation_complete',
   BULK_OPERATION_FAILED: 'bulk.operation_failed',
+
+  // 역할 및 권한 관리
+  ROLE_CREATE: 'role.create',
+  ROLE_UPDATE: 'role.update',
+  ROLE_DELETE: 'role.delete',
+  ROLE_ASSIGN: 'role.assign',
+  ROLE_UNASSIGN: 'role.unassign',
 } as const
 
 /**
