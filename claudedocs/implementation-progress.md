@@ -1,10 +1,10 @@
 # 어드민 시스템 고도화 구현 진행 상황
 
-## 📊 전체 진행률: 16%
+## 📊 전체 진행률: 20%
 
 **시작일**: 2025-12-16
 **예상 완료일**: 2026-03-16 (13주)
-**현재 상태**: Phase 1 완료 (기초 인프라 - 100% 완료)
+**현재 상태**: Phase 2.1 완료 (고객 건강도 계산 로직 - 25% 완료)
 
 ---
 
@@ -19,11 +19,11 @@
 - [x] 1.3 역할 기반 접근 제어 (RBAC)
 - [x] 1.4 기본 API 엔드포인트
 
-### Phase 2: 고객 성공 관리 (0/4 완료)
+### Phase 2: 고객 성공 관리 (1/4 완료)
 **예상 기간**: 2-3주
-**진행률**: 0%
+**진행률**: 25%
 
-- [ ] 2.1 고객 건강도 계산 로직
+- [x] 2.1 고객 건강도 계산 로직
 - [ ] 2.2 건강도 대시보드 UI
 - [ ] 2.3 온보딩 추적 시스템
 - [ ] 2.4 기능 사용 분석
@@ -355,7 +355,60 @@
 - ✅ 문서화 완료
 - ✅ Git 커밋 및 푸시 완료 (commit ee4c82f)
 
-**다음 작업**: Phase 1.4 - 기본 API 엔드포인트 또는 사용자 확인 대기
+**다음 작업**: Phase 2.1 - 고객 건강도 계산 로직
+
+---
+
+### 2025-12-17: Phase 2.1 - 고객 건강도 계산 로직 ✅
+**작업 시작**: 2025-12-17
+**상태**: 완료 ✅
+
+#### 완료 항목:
+1. ✅ 데이터베이스 스키마 생성
+   - `supabase/migrations/20250117_phase2_health_scores.sql`
+   - `health_scores` 테이블: 건강도 점수 및 컴포넌트 점수 저장
+   - `onboarding_progress` 테이블: 온보딩 단계 추적
+   - `feature_usage` 테이블: 기능 사용 분석
+   - 인덱스, RLS 정책, 트리거 함수 추가
+
+2. ✅ 건강도 계산 엔진 구현
+   - `src/lib/health/calculateHealthScore.ts`
+   - 4가지 컴포넌트 점수 계산:
+     * **Engagement Score (35%)**: 로그인 빈도, 활성 사용자 비율, 마지막 활동
+     * **Product Usage Score (30%)**: 랜딩페이지 생성, 리드 생성, 기능 사용
+     * **Support Score (20%)**: 지원 티켓 상태 (플레이스홀더)
+     * **Payment Score (15%)**: 구독 상태, 결제 건강도
+   - 자동 위험 요소 식별 및 권장사항 생성
+   - 건강 상태 분류: critical/at_risk/healthy/excellent
+
+3. ✅ API 엔드포인트 구현
+   - `GET /api/admin/health`: 건강도 점수 목록 (페이지네이션, 필터링)
+   - `GET /api/admin/health/[companyId]`: 회사별 건강도 상세 + 30일 히스토리
+   - `POST /api/admin/health/calculate`: 수동/배치 건강도 계산
+
+4. ✅ RBAC 권한 추가
+   - `CALCULATE_HEALTH_SCORES` 권한 추가
+   - `src/types/rbac.ts` 업데이트
+
+5. ✅ 감사 로깅 통합
+   - `HEALTH_SCORE_CREATE`, `HEALTH_SCORE_UPDATE`, `HEALTH_SCORE_CALCULATE` 액션
+   - `src/lib/admin/audit-middleware.ts` 업데이트
+
+6. ✅ 자동화 작업 문서화
+   - `claudedocs/phase2-1-batch-jobs.md`
+   - Vercel Cron Jobs 설정 가이드
+   - 일일 자동 계산 스크립트 예제
+
+7. ✅ 빌드 검증
+   - TypeScript 타입 체크 통과
+   - Next.js 프로덕션 빌드 성공
+   - ESLint 경고만 있음 (기능적 문제 없음)
+
+8. ✅ Git 커밋 및 푸시
+   - Commit: e049f5a
+   - 메시지: "feat: Phase 2.1 - Customer Health Score System Implementation"
+
+**다음 작업**: Phase 2.2 - 건강도 대시보드 UI 또는 사용자 확인 대기
 
 ---
 
