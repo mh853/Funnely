@@ -102,6 +102,14 @@ export const PERMISSIONS = {
   VIEW_WORKFLOWS: 'view_workflows',
   MANAGE_WORKFLOWS: 'manage_workflows',
   EXECUTE_WORKFLOWS: 'execute_workflows',
+
+  // 일괄 작업
+  VIEW_BULK_OPERATIONS: 'view_bulk_operations',
+  EXECUTE_BULK_OPERATIONS: 'execute_bulk_operations',
+
+  // 이메일 템플릿
+  VIEW_EMAIL_TEMPLATES: 'view_email_templates',
+  MANAGE_EMAIL_TEMPLATES: 'manage_email_templates',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
@@ -280,6 +288,34 @@ export const PERMISSION_INFO: Record<string, PermissionInfo> = {
     description: '워크플로우 수동 실행',
     category: '자동화',
   },
+
+  // 일괄 작업
+  [PERMISSIONS.VIEW_BULK_OPERATIONS]: {
+    code: PERMISSIONS.VIEW_BULK_OPERATIONS,
+    name: '일괄 작업 조회',
+    description: '일괄 작업 이력 조회',
+    category: '자동화',
+  },
+  [PERMISSIONS.EXECUTE_BULK_OPERATIONS]: {
+    code: PERMISSIONS.EXECUTE_BULK_OPERATIONS,
+    name: '일괄 작업 실행',
+    description: '리드/고객사/구독 일괄 작업 실행',
+    category: '자동화',
+  },
+
+  // 이메일 템플릿
+  [PERMISSIONS.VIEW_EMAIL_TEMPLATES]: {
+    code: PERMISSIONS.VIEW_EMAIL_TEMPLATES,
+    name: '이메일 템플릿 조회',
+    description: '이메일 템플릿 목록 및 상세 조회',
+    category: '커뮤니케이션',
+  },
+  [PERMISSIONS.MANAGE_EMAIL_TEMPLATES]: {
+    code: PERMISSIONS.MANAGE_EMAIL_TEMPLATES,
+    name: '이메일 템플릿 관리',
+    description: '이메일 템플릿 생성, 수정, 삭제 및 테스트 발송',
+    category: '커뮤니케이션',
+  },
 }
 
 // 권한 카테고리별 그룹화
@@ -332,7 +368,11 @@ export const PERMISSION_CATEGORIES = [
   },
   {
     name: '커뮤니케이션',
-    permissions: [PERMISSIONS.MANAGE_ANNOUNCEMENTS],
+    permissions: [
+      PERMISSIONS.MANAGE_ANNOUNCEMENTS,
+      PERMISSIONS.VIEW_EMAIL_TEMPLATES,
+      PERMISSIONS.MANAGE_EMAIL_TEMPLATES,
+    ],
   },
   {
     name: '성장 관리',
@@ -347,6 +387,8 @@ export const PERMISSION_CATEGORIES = [
       PERMISSIONS.VIEW_WORKFLOWS,
       PERMISSIONS.MANAGE_WORKFLOWS,
       PERMISSIONS.EXECUTE_WORKFLOWS,
+      PERMISSIONS.VIEW_BULK_OPERATIONS,
+      PERMISSIONS.EXECUTE_BULK_OPERATIONS,
     ],
   },
 ]

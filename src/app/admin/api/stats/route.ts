@@ -9,105 +9,96 @@ export async function GET() {
 
     const supabase = await createClient()
 
-    // Fetch summary stats from materialized view
-    const { data: statsData, error: statsError } = await supabase
-      .from('admin_company_stats')
-      .select('*')
+    // Fetch companies data directly
+    const { data: companies, error: companiesQueryError } = await supabase
+      .from('companies')
+      .select('id, is_active')
 
-    if (statsError) throw statsError
+    if (companiesQueryError) throw companiesQueryError
+
+    // Fetch users count
+    const { count: usersCount, error: usersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+
+    if (usersError) console.error('Users count error:', usersError)
+
+    // Fetch active users in last 30 days
+    const thirtyDaysAgo = new Date()
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    const { count: activeUsersCount, error: activeUsersError } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('last_sign_in_at', thirtyDaysAgo.toISOString())
+
+    if (activeUsersError) console.error('Active users count error:', activeUsersError)
+
+    // Fetch leads count
+    const { count: leadsCount, error: leadsError } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+
+    if (leadsError) console.error('Leads count error:', leadsError)
+
+    // Fetch recent leads (last 30 days)
+    const { count: recentLeadsCount, error: recentLeadsError } = await supabase
+      .from('leads')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', thirtyDaysAgo.toISOString())
+
+    if (recentLeadsError) console.error('Recent leads count error:', recentLeadsError)
 
     // Calculate summary statistics
     const summary = {
-      totalCompanies: statsData?.length || 0,
-      activeCompanies:
-        statsData?.filter((s) => s.is_active === true).length || 0,
-      totalUsers: statsData?.reduce((sum, s) => sum + (s.total_users || 0), 0) || 0,
-      activeUsers30d:
-        statsData?.reduce((sum, s) => sum + (s.active_users_30d || 0), 0) || 0,
-      totalLeads: statsData?.reduce((sum, s) => sum + (s.total_leads || 0), 0) || 0,
-      leads30d: statsData?.reduce((sum, s) => sum + (s.leads_30d || 0), 0) || 0,
-      openTickets:
-        statsData?.reduce((sum, s) => sum + (s.open_tickets || 0), 0) || 0,
-      urgentTickets:
-        statsData?.reduce((sum, s) => sum + (s.urgent_tickets || 0), 0) || 0,
-      totalPageViews:
-        statsData?.reduce((sum, s) => sum + (s.total_page_views || 0), 0) || 0,
-      totalSubmissions:
-        statsData?.reduce((sum, s) => sum + (s.total_submissions || 0), 0) || 0,
+      totalCompanies: companies?.length || 0,
+      activeCompanies: companies?.filter((c) => c.is_active === true).length || 0,
+      totalUsers: usersCount || 0,
+      activeUsers30d: activeUsersCount || 0,
+      totalLeads: leadsCount || 0,
+      leads30d: recentLeadsCount || 0,
+      openTickets: 0, // TODO: Implement when support_tickets table exists
+      urgentTickets: 0, // TODO: Implement when support_tickets table exists
+      totalPageViews: 0, // TODO: Implement analytics
+      totalSubmissions: 0, // TODO: Implement analytics
     }
 
     // Fetch recent companies
     const { data: recentCompanies, error: companiesError } = await supabase
       .from('companies')
-      .select('id, name, created_at')
+      .select('id, name, created_at, is_active')
       .order('created_at', { ascending: false })
       .limit(5)
 
     if (companiesError) throw companiesError
 
-    // Fetch recent activities
-    const { data: recentActivities, error: activitiesError } = await supabase
-      .from('company_activity_logs')
-      .select(
-        `
-        id,
-        activity_type,
-        activity_description,
-        created_at,
-        companies!inner(name)
-      `
-      )
-      .order('created_at', { ascending: false })
-      .limit(10)
+    // Fetch user counts for recent companies
+    const recentCompaniesWithUsers = await Promise.all(
+      (recentCompanies || []).map(async (company) => {
+        const { count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', company.id)
 
-    if (activitiesError) throw activitiesError
-
-    // Fetch system alerts
-    const { data: urgentTickets, error: ticketsError } = await supabase
-      .from('support_tickets')
-      .select('id, priority, status')
-      .eq('priority', 'urgent')
-      .neq('status', 'closed')
-
-    if (ticketsError) throw ticketsError
-
-    const systemAlerts = []
-
-    if (urgentTickets && urgentTickets.length > 0) {
-      systemAlerts.push({
-        type: 'urgent_ticket',
-        count: urgentTickets.length,
-        severity: 'high',
-        message: `긴급 문의 ${urgentTickets.length}건`,
-        action: {
-          label: '확인하기',
-          href: '/admin/support?priority=urgent',
-        },
+        return {
+          id: company.id,
+          name: company.name,
+          joinedAt: company.created_at,
+          totalUsers: count || 0,
+          status: company.is_active ? 'active' : 'inactive',
+        }
       })
-    }
+    )
+
+    // System alerts (no support tickets table yet)
+    const systemAlerts: any[] = []
 
     // Format response
     return NextResponse.json({
       summary,
-      recentCompanies: recentCompanies?.map((c) => ({
-        id: c.id,
-        name: c.name,
-        joinedAt: c.created_at,
-        totalUsers:
-          statsData?.find((s) => s.company_id === c.id)?.total_users || 0,
-        status:
-          statsData?.find((s) => s.company_id === c.id)?.is_active === true
-            ? 'active'
-            : 'inactive',
-      })),
+      recentCompanies: recentCompaniesWithUsers,
       systemAlerts,
-      recentActivities: recentActivities?.map((a) => ({
-        id: a.id,
-        companyName: (a.companies as any)?.name || 'Unknown',
-        activityType: a.activity_type,
-        description: a.activity_description || a.activity_type,
-        createdAt: a.created_at,
-      })),
+      recentActivities: [], // TODO: Implement when company_activity_logs exists
     })
   } catch (error) {
     console.error('Admin stats API error:', error)

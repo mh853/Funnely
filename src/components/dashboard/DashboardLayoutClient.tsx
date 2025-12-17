@@ -44,7 +44,7 @@ export default function DashboardLayoutClient({
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
       />
-      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-52'}`}>
+      <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-[200px]'}`}>
         <Header
           user={user}
           userProfile={userProfile}
