@@ -322,7 +322,7 @@ export default function UsersPage() {
                         </div>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {user.company.name}
+                        {user.company?.name || '-'}
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getRoleBadgeColor(user.role)}`}>
@@ -330,10 +330,10 @@ export default function UsersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {user.stats.total_leads}
+                        {user.stats?.total_leads ?? 0}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">
-                        {user.stats.total_landing_pages}
+                        {user.stats?.total_landing_pages ?? 0}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={user.is_active ? 'default' : 'secondary'}>

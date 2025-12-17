@@ -112,9 +112,11 @@ export async function GET(request: NextRequest) {
         // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 'user')
         let primaryRole = 'user'
         if (roleAssignments && roleAssignments.length > 0) {
-          const firstRole = roleAssignments[0].role as { id: string; name: string } | undefined
-          if (firstRole && typeof firstRole === 'object' && 'name' in firstRole) {
-            primaryRole = firstRole.name || 'user'
+          const firstRole = roleAssignments[0].role
+          // role이 배열이면 첫 번째 요소, 아니면 그대로 사용
+          const roleObj = Array.isArray(firstRole) ? firstRole[0] : firstRole
+          if (roleObj && typeof roleObj === 'object' && 'name' in roleObj) {
+            primaryRole = (roleObj as any).name || 'user'
           }
         }
 
