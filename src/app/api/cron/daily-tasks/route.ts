@@ -14,12 +14,12 @@ import type { Subscription } from '@/types/revenue'
  * Unified daily tasks cron job
  * Consolidates revenue calculation, health scores, and sheets sync
  *
- * Vercel Cron: 0 * * * * (every hour)
+ * Vercel Cron: 0 1 * * * (1 AM daily - Free Plan limitation)
  *
- * Tasks:
- * - 1 AM: Calculate revenue (MRR/ARR)
- * - 2 AM: Calculate customer health scores
- * - 9 AM: Sync Google Sheets
+ * All tasks run sequentially at 1 AM:
+ * - Calculate revenue (MRR/ARR)
+ * - Calculate customer health scores
+ * - Sync Google Sheets
  */
 export async function GET(request: NextRequest) {
   try {
@@ -31,12 +31,12 @@ export async function GET(request: NextRequest) {
     }
 
     const now = new Date()
-    const currentHour = now.getHours()
     const results: any = {
       timestamp: now.toISOString(),
-      hour: currentHour,
       tasksExecuted: [],
     }
+
+    console.log('[Cron] Starting daily tasks at 1 AM')
 
     // Supabase client
     const supabase = createClient(
@@ -44,69 +44,61 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Task 1: Calculate Revenue (1 AM)
-    if (currentHour === 1) {
-      console.log('[Cron] Running revenue calculation at 1 AM')
-      try {
-        const revenueResult = await calculateRevenue(supabase)
-        results.tasksExecuted.push({
-          task: 'revenue_calculation',
-          status: 'success',
-          ...revenueResult,
-        })
-      } catch (error) {
-        console.error('[Cron] Revenue calculation error:', error)
-        results.tasksExecuted.push({
-          task: 'revenue_calculation',
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
+    // Task 1: Calculate Revenue
+    console.log('[Cron] Running revenue calculation')
+    try {
+      const revenueResult = await calculateRevenue(supabase)
+      results.tasksExecuted.push({
+        task: 'revenue_calculation',
+        status: 'success',
+        ...revenueResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Revenue calculation error:', error)
+      results.tasksExecuted.push({
+        task: 'revenue_calculation',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     }
 
-    // Task 2: Calculate Health Scores (2 AM)
-    if (currentHour === 2) {
-      console.log('[Cron] Running health score calculation at 2 AM')
-      try {
-        const healthResult = await calculateHealthScores(supabase)
-        results.tasksExecuted.push({
-          task: 'health_scores',
-          status: 'success',
-          ...healthResult,
-        })
-      } catch (error) {
-        console.error('[Cron] Health score calculation error:', error)
-        results.tasksExecuted.push({
-          task: 'health_scores',
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
+    // Task 2: Calculate Health Scores
+    console.log('[Cron] Running health score calculation')
+    try {
+      const healthResult = await calculateHealthScores(supabase)
+      results.tasksExecuted.push({
+        task: 'health_scores',
+        status: 'success',
+        ...healthResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Health score calculation error:', error)
+      results.tasksExecuted.push({
+        task: 'health_scores',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     }
 
-    // Task 3: Sync Google Sheets (9 AM)
-    if (currentHour === 9) {
-      console.log('[Cron] Running Google Sheets sync at 9 AM')
-      try {
-        const sheetsResult = await syncGoogleSheets(supabase)
-        results.tasksExecuted.push({
-          task: 'sheets_sync',
-          status: 'success',
-          ...sheetsResult,
-        })
-      } catch (error) {
-        console.error('[Cron] Sheets sync error:', error)
-        results.tasksExecuted.push({
-          task: 'sheets_sync',
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
+    // Task 3: Sync Google Sheets
+    console.log('[Cron] Running Google Sheets sync')
+    try {
+      const sheetsResult = await syncGoogleSheets(supabase)
+      results.tasksExecuted.push({
+        task: 'sheets_sync',
+        status: 'success',
+        ...sheetsResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Sheets sync error:', error)
+      results.tasksExecuted.push({
+        task: 'sheets_sync',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     }
 
-    if (results.tasksExecuted.length === 0) {
-      results.message = `No tasks scheduled for hour ${currentHour}`
-    }
+    console.log(`[Cron] Daily tasks completed: ${results.tasksExecuted.length} tasks executed`)
 
     return NextResponse.json(results)
   } catch (error) {
