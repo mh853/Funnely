@@ -116,6 +116,12 @@ const navItems: NavItem[] = [
     description: '구독 취소 패턴 및 예방 가능 이탈',
   },
   {
+    icon: Target,
+    label: '성장 기회',
+    href: '/admin/growth-opportunities',
+    description: '업셀 기회 및 다운셀 위험 식별',
+  },
+  {
     icon: Activity,
     label: '시스템 모니터링',
     href: '/admin/monitoring',

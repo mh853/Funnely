@@ -93,6 +93,10 @@ export const PERMISSIONS = {
 
   // 커뮤니케이션
   MANAGE_ANNOUNCEMENTS: 'manage_announcements',
+
+  // 성장 기회
+  VIEW_GROWTH_OPPORTUNITIES: 'view_growth_opportunities',
+  MANAGE_GROWTH_OPPORTUNITIES: 'manage_growth_opportunities',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
@@ -236,6 +240,20 @@ export const PERMISSION_INFO: Record<string, PermissionInfo> = {
     name: '공지사항 관리',
     description: '시스템 공지사항 작성 및 관리',
     category: '커뮤니케이션',
+  },
+
+  // 성장 기회
+  [PERMISSIONS.VIEW_GROWTH_OPPORTUNITIES]: {
+    code: PERMISSIONS.VIEW_GROWTH_OPPORTUNITIES,
+    name: '성장 기회 조회',
+    description: '업셀 기회 및 다운셀 위험 조회',
+    category: '성장 관리',
+  },
+  [PERMISSIONS.MANAGE_GROWTH_OPPORTUNITIES]: {
+    code: PERMISSIONS.MANAGE_GROWTH_OPPORTUNITIES,
+    name: '성장 기회 관리',
+    description: '성장 기회 상태 변경 및 관리',
+    category: '성장 관리',
   },
 }
 
