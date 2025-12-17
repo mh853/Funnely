@@ -66,37 +66,37 @@ export default function HealthDashboardPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Customer Health</h1>
+        <h1 className="text-2xl font-bold text-gray-900">고객 건강도</h1>
         <p className="mt-1 text-sm text-gray-500">
-          Monitor customer health scores and identify at-risk accounts
+          고객 건강도 점수를 모니터링하고 위험 고객을 식별합니다
         </p>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
         <StatCard
-          label="Critical"
+          label="위험"
           count={stats.critical}
           color="red"
           active={filter === 'critical'}
           onClick={() => setFilter(filter === 'critical' ? 'all' : 'critical')}
         />
         <StatCard
-          label="At Risk"
+          label="주의 필요"
           count={stats.at_risk}
           color="yellow"
           active={filter === 'at_risk'}
           onClick={() => setFilter(filter === 'at_risk' ? 'all' : 'at_risk')}
         />
         <StatCard
-          label="Healthy"
+          label="건강"
           count={stats.healthy}
           color="green"
           active={filter === 'healthy'}
           onClick={() => setFilter(filter === 'healthy' ? 'all' : 'healthy')}
         />
         <StatCard
-          label="Excellent"
+          label="우수"
           count={stats.excellent}
           color="blue"
           active={filter === 'excellent'}
@@ -108,7 +108,7 @@ export default function HealthDashboardPage() {
       <div className="flex items-center gap-4">
         <input
           type="text"
-          placeholder="Search companies..."
+          placeholder="회사 검색..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="block w-full max-w-md rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
@@ -118,17 +118,17 @@ export default function HealthDashboardPage() {
             onClick={() => setFilter('all')}
             className="text-sm text-gray-600 hover:text-gray-900"
           >
-            Clear filter
+            필터 초기화
           </button>
         )}
       </div>
 
       {/* List */}
       {loading ? (
-        <div className="text-center py-12 text-gray-500">Loading...</div>
+        <div className="text-center py-12 text-gray-500">로딩 중...</div>
       ) : filteredScores.length === 0 ? (
         <div className="text-center py-12 text-gray-500">
-          No health scores found
+          건강도 점수가 없습니다
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

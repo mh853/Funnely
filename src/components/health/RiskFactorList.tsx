@@ -19,9 +19,9 @@ export function RiskFactorList({ riskFactors }: RiskFactorListProps) {
   if (riskFactors.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-6">
-        <h3 className="mb-4 text-lg font-semibold">Risk Factors</h3>
+        <h3 className="mb-4 text-lg font-semibold">리스크 요인</h3>
         <div className="text-center py-8 text-gray-500">
-          No risk factors identified
+          확인된 리스크 요인이 없습니다
         </div>
       </div>
     )
@@ -44,7 +44,7 @@ export function RiskFactorList({ riskFactors }: RiskFactorListProps) {
     <div className="rounded-lg border bg-white p-6">
       <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
         <ExclamationTriangleIcon className="h-5 w-5 text-red-500" />
-        Risk Factors ({riskFactors.length})
+        리스크 요인 ({riskFactors.length})
       </h3>
       <div className="space-y-3">
         {riskFactors.map((risk, index) => (
@@ -71,12 +71,12 @@ export function RiskFactorList({ riskFactors }: RiskFactorListProps) {
                   <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
                     {risk.current_value && (
                       <span>
-                        Current: <strong>{risk.current_value}</strong>
+                        현재값: <strong>{risk.current_value}</strong>
                       </span>
                     )}
                     {risk.threshold && (
                       <span>
-                        Threshold: <strong>{risk.threshold}</strong>
+                        기준값: <strong>{risk.threshold}</strong>
                       </span>
                     )}
                   </div>

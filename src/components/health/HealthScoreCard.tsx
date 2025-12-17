@@ -38,7 +38,7 @@ export function HealthScoreCard({
       <div className="mb-4 flex items-start justify-between">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">{companyName}</h3>
-          <p className="text-sm text-gray-500">Updated {timeAgo}</p>
+          <p className="text-sm text-gray-500">{timeAgo} 업데이트</p>
         </div>
         <HealthStatusBadge status={healthStatus} />
       </div>
@@ -61,10 +61,10 @@ export function HealthScoreCard({
 
       {/* Component Scores */}
       <div className="mb-4 grid grid-cols-4 gap-3 text-sm">
-        <ScorePill label="Engagement" score={componentScores.engagement} />
-        <ScorePill label="Product" score={componentScores.productUsage} />
-        <ScorePill label="Support" score={componentScores.support} />
-        <ScorePill label="Payment" score={componentScores.payment} />
+        <ScorePill label="참여도" score={componentScores.engagement} />
+        <ScorePill label="제품사용" score={componentScores.productUsage} />
+        <ScorePill label="고객지원" score={componentScores.support} />
+        <ScorePill label="결제" score={componentScores.payment} />
       </div>
 
       {/* Alerts */}
@@ -72,13 +72,12 @@ export function HealthScoreCard({
         <div className="flex items-center gap-4 border-t pt-3 text-sm">
           {riskFactorCount > 0 && (
             <span className="text-red-600">
-              🚨 {riskFactorCount} {riskFactorCount === 1 ? 'Risk' : 'Risks'}
+              🚨 {riskFactorCount}개 리스크
             </span>
           )}
           {recommendationCount > 0 && (
             <span className="text-blue-600">
-              💡 {recommendationCount}{' '}
-              {recommendationCount === 1 ? 'Recommendation' : 'Recommendations'}
+              💡 {recommendationCount}개 권장사항
             </span>
           )}
         </div>

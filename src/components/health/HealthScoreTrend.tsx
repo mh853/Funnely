@@ -33,7 +33,7 @@ export function HealthScoreTrend({
 
   return (
     <div className="rounded-lg border bg-white p-6">
-      <h3 className="mb-4 text-lg font-semibold">30-Day Trend</h3>
+      <h3 className="mb-4 text-lg font-semibold">30일 추이</h3>
       <ResponsiveContainer width="100%" height={height}>
         <LineChart data={chartData}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />

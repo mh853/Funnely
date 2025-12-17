@@ -87,7 +87,7 @@ export default function HealthDetailPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading...</div>
+        <div className="text-gray-500">로딩 중...</div>
       </div>
     )
   }
@@ -95,24 +95,24 @@ export default function HealthDetailPage() {
   if (!healthScore) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Health score not found</div>
+        <div className="text-gray-500">건강도 점수를 찾을 수 없습니다</div>
       </div>
     )
   }
 
   const componentScores = [
     {
-      name: 'Engagement',
+      name: '참여도',
       score: healthScore.engagement_score,
       weight: '35%',
     },
     {
-      name: 'Product Usage',
+      name: '제품 사용',
       score: healthScore.product_usage_score,
       weight: '30%',
     },
-    { name: 'Support', score: healthScore.support_score, weight: '20%' },
-    { name: 'Payment', score: healthScore.payment_score, weight: '15%' },
+    { name: '고객 지원', score: healthScore.support_score, weight: '20%' },
+    { name: '결제', score: healthScore.payment_score, weight: '15%' },
   ]
 
   function getScoreColor(score: number): string {
@@ -138,7 +138,7 @@ export default function HealthDetailPage() {
               {healthScore.company.name}
             </h1>
             <p className="mt-1 text-sm text-gray-500">
-              Customer Health Score Detail
+              고객 건강도 점수 상세
             </p>
           </div>
         </div>
@@ -147,14 +147,14 @@ export default function HealthDetailPage() {
           disabled={recalculating}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:bg-gray-400 transition"
         >
-          {recalculating ? 'Recalculating...' : 'Recalculate Score'}
+          {recalculating ? '재계산 중...' : '점수 재계산'}
         </button>
       </div>
 
       {/* Overall Score Card */}
       <div className="rounded-lg border bg-white p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Overall Health Score</h2>
+          <h2 className="text-lg font-semibold">전체 건강도 점수</h2>
           <HealthStatusBadge status={healthScore.health_status} size="lg" />
         </div>
         <div className="flex items-end gap-2 mb-2">
@@ -172,7 +172,7 @@ export default function HealthDetailPage() {
           />
         </div>
         <p className="mt-2 text-sm text-gray-500">
-          Last calculated:{' '}
+          마지막 계산:{' '}
           {new Date(healthScore.calculated_at).toLocaleString('ko-KR')}
         </p>
       </div>

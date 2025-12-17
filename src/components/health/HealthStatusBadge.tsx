@@ -13,22 +13,22 @@ interface HealthStatusBadgeProps {
 
 const statusConfig = {
   critical: {
-    label: 'Critical',
+    label: '위험',
     icon: ExclamationTriangleIcon,
     className: 'bg-red-100 text-red-800 border-red-200',
   },
   at_risk: {
-    label: 'At Risk',
+    label: '주의 필요',
     icon: ExclamationCircleIcon,
     className: 'bg-yellow-100 text-yellow-800 border-yellow-200',
   },
   healthy: {
-    label: 'Healthy',
+    label: '건강',
     icon: CheckCircleIcon,
     className: 'bg-green-100 text-green-800 border-green-200',
   },
   excellent: {
-    label: 'Excellent',
+    label: '우수',
     icon: StarIcon,
     className: 'bg-blue-100 text-blue-800 border-blue-200',
   },

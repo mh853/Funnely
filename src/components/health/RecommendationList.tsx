@@ -20,9 +20,9 @@ export function RecommendationList({
   if (recommendations.length === 0) {
     return (
       <div className="rounded-lg border bg-white p-6">
-        <h3 className="mb-4 text-lg font-semibold">Recommendations</h3>
+        <h3 className="mb-4 text-lg font-semibold">권장사항</h3>
         <div className="text-center py-8 text-gray-500">
-          No recommendations at this time
+          현재 권장사항이 없습니다
         </div>
       </div>
     )
@@ -45,7 +45,7 @@ export function RecommendationList({
     <div className="rounded-lg border bg-white p-6">
       <h3 className="mb-4 text-lg font-semibold flex items-center gap-2">
         <LightBulbIcon className="h-5 w-5 text-blue-500" />
-        Recommendations ({recommendations.length})
+        권장사항 ({recommendations.length})
       </h3>
       <div className="space-y-3">
         {recommendations.map((rec, index) => (
@@ -72,7 +72,7 @@ export function RecommendationList({
             {rec.action_items && rec.action_items.length > 0 && (
               <div className="mt-3 pl-4 border-l-2 border-blue-200">
                 <p className="text-xs font-medium text-gray-700 mb-1">
-                  Action Items:
+                  실행 항목:
                 </p>
                 <ul className="list-disc list-inside space-y-1">
                   {rec.action_items.map((item, i) => (
