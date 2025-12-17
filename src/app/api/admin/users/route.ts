@@ -165,7 +165,39 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 6. 응답
+    // 6. 통계 계산 (전체 사용자 기준)
+    const totalUsers = count || 0
+    const activeUsers = usersWithRoles.filter((u) => u.is_active).length
+    const inactiveUsers = usersWithRoles.length - activeUsers
+
+    // 역할별 통계
+    const byRole: Record<string, number> = {}
+    usersWithRoles.forEach((user) => {
+      byRole[user.role] = (byRole[user.role] || 0) + 1
+    })
+
+    // 회사별 통계
+    const byCompanyMap = new Map<string, { name: string; count: number }>()
+    usersWithRoles.forEach((user) => {
+      if (user.company_id && user.company_name) {
+        const existing = byCompanyMap.get(user.company_id) || {
+          name: user.company_name,
+          count: 0,
+        }
+        existing.count++
+        byCompanyMap.set(user.company_id, existing)
+      }
+    })
+
+    const byCompany = Array.from(byCompanyMap.entries()).map(
+      ([company_id, { name, count }]) => ({
+        company_id,
+        company_name: name,
+        count,
+      })
+    )
+
+    // 7. 응답
     return NextResponse.json({
       success: true,
       users: filteredUsers,
@@ -174,6 +206,13 @@ export async function GET(request: NextRequest) {
         limit,
         offset,
         hasMore: (count || 0) > offset + limit,
+      },
+      summary: {
+        total_users: totalUsers,
+        active_users: activeUsers,
+        inactive_users: inactiveUsers,
+        by_role: byRole,
+        by_company: byCompany,
       },
     })
   } catch (error) {
