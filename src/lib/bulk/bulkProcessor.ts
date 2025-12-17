@@ -192,7 +192,7 @@ export class BulkProcessor {
           .single()
 
         const metadata = (leadForNote?.metadata as Record<string, any>) || {}
-        const notes = (metadata.notes as string[]) || []
+        const notes = (metadata.notes as Array<{ note: string; created_by: string; created_at: string }>) || []
 
         notes.push({
           note: parameters.note,
