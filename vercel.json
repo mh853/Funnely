@@ -1,16 +1,8 @@
 {
   "crons": [
     {
-      "path": "/api/cron/sync-sheets",
-      "schedule": "0 9 * * *"
-    },
-    {
-      "path": "/api/cron/calculate-health-scores",
-      "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/calculate-revenue",
-      "schedule": "0 1 * * *"
+      "path": "/api/cron/daily-tasks",
+      "schedule": "0 * * * *"
     }
   ]
 }
