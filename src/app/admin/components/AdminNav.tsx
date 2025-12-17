@@ -110,6 +110,12 @@ const navItems: NavItem[] = [
     description: '고객 건강도 점수 및 리스크 관리',
   },
   {
+    icon: TrendingUp,
+    label: '이탈 분석',
+    href: '/admin/churn',
+    description: '구독 취소 패턴 및 예방 가능 이탈',
+  },
+  {
     icon: Activity,
     label: '시스템 모니터링',
     href: '/admin/monitoring',
