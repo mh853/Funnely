@@ -18,6 +18,7 @@ import {
   DollarSign,
   Activity,
   Shield,
+  HeartPulse,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -95,6 +96,12 @@ const navItems: NavItem[] = [
     label: '매출 관리',
     href: '/admin/billing',
     description: 'MRR/ARR 및 결제 현황',
+  },
+  {
+    icon: HeartPulse,
+    label: '고객 건강도',
+    href: '/admin/health',
+    description: '고객 건강도 점수 및 리스크 관리',
   },
   {
     icon: Activity,
