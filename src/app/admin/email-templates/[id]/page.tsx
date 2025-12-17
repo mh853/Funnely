@@ -41,7 +41,7 @@ export default function EmailTemplateEditorPage() {
   })
 
   const [loading, setLoading] = useState(!isNew)
-  const [saving, setS aving] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [testEmail, setTestEmail] = useState('')
   const [sendingTest, setSendingTest] = useState(false)
   const [previewMode, setPreviewMode] = useState<'rendered' | 'code'>('rendered')

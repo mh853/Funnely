@@ -37,8 +37,8 @@ export async function POST(
       'manual',
       {
         ...triggerData,
-        triggered_by_user: adminUser.id,
-        triggered_by_email: adminUser.email,
+        triggered_by_user: adminUser.user.id,
+        triggered_by_email: adminUser.user.email,
       }
     )
 
