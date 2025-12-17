@@ -58,16 +58,19 @@ export async function GET(request: NextRequest) {
         `
         id,
         email,
+        full_name,
+        company_id,
+        is_active,
         created_at,
         last_sign_in_at,
-        profiles(full_name, company_id, companies(name))
+        companies(name)
       `
       )
       .range(offset, offset + limit - 1)
 
     // 회사 필터
     if (companyId) {
-      dataQuery = dataQuery.eq('profiles.company_id', companyId)
+      dataQuery = dataQuery.eq('company_id', companyId)
     }
 
     // 정렬
@@ -106,10 +109,10 @@ export async function GET(request: NextRequest) {
           .select('id', { count: 'exact', head: true })
           .eq('created_by', user.id)
 
-        const profile = Array.isArray(user.profiles)
-          ? user.profiles[0]
-          : user.profiles
-        const company = profile?.companies
+        // companies는 배열 또는 단일 객체일 수 있음
+        const company = Array.isArray(user.companies)
+          ? user.companies[0]
+          : user.companies
 
         // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 'user')
         let primaryRole = 'user'
@@ -125,15 +128,15 @@ export async function GET(request: NextRequest) {
         return {
           id: user.id,
           email: user.email,
-          full_name: profile?.full_name || null,
-          company_id: profile?.company_id || null,
+          full_name: user.full_name || null,
+          company_id: user.company_id || null,
           company_name: company?.name || null,
           company: company ? { name: company.name } : null,
           role: primaryRole,
           created_at: user.created_at,
           last_sign_in_at: user.last_sign_in_at,
           last_login_at: user.last_sign_in_at, // 프론트엔드 호환성
-          is_active: !!user.last_sign_in_at, // 한 번이라도 로그인했으면 활성
+          is_active: user.is_active ?? !!user.last_sign_in_at,
           stats: {
             total_leads: totalLeads || 0,
             total_landing_pages: totalLandingPages || 0,

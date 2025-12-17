@@ -58,8 +58,7 @@ export async function GET(request: NextRequest) {
         `
         id,
         name,
-        slug,
-        status,
+        is_active,
         created_at,
         updated_at
       `
@@ -73,7 +72,8 @@ export async function GET(request: NextRequest) {
 
     // 상태 필터
     if (status) {
-      dataQuery = dataQuery.eq('status', status)
+      const isActive = status === 'active'
+      dataQuery = dataQuery.eq('is_active', isActive)
     }
 
     // 정렬
