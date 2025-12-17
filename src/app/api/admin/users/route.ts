@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 
     const { count } = await countQuery
 
-    // 데이터 쿼리
+    // 데이터 쿼리 (role 컬럼 추가)
     let dataQuery = supabase
       .from('users')
       .select(
@@ -60,6 +60,7 @@ export async function GET(request: NextRequest) {
         email,
         full_name,
         company_id,
+        role,
         is_active,
         created_at,
         last_login,
@@ -88,30 +89,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 5. 각 사용자의 역할 정보 조회 (통계는 제거)
+    // 5. 각 사용자의 역할 정보 조회 (users.role 우선 사용)
     const usersWithRoles = await Promise.all(
       (usersData || []).map(async (user: any) => {
-        // 관리자 역할 조회
-        const { data: roleAssignments } = await supabase
-          .from('admin_role_assignments')
-          .select('role:admin_roles(id, name)')
-          .eq('user_id', user.id)
-
         // companies는 배열 또는 단일 객체일 수 있음
         const company = Array.isArray(user.companies)
           ? user.companies[0]
           : user.companies
 
-        // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 '일반 사용자')
-        let primaryRole = '일반 사용자'
-        if (roleAssignments && roleAssignments.length > 0) {
-          const firstRole = roleAssignments[0].role
-          // role이 배열이면 첫 번째 요소, 아니면 그대로 사용
-          const roleObj = Array.isArray(firstRole) ? firstRole[0] : firstRole
-          if (roleObj && typeof roleObj === 'object' && 'name' in roleObj) {
-            primaryRole = (roleObj as any).name || '일반 사용자'
-          }
-        }
+        // users.role 컬럼의 값을 사용 (실제 업무 역할)
+        // role 값이 없으면 기본값으로 '일반 사용자' 사용
+        const primaryRole = user.role || '일반 사용자'
 
         return {
           id: user.id,
@@ -125,8 +113,6 @@ export async function GET(request: NextRequest) {
           last_sign_in_at: user.last_login,
           last_login_at: user.last_login, // 프론트엔드 호환성
           is_active: user.is_active ?? false,
-          admin_roles:
-            roleAssignments?.map((ra: any) => ra.role).filter(Boolean) || [],
         }
       })
     )
