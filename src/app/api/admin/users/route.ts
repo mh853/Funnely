@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
         company_id,
         is_active,
         created_at,
-        last_sign_in_at,
+        last_login,
         companies(name)
       `
       )
@@ -134,9 +134,9 @@ export async function GET(request: NextRequest) {
           company: company ? { name: company.name } : null,
           role: primaryRole,
           created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
-          last_login_at: user.last_sign_in_at, // 프론트엔드 호환성
-          is_active: user.is_active ?? !!user.last_sign_in_at,
+          last_sign_in_at: user.last_login,
+          last_login_at: user.last_login, // 프론트엔드 호환성
+          is_active: user.is_active ?? !!user.last_login,
           stats: {
             total_leads: totalLeads || 0,
             total_landing_pages: totalLandingPages || 0,
