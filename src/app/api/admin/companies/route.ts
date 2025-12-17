@@ -17,8 +17,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    // 2. 권한 체크 (is_super_admin이면 권한 체크 스킵)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    }
 
     // 3. 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url)
