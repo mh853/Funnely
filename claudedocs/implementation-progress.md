@@ -1,10 +1,10 @@
 # 어드민 시스템 고도화 구현 진행 상황
 
-## 📊 전체 진행률: 20%
+## 📊 전체 진행률: 33%
 
 **시작일**: 2025-12-16
 **예상 완료일**: 2026-03-16 (13주)
-**현재 상태**: Phase 2.1 완료 (고객 건강도 계산 로직 - 25% 완료)
+**현재 상태**: Phase 2 완료 (고객 성공 관리 - 100% 완료), RLS 보안 마이그레이션 실행 대기 중
 
 ---
 
@@ -19,14 +19,14 @@
 - [x] 1.3 역할 기반 접근 제어 (RBAC)
 - [x] 1.4 기본 API 엔드포인트
 
-### Phase 2: 고객 성공 관리 (3/4 완료)
+### Phase 2: 고객 성공 관리 (4/4 완료) ✅
 **예상 기간**: 2-3주
-**진행률**: 75%
+**진행률**: 100%
 
 - [x] 2.1 고객 건강도 계산 로직
 - [x] 2.2 건강도 대시보드 UI
 - [x] 2.3 일일 배치 작업 (Vercel Cron)
-- [ ] 2.4 기능 사용 분석
+- [x] 2.4 기능 사용 분석
 
 ### Phase 3: 재무 및 수익 관리 (0/4 완료)
 **예상 기간**: 2주
@@ -519,6 +519,109 @@
    - 메시지: "feat: 고객 건강도 페이지 한글화"
 
 **다음 작업**: Phase 2.4 - 기능 사용 분석 (참고문서 확인 후)
+
+---
+
+### 2025-12-17: Phase 2.4 - 기능 사용 분석 ✅
+**작업 시작**: 2025-12-17
+**상태**: 완료 ✅
+
+#### 완료 항목:
+1. ✅ 설계 문서 작성
+   - `claudedocs/phase2-4-design.md`
+   - 7개 추적 기능 정의 (핵심/협업/고급)
+   - 추천 로직 설계
+
+2. ✅ TypeScript 타입 정의
+   - `src/types/features.ts`
+   - TRACKED_FEATURES 상수 (7개 기능)
+   - FEATURE_CATEGORIES 상수
+   - FeatureInfo, FeatureRecommendation, FeatureAnalysis 인터페이스
+
+3. ✅ 추천 엔진 구현
+   - `src/lib/analytics/feature-recommendations.ts`
+   - 미사용 핵심 기능 → 우선순위 High
+   - 30일 이상 미사용 → 우선순위 Medium
+   - 팀 규모별 추천 (2명 이상 → 팀 초대)
+
+4. ✅ API 엔드포인트 구현
+   - `src/app/api/admin/companies/[id]/features/route.ts`
+   - 회사별 기능 사용 분석
+   - 활용률 계산
+   - 권장사항 생성
+
+5. ✅ UI 컴포넌트 구현
+   - `src/app/admin/companies/[id]/components/FeaturesTab.tsx`
+   - 요약 통계 카드 (전체/사용중/활용률)
+   - 카테고리별 기능 목록
+   - 권장사항 표시
+
+6. ✅ 회사 상세 페이지 통합
+   - `src/app/admin/companies/[id]/page.tsx`
+   - "기능 사용" 탭 추가
+
+7. ✅ 빌드 검증
+   - TypeScript 타입 체크 통과
+   - Next.js 프로덕션 빌드 성공
+
+8. ✅ Git 커밋 및 푸시
+   - Commit: 3d6a90c
+   - 메시지: "feat: Phase 2.4 - Feature Usage Analysis Implementation"
+
+**다음 작업**: Phase 3 - 재무 및 수익 관리 (RLS 보안 수정 후)
+
+---
+
+### 2025-12-17: 전체 보안 취약점 해결 🔒
+**작업 시작**: 2025-12-17
+**상태**: 마이그레이션 파일 생성 완료, 실행 준비
+
+#### 발견된 문제:
+**Priority 1 (ERROR)**: RLS 미활성화
+- 15개 테이블의 RLS 비활성화 보안 문제 (CRITICAL)
+- **users 테이블**: 정책은 있지만 RLS 비활성화
+- **admin 테이블 13개**: 모두 RLS 비활성화
+
+**Priority 2 (WARN)**: 함수 보안 경고
+- 18개 함수의 search_path 미설정 (SQL Injection 위험)
+- 1개 materialized view의 과도한 접근 권한
+
+**Priority 3 (WARN)**: 비밀번호 보호
+- Leaked Password Protection 비활성화
+
+#### 완료 항목:
+1. ✅ RLS 보안 마이그레이션 파일 생성
+   - `supabase/migrations/20251217000000_enable_rls_security.sql`
+   - 15개 테이블 RLS 활성화
+   - 역할 기반 정책 생성
+   - 검증 쿼리 포함
+
+2. ✅ 함수 보안 마이그레이션 파일 생성
+   - `supabase/migrations/20251217000001_fix_security_warnings.sql`
+   - 18개 함수 search_path 설정
+   - admin_company_stats 뷰 접근 제한
+   - 검증 쿼리 포함
+
+3. ✅ 정책 설계
+   - **Super Admin 전용**: admin_roles, admin_role_assignments
+   - **Finance 역할**: revenue_metrics, churn_records (SELECT)
+   - **일반 Admin**: customer_health_scores, onboarding_progress, feature_usage_tracking, etc.
+
+4. ✅ 실행 가이드 작성 (3개 문서)
+   - `claudedocs/rls-migration-guide.md`: RLS 수정 가이드
+   - `claudedocs/security-warnings-fix-guide.md`: 함수 보안 수정 가이드
+   - `claudedocs/complete-security-fix-guide.md`: 통합 실행 가이드
+
+#### 대기 중인 작업:
+- [ ] Step 1: RLS 마이그레이션 실행 (5분)
+- [ ] Step 2: 함수 보안 마이그레이션 실행 (3분)
+- [ ] Step 3: 비밀번호 보호 활성화 (1분)
+- [ ] 검증: Supabase 린터 재실행 (보안 경고 0개 확인)
+- [ ] Git 커밋 및 푸시
+
+**예상 소요 시간**: 10-15분
+
+**다음 작업**: 보안 마이그레이션 실행 및 검증 후 Phase 3.1 시작
 
 ---
 

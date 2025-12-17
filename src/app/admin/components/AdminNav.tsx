@@ -93,9 +93,15 @@ const navItems: NavItem[] = [
   },
   {
     icon: DollarSign,
+    label: '수익 대시보드',
+    href: '/admin/revenue',
+    description: 'MRR/ARR 및 수익 추이',
+  },
+  {
+    icon: DollarSign,
     label: '매출 관리',
     href: '/admin/billing',
-    description: 'MRR/ARR 및 결제 현황',
+    description: '결제 및 청구 현황',
   },
   {
     icon: HeartPulse,

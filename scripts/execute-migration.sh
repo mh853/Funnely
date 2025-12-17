@@ -1,36 +1,31 @@
 #!/bin/bash
 
-# Execute admin enhancement migration
-# This script applies the migration SQL file to the Supabase database
+# RLS Security Migration Execution Script
+# This script executes the RLS security migration via Supabase SQL Editor
 
-set -e
-
-echo "📁 Loading environment variables..."
-source .env.local
-
-if [ -z "$DATABASE_URL" ]; then
-  echo "❌ DATABASE_URL not found in .env.local"
-  exit 1
-fi
-
-echo "✅ Environment loaded"
+echo "🔒 RLS Security Migration"
+echo "=========================="
 echo ""
-echo "🚀 Applying migration: 20251216000000_admin_enhancement_schema.sql"
+echo "⚠️  This migration will:"
+echo "  1. Enable Row Level Security on 15 tables"
+echo "  2. Create role-based access policies"
+echo "  3. Verify all security vulnerabilities are resolved"
 echo ""
-
-# Use psql if available, otherwise provide manual instructions
-if command -v psql &> /dev/null; then
-  psql "$DATABASE_URL" -f supabase/migrations/20251216000000_admin_enhancement_schema.sql
-  echo ""
-  echo "✅ Migration applied successfully!"
-else
-  echo "⚠️  psql command not found."
-  echo ""
-  echo "Please apply the migration manually via Supabase Dashboard:"
-  echo ""
-  echo "1. Go to: https://supabase.com/dashboard/project/wsrjfdnxsggwymlrfqcc/sql/new"
-  echo "2. Open file: supabase/migrations/20251216000000_admin_enhancement_schema.sql"
-  echo "3. Copy and paste the SQL into the editor"
-  echo "4. Click 'Run' to execute"
-  echo ""
-fi
+echo "📋 Migration file: supabase/migrations/20251217000000_enable_rls_security.sql"
+echo ""
+echo "🚀 To execute this migration:"
+echo ""
+echo "Option 1: Supabase Dashboard (Recommended)"
+echo "  1. Open: https://supabase.com/dashboard/project/gprrqdhmnzsimkzdhfhh/sql"
+echo "  2. Copy contents from: supabase/migrations/20251217000000_enable_rls_security.sql"
+echo "  3. Paste into SQL Editor"
+echo "  4. Click 'Run' button"
+echo "  5. Verify success message"
+echo ""
+echo "Option 2: Local Supabase CLI"
+echo "  npx supabase migration up"
+echo ""
+echo "✅ After execution, verify:"
+echo "  - Check for '🎉 All security vulnerabilities resolved!' message"
+echo "  - Confirm RLS enabled on 15/15 tables"
+echo ""
