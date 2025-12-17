@@ -8,6 +8,7 @@ import {
   parseSheetToLeads,
   ColumnMapping,
 } from '@/lib/google-sheets'
+import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
 
 /**
@@ -20,6 +21,7 @@ import type { Subscription } from '@/types/revenue'
  * - Calculate revenue (MRR/ARR)
  * - Calculate customer health scores
  * - Sync Google Sheets
+ * - Detect growth opportunities
  */
 export async function GET(request: NextRequest) {
   try {
@@ -93,6 +95,24 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Sheets sync error:', error)
       results.tasksExecuted.push({
         task: 'sheets_sync',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 4: Detect Growth Opportunities
+    console.log('[Cron] Running growth opportunity detection')
+    try {
+      const growthResult = await detectGrowthOpportunities(supabase)
+      results.tasksExecuted.push({
+        task: 'growth_opportunities',
+        status: growthResult.success ? 'success' : 'partial',
+        ...growthResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Growth detection error:', error)
+      results.tasksExecuted.push({
+        task: 'growth_opportunities',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })

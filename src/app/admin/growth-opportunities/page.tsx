@@ -7,6 +7,7 @@ export default function GrowthOpportunitiesPage() {
   const [data, setData] = useState<GrowthOpportunitiesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [detecting, setDetecting] = useState(false)
   const [filter, setFilter] = useState({
     type: 'all',
     status: 'active',
@@ -50,6 +51,65 @@ export default function GrowthOpportunitiesPage() {
     }
   }
 
+  async function runDetection() {
+    try {
+      setDetecting(true)
+      setError(null)
+
+      const response = await fetch('/api/admin/growth-opportunities/detect', {
+        method: 'POST',
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to run detection')
+      }
+
+      const result = await response.json()
+
+      if (result.success) {
+        alert(
+          `감지 완료!\n새로운 기회: ${result.detected}개\n업데이트: ${result.updated}개\n해제: ${result.dismissed}개`
+        )
+        fetchOpportunities() // Refresh list
+      } else {
+        alert(`감지 중 오류 발생:\n${result.errors?.join('\n') || 'Unknown error'}`)
+      }
+    } catch (err) {
+      console.error('Error running detection:', err)
+      setError(
+        err instanceof Error ? err.message : 'Failed to run detection'
+      )
+    } finally {
+      setDetecting(false)
+    }
+  }
+
+  async function updateStatus(
+    opportunityId: string,
+    status: string,
+    notes?: string
+  ) {
+    try {
+      const response = await fetch(
+        `/api/admin/growth-opportunities/${opportunityId}/update`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status, notes }),
+        }
+      )
+
+      if (!response.ok) {
+        throw new Error('Failed to update status')
+      }
+
+      fetchOpportunities() // Refresh list
+    } catch (err) {
+      console.error('Error updating status:', err)
+      alert('상태 업데이트에 실패했습니다')
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -89,11 +149,27 @@ export default function GrowthOpportunitiesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* 헤더 */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">성장 기회</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          업셀 기회 및 다운셀 위험을 식별하고 관리합니다
-        </p>
+      <div className="mb-6 flex justify-between items-start">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">성장 기회</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            업셀 기회 및 다운셀 위험을 식별하고 관리합니다
+          </p>
+        </div>
+        <button
+          onClick={runDetection}
+          disabled={detecting}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {detecting ? (
+            <>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+              감지 중...
+            </>
+          ) : (
+            '기회 감지 실행'
+          )}
+        </button>
       </div>
 
       {/* 요약 카드 */}
@@ -213,6 +289,9 @@ export default function GrowthOpportunitiesPage() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   MRR 영향
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  액션
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -271,6 +350,32 @@ export default function GrowthOpportunitiesPage() {
                       <span className="text-red-600 font-medium">
                         -{opp.potential_lost_mrr.toLocaleString()}원
                       </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm space-x-2">
+                    {opp.status === 'active' && (
+                      <>
+                        <button
+                          onClick={() => updateStatus(opp.id, 'contacted')}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          연락함
+                        </button>
+                        <button
+                          onClick={() => updateStatus(opp.id, 'dismissed')}
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          무시
+                        </button>
+                      </>
+                    )}
+                    {opp.status === 'contacted' && (
+                      <button
+                        onClick={() => updateStatus(opp.id, 'converted')}
+                        className="text-green-600 hover:text-green-900"
+                      >
+                        전환 완료
+                      </button>
                     )}
                   </td>
                 </tr>
