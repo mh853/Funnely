@@ -83,7 +83,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 5. 각 사용자의 역할 정보 조회
+    // 5. 각 사용자의 역할 정보 및 통계 조회
     const usersWithRoles = await Promise.all(
       (usersData || []).map(async (user: any) => {
         // 관리자 역할 조회
@@ -92,10 +92,31 @@ export async function GET(request: NextRequest) {
           .select('role:admin_roles(id, name)')
           .eq('user_id', user.id)
 
+        // 리드 수 조회
+        const { count: totalLeads } = await supabase
+          .from('leads')
+          .select('id', { count: 'exact', head: true })
+          .eq('created_by', user.id)
+
+        // 랜딩페이지 수 조회
+        const { count: totalLandingPages } = await supabase
+          .from('landing_pages')
+          .select('id', { count: 'exact', head: true })
+          .eq('created_by', user.id)
+
         const profile = Array.isArray(user.profiles)
           ? user.profiles[0]
           : user.profiles
         const company = profile?.companies
+
+        // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 'user')
+        let primaryRole = 'user'
+        if (roleAssignments && roleAssignments.length > 0) {
+          const firstRole = roleAssignments[0].role as { id: string; name: string } | undefined
+          if (firstRole && typeof firstRole === 'object' && 'name' in firstRole) {
+            primaryRole = firstRole.name || 'user'
+          }
+        }
 
         return {
           id: user.id,
@@ -103,8 +124,16 @@ export async function GET(request: NextRequest) {
           full_name: profile?.full_name || null,
           company_id: profile?.company_id || null,
           company_name: company?.name || null,
+          company: company ? { name: company.name } : null,
+          role: primaryRole,
           created_at: user.created_at,
           last_sign_in_at: user.last_sign_in_at,
+          last_login_at: user.last_sign_in_at, // 프론트엔드 호환성
+          is_active: !!user.last_sign_in_at, // 한 번이라도 로그인했으면 활성
+          stats: {
+            total_leads: totalLeads || 0,
+            total_landing_pages: totalLandingPages || 0,
+          },
           admin_roles:
             roleAssignments?.map((ra: any) => ra.role).filter(Boolean) || [],
         }
