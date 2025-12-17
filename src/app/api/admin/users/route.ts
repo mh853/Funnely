@@ -97,11 +97,11 @@ export async function GET(request: NextRequest) {
           .select('role:admin_roles(id, name)')
           .eq('user_id', user.id)
 
-        // 리드 수 조회
+        // 리드 수 조회 (company_id 기준)
         const { count: totalLeads } = await supabase
           .from('leads')
           .select('id', { count: 'exact', head: true })
-          .eq('created_by', user.id)
+          .eq('company_id', user.company_id || '')
 
         // 랜딩페이지 수 조회
         const { count: totalLandingPages } = await supabase
