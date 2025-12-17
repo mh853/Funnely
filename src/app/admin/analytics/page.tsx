@@ -105,9 +105,9 @@ export default function AnalyticsPage() {
 
       // 병렬로 데이터 조회
       const [conversionRes, channelRes, trendRes] = await Promise.all([
-        fetch(`/admin/api/analytics/conversion?${params}`),
-        fetch(`/admin/api/analytics/channels?${params}`),
-        fetch(`/admin/api/analytics/trends?${params}`),
+        fetch(`/api/admin/analytics/conversion?${params}`),
+        fetch(`/api/admin/analytics/channels?${params}`),
+        fetch(`/api/admin/analytics/trends?${params}`),
       ])
 
       if (!conversionRes.ok || !channelRes.ok || !trendRes.ok) {

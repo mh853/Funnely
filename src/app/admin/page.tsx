@@ -52,7 +52,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function fetchStats() {
       try {
-        const response = await fetch('/admin/api/stats')
+        const response = await fetch('/api/admin/stats')
         if (!response.ok) {
           throw new Error('Failed to fetch stats')
         }

@@ -29,7 +29,7 @@ export default function ActivityTab({ companyId }: ActivityTabProps) {
       })
 
       const response = await fetch(
-        `/admin/api/companies/${companyId}/activities?${params}`
+        `/api/admin/companies/${companyId}/activities?${params}`
       )
       if (!response.ok) throw new Error('Failed to fetch activities')
 

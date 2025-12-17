@@ -97,7 +97,7 @@ export default function LeadsPage() {
       if (search) params.set('search', search)
       if (statusFilter && statusFilter !== 'all') params.set('status', statusFilter)
 
-      const response = await fetch(`/admin/api/leads?${params}`)
+      const response = await fetch(`/api/admin/leads?${params}`)
       if (!response.ok) throw new Error('Failed to fetch leads')
 
       const result = await response.json()

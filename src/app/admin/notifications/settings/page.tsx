@@ -68,7 +68,7 @@ export default function NotificationSettingsPage() {
   async function fetchSettings() {
     try {
       setLoading(true)
-      const response = await fetch('/admin/api/notifications/settings')
+      const response = await fetch('/api/admin/notifications/settings')
       if (!response.ok) throw new Error('Failed to fetch settings')
 
       const result = await response.json()
@@ -103,7 +103,7 @@ export default function NotificationSettingsPage() {
         }))
       )
 
-      const response = await fetch('/admin/api/notifications/settings', {
+      const response = await fetch('/api/admin/notifications/settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

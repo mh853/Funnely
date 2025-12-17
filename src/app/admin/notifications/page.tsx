@@ -85,7 +85,7 @@ export default function NotificationsPage() {
         params.set('unread_only', 'true')
       }
 
-      const response = await fetch(`/admin/api/notifications?${params}`)
+      const response = await fetch(`/api/admin/notifications?${params}`)
       if (!response.ok) throw new Error('Failed to fetch notifications')
 
       const result = await response.json()
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
 
   async function handleMarkAsRead(notificationIds: string[]) {
     try {
-      const response = await fetch('/admin/api/notifications/mark-read', {
+      const response = await fetch('/api/admin/notifications/mark-read', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -34,7 +34,7 @@ export default function UsersPage() {
 
   async function fetchCompanies() {
     try {
-      const response = await fetch('/admin/api/companies?limit=1000')
+      const response = await fetch('/api/admin/companies?limit=1000')
       if (!response.ok) throw new Error('Failed to fetch companies')
 
       const result = await response.json()
@@ -59,7 +59,7 @@ export default function UsersPage() {
         sortOrder: 'desc',
       })
 
-      const response = await fetch(`/admin/api/users?${params}`)
+      const response = await fetch(`/api/admin/users?${params}`)
       if (!response.ok) throw new Error('Failed to fetch users')
 
       const result = await response.json()

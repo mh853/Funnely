@@ -27,7 +27,7 @@ export default function BillingPage() {
   async function fetchMetrics() {
     try {
       setLoading(true)
-      const response = await fetch('/admin/api/subscriptions/metrics')
+      const response = await fetch('/api/admin/subscriptions/metrics')
       if (!response.ok) throw new Error('Failed to fetch metrics')
 
       const result = await response.json()

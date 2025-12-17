@@ -28,7 +28,7 @@ export default function CompanyDetailPage() {
   async function fetchCompany() {
     try {
       setLoading(true)
-      const response = await fetch(`/admin/api/companies/${companyId}`)
+      const response = await fetch(`/api/admin/companies/${companyId}`)
       if (!response.ok) throw new Error('Failed to fetch company')
 
       const result = await response.json()
@@ -47,7 +47,7 @@ export default function CompanyDetailPage() {
 
     try {
       setIsUpdating(true)
-      const response = await fetch(`/admin/api/companies/${companyId}`, {
+      const response = await fetch(`/api/admin/companies/${companyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !data.company.is_active }),

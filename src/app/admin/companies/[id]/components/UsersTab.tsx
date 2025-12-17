@@ -31,7 +31,7 @@ export default function UsersTab({ companyId }: UsersTabProps) {
       })
 
       const response = await fetch(
-        `/admin/api/companies/${companyId}/users?${params}`
+        `/api/admin/companies/${companyId}/users?${params}`
       )
       if (!response.ok) throw new Error('Failed to fetch users')
 

@@ -71,7 +71,7 @@ export default function ReportsPage() {
         limit: '20',
       })
 
-      const response = await fetch(`/admin/api/reports?${params}`)
+      const response = await fetch(`/api/admin/reports?${params}`)
       if (!response.ok) throw new Error('Failed to fetch reports')
 
       const result = await response.json()
@@ -85,7 +85,7 @@ export default function ReportsPage() {
 
   async function handleExport(reportId: string, reportName: string) {
     try {
-      const response = await fetch(`/admin/api/reports/${reportId}/export`)
+      const response = await fetch(`/api/admin/reports/${reportId}/export`)
       if (!response.ok) throw new Error('Failed to export report')
 
       const blob = await response.blob()
@@ -107,7 +107,7 @@ export default function ReportsPage() {
     if (!confirm('이 리포트를 삭제하시겠습니까?')) return
 
     try {
-      const response = await fetch(`/admin/api/reports/${reportId}`, {
+      const response = await fetch(`/api/admin/reports/${reportId}`, {
         method: 'DELETE',
       })
 

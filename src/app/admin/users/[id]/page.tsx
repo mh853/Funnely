@@ -25,7 +25,7 @@ export default function UserDetailPage() {
   async function fetchUser() {
     try {
       setLoading(true)
-      const response = await fetch(`/admin/api/users/${userId}`)
+      const response = await fetch(`/api/admin/users/${userId}`)
       if (!response.ok) throw new Error('Failed to fetch user')
 
       const data = await response.json()
@@ -44,7 +44,7 @@ export default function UserDetailPage() {
 
     try {
       setIsUpdating(true)
-      const response = await fetch(`/admin/api/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: !user.is_active }),
@@ -66,7 +66,7 @@ export default function UserDetailPage() {
 
     try {
       setIsUpdating(true)
-      const response = await fetch(`/admin/api/users/${userId}`, {
+      const response = await fetch(`/api/admin/users/${userId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ role: newRole }),
@@ -88,7 +88,7 @@ export default function UserDetailPage() {
     if (!confirm(`${user.email}에게 비밀번호 재설정 이메일을 발송하시겠습니까?`)) return
 
     try {
-      const response = await fetch(`/admin/api/users/${userId}/reset-password`, {
+      const response = await fetch(`/api/admin/users/${userId}/reset-password`, {
         method: 'POST',
       })
 

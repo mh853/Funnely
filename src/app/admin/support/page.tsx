@@ -109,9 +109,9 @@ export default function AdminSupportPage() {
       setLoading(true)
       const [ticketsResponse, statsResponse] = await Promise.all([
         fetch(
-          `/admin/api/support/tickets?${filter !== 'all' ? `status=${filter}` : ''}`
+          `/api/admin/support/tickets?${filter !== 'all' ? `status=${filter}` : ''}`
         ),
-        fetch('/admin/api/support/stats'),
+        fetch('/api/admin/support/stats'),
       ])
 
       if (ticketsResponse.ok) {

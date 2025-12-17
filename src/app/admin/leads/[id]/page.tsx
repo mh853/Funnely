@@ -106,7 +106,7 @@ export default function LeadDetailPage() {
   async function fetchLeadDetail() {
     try {
       setLoading(true)
-      const response = await fetch(`/admin/api/leads/${leadId}`)
+      const response = await fetch(`/api/admin/leads/${leadId}`)
       if (!response.ok) throw new Error('Failed to fetch lead')
 
       const data = await response.json()

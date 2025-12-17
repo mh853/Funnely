@@ -99,7 +99,7 @@ export default function SubscriptionsPage() {
         params.set('status', filter)
       }
 
-      const response = await fetch(`/admin/api/subscriptions?${params}`)
+      const response = await fetch(`/api/admin/subscriptions?${params}`)
       if (!response.ok) throw new Error('Failed to fetch subscriptions')
 
       const result = await response.json()
@@ -116,7 +116,7 @@ export default function SubscriptionsPage() {
       return
 
     try {
-      const response = await fetch(`/admin/api/subscriptions/${subscriptionId}`, {
+      const response = await fetch(`/api/admin/subscriptions/${subscriptionId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

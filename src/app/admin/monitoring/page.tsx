@@ -59,8 +59,8 @@ export default function MonitoringPage() {
     try {
       setLoading(true)
       const [healthResponse, errorsResponse] = await Promise.all([
-        fetch('/admin/api/monitoring/health'),
-        fetch('/admin/api/monitoring/errors'),
+        fetch('/api/admin/monitoring/health'),
+        fetch('/api/admin/monitoring/errors'),
       ])
 
       if (healthResponse.ok) {
@@ -82,7 +82,7 @@ export default function MonitoringPage() {
   async function runHealthCheck() {
     try {
       setChecking(true)
-      const response = await fetch('/admin/api/monitoring/health', {
+      const response = await fetch('/api/admin/monitoring/health', {
         method: 'POST',
       })
 

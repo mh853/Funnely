@@ -32,7 +32,7 @@ export default function ActivityTab({ userId }: ActivityTabProps) {
         limit: '20',
       })
 
-      const response = await fetch(`/admin/api/users/${userId}/activities?${params}`)
+      const response = await fetch(`/api/admin/users/${userId}/activities?${params}`)
       if (!response.ok) throw new Error('Failed to fetch activities')
 
       const result = await response.json()

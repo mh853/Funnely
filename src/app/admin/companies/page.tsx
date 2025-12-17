@@ -41,7 +41,7 @@ export default function CompaniesPage() {
         sortOrder: 'desc',
       })
 
-      const response = await fetch(`/admin/api/companies?${params}`)
+      const response = await fetch(`/api/admin/companies?${params}`)
       if (!response.ok) throw new Error('Failed to fetch companies')
 
       const result = await response.json()

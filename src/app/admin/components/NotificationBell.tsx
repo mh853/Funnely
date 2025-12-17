@@ -18,7 +18,7 @@ export default function NotificationBell() {
 
   async function fetchUnreadCount() {
     try {
-      const response = await fetch('/admin/api/notifications?unread_only=true&limit=1')
+      const response = await fetch('/api/admin/notifications?unread_only=true&limit=1')
       if (!response.ok) return
 
       const data = await response.json()

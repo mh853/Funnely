@@ -123,7 +123,7 @@ export default function AdminTicketDetailPage({
   async function fetchTicketDetail() {
     try {
       setLoading(true)
-      const response = await fetch(`/admin/api/support/tickets/${params.id}`)
+      const response = await fetch(`/api/admin/support/tickets/${params.id}`)
       if (!response.ok) throw new Error('Failed to fetch ticket')
 
       const result = await response.json()
@@ -144,7 +144,7 @@ export default function AdminTicketDetailPage({
     try {
       setSending(true)
       const response = await fetch(
-        `/admin/api/support/tickets/${params.id}/messages`,
+        `/api/admin/support/tickets/${params.id}/messages`,
         {
           method: 'POST',
           headers: {
@@ -175,7 +175,7 @@ export default function AdminTicketDetailPage({
 
     try {
       setUpdating(true)
-      const response = await fetch(`/admin/api/support/tickets/${params.id}`, {
+      const response = await fetch(`/api/admin/support/tickets/${params.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -200,7 +200,7 @@ export default function AdminTicketDetailPage({
 
     try {
       setUpdating(true)
-      const response = await fetch(`/admin/api/support/tickets/${params.id}`, {
+      const response = await fetch(`/api/admin/support/tickets/${params.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

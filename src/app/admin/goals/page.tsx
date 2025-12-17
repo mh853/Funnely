@@ -83,7 +83,7 @@ export default function GoalsPage() {
         params.set('status', filter)
       }
 
-      const response = await fetch(`/admin/api/goals?${params}`)
+      const response = await fetch(`/api/admin/goals?${params}`)
       if (!response.ok) throw new Error('Failed to fetch goals')
 
       const result = await response.json()
