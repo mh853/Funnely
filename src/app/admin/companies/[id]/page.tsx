@@ -6,9 +6,10 @@ import CompanyHeader from './components/CompanyHeader'
 import OverviewTab from './components/OverviewTab'
 import UsersTab from './components/UsersTab'
 import ActivityTab from './components/ActivityTab'
+import FeaturesTab from './components/FeaturesTab'
 import type { CompanyDetailResponse } from '@/types/admin'
 
-type TabType = 'overview' | 'users' | 'activities'
+type TabType = 'overview' | 'users' | 'features' | 'activities'
 
 export default function CompanyDetailPage() {
   const params = useParams()
@@ -88,6 +89,7 @@ export default function CompanyDetailPage() {
   const tabs = [
     { id: 'overview' as TabType, label: '개요' },
     { id: 'users' as TabType, label: '사용자' },
+    { id: 'features' as TabType, label: '기능 사용' },
     { id: 'activities' as TabType, label: '활동 로그' },
   ]
 
@@ -125,6 +127,7 @@ export default function CompanyDetailPage() {
       <div className="p-8">
         {activeTab === 'overview' && <OverviewTab company={data.company} />}
         {activeTab === 'users' && <UsersTab companyId={companyId} />}
+        {activeTab === 'features' && <FeaturesTab companyId={companyId} />}
         {activeTab === 'activities' && <ActivityTab companyId={companyId} />}
       </div>
     </div>
