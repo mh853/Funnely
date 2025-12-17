@@ -97,6 +97,11 @@ export const PERMISSIONS = {
   // 성장 기회
   VIEW_GROWTH_OPPORTUNITIES: 'view_growth_opportunities',
   MANAGE_GROWTH_OPPORTUNITIES: 'manage_growth_opportunities',
+
+  // 워크플로우
+  VIEW_WORKFLOWS: 'view_workflows',
+  MANAGE_WORKFLOWS: 'manage_workflows',
+  EXECUTE_WORKFLOWS: 'execute_workflows',
 } as const
 
 export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS]
@@ -255,6 +260,26 @@ export const PERMISSION_INFO: Record<string, PermissionInfo> = {
     description: '성장 기회 상태 변경 및 관리',
     category: '성장 관리',
   },
+
+  // 워크플로우
+  [PERMISSIONS.VIEW_WORKFLOWS]: {
+    code: PERMISSIONS.VIEW_WORKFLOWS,
+    name: '워크플로우 조회',
+    description: '자동화 워크플로우 조회 및 실행 로그 확인',
+    category: '자동화',
+  },
+  [PERMISSIONS.MANAGE_WORKFLOWS]: {
+    code: PERMISSIONS.MANAGE_WORKFLOWS,
+    name: '워크플로우 관리',
+    description: '워크플로우 생성, 수정, 삭제, 활성화/비활성화',
+    category: '자동화',
+  },
+  [PERMISSIONS.EXECUTE_WORKFLOWS]: {
+    code: PERMISSIONS.EXECUTE_WORKFLOWS,
+    name: '워크플로우 실행',
+    description: '워크플로우 수동 실행',
+    category: '자동화',
+  },
 }
 
 // 권한 카테고리별 그룹화
@@ -308,6 +333,21 @@ export const PERMISSION_CATEGORIES = [
   {
     name: '커뮤니케이션',
     permissions: [PERMISSIONS.MANAGE_ANNOUNCEMENTS],
+  },
+  {
+    name: '성장 관리',
+    permissions: [
+      PERMISSIONS.VIEW_GROWTH_OPPORTUNITIES,
+      PERMISSIONS.MANAGE_GROWTH_OPPORTUNITIES,
+    ],
+  },
+  {
+    name: '자동화',
+    permissions: [
+      PERMISSIONS.VIEW_WORKFLOWS,
+      PERMISSIONS.MANAGE_WORKFLOWS,
+      PERMISSIONS.EXECUTE_WORKFLOWS,
+    ],
   },
 ]
 

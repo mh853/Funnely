@@ -19,6 +19,7 @@ import {
   Activity,
   Shield,
   HeartPulse,
+  Zap,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -120,6 +121,12 @@ const navItems: NavItem[] = [
     label: '성장 기회',
     href: '/admin/growth-opportunities',
     description: '업셀 기회 및 다운셀 위험 식별',
+  },
+  {
+    icon: Zap,
+    label: '워크플로우',
+    href: '/admin/workflows',
+    description: '자동화 워크플로우 관리',
   },
   {
     icon: Activity,
