@@ -50,7 +50,7 @@ export interface CompanyUser {
   id: string
   full_name: string
   email: string
-  role: 'admin' | 'manager' | 'member'
+  role: 'admin' | 'manager' | 'user'  // 3단계 권한 (member → user로 변경)
   department?: string
   is_active: boolean
   last_login_at?: string
@@ -106,16 +106,17 @@ export interface CompanyActivitiesResponse {
   pagination: PaginationInfo
 }
 
-// User Management Types
+// User Management Types (3단계 권한 시스템)
 export type UserRole =
+  | 'admin'     // 관리자 (구 company_owner, company_admin)
+  | 'manager'   // 매니저 (구 marketing_manager)
+  | 'user'      // 일반 사용자 (구 marketing_staff, viewer, staff)
+  // Backward compatibility - 기존 데이터 마이그레이션용
   | 'company_owner'
   | 'company_admin'
   | 'marketing_manager'
   | 'marketing_staff'
   | 'viewer'
-  // Legacy roles (backward compatibility)
-  | 'admin'
-  | 'manager'
   | 'staff'
 
 export interface UserListItem {
