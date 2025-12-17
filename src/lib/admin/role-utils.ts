@@ -59,16 +59,27 @@ export const ROLE_INFO: Record<UserRole, RoleInfo> = {
   },
 }
 
-export function getRoleLabel(role: UserRole): string {
-  return ROLE_INFO[role]?.label || role
+export function getRoleLabel(role: UserRole | string): string {
+  // admin_roles 테이블에서 온 한글 역할명은 그대로 반환
+  if (role === '슈퍼 관리자' || role === '일반 사용자' || !ROLE_INFO[role as UserRole]) {
+    return role
+  }
+  return ROLE_INFO[role as UserRole]?.label || role
 }
 
 export function getRoleDescription(role: UserRole): string {
   return ROLE_INFO[role]?.description || ''
 }
 
-export function getRoleBadgeColor(role: UserRole): string {
-  return ROLE_INFO[role]?.badgeColor || 'bg-gray-100 text-gray-700'
+export function getRoleBadgeColor(role: UserRole | string): string {
+  // admin_roles 테이블에서 온 역할에 대한 색상 매핑
+  if (role === '슈퍼 관리자') {
+    return 'bg-red-100 text-red-700'
+  }
+  if (role === '일반 사용자') {
+    return 'bg-gray-100 text-gray-700'
+  }
+  return ROLE_INFO[role as UserRole]?.badgeColor || 'bg-gray-100 text-gray-700'
 }
 
 export function getRolePermissions(role: UserRole): string[] {

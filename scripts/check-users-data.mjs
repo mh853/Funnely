@@ -42,36 +42,100 @@ async function checkUsersData() {
     console.log(`  - Created At: ${user.created_at}\n`);
   });
 
-  // 2. Check if users have any leads
+  // 2. Check leads table structure
+  console.log('\n🔍 Checking leads table structure...');
+  const { data: sampleLeads, error: leadsStructureError } = await supabase
+    .from('leads')
+    .select('*')
+    .limit(3);
+
+  if (leadsStructureError) {
+    console.error('❌ Error fetching leads structure:', leadsStructureError);
+  } else if (sampleLeads && sampleLeads.length > 0) {
+    console.log(`✅ Found ${sampleLeads.length} sample leads`);
+    console.log('📋 Lead columns:', Object.keys(sampleLeads[0]).join(', '));
+    console.log('\n📋 Sample lead data:');
+    sampleLeads.forEach((lead, idx) => {
+      console.log(`\nLead ${idx + 1}:`);
+      console.log(`  - ID: ${lead.id}`);
+      console.log(`  - Company ID: ${lead.company_id || 'NULL'}`);
+      console.log(`  - Landing Page ID: ${lead.landing_page_id || 'NULL'}`);
+      console.log(`  - Name: ${lead.name || 'NULL'}`);
+      console.log(`  - Created At: ${lead.created_at}`);
+    });
+  } else {
+    console.log('⚠️  No leads found in database');
+  }
+
+  // 3. Check leads count by company
   if (users && users.length > 0) {
-    const userId = users[0].id;
-    console.log(`\n🔍 Checking leads for user ${userId}...`);
+    console.log('\n🔍 Checking leads count by company...');
+    for (const user of users.slice(0, 3)) {
+      const { count: leadsCount } = await supabase
+        .from('leads')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', user.company_id);
 
-    const { count: leadsCount, error: leadsError } = await supabase
-      .from('leads')
-      .select('id', { count: 'exact', head: true })
-      .eq('created_by', userId);
-
-    if (leadsError) {
-      console.error('❌ Error checking leads:', leadsError);
-    } else {
-      console.log(`  - Leads count: ${leadsCount || 0}`);
-    }
-
-    // 3. Check landing pages
-    const { count: pagesCount, error: pagesError } = await supabase
-      .from('landing_pages')
-      .select('id', { count: 'exact', head: true })
-      .eq('created_by', userId);
-
-    if (pagesError) {
-      console.error('❌ Error checking landing pages:', pagesError);
-    } else {
-      console.log(`  - Landing pages count: ${pagesCount || 0}`);
+      console.log(`  - ${user.email} (Company: ${user.company_id?.slice(0, 8)}...): ${leadsCount || 0} leads`);
     }
   }
 
-  // 4. Check all users' is_active status
+  // 4. Check landing pages
+  if (users && users.length > 0) {
+    console.log('\n🔍 Checking landing pages by user...');
+    for (const user of users.slice(0, 3)) {
+      const { count: pagesCount } = await supabase
+        .from('landing_pages')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', user.id);
+
+      console.log(`  - ${user.email}: ${pagesCount || 0} landing pages`);
+    }
+  }
+
+  // 5. Check user roles and companies
+  console.log('\n👥 Checking Admin Users Table Data Accuracy...');
+  for (const user of users) {
+    console.log(`\n📋 ${user.email}:`);
+
+    // Check company
+    if (user.company_id) {
+      const { data: company } = await supabase
+        .from('companies')
+        .select('id, name')
+        .eq('id', user.company_id)
+        .single();
+
+      console.log(`  ✅ Company: ${company?.name || 'ERROR: Company not found'}`);
+    } else {
+      console.log(`  ⚠️  Company: NULL`);
+    }
+
+    // Check role
+    const { data: roleAssignments } = await supabase
+      .from('admin_role_assignments')
+      .select('role_id, admin_roles(id, name, code)')
+      .eq('user_id', user.id);
+
+    if (roleAssignments && roleAssignments.length > 0) {
+      const roles = roleAssignments.map(ra => ra.admin_roles?.name || 'Unknown').join(', ');
+      console.log(`  ✅ Role: ${roles}`);
+    } else {
+      console.log(`  ✅ Role: user (일반 사용자 - admin_role_assignments 없음)`);
+    }
+
+    // Check status
+    console.log(`  ✅ Status: ${user.is_active ? '활성' : '비활성'}`);
+
+    // Check last login
+    if (user.last_login) {
+      console.log(`  ✅ Last Login: ${user.last_login}`);
+    } else {
+      console.log(`  ✅ Last Login: NULL (로그인 기록 없음)`);
+    }
+  }
+
+  // 6. Check all users' is_active status
   console.log('\n📊 Active status distribution:');
   const { data: allUsers } = await supabase
     .from('users')
@@ -85,7 +149,7 @@ async function checkUsersData() {
     console.log(`  - Total: ${allUsers.length}`);
   }
 
-  // 5. Check last_login values
+  // 7. Check last_login values
   console.log('\n📅 Last login data:');
   const { data: loginData } = await supabase
     .from('users')

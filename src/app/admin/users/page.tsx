@@ -295,12 +295,6 @@ export default function UsersPage() {
                       역할
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      리드
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      페이지
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       상태
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
@@ -328,12 +322,6 @@ export default function UsersPage() {
                         <span className={`inline-block px-2 py-1 text-xs font-medium rounded ${getRoleBadgeColor(user.role)}`}>
                           {getRoleLabel(user.role)}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {user.stats?.total_leads ?? 0}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-900">
-                        {user.stats?.total_landing_pages ?? 0}
                       </td>
                       <td className="px-6 py-4">
                         <Badge variant={user.is_active ? 'default' : 'secondary'}>

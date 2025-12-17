@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 5. 각 사용자의 역할 정보 및 통계 조회
+    // 5. 각 사용자의 역할 정보 조회 (통계는 제거)
     const usersWithRoles = await Promise.all(
       (usersData || []).map(async (user: any) => {
         // 관리자 역할 조회
@@ -97,31 +97,19 @@ export async function GET(request: NextRequest) {
           .select('role:admin_roles(id, name)')
           .eq('user_id', user.id)
 
-        // 리드 수 조회 (company_id 기준)
-        const { count: totalLeads } = await supabase
-          .from('leads')
-          .select('id', { count: 'exact', head: true })
-          .eq('company_id', user.company_id || '')
-
-        // 랜딩페이지 수 조회
-        const { count: totalLandingPages } = await supabase
-          .from('landing_pages')
-          .select('id', { count: 'exact', head: true })
-          .eq('created_by', user.id)
-
         // companies는 배열 또는 단일 객체일 수 있음
         const company = Array.isArray(user.companies)
           ? user.companies[0]
           : user.companies
 
-        // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 'user')
-        let primaryRole = 'user'
+        // 기본 역할 결정 (관리자 역할이 있으면 첫 번째 역할, 없으면 '일반 사용자')
+        let primaryRole = '일반 사용자'
         if (roleAssignments && roleAssignments.length > 0) {
           const firstRole = roleAssignments[0].role
           // role이 배열이면 첫 번째 요소, 아니면 그대로 사용
           const roleObj = Array.isArray(firstRole) ? firstRole[0] : firstRole
           if (roleObj && typeof roleObj === 'object' && 'name' in roleObj) {
-            primaryRole = (roleObj as any).name || 'user'
+            primaryRole = (roleObj as any).name || '일반 사용자'
           }
         }
 
@@ -136,11 +124,7 @@ export async function GET(request: NextRequest) {
           created_at: user.created_at,
           last_sign_in_at: user.last_login,
           last_login_at: user.last_login, // 프론트엔드 호환성
-          is_active: user.is_active ?? !!user.last_login,
-          stats: {
-            total_leads: totalLeads || 0,
-            total_landing_pages: totalLandingPages || 0,
-          },
+          is_active: user.is_active ?? false,
           admin_roles:
             roleAssignments?.map((ra: any) => ra.role).filter(Boolean) || [],
         }
