@@ -120,9 +120,10 @@ export async function GET(request: NextRequest) {
     // 역할 필터 적용
     let filteredUsers = usersWithRoles
     if (roleFilter) {
-      filteredUsers = usersWithRoles.filter((user) =>
-        user.admin_roles.some((role) => role.id === roleFilter)
-      )
+      // TODO: admin_roles table doesn't exist yet
+      // filteredUsers = usersWithRoles.filter((user: any) =>
+      //   user.admin_roles?.some((role: any) => role.id === roleFilter)
+      // )
     }
 
     // 검색 필터 적용 (이름/이메일)

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
-import { Search, ChevronLeft, ChevronRight, Building2, Users, FileText } from 'lucide-react'
+import { Search, ChevronLeft, ChevronRight, Building2, Users, FileText, CreditCard, TrendingUp, DollarSign } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
@@ -170,7 +170,8 @@ export default function CompaniesPage() {
 
       {/* 통계 요약 */}
       {data && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-4 gap-4">
+          {/* 총 회사 수 */}
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <div className="flex items-center justify-between">
               <div>
@@ -180,6 +181,58 @@ export default function CompaniesPage() {
                 </p>
               </div>
               <Building2 className="h-10 w-10 text-blue-500" />
+            </div>
+          </div>
+
+          {/* 활성 구독 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">활성 구독</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.companies.filter(c =>
+                    c.subscription?.status === 'active' || c.subscription?.status === 'trial'
+                  ).length}
+                </p>
+              </div>
+              <CreditCard className="h-10 w-10 text-green-500" />
+            </div>
+          </div>
+
+          {/* MRR (Monthly Recurring Revenue) */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">MRR (월간 반복 매출)</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.companies
+                    .filter(c => c.subscription?.status === 'active')
+                    .reduce((sum, c) => {
+                      if (!c.subscription) return sum;
+                      const monthlyRevenue = c.subscription.billing_cycle === 'monthly'
+                        ? c.subscription.monthly_price
+                        : Math.round(c.subscription.yearly_price / 12);
+                      return sum + monthlyRevenue;
+                    }, 0)
+                    .toLocaleString()}원
+                </p>
+              </div>
+              <TrendingUp className="h-10 w-10 text-purple-500" />
+            </div>
+          </div>
+
+          {/* 총 결제금액 */}
+          <div className="bg-white rounded-lg border border-gray-200 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-500">총 결제금액</p>
+                <p className="text-2xl font-bold text-gray-900 mt-1">
+                  {data.companies
+                    .reduce((sum, c) => sum + (c.subscription?.payment_stats.total_paid || 0), 0)
+                    .toLocaleString()}원
+                </p>
+              </div>
+              <DollarSign className="h-10 w-10 text-orange-500" />
             </div>
           </div>
         </div>
@@ -211,6 +264,18 @@ export default function CompaniesPage() {
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       페이지
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      구독 플랜
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      구독 상태
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      월 결제금액
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      다음 결제일
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       상태
@@ -252,6 +317,61 @@ export default function CompaniesPage() {
                       <td className="px-6 py-4 text-sm text-gray-900">
                         {company.stats.landing_pages_count}
                       </td>
+
+                      {/* Subscription Plan */}
+                      <td className="px-6 py-4">
+                        {company.subscription ? (
+                          <div>
+                            <div className="font-medium text-gray-900">
+                              {company.subscription.plan_name}
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              {company.subscription.billing_cycle === 'monthly' ? '월간' : '연간'}
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-gray-400">미가입</span>
+                        )}
+                      </td>
+
+                      {/* Subscription Status */}
+                      <td className="px-6 py-4">
+                        {company.subscription ? (
+                          <Badge variant={
+                            company.subscription.status === 'active' ? 'default' :
+                            company.subscription.status === 'trial' ? 'secondary' :
+                            company.subscription.status === 'past_due' ? 'destructive' :
+                            'outline'
+                          }>
+                            {company.subscription.status === 'active' ? '활성' :
+                             company.subscription.status === 'trial' ? '체험중' :
+                             company.subscription.status === 'past_due' ? '결제지연' :
+                             company.subscription.status === 'canceled' ? '취소됨' :
+                             company.subscription.status}
+                          </Badge>
+                        ) : (
+                          <span className="text-sm text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Monthly Price */}
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {company.subscription ? (
+                          `${company.subscription.monthly_price.toLocaleString()}원/월`
+                        ) : (
+                          <span className="text-gray-400">-</span>
+                        )}
+                      </td>
+
+                      {/* Next Payment Date */}
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        {company.subscription?.current_period_end ? (
+                          format(new Date(company.subscription.current_period_end), 'yyyy-MM-dd', { locale: ko })
+                        ) : (
+                          <span className="text-gray-400">없음</span>
+                        )}
+                      </td>
+
                       <td className="px-6 py-4">
                         <Badge variant={company.is_active ? 'default' : 'secondary'}>
                           {company.is_active ? '활성' : '비활성'}

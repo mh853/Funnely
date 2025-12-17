@@ -136,6 +136,7 @@ export async function GET(request: Request) {
             total_leads: leadsCount || 0,
             landing_pages_count: pagesCount || 0,
           },
+          subscription: null, // No subscription data in this old API
         }
       })
     )

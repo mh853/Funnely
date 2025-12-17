@@ -45,8 +45,9 @@ export async function GET(request: NextRequest) {
     if (search) {
       countQuery = countQuery.ilike('name', `%${search}%`)
     }
-    if (status) {
-      countQuery = countQuery.eq('status', status)
+    if (status && status !== 'all') {
+      const isActive = status === 'active'
+      countQuery = countQuery.eq('is_active', isActive)
     }
 
     const { count } = await countQuery
@@ -58,6 +59,7 @@ export async function GET(request: NextRequest) {
         `
         id,
         name,
+        short_id,
         is_active,
         created_at,
         updated_at
@@ -71,7 +73,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 상태 필터
-    if (status) {
+    if (status && status !== 'all') {
       const isActive = status === 'active'
       dataQuery = dataQuery.eq('is_active', isActive)
     }
@@ -91,48 +93,123 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 5. 각 회사의 사용자 수와 리드 수 조회
-    const companiesWithCounts = await Promise.all(
+    // 5. 각 회사의 상세 정보 조회
+    const companiesWithDetails = await Promise.all(
       (companies || []).map(async (company) => {
-        // 사용자 수
+        // Admin user (company_owner)
+        const { data: adminUser } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('company_id', company.id)
+          .eq('role', 'company_owner')
+          .limit(1)
+          .single()
+
+        // User count
         const { count: userCount } = await supabase
-          .from('profiles')
+          .from('users')
           .select('*', { count: 'exact', head: true })
           .eq('company_id', company.id)
 
-        // 리드 수
+        // Lead count
         const { count: leadCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
           .eq('company_id', company.id)
 
-        // 구독 상태 (최신 활성 구독)
-        const { data: subscription } = await supabase
-          .from('subscriptions')
-          .select('status')
+        // Landing pages count
+        const { count: pagesCount } = await supabase
+          .from('landing_pages')
+          .select('*', { count: 'exact', head: true })
           .eq('company_id', company.id)
+
+        // Subscription information
+        const { data: subscription } = await supabase
+          .from('company_subscriptions')
+          .select(`
+            id,
+            plan_id,
+            status,
+            billing_cycle,
+            trial_end,
+            current_period_end,
+            created_at,
+            cancelled_at,
+            subscription_plans (
+              id,
+              name,
+              price_monthly,
+              price_yearly
+            )
+          `)
+          .eq('company_id', company.id)
+          .in('status', ['trial', 'active', 'past_due'])
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
 
+        // Payment transactions
+        const { data: payments } = await supabase
+          .from('payment_transactions')
+          .select('total_amount, approved_at')
+          .eq('company_id', company.id)
+          .eq('status', 'success')
+          .order('approved_at', { ascending: false })
+
+        const totalPaid = payments?.reduce((sum, p) => sum + p.total_amount, 0) || 0
+        const paymentCount = payments?.length || 0
+        const lastPaymentDate = payments?.[0]?.approved_at || null
+
         return {
-          ...company,
-          user_count: userCount || 0,
-          lead_count: leadCount || 0,
-          subscription_status: subscription?.status || null,
+          id: company.id,
+          name: company.name,
+          slug: company.short_id || company.id.substring(0, 8),
+          is_active: company.is_active,
+          created_at: company.created_at,
+          admin_user: adminUser || {
+            id: '',
+            full_name: '없음',
+            email: '없음'
+          },
+          stats: {
+            total_users: userCount || 0,
+            total_leads: leadCount || 0,
+            landing_pages_count: pagesCount || 0
+          },
+          subscription: subscription ? {
+            plan_id: subscription.plan_id,
+            plan_name: (subscription.subscription_plans as any)?.name || null,
+            monthly_price: (subscription.subscription_plans as any)?.price_monthly || 0,
+            yearly_price: (subscription.subscription_plans as any)?.price_yearly || 0,
+            billing_cycle: subscription.billing_cycle,
+            status: subscription.status,
+            trial_end_date: subscription.trial_end,
+            current_period_end: subscription.current_period_end,
+            subscribed_at: subscription.created_at,
+            canceled_at: subscription.cancelled_at,
+            payment_stats: {
+              total_paid: totalPaid,
+              payment_count: paymentCount,
+              last_payment_date: lastPaymentDate
+            }
+          } : null
         }
       })
     )
 
     // 6. 응답
+    const page = Math.floor(offset / limit) + 1
+    const totalPages = Math.ceil((count || 0) / limit)
+
     return NextResponse.json({
-      success: true,
-      companies: companiesWithCounts,
+      companies: companiesWithDetails,
       pagination: {
         total: count || 0,
+        page,
         limit,
-        offset,
-        hasMore: (count || 0) > offset + limit,
+        totalPages,
+        hasNext: (count || 0) > offset + limit,
+        hasPrev: offset > 0
       },
     })
   } catch (error) {

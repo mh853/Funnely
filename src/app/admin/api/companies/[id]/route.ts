@@ -163,6 +163,7 @@ export async function GET(
           active_landing_pages: activePages || 0,
         },
         recent_activities: recentActivities,
+        subscription: null, // No subscription data in this old API
       },
     }
 

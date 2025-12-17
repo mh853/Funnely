@@ -21,11 +21,33 @@ export interface CompanyListItem {
     landing_pages_count: number
   }
 
-  // 구독 정보 (나중에 추가)
-  subscription?: {
-    plan_type: string
-    status: string
-  }
+  // 구독 정보
+  subscription: {
+    // Plan info
+    plan_id: string | null
+    plan_name: string | null        // 'Free', 'Pro', 'Enterprise'
+
+    // Pricing
+    monthly_price: number           // 월 결제금액 (원)
+    yearly_price: number            // 연 결제금액 (원)
+    billing_cycle: 'monthly' | 'yearly' | null
+
+    // Status
+    status: 'trial' | 'active' | 'past_due' | 'canceled' | 'expired' | 'none'
+
+    // Dates
+    trial_end_date: string | null   // 체험 종료일
+    current_period_end: string | null // 다음 결제일
+    subscribed_at: string | null    // 구독 시작일
+    canceled_at: string | null      // 취소일
+
+    // Payment history
+    payment_stats: {
+      total_paid: number            // 총 결제금액 (원)
+      payment_count: number         // 결제 횟수
+      last_payment_date: string | null // 최근 결제일
+    }
+  } | null  // null if no subscription
 }
 
 export interface CompanyDetail extends CompanyListItem {
