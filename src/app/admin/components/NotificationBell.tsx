@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
+  const lastSyncTime = useRef<number>(0)
 
   useEffect(() => {
     fetchUnreadCount()
@@ -27,14 +28,63 @@ export default function NotificationBell() {
         (payload) => {
           console.log('🔔 Realtime notification change:', payload)
           console.log('  - Event type:', payload.eventType)
-          console.log('  - Old is_read:', (payload.old as any)?.is_read)
-          console.log('  - New is_read:', (payload.new as any)?.is_read)
 
-          // 알림 변경 시 즉시 카운트 업데이트
-          // 50ms 지연으로 DB 일관성 보장
-          setTimeout(() => {
+          // ✅ Realtime 이벤트로 즉시 카운트 계산
+          if (payload.eventType === 'UPDATE') {
+            const oldRead = (payload.old as any)?.is_read
+            const newRead = (payload.new as any)?.is_read
+
+            console.log('  - Old is_read:', oldRead)
+            console.log('  - New is_read:', newRead)
+
+            if (oldRead === false && newRead === true) {
+              // 읽음 처리 → 카운트 감소
+              setUnreadCount((prev) => {
+                const newCount = Math.max(0, prev - 1)
+                console.log(`  → Unread count decreased: ${prev} → ${newCount}`)
+                return newCount
+              })
+            } else if (oldRead === true && newRead === false) {
+              // 읽지 않음으로 변경 → 카운트 증가
+              setUnreadCount((prev) => {
+                const newCount = prev + 1
+                console.log(`  → Unread count increased: ${prev} → ${newCount}`)
+                return newCount
+              })
+            }
+          } else if (payload.eventType === 'INSERT') {
+            const isRead = (payload.new as any)?.is_read
+            console.log('  - New notification is_read:', isRead)
+
+            if (isRead === false) {
+              // 새 읽지 않은 알림 → 카운트 증가
+              setUnreadCount((prev) => {
+                const newCount = prev + 1
+                console.log(`  → New unread notification: ${prev} → ${newCount}`)
+                return newCount
+              })
+            }
+          } else if (payload.eventType === 'DELETE') {
+            const wasUnread = (payload.old as any)?.is_read === false
+            console.log('  - Deleted notification was_unread:', wasUnread)
+
+            if (wasUnread) {
+              // 읽지 않은 알림 삭제 → 카운트 감소
+              setUnreadCount((prev) => {
+                const newCount = Math.max(0, prev - 1)
+                console.log(`  → Unread notification deleted: ${prev} → ${newCount}`)
+                return newCount
+              })
+            }
+          }
+
+          // 5분마다 한 번씩 서버와 동기화 (정확성 보장)
+          const now = Date.now()
+          if (now - lastSyncTime.current > 300000) {
+            console.log('  → Syncing with server (5min periodic check)')
             fetchUnreadCount()
-          }, 50)
+            lastSyncTime.current = now
+          }
         }
       )
       .subscribe()
@@ -51,6 +101,7 @@ export default function NotificationBell() {
 
       const data = await response.json()
       setUnreadCount(data.unreadCount || 0)
+      lastSyncTime.current = Date.now()
     } catch (error) {
       console.error('Error fetching unread count:', error)
     }
