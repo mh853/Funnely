@@ -130,23 +130,42 @@ export default function SubscriptionClient({
 
       // 기존 구독이 있으면 플랜 변경, 없으면 신규 구독 생성
       if (currentSubscription) {
-        // 플랜 변경
+        // 플랜 변경 - 새로운 결제 주기에 맞춰 기간 재계산
+        const now = new Date()
+        const newPeriodEnd = new Date()
+
+        if (billingCycle === 'monthly') {
+          newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+        } else {
+          newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
+        }
+
         const { error: updateError } = await supabase
           .from('company_subscriptions')
           .update({
             plan_id: plan.id,
             billing_cycle: billingCycle,
+            current_period_start: now.toISOString(),
+            current_period_end: newPeriodEnd.toISOString(),
           })
           .eq('id', currentSubscription.id)
 
         if (updateError) throw new Error(updateError.message)
 
-        alert(`플랜이 ${plan.name}(으)로 변경되었습니다.`)
+        alert(`플랜이 ${plan.name} (${billingCycle === 'monthly' ? '월간' : '연간'})(으)로 변경되었습니다.`)
         router.refresh()
       } else {
         // 신규 구독 생성 (체험)
+        const now = new Date()
         const trialEndDate = new Date()
         trialEndDate.setDate(trialEndDate.getDate() + 7) // 7일 무료 체험
+
+        const periodEndDate = new Date()
+        if (billingCycle === 'monthly') {
+          periodEndDate.setMonth(periodEndDate.getMonth() + 1)
+        } else {
+          periodEndDate.setFullYear(periodEndDate.getFullYear() + 1)
+        }
 
         const { data: subscription, error: subError } = await supabase
           .from('company_subscriptions')
@@ -155,7 +174,9 @@ export default function SubscriptionClient({
             plan_id: plan.id,
             status: 'trial',
             billing_cycle: billingCycle,
-            trial_start_date: new Date().toISOString(),
+            current_period_start: now.toISOString(),
+            current_period_end: periodEndDate.toISOString(),
+            trial_start_date: now.toISOString(),
             trial_end_date: trialEndDate.toISOString(),
             customer_key: `customer_${companyId}_${Date.now()}`,
           })
