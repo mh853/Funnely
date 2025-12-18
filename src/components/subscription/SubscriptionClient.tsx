@@ -410,7 +410,7 @@ export default function SubscriptionClient({
                   <p className="text-sm text-gray-600 mt-0.5">
                     / {billingCycle === 'monthly' ? '월' : '년'}
                   </p>
-                  {billingCycle === 'yearly' && (
+                  {billingCycle === 'yearly' && plan.price_monthly > 0 && (
                     <p className="text-sm text-green-600 font-semibold mt-1">
                       {getSavings(plan)}% 절약
                     </p>
