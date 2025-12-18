@@ -397,8 +397,10 @@ export default function SubscriptionClient({
       {/* 플랜 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
         {plans.map((plan) => {
+          // 플랜 ID와 결제 주기 모두 일치해야 현재 플랜
           const isCurrentPlan =
-            currentSubscription?.subscription_plans.id === plan.id
+            currentSubscription?.subscription_plans.id === plan.id &&
+            currentSubscription?.billing_cycle === billingCycle
           const isPro = plan.name.toLowerCase() === 'pro'
 
           return (
