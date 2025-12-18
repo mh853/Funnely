@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { createClient } from '@/lib/supabase/client'
 
 interface Subscription {
   id: string
@@ -85,6 +86,37 @@ export default function SubscriptionsPage() {
 
   useEffect(() => {
     fetchSubscriptions()
+
+    // Supabase Realtime 구독
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('subscriptions-admin-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'company_subscriptions',
+        },
+        (payload) => {
+          console.log('🔔 Realtime subscription change:', payload)
+          console.log('  - Event type:', payload.eventType)
+          console.log('  - Company:', (payload.new as any)?.company_id || (payload.old as any)?.company_id)
+          console.log('  - Status:', (payload.new as any)?.status || (payload.old as any)?.status)
+
+          // 구독 변경 시 즉시 목록 새로고침
+          // 50ms 지연으로 DB 복제 지연 고려
+          setTimeout(() => {
+            fetchSubscriptions()
+          }, 50)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [filter, page])
 
   async function fetchSubscriptions() {

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Bell } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { createClient } from '@/lib/supabase/client'
 
 export default function NotificationBell() {
   const [unreadCount, setUnreadCount] = useState(0)
@@ -11,9 +12,36 @@ export default function NotificationBell() {
   useEffect(() => {
     fetchUnreadCount()
 
-    // 30초마다 업데이트
-    const interval = setInterval(fetchUnreadCount, 30000)
-    return () => clearInterval(interval)
+    // Supabase Realtime 구독
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('notifications-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        (payload) => {
+          console.log('🔔 Realtime notification change:', payload)
+          console.log('  - Event type:', payload.eventType)
+          console.log('  - Old is_read:', (payload.old as any)?.is_read)
+          console.log('  - New is_read:', (payload.new as any)?.is_read)
+
+          // 알림 변경 시 즉시 카운트 업데이트
+          // 50ms 지연으로 DB 일관성 보장
+          setTimeout(() => {
+            fetchUnreadCount()
+          }, 50)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   async function fetchUnreadCount() {

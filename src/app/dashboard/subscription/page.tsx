@@ -24,7 +24,7 @@ export default async function SubscriptionPage() {
     .from('subscription_plans')
     .select('*')
     .eq('is_active', true)
-    .order('display_order', { ascending: true })
+    .order('price_monthly', { ascending: true })
 
   // 현재 구독 정보 조회
   const { data: currentSubscription } = await supabase
@@ -34,10 +34,19 @@ export default async function SubscriptionPage() {
     .in('status', ['trial', 'active', 'past_due'])
     .single()
 
+  // 구독 이력 조회 (최근 10개)
+  const { data: subscriptionHistory } = await supabase
+    .from('company_subscriptions')
+    .select('*, subscription_plans(*)')
+    .eq('company_id', userProfile.company_id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
   return (
     <SubscriptionClient
       plans={plans || []}
       currentSubscription={currentSubscription}
+      subscriptionHistory={subscriptionHistory || []}
       companyId={userProfile.company_id}
     />
   )

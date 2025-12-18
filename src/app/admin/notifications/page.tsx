@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { createClient } from '@/lib/supabase/client'
 
 interface Notification {
   id: string
@@ -71,6 +72,30 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications()
+
+    // Supabase Realtime 구독
+    const supabase = createClient()
+
+    const channel = supabase
+      .channel('notifications-page')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications',
+        },
+        (payload) => {
+          console.log('🔔 Realtime notification change (page):', payload)
+          // 알림 변경 시 즉시 목록 새로고침
+          fetchNotifications()
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [page, filter])
 
   async function fetchNotifications() {
@@ -98,6 +123,20 @@ export default function NotificationsPage() {
   }
 
   async function handleMarkAsRead(notificationIds: string[]) {
+    // 1. 낙관적 업데이트 (즉시 UI 반영)
+    setData((prevData) => {
+      if (!prevData) return prevData
+
+      return {
+        ...prevData,
+        notifications: prevData.notifications.map((n) =>
+          notificationIds.includes(n.id) ? { ...n, read: true } : n
+        ),
+        unreadCount: Math.max(0, prevData.unreadCount - notificationIds.length),
+      }
+    })
+
+    // 2. API 호출 (백그라운드)
     try {
       const response = await fetch('/api/admin/notifications/mark-read', {
         method: 'POST',
@@ -109,9 +148,13 @@ export default function NotificationsPage() {
 
       if (!response.ok) throw new Error('Failed to mark as read')
 
-      fetchNotifications()
+      // 3. 성공 시 Realtime이 NotificationBell 자동 업데이트
+      // fetchNotifications() 호출 불필요 (이미 로컬 업데이트됨)
     } catch (error) {
       console.error('Error marking as read:', error)
+
+      // 4. 실패 시 롤백 (서버 데이터로 복구)
+      fetchNotifications()
     }
   }
 
@@ -124,6 +167,7 @@ export default function NotificationsPage() {
 
     if (unreadIds.length === 0) return
 
+    // handleMarkAsRead가 낙관적 업데이트를 자동으로 수행
     await handleMarkAsRead(unreadIds)
   }
 
