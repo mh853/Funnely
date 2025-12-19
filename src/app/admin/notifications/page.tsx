@@ -12,6 +12,8 @@ import {
   FileText,
   User,
   CreditCard,
+  Clock,
+  AlertTriangle,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -49,6 +51,9 @@ const TYPE_ICONS: Record<string, any> = {
   user_activity: User,
   subscription_started: CreditCard,
   subscription_changed: CreditCard,
+  subscription_expiring_soon: Clock,
+  subscription_expired: AlertTriangle,
+  subscription_in_grace_period: Clock,
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -59,6 +64,9 @@ const TYPE_COLORS: Record<string, string> = {
   user_activity: 'text-gray-600 bg-gray-50',
   subscription_started: 'text-indigo-600 bg-indigo-50',
   subscription_changed: 'text-indigo-600 bg-indigo-50',
+  subscription_expiring_soon: 'text-orange-600 bg-orange-50',
+  subscription_expired: 'text-red-600 bg-red-50',
+  subscription_in_grace_period: 'text-yellow-600 bg-yellow-50',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -69,6 +77,9 @@ const TYPE_LABELS: Record<string, string> = {
   user_activity: '사용자 활동',
   subscription_started: '구독 시작',
   subscription_changed: '구독 변경',
+  subscription_expiring_soon: '구독 만료 예정',
+  subscription_expired: '구독 만료',
+  subscription_in_grace_period: '결제 지연',
 }
 
 export default function NotificationsPage() {

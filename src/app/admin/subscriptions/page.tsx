@@ -34,6 +34,7 @@ interface Subscription {
   plan: {
     id: string
     name: string
+    plan_type: 'individual' | 'business'
     price_monthly: number
     price_yearly: number
     max_users: number | null
@@ -274,11 +275,14 @@ export default function SubscriptionsPage() {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
                         <div>
                           <div className="text-gray-500">플랜</div>
                           <div className="font-medium text-gray-900">
                             {subscription.plan.name}
+                            <span className="ml-2 text-xs text-gray-500">
+                              ({subscription.plan.plan_type === 'individual' ? '개인' : '기업'})
+                            </span>
                           </div>
                         </div>
                         <div>
@@ -295,6 +299,12 @@ export default function SubscriptionsPage() {
                             {subscription.billing_cycle === 'monthly'
                               ? `₩${subscription.plan.price_monthly.toLocaleString()}/월`
                               : `₩${subscription.plan.price_yearly.toLocaleString()}/년`}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-gray-500">계정 수</div>
+                          <div className="font-medium text-gray-900">
+                            {subscription.plan.max_users || '무제한'}개
                           </div>
                         </div>
                         <div>

@@ -20,6 +20,8 @@ export default async function DashboardLayout({
   // Get user profile with hospital info (cached)
   const userProfile = await getCachedUserProfile(user.id)
 
+  // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
+
   return (
     <DashboardLayoutClient user={user} userProfile={userProfile}>
       {children}

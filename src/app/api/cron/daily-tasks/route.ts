@@ -13,11 +13,12 @@ import type { Subscription } from '@/types/revenue'
 
 /**
  * Unified daily tasks cron job
- * Consolidates revenue calculation, health scores, and sheets sync
+ * Consolidates all daily operations into single cron job
  *
- * Vercel Cron: 0 1 * * * (1 AM daily - Free Plan limitation)
+ * Vercel Cron: 0 1 * * * (1 AM daily - Free Plan limitation: 1 cron only)
  *
  * All tasks run sequentially at 1 AM:
+ * - Check subscription expiry and send notifications
  * - Calculate revenue (MRR/ARR)
  * - Calculate customer health scores
  * - Sync Google Sheets
@@ -45,6 +46,24 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Task 0: Check Subscription Expiry (PRIORITY)
+    console.log('[Cron] Running subscription expiry check')
+    try {
+      const subscriptionResult = await checkSubscriptionExpiry(supabase)
+      results.tasksExecuted.push({
+        task: 'subscription_expiry_check',
+        status: 'success',
+        ...subscriptionResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Subscription check error:', error)
+      results.tasksExecuted.push({
+        task: 'subscription_expiry_check',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
 
     // Task 1: Calculate Revenue
     console.log('[Cron] Running revenue calculation')
@@ -468,5 +487,171 @@ async function syncGoogleSheets(supabase: any) {
   return {
     synced: results.filter((r) => r.status === 'success').length,
     results,
+  }
+}
+
+/**
+ * Check subscription expiry and send notifications
+ * Integrated from /api/cron/check-subscriptions
+ */
+async function checkSubscriptionExpiry(supabase: any) {
+  const now = new Date()
+  const sevenDaysLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+  console.log(`[Subscription] 구독 체크 시작: ${now.toISOString()}`)
+
+  // 1. 만료 7일 전 구독 찾기 (active 또는 trial 상태)
+  const { data: expiringSoon, error: expiringError } = await supabase
+    .from('company_subscriptions')
+    .select(`
+      id,
+      company_id,
+      status,
+      current_period_end,
+      companies (
+        id,
+        name
+      )
+    `)
+    .in('status', ['active', 'trial'])
+    .gte('current_period_end', now.toISOString())
+    .lte('current_period_end', sevenDaysLater.toISOString())
+
+  if (expiringError) {
+    throw new Error(`만료 예정 구독 조회 실패: ${expiringError.message}`)
+  }
+
+  console.log(`[Subscription] 만료 예정 구독 발견: ${expiringSoon?.length || 0}개`)
+
+  // 2. 만료 예정 알림 생성 (중복 체크)
+  let notificationsCreated = 0
+  for (const sub of expiringSoon || []) {
+    // 중복 체크
+    const { data: alreadySent } = await supabase
+      .from('notification_sent_logs')
+      .select('id')
+      .eq('subscription_id', sub.id)
+      .eq('notification_type', 'subscription_expiring_soon')
+      .gte('period_end', sub.current_period_end)
+      .single()
+
+    if (!alreadySent) {
+      const periodEnd = new Date(sub.current_period_end)
+      const daysRemaining = Math.ceil(
+        (periodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
+      )
+
+      // 알림 생성
+      const { error: notifError } = await supabase.from('notifications').insert({
+        company_id: sub.company_id,
+        title: `구독 만료 예정 알림`,
+        message: `${(sub.companies as any)?.name || '회사'}의 구독이 ${daysRemaining}일 후 만료됩니다. 서비스 중단을 방지하려면 결제를 진행해주세요.`,
+        type: 'subscription_expiring_soon',
+        link: '/dashboard/subscription',
+      })
+
+      if (notifError) {
+        console.error(`[Subscription] 알림 생성 실패 (subscription_id: ${sub.id}):`, notifError)
+        continue
+      }
+
+      // 로그 기록
+      await supabase.from('notification_sent_logs').insert({
+        subscription_id: sub.id,
+        notification_type: 'subscription_expiring_soon',
+        period_end: sub.current_period_end,
+      })
+
+      notificationsCreated++
+      console.log(`[Subscription] 만료 예정 알림 생성: ${sub.id} (${daysRemaining}일 남음)`)
+    }
+  }
+
+  // 3. 만료된 구독 찾기
+  const { data: expiredSubs, error: expiredError } = await supabase
+    .from('company_subscriptions')
+    .select(`
+      id,
+      company_id,
+      status,
+      current_period_end,
+      grace_period_end,
+      companies (
+        id,
+        name
+      )
+    `)
+    .in('status', ['active', 'trial', 'past_due'])
+    .lt('current_period_end', now.toISOString())
+
+  if (expiredError) {
+    throw new Error(`만료된 구독 조회 실패: ${expiredError.message}`)
+  }
+
+  console.log(`[Subscription] 만료된 구독 발견: ${expiredSubs?.length || 0}개`)
+
+  // 4. 만료된 구독 처리
+  let subscriptionsExpired = 0
+  for (const sub of expiredSubs || []) {
+    const graceEnd = sub.grace_period_end ? new Date(sub.grace_period_end) : null
+    const isInGracePeriod = graceEnd && graceEnd > now
+
+    if (isInGracePeriod) {
+      // Grace period 중이면 'past_due' 상태로 유지
+      if (sub.status !== 'past_due') {
+        await supabase
+          .from('company_subscriptions')
+          .update({ status: 'past_due' })
+          .eq('id', sub.id)
+
+        console.log(`[Subscription] Grace period 진입: ${sub.id}`)
+      }
+    } else {
+      // Grace period 없거나 종료 → 'expired'로 변경
+      const { error: updateError } = await supabase
+        .from('company_subscriptions')
+        .update({ status: 'expired' })
+        .eq('id', sub.id)
+
+      if (updateError) {
+        console.error(`[Subscription] 구독 만료 처리 실패 (subscription_id: ${sub.id}):`, updateError)
+        continue
+      }
+
+      // 만료 알림 생성 (중복 체크)
+      const { data: expiredNotifSent } = await supabase
+        .from('notification_sent_logs')
+        .select('id')
+        .eq('subscription_id', sub.id)
+        .eq('notification_type', 'subscription_expired')
+        .gte('period_end', sub.current_period_end)
+        .single()
+
+      if (!expiredNotifSent) {
+        await supabase.from('notifications').insert({
+          company_id: sub.company_id,
+          title: `구독이 만료되었습니다`,
+          message: `${(sub.companies as any)?.name || '회사'}의 구독이 만료되어 대시보드 접근이 제한됩니다. 서비스를 계속 이용하려면 플랜을 선택해주세요.`,
+          type: 'subscription_expired',
+          link: '/dashboard/subscription',
+        })
+
+        await supabase.from('notification_sent_logs').insert({
+          subscription_id: sub.id,
+          notification_type: 'subscription_expired',
+          period_end: sub.current_period_end,
+        })
+      }
+
+      subscriptionsExpired++
+      console.log(`[Subscription] 구독 만료 처리: ${sub.id}`)
+    }
+  }
+
+  return {
+    expiringSoonCount: expiringSoon?.length || 0,
+    notificationsCreated,
+    expiredCount: expiredSubs?.length || 0,
+    subscriptionsExpired,
   }
 }

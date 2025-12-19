@@ -11,6 +11,7 @@ interface Plan {
   id: string
   name: string
   description: string
+  plan_type: 'individual' | 'business'
   price_monthly: number
   price_yearly: number
   features: any
@@ -84,10 +85,18 @@ export default function SubscriptionClient({
 }: SubscriptionClientProps) {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
+  const [planType, setPlanType] = useState<'individual' | 'business'>('individual')
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+
+  // 현재 구독의 플랜 타입으로 초기화
+  useEffect(() => {
+    if (currentSubscription?.subscription_plans?.plan_type) {
+      setPlanType(currentSubscription.subscription_plans.plan_type as 'individual' | 'business')
+    }
+  }, [currentSubscription])
 
   // Realtime 구독 - 내 구독 상태 변경 감지
   useEffect(() => {
@@ -365,6 +374,32 @@ export default function SubscriptionClient({
         </p>
       </div>
 
+      {/* 플랜 타입 선택 (개인/기업) */}
+      <div className="flex justify-center mb-3">
+        <div className="inline-flex rounded-lg bg-gray-100 p-1">
+          <button
+            onClick={() => setPlanType('individual')}
+            className={`px-6 py-2 rounded-md text-sm font-semibold transition-colors ${
+              planType === 'individual'
+                ? 'bg-white text-gray-900 shadow'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            개인
+          </button>
+          <button
+            onClick={() => setPlanType('business')}
+            className={`px-6 py-2 rounded-md text-sm font-semibold transition-colors ${
+              planType === 'business'
+                ? 'bg-white text-gray-900 shadow'
+                : 'text-gray-600 hover:text-gray-900'
+            }`}
+          >
+            기업
+          </button>
+        </div>
+      </div>
+
       {/* 결제 주기 선택 */}
       <div className="flex justify-center mb-5">
         <div className="inline-flex rounded-lg bg-gray-100 p-1">
@@ -396,23 +431,24 @@ export default function SubscriptionClient({
 
       {/* 플랜 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        {plans.map((plan) => {
+        {plans.filter(plan => plan.plan_type === planType).map((plan) => {
           // 플랜 ID와 결제 주기 모두 일치해야 현재 플랜
           const isCurrentPlan =
             currentSubscription?.subscription_plans.id === plan.id &&
             currentSubscription?.billing_cycle === billingCycle
-          const isPro = plan.name.toLowerCase() === 'pro'
+          const isRecommended = (planType === 'individual' && plan.name.toLowerCase() === 'pro') ||
+                                (planType === 'business' && plan.name.toLowerCase() === 'starter')
 
           return (
             <div
               key={plan.id}
               className={`relative rounded-xl border-2 p-5 ${
-                isPro
+                isRecommended
                   ? 'border-blue-500 shadow-xl'
                   : 'border-gray-200 shadow-sm'
               } ${isCurrentPlan ? 'ring-2 ring-blue-500' : ''}`}
             >
-              {isPro && (
+              {isRecommended && (
                 <div className="absolute top-0 right-6 transform -translate-y-1/2">
                   <span className="inline-flex rounded-full bg-blue-500 px-3 py-0.5 text-xs font-semibold text-white">
                     추천
@@ -444,7 +480,7 @@ export default function SubscriptionClient({
                   onClick={() => handleSelectPlan(plan)}
                   disabled={loading || isCurrentPlan}
                   className={`mt-5 w-full rounded-lg px-5 py-2.5 text-sm font-semibold transition-colors ${
-                    isPro
+                    isRecommended
                       ? 'bg-blue-600 text-white hover:bg-blue-700'
                       : 'bg-gray-900 text-white hover:bg-gray-800'
                   } ${

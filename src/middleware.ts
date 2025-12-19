@@ -62,6 +62,10 @@ export async function middleware(request: NextRequest) {
   // Admin routes - require super admin privileges
   const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
 
+  // Subscription pages - always allow access (users need to select plans)
+  const isSubscriptionPage =
+    request.nextUrl.pathname.startsWith('/dashboard/subscription')
+
   // Protected routes - require authentication
   const protectedPaths = ['/dashboard', '/admin']
   const isProtectedPath = protectedPaths.some(path =>
@@ -92,6 +96,51 @@ export async function middleware(request: NextRequest) {
         const redirectUrl = request.nextUrl.clone()
         redirectUrl.pathname = '/dashboard'
         return NextResponse.redirect(redirectUrl)
+      }
+    }
+
+    // Subscription access check for dashboard (except subscription pages)
+    if (
+      request.nextUrl.pathname.startsWith('/dashboard') &&
+      !isSubscriptionPage
+    ) {
+      // Get user's company subscription status
+      const { data: profile } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
+
+      if (profile?.company_id) {
+        const now = new Date().toISOString()
+
+        const { data: subscription } = await supabase
+          .from('company_subscriptions')
+          .select('id, status, current_period_end, grace_period_end, trial_end')
+          .eq('company_id', profile.company_id)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+
+        // Check if subscription is expired
+        if (subscription) {
+          const isExpired =
+            ['expired', 'cancelled', 'suspended'].includes(
+              subscription.status
+            ) ||
+            (subscription.status === 'trial' &&
+              subscription.trial_end &&
+              subscription.trial_end < now) ||
+            (subscription.current_period_end < now &&
+              (!subscription.grace_period_end ||
+                subscription.grace_period_end < now))
+
+          if (isExpired) {
+            const redirectUrl = request.nextUrl.clone()
+            redirectUrl.pathname = '/dashboard/subscription/expired'
+            return NextResponse.redirect(redirectUrl)
+          }
+        }
       }
     }
   } else {
