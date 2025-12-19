@@ -15,14 +15,16 @@ import type { Subscription } from '@/types/revenue'
  * Unified daily tasks cron job
  * Consolidates all daily operations into single cron job
  *
- * Vercel Cron: 0 1 * * * (1 AM daily - Free Plan limitation: 1 cron only)
+ * Vercel Cron: 0 1 * * * (UTC 01:00 = KST 10:00 - Free Plan limitation: 1 cron only)
  *
- * All tasks run sequentially at 1 AM:
+ * All tasks run sequentially at 01:00 UTC (10:00 KST):
  * - Check subscription expiry and send notifications
  * - Calculate revenue (MRR/ARR)
  * - Calculate customer health scores
  * - Sync Google Sheets
  * - Detect growth opportunities
+ *
+ * Note: All times stored in database are UTC. Frontend displays in user's timezone.
  */
 export async function GET(request: NextRequest) {
   try {
@@ -39,7 +41,7 @@ export async function GET(request: NextRequest) {
       tasksExecuted: [],
     }
 
-    console.log('[Cron] Starting daily tasks at 1 AM')
+    console.log('[Cron] Starting daily tasks at 01:00 UTC (10:00 KST)')
 
     // Supabase client
     const supabase = createClient(

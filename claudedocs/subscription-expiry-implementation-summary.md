@@ -44,7 +44,7 @@ npx supabase db push
 - ✅ 중복 알림 방지 (notification_sent_logs 테이블 활용)
 - ✅ 기존 daily tasks와 함께 실행 (revenue, health scores, sheets sync)
 
-**실행 주기**: 매일 01:00 (KST) - `vercel.json`에 설정됨
+**실행 주기**: 매일 01:00 UTC (10:00 KST) - `vercel.json`에 설정됨
 
 **보안**: `CRON_SECRET` 환경변수로 인증
 
@@ -176,6 +176,11 @@ getSubscriptionStatusColor(status: string): string
 
 **실행 주기**: 매일 01:00 UTC (10:00 KST)
 
+**⏰ 시간 처리 정책**:
+- **서버/DB**: 모든 시간은 UTC로 저장 및 처리
+- **프론트엔드**: 사용자 타임존으로 자동 변환하여 표시
+- **Cron**: UTC 01:00 = 한국 시간 오전 10시 실행
+
 **통합된 작업**:
 1. 구독 만료 체크 및 알림 생성 (NEW)
 2. Revenue 계산 (MRR/ARR)
@@ -190,7 +195,7 @@ getSubscriptionStatusColor(status: string): string
 ### 플로우 1: 만료 7일 전 알림
 
 ```
-1. Cron Job 실행 (매일 01:00 - daily-tasks)
+1. Cron Job 실행 (매일 01:00 UTC = 10:00 KST - daily-tasks)
    ↓
 2. checkSubscriptionExpiry() 함수 실행
    ↓
@@ -208,7 +213,7 @@ getSubscriptionStatusColor(status: string): string
 ### 플로우 2: 구독 만료 처리
 
 ```
-1. Cron Job 실행 (매일 01:00 - daily-tasks)
+1. Cron Job 실행 (매일 01:00 UTC = 10:00 KST - daily-tasks)
    ↓
 2. checkSubscriptionExpiry() 함수 실행
    ↓
