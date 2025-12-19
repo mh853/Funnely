@@ -13,11 +13,16 @@ export default function NotificationBell() {
   useEffect(() => {
     fetchUnreadCount()
 
-    // Supabase Realtime 구독
+    // 1. Polling: 10초마다 카운트 새로고침 (백업 메커니즘)
+    const pollingInterval = setInterval(() => {
+      fetchUnreadCount()
+    }, 10000) // 10초
+
+    // 2. Supabase Realtime 구독 (메인 메커니즘)
     const supabase = createClient()
 
     const channel = supabase
-      .channel('notifications-changes')
+      .channel('notifications-bell')
       .on(
         'postgres_changes',
         {
@@ -26,70 +31,20 @@ export default function NotificationBell() {
           table: 'notifications',
         },
         (payload) => {
-          console.log('🔔 Realtime notification change:', payload)
-          console.log('  - Event type:', payload.eventType)
-
-          // ✅ Realtime 이벤트로 즉시 카운트 계산
-          if (payload.eventType === 'UPDATE') {
-            const oldRead = (payload.old as any)?.is_read
-            const newRead = (payload.new as any)?.is_read
-
-            console.log('  - Old is_read:', oldRead)
-            console.log('  - New is_read:', newRead)
-
-            if (oldRead === false && newRead === true) {
-              // 읽음 처리 → 카운트 감소
-              setUnreadCount((prev) => {
-                const newCount = Math.max(0, prev - 1)
-                console.log(`  → Unread count decreased: ${prev} → ${newCount}`)
-                return newCount
-              })
-            } else if (oldRead === true && newRead === false) {
-              // 읽지 않음으로 변경 → 카운트 증가
-              setUnreadCount((prev) => {
-                const newCount = prev + 1
-                console.log(`  → Unread count increased: ${prev} → ${newCount}`)
-                return newCount
-              })
-            }
-          } else if (payload.eventType === 'INSERT') {
-            const isRead = (payload.new as any)?.is_read
-            console.log('  - New notification is_read:', isRead)
-
-            if (isRead === false) {
-              // 새 읽지 않은 알림 → 카운트 증가
-              setUnreadCount((prev) => {
-                const newCount = prev + 1
-                console.log(`  → New unread notification: ${prev} → ${newCount}`)
-                return newCount
-              })
-            }
-          } else if (payload.eventType === 'DELETE') {
-            const wasUnread = (payload.old as any)?.is_read === false
-            console.log('  - Deleted notification was_unread:', wasUnread)
-
-            if (wasUnread) {
-              // 읽지 않은 알림 삭제 → 카운트 감소
-              setUnreadCount((prev) => {
-                const newCount = Math.max(0, prev - 1)
-                console.log(`  → Unread notification deleted: ${prev} → ${newCount}`)
-                return newCount
-              })
-            }
-          }
-
-          // 5분마다 한 번씩 서버와 동기화 (정확성 보장)
-          const now = Date.now()
-          if (now - lastSyncTime.current > 300000) {
-            console.log('  → Syncing with server (5min periodic check)')
-            fetchUnreadCount()
-            lastSyncTime.current = now
-          }
+          // Realtime 이벤트 발생 시 즉시 카운트 업데이트
+          fetchUnreadCount()
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'CHANNEL_ERROR') {
+          console.error('[NotificationBell] Realtime subscription error')
+        } else if (status === 'TIMED_OUT') {
+          console.error('[NotificationBell] Realtime subscription timed out')
+        }
+      })
 
     return () => {
+      clearInterval(pollingInterval)
       supabase.removeChannel(channel)
     }
   }, [])

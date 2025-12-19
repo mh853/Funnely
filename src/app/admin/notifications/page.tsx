@@ -11,6 +11,7 @@ import {
   TrendingUp,
   FileText,
   User,
+  CreditCard,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -46,6 +47,8 @@ const TYPE_ICONS: Record<string, any> = {
   goal_achieved: TrendingUp,
   report_ready: FileText,
   user_activity: User,
+  subscription_started: CreditCard,
+  subscription_changed: CreditCard,
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -54,6 +57,8 @@ const TYPE_COLORS: Record<string, string> = {
   goal_achieved: 'text-green-600 bg-green-50',
   report_ready: 'text-orange-600 bg-orange-50',
   user_activity: 'text-gray-600 bg-gray-50',
+  subscription_started: 'text-indigo-600 bg-indigo-50',
+  subscription_changed: 'text-indigo-600 bg-indigo-50',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -62,6 +67,8 @@ const TYPE_LABELS: Record<string, string> = {
   goal_achieved: '목표 달성',
   report_ready: '리포트 완료',
   user_activity: '사용자 활동',
+  subscription_started: '구독 시작',
+  subscription_changed: '구독 변경',
 }
 
 export default function NotificationsPage() {
@@ -86,7 +93,6 @@ export default function NotificationsPage() {
           table: 'notifications',
         },
         (payload) => {
-          console.log('🔔 Realtime notification change (page):', payload)
           // 알림 변경 시 즉시 목록 새로고침
           fetchNotifications()
         }
