@@ -36,6 +36,7 @@ export async function GET(request: NextRequest) {
 
     // 4. 현재 활성 구독 조회 (company_subscriptions + subscription_plans)
     // 새로운 플랜 구조: 개인(Personal)/기업(Business) × Free/Basic/Pro
+    // 기존 플랜과 호환성 유지: plan_type 컬럼도 조회
     const { data: activeSubscriptions, error: subsError } = await supabase
       .from('company_subscriptions')
       .select(
@@ -47,6 +48,7 @@ export async function GET(request: NextRequest) {
         subscription_plans:plan_id (
           id,
           name,
+          plan_type,
           tier,
           user_type,
           price_monthly,
@@ -73,15 +75,24 @@ export async function GET(request: NextRequest) {
             ? plan.price_yearly || plan.price_monthly * 12
             : plan.price_monthly
 
-        // 플랜명을 "개인 Free", "기업 Pro" 등으로 조합
-        const userTypeLabel = plan.user_type === 'personal' ? '개인' : '기업'
-        const tierLabel = plan.tier === 'free' ? 'Free' : plan.tier === 'basic' ? 'Basic' : 'Pro'
-        const planDisplayName = `${userTypeLabel} ${tierLabel}`
+        // 플랜명 생성 로직
+        let planDisplayName: string
+
+        if (plan.tier && plan.user_type) {
+          // 새로운 플랜 구조: "개인 Free", "기업 Pro" 등
+          const userTypeLabel = plan.user_type === 'personal' ? '개인' : '기업'
+          const tierLabel = plan.tier === 'free' ? 'Free' : plan.tier === 'basic' ? 'Basic' : 'Pro'
+          planDisplayName = `${userTypeLabel} ${tierLabel}`
+        } else {
+          // 기존 플랜 구조: plan_type과 name 조합
+          const planTypeLabel = plan.plan_type === 'business' ? '기업' : '개인'
+          planDisplayName = `${planTypeLabel} ${plan.name}`
+        }
 
         return {
           id: sub.id,
           company_id: sub.company_id,
-          plan_type: planDisplayName, // "개인 Free", "개인 Basic", "개인 Pro", "기업 Free", "기업 Basic", "기업 Pro"
+          plan_type: planDisplayName,
           billing_cycle: sub.billing_cycle,
           amount: amount,
           status: sub.status,
