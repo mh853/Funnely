@@ -117,6 +117,25 @@ export default function ScheduleRegistrationModal({
                     <label htmlFor="time" className="block text-sm font-medium text-gray-700 mb-2">
                       시간 <span className="text-red-500">*</span>
                     </label>
+
+                    {/* 빠른 시간 선택 버튼 */}
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {['09:00', '10:00', '11:00', '14:00', '15:00', '16:00', '17:00', '18:00'].map((quickTime) => (
+                        <button
+                          key={quickTime}
+                          type="button"
+                          onClick={() => setTime(quickTime)}
+                          className={`px-3 py-1.5 text-xs font-medium rounded-lg transition ${
+                            time === quickTime
+                              ? 'bg-emerald-600 text-white'
+                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          }`}
+                        >
+                          {quickTime}
+                        </button>
+                      ))}
+                    </div>
+
                     <input
                       type="time"
                       id="time"
