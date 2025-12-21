@@ -1,6 +1,6 @@
 'use client'
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts'
 import { formatCurrency } from '@/lib/revenue/calculations'
 import type { PlanBreakdown, BillingCycleBreakdown } from '@/types/revenue'
 
@@ -9,33 +9,68 @@ interface PlanBreakdownChartProps {
   billingData: BillingCycleBreakdown[]
 }
 
-const PLAN_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
+const PLAN_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899']
 const BILLING_COLORS = ['#3b82f6', '#10b981', '#f59e0b']
+
+// 외부 라벨 렌더링 함수 - 텍스트 겹침 방지
+const renderCustomLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+  name,
+}: any) => {
+  const RADIAN = Math.PI / 180
+  // 라벨을 파이 바깥쪽으로 배치
+  const radius = outerRadius + 30
+  const x = cx + radius * Math.cos(-midAngle * RADIAN)
+  const y = cy + radius * Math.sin(-midAngle * RADIAN)
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="#374151"
+      textAnchor={x > cx ? 'start' : 'end'}
+      dominantBaseline="central"
+      className="text-xs font-medium"
+    >
+      {`${name} (${(percent * 100).toFixed(1)}%)`}
+    </text>
+  )
+}
 
 export default function PlanBreakdownChart({
   planData,
   billingData,
 }: PlanBreakdownChartProps) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Plan Breakdown */}
       <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           플랜별 수익 분포
         </h3>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={400}>
           <PieChart>
             <Pie
-              data={planData}
+              data={planData.map((item) => ({
+                ...item,
+                name: item.plan_name,
+              }))}
               dataKey="mrr"
-              nameKey="plan_name"
+              nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={80}
-              label={({ plan_name, percentage }) =>
-                `${plan_name} (${percentage.toFixed(1)}%)`
-              }
+              outerRadius={100}
+              label={renderCustomLabel}
+              labelLine={{
+                stroke: '#9ca3af',
+                strokeWidth: 1,
+              }}
             >
               {planData.map((entry, index) => (
                 <Cell
@@ -46,8 +81,13 @@ export default function PlanBreakdownChart({
             </Pie>
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                padding: '0.5rem',
+              }}
             />
-            <Legend />
           </PieChart>
         </ResponsiveContainer>
 
@@ -78,18 +118,22 @@ export default function PlanBreakdownChart({
           결제 주기별 수익 분포
         </h3>
 
-        <ResponsiveContainer width="100%" height={300}>
+        <ResponsiveContainer width="100%" height={400}>
           <PieChart>
             <Pie
-              data={billingData}
+              data={billingData.map((item) => ({
+                ...item,
+                name: item.cycle === 'monthly' ? '월간' : item.cycle === 'yearly' ? '연간' : '분기',
+              }))}
               dataKey="mrr"
-              nameKey="cycle"
+              nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={80}
-              label={({ cycle, percentage }) => {
-                const cycleLabel = cycle === 'monthly' ? '월간' : cycle === 'yearly' ? '연간' : '분기'
-                return `${cycleLabel} (${percentage.toFixed(1)}%)`
+              outerRadius={100}
+              label={renderCustomLabel}
+              labelLine={{
+                stroke: '#9ca3af',
+                strokeWidth: 1,
               }}
             >
               {billingData.map((entry, index) => (
@@ -101,13 +145,11 @@ export default function PlanBreakdownChart({
             </Pie>
             <Tooltip
               formatter={(value: number) => formatCurrency(value)}
-            />
-            <Legend
-              formatter={(value) => {
-                if (value === 'monthly') return '월간'
-                if (value === 'yearly') return '연간'
-                if (value === 'quarterly') return '분기'
-                return value
+              contentStyle={{
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem',
+                padding: '0.5rem',
               }}
             />
           </PieChart>
