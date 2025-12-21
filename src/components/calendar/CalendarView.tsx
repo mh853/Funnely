@@ -307,7 +307,9 @@ export default function CalendarView({
   const handleDayClick = (day: number) => {
     const dayEvents = getEventsForDay(day)
     const dayLeads = getLeadsForDay(day)
-    setSelectedDayData({ events: dayEvents, leads: dayLeads, day })
+    // 모달에 표시할 leads도 필터링 적용
+    const filteredDayLeads = dayLeads.filter(lead => allowedStatuses.includes(lead.status))
+    setSelectedDayData({ events: dayEvents, leads: filteredDayLeads, day })
     setShowDayDetailModal(true)
   }
 
