@@ -326,9 +326,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
     return (
       <div
-        className={`${position === 'top' ? 'sticky top-0 border-b' : 'sticky bottom-0 border-t'} z-50 bg-white p-4 border-gray-200 shadow-md space-y-3`}
+        className={`${position === 'top' ? 'sticky top-0 border-b' : 'sticky bottom-0 border-t'} z-50 bg-white border-gray-200 shadow-md`}
       >
-        {buttons}
+        <div className="max-w-[800px] mx-auto p-4 space-y-3">
+          {buttons}
+        </div>
       </div>
     )
   }
@@ -480,7 +482,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         {renderStickyButtons('top')}
 
       {/* Scrollable Content */}
-      <div className="px-6 py-8 space-y-8">
+      <div className="max-w-[800px] mx-auto px-6 py-8 space-y-8">
         {/* Hero Images */}
         {isSectionEnabled('hero_image') && landingPage.images && landingPage.images.length > 0 && (
           <div className="space-y-0">
@@ -696,7 +698,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 }
               }}
               disabled={isSubmitting}
-              className="w-full py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full max-w-xs py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
               style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
             >
               {isSubmitting && (
@@ -712,7 +714,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           <div className="flex justify-center">
             <a
               href={`tel:${landingPage.call_button_phone}`}
-              className="w-full py-4 text-white rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow flex items-center justify-center gap-3"
+              className="w-full max-w-xs py-4 text-white rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow flex items-center justify-center gap-3"
               style={{ backgroundColor: landingPage.call_button_color || '#10B981' }}
             >
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
