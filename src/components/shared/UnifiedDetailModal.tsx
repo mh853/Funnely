@@ -10,6 +10,7 @@ import {
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 import { formatDateTime } from '@/lib/utils/date'
+import { decryptPhone } from '@/lib/encryption/phone'
 import ScheduleRegistrationModal from './ScheduleRegistrationModal'
 
 interface TeamMember {
@@ -95,6 +96,9 @@ export default function UnifiedDetailModal({
   const [changeLogs, setChangeLogs] = useState<any[]>([])
   const [loadingChangeLogs, setLoadingChangeLogs] = useState(false)
 
+  // 전화번호 복호화 (클라이언트 전용)
+  const [decryptedPhone, setDecryptedPhone] = useState<string>('')
+
   // lead가 변경될 때마다 상태 초기화
   useEffect(() => {
     if (lead) {
@@ -103,6 +107,13 @@ export default function UnifiedDetailModal({
       setCurrentStatus(lead.status)
       setReservationDate(lead.contract_completed_at)
       setError(null)
+
+      // 전화번호 복호화 (클라이언트에서만 실행)
+      if (lead.phone) {
+        setDecryptedPhone(decryptPhone(lead.phone))
+      } else {
+        setDecryptedPhone('')
+      }
 
       // 결제 내역 및 변경이력 조회
       fetchPayments(lead.id)
@@ -505,12 +516,12 @@ export default function UnifiedDetailModal({
                               전화번호
                             </dt>
                             <dd className="mt-0.5">
-                              {lead.phone ? (
+                              {decryptedPhone ? (
                                 <a
-                                  href={`tel:${lead.phone}`}
+                                  href={`tel:${decryptedPhone}`}
                                   className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
                                 >
-                                  {lead.phone}
+                                  {decryptedPhone}
                                 </a>
                               ) : (
                                 <span className="text-sm text-gray-400">정보 없음</span>

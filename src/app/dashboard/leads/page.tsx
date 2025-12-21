@@ -1,5 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import { decryptPhone } from '@/lib/encryption/phone'
 import LeadsClient from './LeadsClient'
 
 interface SearchParams {
@@ -167,6 +168,12 @@ export default async function LeadsPage({
     .order('created_at', { ascending: false })
     .range((page - 1) * pageSize, page * pageSize - 1)
 
+  // 서버에서 전화번호 복호화
+  const decryptedLeads = (leads || []).map(lead => ({
+    ...lead,
+    phone: lead.phone ? decryptPhone(lead.phone) : lead.phone
+  }))
+
   // Get landing pages for filter
   const { data: landingPages } = await supabase
     .from('landing_pages')
@@ -194,7 +201,7 @@ export default async function LeadsPage({
       {/* Header는 LeadsClient에서 Excel 버튼과 함께 렌더링 */}
 
       <LeadsClient
-        leads={leads || []}
+        leads={decryptedLeads}
         landingPages={landingPages || []}
         teamMembers={teamMembers || []}
         totalCount={totalCount || 0}

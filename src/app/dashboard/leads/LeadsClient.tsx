@@ -4,7 +4,6 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon } from '@heroicons/react/24/outline'
-import { decryptPhone } from '@/lib/encryption/phone'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
 import * as XLSX from 'xlsx'
@@ -1069,7 +1068,7 @@ export default function LeadsClient({
           'DB 신청일': formatDateTime(lead.created_at),
           '랜딩페이지': lead.landing_pages?.title || '-',
           '이름': lead.name || '-',
-          '전화번호': lead.phone ? decryptPhone(lead.phone) : '-',
+          '전화번호': lead.phone || '-',
           '기기': lead.device_type
             ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
             : '-',
@@ -1430,11 +1429,11 @@ export default function LeadsClient({
                       </span>
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-900 max-w-[110px]">
-                      <span className="truncate block" title={lead.phone ? decryptPhone(lead.phone) : ''}>
+                      <span className="truncate block" title={lead.phone || ''}>
                         {lead.phone ? (
-                          decryptPhone(lead.phone).length > 13
-                            ? `${decryptPhone(lead.phone).slice(0, 13)}...`
-                            : decryptPhone(lead.phone)
+                          lead.phone.length > 13
+                            ? `${lead.phone.slice(0, 13)}...`
+                            : lead.phone
                         ) : '-'}
                       </span>
                     </td>
@@ -1779,7 +1778,7 @@ export default function LeadsClient({
                     </div>
                     <div>
                       <div className="font-semibold text-gray-900">{lead.name}</div>
-                      <div className="text-sm text-gray-500">{decryptPhone(lead.phone)}</div>
+                      <div className="text-sm text-gray-500">{lead.phone || '-'}</div>
                     </div>
                   </div>
                 ) : null

@@ -14,7 +14,6 @@ import {
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
-import { decryptPhone } from '@/lib/encryption/phone'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
