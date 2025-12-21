@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
     const { data: churnRecords, error: churnError } = await supabase
       .from('churn_records')
       .select('*')
-      .gte('churned_at', startDate.toISOString())
-      .lte('churned_at', now.toISOString())
-      .order('churned_at', { ascending: false })
+      .gte('churn_date', startDate.toISOString())
+      .lte('churn_date', now.toISOString())
+      .order('churn_date', { ascending: false })
 
     if (churnError) throw churnError
 
@@ -84,12 +84,12 @@ export async function GET(request: NextRequest) {
       const { data: monthRecords } = await supabase
         .from('churn_records')
         .select('*')
-        .gte('churned_at', monthStart.toISOString())
-        .lte('churned_at', monthEnd.toISOString())
+        .gte('churn_date', monthStart.toISOString())
+        .lte('churn_date', monthEnd.toISOString())
 
       const monthChurnedCount = monthRecords?.length || 0
       const monthLostMrr = (monthRecords || []).reduce(
-        (sum, r) => sum + (r.last_mrr || 0),
+        (sum, r) => sum + (r.metadata?.last_mrr || 0),
         0
       )
 

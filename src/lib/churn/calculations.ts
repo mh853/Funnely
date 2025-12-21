@@ -17,7 +17,7 @@ export function calculateChurnRate(
  */
 export function calculateAverageTenure(records: ChurnRecord[]): number {
   if (records.length === 0) return 0
-  const sum = records.reduce((acc, r) => acc + r.tenure_days, 0)
+  const sum = records.reduce((acc, r) => acc + (r.metadata?.tenure_days || 0), 0)
   return Math.round(sum / records.length)
 }
 
@@ -27,15 +27,17 @@ export function calculateAverageTenure(records: ChurnRecord[]): number {
 export function calculateMedianTenure(records: ChurnRecord[]): number {
   if (records.length === 0) return 0
 
-  const sorted = [...records].sort((a, b) => a.tenure_days - b.tenure_days)
+  const sorted = [...records].sort(
+    (a, b) => (a.metadata?.tenure_days || 0) - (b.metadata?.tenure_days || 0)
+  )
   const mid = Math.floor(sorted.length / 2)
 
   if (sorted.length % 2 === 0) {
-    return Math.round(
-      (sorted[mid - 1].tenure_days + sorted[mid].tenure_days) / 2
-    )
+    const tenure1 = sorted[mid - 1].metadata?.tenure_days || 0
+    const tenure2 = sorted[mid].metadata?.tenure_days || 0
+    return Math.round((tenure1 + tenure2) / 2)
   } else {
-    return sorted[mid].tenure_days
+    return sorted[mid].metadata?.tenure_days || 0
   }
 }
 
@@ -48,12 +50,13 @@ export function analyzeChurnReasons(
   const categoryMap = new Map<string, { count: number; lost_mrr: number }>()
 
   records.forEach((record) => {
-    const category = record.reason_category || 'unknown'
+    // churn_type을 category로 사용
+    const category = record.churn_type || 'unknown'
     const existing = categoryMap.get(category) || { count: 0, lost_mrr: 0 }
 
     categoryMap.set(category, {
       count: existing.count + 1,
-      lost_mrr: existing.lost_mrr + (record.last_mrr || 0),
+      lost_mrr: existing.lost_mrr + (record.metadata?.last_mrr || 0),
     })
   })
 
@@ -77,7 +80,7 @@ export function analyzeChurnReasons(
  * 예방 가능 이탈 분석
  */
 export function analyzePreventableChurn(records: ChurnRecord[]) {
-  const preventable = records.filter((r) => r.was_preventable)
+  const preventable = records.filter((r) => r.metadata?.was_preventable === true)
   const preventableCount = preventable.length
   const preventablePercentage =
     records.length > 0
@@ -85,7 +88,7 @@ export function analyzePreventableChurn(records: ChurnRecord[]) {
       : 0
 
   const potentialSavedMrr = preventable.reduce(
-    (sum, r) => sum + (r.last_mrr || 0),
+    (sum, r) => sum + (r.metadata?.last_mrr || 0),
     0
   )
 
@@ -100,7 +103,7 @@ export function analyzePreventableChurn(records: ChurnRecord[]) {
  * 총 손실 MRR/ARR 계산
  */
 export function calculateLostRevenue(records: ChurnRecord[]) {
-  const lostMrr = records.reduce((sum, r) => sum + (r.last_mrr || 0), 0)
+  const lostMrr = records.reduce((sum, r) => sum + (r.metadata?.last_mrr || 0), 0)
   const lostArr = lostMrr * 12
 
   return { lost_mrr: lostMrr, lost_arr: lostArr }

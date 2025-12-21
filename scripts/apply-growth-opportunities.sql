@@ -1,8 +1,8 @@
--- Phase 3.4: Growth Opportunities Tables
--- 업셀 기회 및 다운셀 위험 감지 시스템
+-- Create growth_opportunities table if it doesn't exist
+-- This is a standalone script to fix the missing table issue
 
 -- 1. growth_opportunities 테이블
-CREATE TABLE growth_opportunities (
+CREATE TABLE IF NOT EXISTS growth_opportunities (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
 
@@ -34,11 +34,18 @@ CREATE TABLE growth_opportunities (
 );
 
 -- 같은 회사에 대해 같은 타입의 활성 기회는 하나만
+DROP INDEX IF EXISTS idx_growth_opportunities_unique_active;
 CREATE UNIQUE INDEX idx_growth_opportunities_unique_active
   ON growth_opportunities(company_id, opportunity_type)
   WHERE status = 'active';
 
 -- 조회 성능을 위한 인덱스
+DROP INDEX IF EXISTS idx_growth_opportunities_company;
+DROP INDEX IF EXISTS idx_growth_opportunities_status;
+DROP INDEX IF EXISTS idx_growth_opportunities_type;
+DROP INDEX IF EXISTS idx_growth_opportunities_detected;
+DROP INDEX IF EXISTS idx_growth_opportunities_confidence;
+
 CREATE INDEX idx_growth_opportunities_company ON growth_opportunities(company_id);
 CREATE INDEX idx_growth_opportunities_status ON growth_opportunities(status);
 CREATE INDEX idx_growth_opportunities_type ON growth_opportunities(opportunity_type);
@@ -46,40 +53,18 @@ CREATE INDEX idx_growth_opportunities_detected ON growth_opportunities(detected_
 CREATE INDEX idx_growth_opportunities_confidence ON growth_opportunities(confidence_score DESC);
 
 -- updated_at 자동 업데이트 트리거
+DROP TRIGGER IF EXISTS update_growth_opportunities_updated_at ON growth_opportunities;
 CREATE TRIGGER update_growth_opportunities_updated_at
   BEFORE UPDATE ON growth_opportunities
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
 
--- 2. usage_metrics 테이블 (사용량 추적)
-CREATE TABLE IF NOT EXISTS usage_metrics (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
-
-  -- 사용량 데이터
-  total_leads INTEGER DEFAULT 0,
-  total_users INTEGER DEFAULT 0,
-  total_landing_pages INTEGER DEFAULT 0,
-  api_calls_count INTEGER DEFAULT 0,
-
-  -- 활동 지표
-  active_days_count INTEGER DEFAULT 0,
-  last_activity_at TIMESTAMPTZ,
-
-  -- 기간
-  metric_month DATE NOT NULL, -- 월별 집계 (매월 1일)
-
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-
-  UNIQUE(company_id, metric_month)
-);
-
-CREATE INDEX idx_usage_metrics_company_month ON usage_metrics(company_id, metric_month DESC);
-
--- 3. RLS 정책 설정
-
--- growth_opportunities RLS
+-- RLS 정책 설정
 ALTER TABLE growth_opportunities ENABLE ROW LEVEL SECURITY;
+
+-- 기존 정책 삭제 후 재생성
+DROP POLICY IF EXISTS "Super admins can view all growth opportunities" ON growth_opportunities;
+DROP POLICY IF EXISTS "Super admins can update growth opportunities" ON growth_opportunities;
 
 -- 관리자만 조회/수정 가능
 CREATE POLICY "Super admins can view all growth opportunities"
@@ -114,8 +99,36 @@ CREATE POLICY "Super admins can update growth opportunities"
     )
   );
 
+-- 2. usage_metrics 테이블 (사용량 추적)
+CREATE TABLE IF NOT EXISTS usage_metrics (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  company_id UUID REFERENCES companies(id) ON DELETE CASCADE NOT NULL,
+
+  -- 사용량 데이터
+  total_leads INTEGER DEFAULT 0,
+  total_users INTEGER DEFAULT 0,
+  total_landing_pages INTEGER DEFAULT 0,
+  api_calls_count INTEGER DEFAULT 0,
+
+  -- 활동 지표
+  active_days_count INTEGER DEFAULT 0,
+  last_activity_at TIMESTAMPTZ,
+
+  -- 기간
+  metric_month DATE NOT NULL, -- 월별 집계 (매월 1일)
+
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+
+  UNIQUE(company_id, metric_month)
+);
+
+DROP INDEX IF EXISTS idx_usage_metrics_company_month;
+CREATE INDEX idx_usage_metrics_company_month ON usage_metrics(company_id, metric_month DESC);
+
 -- usage_metrics RLS
 ALTER TABLE usage_metrics ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Super admins can view all usage metrics" ON usage_metrics;
 
 -- 관리자 조회 가능
 CREATE POLICY "Super admins can view all usage metrics"
@@ -130,59 +143,4 @@ CREATE POLICY "Super admins can view all usage metrics"
     )
   );
 
--- 4. 샘플 데이터 생성 함수 (테스트용)
-CREATE OR REPLACE FUNCTION generate_sample_growth_opportunities()
-RETURNS void AS $$
-DECLARE
-  sample_company_id UUID;
-BEGIN
-  -- 첫 번째 활성 회사 선택
-  SELECT id INTO sample_company_id FROM companies WHERE is_active = true LIMIT 1;
-
-  IF sample_company_id IS NOT NULL THEN
-    -- 업셀 기회 예시
-    INSERT INTO growth_opportunities (
-      company_id,
-      opportunity_type,
-      current_plan,
-      recommended_plan,
-      signals,
-      confidence_score,
-      estimated_additional_mrr,
-      status
-    ) VALUES (
-      sample_company_id,
-      'upsell',
-      'Basic',
-      'Pro',
-      '[
-        {
-          "type": "usage_limit",
-          "resource": "leads",
-          "current": 950,
-          "limit": 1000,
-          "percentage": 95,
-          "message": "리드 수 95% 사용 중 (950/1000)"
-        },
-        {
-          "type": "feature_attempt",
-          "feature": "API Integration",
-          "required_plan": "Pro",
-          "attempt_count": 3,
-          "message": "API 연동 시도 3회 (Pro 플랜 필요)"
-        }
-      ]'::jsonb,
-      85,
-      200.00,
-      'active'
-    ) ON CONFLICT DO NOTHING;
-
-    RAISE NOTICE 'Sample growth opportunity created for company %', sample_company_id;
-  ELSE
-    RAISE NOTICE 'No active company found - skipping sample data';
-  END IF;
-END;
-$$ LANGUAGE plpgsql;
-
--- 주석: 샘플 데이터는 필요시 수동으로 실행
--- SELECT generate_sample_growth_opportunities();
+SELECT 'Growth opportunities and usage metrics tables created successfully!' AS status;

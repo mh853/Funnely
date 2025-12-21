@@ -3,14 +3,13 @@
 export interface ChurnRecord {
   id: string
   company_id: string
-  churned_at: string
-  tenure_days: number
-  last_mrr: number
+  churn_date: string
   reason: string | null
-  reason_category: string | null
-  feedback: string | null
-  was_preventable: boolean
+  churn_type: 'voluntary' | 'involuntary' | 'other'
+  ltv: number | null
+  metadata: Record<string, any>
   created_at: string
+  updated_at: string
 }
 
 export interface ChurnMetrics {

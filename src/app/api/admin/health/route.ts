@@ -23,8 +23,9 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
     const offset = parseInt(searchParams.get('offset') || '0')
-    const healthStatus = searchParams.get('healthStatus') // 'critical' | 'at_risk' | 'healthy' | 'excellent'
-    const sortBy = searchParams.get('sortBy') || 'calculated_at' // 'calculated_at' | 'overall_score'
+    // riskLevel과 healthStatus 모두 지원 (하위 호환성)
+    const riskLevel = searchParams.get('riskLevel') || searchParams.get('healthStatus') // 'low' | 'medium' | 'high' | 'critical'
+    const sortBy = searchParams.get('sortBy') || 'calculated_at' // 'calculated_at' | 'score'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
     const date = searchParams.get('date') // Optional: specific date filter (YYYY-MM-DD)
 
@@ -36,11 +37,11 @@ export async function GET(request: NextRequest) {
 
     // 카운트 쿼리
     let countQuery = supabase
-      .from('health_scores')
+      .from('customer_health_scores')
       .select('*', { count: 'exact', head: true })
 
-    if (healthStatus) {
-      countQuery = countQuery.eq('health_status', healthStatus)
+    if (riskLevel) {
+      countQuery = countQuery.eq('risk_level', riskLevel)
     }
 
     if (date) {
@@ -57,29 +58,24 @@ export async function GET(request: NextRequest) {
 
     // 데이터 쿼리
     let dataQuery = supabase
-      .from('health_scores')
+      .from('customer_health_scores')
       .select(
         `
         id,
         company_id,
-        overall_score,
-        engagement_score,
-        product_usage_score,
-        support_score,
-        payment_score,
-        health_status,
-        risk_factors,
-        recommendations,
+        score,
+        risk_level,
+        metrics,
         calculated_at,
         created_at,
-        companies!inner(id, name, slug, status)
+        companies!inner(id, name, short_id, is_active)
       `
       )
       .range(offset, offset + limit - 1)
 
     // 필터 적용
-    if (healthStatus) {
-      dataQuery = dataQuery.eq('health_status', healthStatus)
+    if (riskLevel) {
+      dataQuery = dataQuery.eq('risk_level', riskLevel)
     }
 
     if (date) {
@@ -93,7 +89,7 @@ export async function GET(request: NextRequest) {
     }
 
     // 정렬
-    const validSortColumns = ['calculated_at', 'overall_score']
+    const validSortColumns = ['calculated_at', 'score']
     const sortColumn = validSortColumns.includes(sortBy)
       ? sortBy
       : 'calculated_at'
@@ -115,17 +111,12 @@ export async function GET(request: NextRequest) {
       company: {
         id: score.companies.id,
         name: score.companies.name,
-        slug: score.companies.slug,
-        status: score.companies.status,
+        short_id: score.companies.short_id,
+        is_active: score.companies.is_active,
       },
-      overall_score: score.overall_score,
-      engagement_score: score.engagement_score,
-      product_usage_score: score.product_usage_score,
-      support_score: score.support_score,
-      payment_score: score.payment_score,
-      health_status: score.health_status,
-      risk_factors: score.risk_factors || [],
-      recommendations: score.recommendations || [],
+      score: score.score,
+      risk_level: score.risk_level,
+      metrics: score.metrics || {},
       calculated_at: score.calculated_at,
       created_at: score.created_at,
     }))
