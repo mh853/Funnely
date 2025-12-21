@@ -1070,7 +1070,11 @@ export default function LeadsClient({
           '이름': lead.name || '-',
           '전화번호': lead.phone || '-',
           '기기': lead.device_type
-            ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+            ? (lead.device_type.toLowerCase() === 'unknown'
+                ? '알수없음'
+                : lead.device_type.toLowerCase() === 'manual'
+                  ? 'DB수동추가'
+                  : lead.device_type.toUpperCase())
             : '-',
           '결과': statusLabel,
           '예약일': formatDateTime(lead.contract_completed_at),
@@ -1236,7 +1240,33 @@ export default function LeadsClient({
       )}
 
       {/* Filters - 한 행 레이아웃 */}
-      <div className="bg-white rounded-xl shadow-lg p-4">
+      <div className="bg-white rounded-xl shadow-lg p-4 space-y-3">
+        {/* 검색 결과 카운트 표시 */}
+        <div className="flex items-center justify-between pb-2 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              📊 검색 결과:
+            </span>
+            <span className="text-sm font-semibold text-indigo-600">
+              {leads.length}건
+            </span>
+            <span className="text-xs text-gray-400">/</span>
+            <span className="text-sm text-gray-500">
+              전체 {totalCount}건
+            </span>
+          </div>
+
+          {(startDate || endDate || landingPageId || deviceType || status || assignedTo || searchQuery) && (
+            <button
+              onClick={handleClearFilter}
+              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors"
+            >
+              <XMarkIcon className="h-3 w-3" />
+              필터 초기화
+            </button>
+          )}
+        </div>
+
         <div className="flex flex-wrap items-end gap-3">
           {/* 날짜 범위 */}
           <div className="flex-shrink-0 w-72">
@@ -1439,7 +1469,11 @@ export default function LeadsClient({
                     </td>
                     <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-600">
                       {lead.device_type
-                        ? (lead.device_type.toLowerCase() === 'unknown' ? '알수없음' : lead.device_type.toUpperCase())
+                        ? (lead.device_type.toLowerCase() === 'unknown'
+                            ? '알수없음'
+                            : lead.device_type.toLowerCase() === 'manual'
+                              ? 'DB수동추가'
+                              : lead.device_type.toUpperCase())
                         : '-'}
                     </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm">
