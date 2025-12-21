@@ -262,7 +262,8 @@ export default function CalendarView({
   // Get leads for a specific day (by contract_completed_at for contract_completed status, otherwise preferred_date or created_at)
   const getLeadsForDay = (day: number) => {
     const targetDate = new Date(year, month, day)
-    return leads.filter((lead) => {
+    // 필터링된 localLeads 사용
+    return localLeads.filter((lead) => {
       // For contract_completed status, use contract_completed_at date
       if (lead.status === 'contract_completed' && lead.contract_completed_at) {
         const completedDate = new Date(lead.contract_completed_at)
