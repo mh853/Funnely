@@ -133,7 +133,11 @@ export default function CalendarView({
   // Lead detail modal state
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
-  const [localLeads, setLocalLeads] = useState<Lead[]>(leads)
+
+  // 캘린더에 표시할 상태만 필터링: 상담 전, 상담 진행중, 추가상담 필요, 기타
+  const allowedStatuses = ['new', 'pending', 'contacting', 'contacted', 'qualified', 'needs_followup', 'other']
+  const filteredLeads = leads.filter(lead => allowedStatuses.includes(lead.status))
+  const [localLeads, setLocalLeads] = useState<Lead[]>(filteredLeads)
 
   // 드래그 앤 드롭 상태
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
@@ -147,6 +151,12 @@ export default function CalendarView({
     const d = String(date.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
   }
+
+  // leads prop 변경 시 필터링된 leads로 업데이트
+  useEffect(() => {
+    const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
+    setLocalLeads(filtered)
+  }, [leads])
 
   // 예약 건수 계산 및 업데이트
   useEffect(() => {
@@ -449,8 +459,9 @@ export default function CalendarView({
       router.refresh()
     } catch (error) {
       console.error('Schedule update error:', error)
-      // 롤백
-      setLocalLeads(leads)
+      // 롤백 - 필터링된 leads로 복원
+      const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
+      setLocalLeads(filtered)
       alert('스케줄 변경에 실패했습니다.')
     }
   }
