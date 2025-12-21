@@ -121,7 +121,7 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
                     <div className="flex items-center gap-2">
                       <UserPlusIcon className="h-5 w-5" />
                       <Dialog.Title as="h3" className="text-lg font-bold">
-                        리드 추가
+                        DB 수동 추가
                       </Dialog.Title>
                     </div>
                     <button
@@ -178,7 +178,7 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
                   {/* 안내 메시지 */}
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                     <p className="text-xs text-blue-800">
-                      💡 추가된 리드는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
+                      💡 추가된 DB는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
                     </p>
                   </div>
                 </form>
@@ -200,7 +200,7 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
                     {loading && (
                       <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                     )}
-                    {loading ? '추가 중...' : '리드 추가'}
+                    {loading ? '추가 중...' : 'DB 추가'}
                   </button>
                 </div>
               </Dialog.Panel>

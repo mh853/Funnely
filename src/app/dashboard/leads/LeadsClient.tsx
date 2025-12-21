@@ -1166,7 +1166,7 @@ export default function LeadsClient({
               className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
             >
               <UserPlusIcon className="h-5 w-5" />
-              리드 추가
+              DB 수동 추가
             </button>
             <button
               onClick={handleExcelExport}
