@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeftIcon,
@@ -39,6 +39,7 @@ interface CalendarViewProps {
   currentUserId: string
   statusFilter?: string
   viewMode?: 'calendar' | 'list'
+  onReservationCountChange?: (count: number) => void
 }
 
 type CalendarMode = 'month' | 'week' | 'day'
@@ -108,6 +109,7 @@ export default function CalendarView({
   currentUserId,
   statusFilter,
   viewMode = 'calendar',
+  onReservationCountChange,
 }: CalendarViewProps) {
   const router = useRouter()
   const supabase = createClient()
@@ -145,6 +147,67 @@ export default function CalendarView({
     const d = String(date.getDate()).padStart(2, '0')
     return `${y}-${m}-${d}`
   }
+
+  // 예약 건수 계산 및 업데이트
+  useEffect(() => {
+    if (!onReservationCountChange) return
+
+    let count = 0
+
+    if (viewMode === 'calendar') {
+      // 월별 캘린더 모드: 현재 월의 예약 건수
+      const year = currentDate.getFullYear()
+      const month = currentDate.getMonth()
+
+      count = localLeads.filter((lead) => {
+        // contract_completed_at 기준 (예약 확정일)
+        if (lead.contract_completed_at) {
+          const completedDate = new Date(lead.contract_completed_at)
+          return (
+            completedDate.getFullYear() === year &&
+            completedDate.getMonth() === month
+          )
+        }
+        // preferred_date 기준
+        if (lead.preferred_date) {
+          const preferredDate = new Date(lead.preferred_date)
+          return (
+            preferredDate.getFullYear() === year &&
+            preferredDate.getMonth() === month
+          )
+        }
+        // created_at 기준
+        const createdDate = new Date(lead.created_at)
+        return (
+          createdDate.getFullYear() === year &&
+          createdDate.getMonth() === month
+        )
+      }).length
+    } else {
+      // 주별 리스트 모드: 현재 주의 예약 건수
+      const weekEnd = new Date(weekStartDate)
+      weekEnd.setDate(weekStartDate.getDate() + 6)
+      weekEnd.setHours(23, 59, 59, 999)
+
+      count = localLeads.filter((lead) => {
+        // contract_completed_at 기준 (예약 확정일)
+        if (lead.contract_completed_at) {
+          const completedDate = new Date(lead.contract_completed_at)
+          return completedDate >= weekStartDate && completedDate <= weekEnd
+        }
+        // preferred_date 기준
+        if (lead.preferred_date) {
+          const preferredDate = new Date(lead.preferred_date)
+          return preferredDate >= weekStartDate && preferredDate <= weekEnd
+        }
+        // created_at 기준
+        const createdDate = new Date(lead.created_at)
+        return createdDate >= weekStartDate && createdDate <= weekEnd
+      }).length
+    }
+
+    onReservationCountChange(count)
+  }, [viewMode, currentDate, weekStartDate, localLeads, onReservationCountChange])
 
   // Get days in month
   const getDaysInMonth = (date: Date) => {

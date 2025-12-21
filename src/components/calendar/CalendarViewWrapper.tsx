@@ -36,6 +36,7 @@ export default function CalendarViewWrapper({
   statusFilter,
 }: CalendarViewWrapperProps) {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
+  const [reservationCount, setReservationCount] = useState(leads.length)
 
   return (
     <div className="space-y-4">
@@ -74,10 +75,10 @@ export default function CalendarViewWrapper({
                 주별 리스트
               </button>
             </div>
-            {/* 총 DB 건수 */}
+            {/* 총 예약 건수 */}
             <div className="text-right">
-              <div className="text-3xl font-bold">{leads.length}</div>
-              <div className="text-xs text-indigo-100">총 DB 건수</div>
+              <div className="text-3xl font-bold">{reservationCount}</div>
+              <div className="text-xs text-indigo-100">총 예약 건수</div>
             </div>
           </div>
         </div>
@@ -91,6 +92,7 @@ export default function CalendarViewWrapper({
         currentUserId={currentUserId}
         statusFilter={statusFilter}
         viewMode={viewMode}
+        onReservationCountChange={setReservationCount}
       />
     </div>
   )
