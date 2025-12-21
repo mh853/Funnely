@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         phone_hash: phoneHash,
         status: 'new',
         source: 'manual',
-        device: 'manual',
+        device_type: 'manual',
       })
       .select()
       .single()
