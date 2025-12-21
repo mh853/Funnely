@@ -428,37 +428,39 @@ export default function CalendarView({
         </div>
       )}
 
-      {/* Header */}
-      <div className="p-6 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
-            </h2>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={previousMonth}
-                className="p-2 hover:bg-gray-100 rounded-md transition"
-              >
-                <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
-              </button>
-              <button
-                onClick={today}
-                className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
-              >
-                오늘
-              </button>
-              <button
-                onClick={nextMonth}
-                className="p-2 hover:bg-gray-100 rounded-md transition"
-              >
-                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
-              </button>
+      {/* Header - 월별 캘린더 전용 */}
+      {viewMode === 'calendar' && (
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-lg font-semibold text-gray-900">
+                {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
+              </h2>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={previousMonth}
+                  className="p-2 hover:bg-gray-100 rounded-md transition"
+                >
+                  <ChevronLeftIcon className="h-5 w-5 text-gray-600" />
+                </button>
+                <button
+                  onClick={today}
+                  className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
+                >
+                  오늘
+                </button>
+                <button
+                  onClick={nextMonth}
+                  className="p-2 hover:bg-gray-100 rounded-md transition"
+                >
+                  <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+                </button>
+              </div>
             </div>
-          </div>
 
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Calendar Grid - Month View */}
       {viewMode === 'calendar' && (

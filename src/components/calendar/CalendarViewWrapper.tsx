@@ -60,7 +60,7 @@ export default function CalendarViewWrapper({
                 }`}
               >
                 <CalendarDaysIcon className="h-4 w-4" />
-                캘린더
+                월별 캘린더
               </button>
               <button
                 onClick={() => setViewMode('list')}
@@ -71,7 +71,7 @@ export default function CalendarViewWrapper({
                 }`}
               >
                 <ListBulletIcon className="h-4 w-4" />
-                리스트
+                주별 리스트
               </button>
             </div>
             {/* 총 DB 건수 */}
