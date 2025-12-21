@@ -35,6 +35,7 @@ export async function GET(request: NextRequest) {
     )
 
     // 4. 현재 활성 구독 조회 (company_subscriptions + subscription_plans)
+    // 새로운 플랜 구조: 개인(Personal)/기업(Business) × Free/Basic/Pro
     const { data: activeSubscriptions, error: subsError } = await supabase
       .from('company_subscriptions')
       .select(
@@ -46,6 +47,8 @@ export async function GET(request: NextRequest) {
         subscription_plans:plan_id (
           id,
           name,
+          tier,
+          user_type,
           price_monthly,
           price_yearly
         )
@@ -70,10 +73,15 @@ export async function GET(request: NextRequest) {
             ? plan.price_yearly || plan.price_monthly * 12
             : plan.price_monthly
 
+        // 플랜명을 "개인 Free", "기업 Pro" 등으로 조합
+        const userTypeLabel = plan.user_type === 'personal' ? '개인' : '기업'
+        const tierLabel = plan.tier === 'free' ? 'Free' : plan.tier === 'basic' ? 'Basic' : 'Pro'
+        const planDisplayName = `${userTypeLabel} ${tierLabel}`
+
         return {
           id: sub.id,
           company_id: sub.company_id,
-          plan_type: plan.name,
+          plan_type: planDisplayName, // "개인 Free", "개인 Basic", "개인 Pro", "기업 Free", "기업 Basic", "기업 Pro"
           billing_cycle: sub.billing_cycle,
           amount: amount,
           status: sub.status,
