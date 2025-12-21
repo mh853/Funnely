@@ -58,7 +58,7 @@ export default function EnhancedDashboard() {
   async function fetchDashboardData() {
     try {
       setLoading(true)
-      const response = await fetch('/api/admin/dashboard')
+      const response = await fetch('/admin/api/dashboard')
       if (!response.ok) throw new Error('Failed to fetch dashboard data')
 
       const result = await response.json()
@@ -75,7 +75,7 @@ export default function EnhancedDashboard() {
   async function handleExport(type: 'companies' | 'users' | 'leads') {
     try {
       setExporting(true)
-      const response = await fetch(`/api/admin/export?type=${type}&format=csv`)
+      const response = await fetch(`/admin/api/export?type=${type}&format=csv`)
       if (!response.ok) throw new Error('Export failed')
 
       const blob = await response.blob()
