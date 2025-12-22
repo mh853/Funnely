@@ -1,5 +1,6 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import { LandingPageFormProvider, useLandingPageForm } from './context'
 import { LandingPageNewFormProps } from './context/types'
 import {
@@ -10,16 +11,51 @@ import {
   useCompanyInfo,
   useRealtimeRolling,
 } from './hooks'
-import {
-  BasicInfoSection,
-  CollectionFieldsSection,
-  DesignSection,
-  SectionOrderManager,
-  PrivacySection,
-  CompletionPageSection,
-  DeploymentSection,
-} from './sections'
-import ImageUploader from './components/ImageUploader'
+
+// Code Splitting: Dynamically import section components
+const BasicInfoSection = dynamic(() => import('./sections/BasicInfoSection'), {
+  loading: () => <SectionSkeleton />,
+})
+const CollectionFieldsSection = dynamic(() => import('./sections/CollectionFieldsSection'), {
+  loading: () => <SectionSkeleton />,
+})
+const DesignSection = dynamic(() => import('./sections/DesignSection'), {
+  loading: () => <SectionSkeleton />,
+})
+const SectionOrderManager = dynamic(() => import('./sections/SectionOrderManager'), {
+  loading: () => <SectionSkeleton />,
+})
+const PrivacySection = dynamic(() => import('./sections/PrivacySection'), {
+  loading: () => <SectionSkeleton />,
+})
+const CompletionPageSection = dynamic(() => import('./sections/CompletionPageSection'), {
+  loading: () => <SectionSkeleton />,
+})
+const DeploymentSection = dynamic(() => import('./sections/DeploymentSection'), {
+  loading: () => <SectionSkeleton />,
+})
+const PreviewContainer = dynamic(() => import('./preview/PreviewContainer'), {
+  loading: () => <SectionSkeleton />,
+})
+const ImageUploader = dynamic(() => import('./components/ImageUploader'), {
+  loading: () => <div className="animate-pulse bg-gray-200 h-32 rounded-lg" />,
+})
+
+/**
+ * Loading skeleton for section components
+ */
+function SectionSkeleton() {
+  return (
+    <div className="bg-white rounded-xl shadow-lg p-6 animate-pulse">
+      <div className="h-6 bg-gray-200 rounded w-1/3 mb-4" />
+      <div className="space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-full" />
+        <div className="h-4 bg-gray-200 rounded w-5/6" />
+        <div className="h-4 bg-gray-200 rounded w-4/6" />
+      </div>
+    </div>
+  )
+}
 
 /**
  * Main Landing Page Form Container
@@ -99,6 +135,9 @@ function LandingPageFormContent({ companyId, userId, landingPage }: LandingPageN
 
       {/* Deployment Section */}
       <DeploymentSection companyShortId={state.companyShortId} />
+
+      {/* Preview Container */}
+      <PreviewContainer companyId={companyId} />
 
       {/* Action Buttons */}
       <div className="flex gap-3 sticky bottom-6 bg-white/95 backdrop-blur-sm p-4 rounded-xl shadow-lg border border-gray-200">
