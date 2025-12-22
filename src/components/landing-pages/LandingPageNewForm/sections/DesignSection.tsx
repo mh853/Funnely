@@ -68,9 +68,9 @@ export default function DesignSection() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => actions.setCtaSticky('none')}
+                  onClick={() => actions.setCtaStickyPosition('none')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.ctaSticky === 'none'
+                    state.ctaStickyPosition === 'none'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -79,9 +79,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setCtaSticky('top')}
+                  onClick={() => actions.setCtaStickyPosition('top')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.ctaSticky === 'top'
+                    state.ctaStickyPosition === 'top'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -90,9 +90,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setCtaSticky('bottom')}
+                  onClick={() => actions.setCtaStickyPosition('bottom')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.ctaSticky === 'bottom'
+                    state.ctaStickyPosition === 'bottom'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -167,9 +167,9 @@ export default function DesignSection() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => actions.setTimerSticky('none')}
+                  onClick={() => actions.setTimerStickyPosition('none')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.timerSticky === 'none'
+                    state.timerStickyPosition === 'none'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -178,9 +178,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setTimerSticky('top')}
+                  onClick={() => actions.setTimerStickyPosition('top')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.timerSticky === 'top'
+                    state.timerStickyPosition === 'top'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -189,9 +189,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setTimerSticky('bottom')}
+                  onClick={() => actions.setTimerStickyPosition('bottom')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.timerSticky === 'bottom'
+                    state.timerStickyPosition === 'bottom'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -259,9 +259,9 @@ export default function DesignSection() {
               <div className="grid grid-cols-3 gap-2">
                 <button
                   type="button"
-                  onClick={() => actions.setCallButtonSticky('none')}
+                  onClick={() => actions.setCallButtonStickyPosition('none')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.callButtonSticky === 'none'
+                    state.callButtonStickyPosition === 'none'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -270,9 +270,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setCallButtonSticky('top')}
+                  onClick={() => actions.setCallButtonStickyPosition('top')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.callButtonSticky === 'top'
+                    state.callButtonStickyPosition === 'top'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}
@@ -281,9 +281,9 @@ export default function DesignSection() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => actions.setCallButtonSticky('bottom')}
+                  onClick={() => actions.setCallButtonStickyPosition('bottom')}
                   className={`px-3 py-2 text-xs font-medium rounded-lg border-2 transition-all ${
-                    state.callButtonSticky === 'bottom'
+                    state.callButtonStickyPosition === 'bottom'
                       ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
                       : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
                   }`}

@@ -30,7 +30,7 @@ export default function DesktopPreview({ companyId }: { companyId: string }) {
         {/* Desktop Content */}
         <div className="bg-gray-50 h-[500px] overflow-y-auto">
           {/* Timer Bar (if enabled) */}
-          {state.timerEnabled && state.timerSticky === 'top' && (
+          {state.timerEnabled && state.timerStickyPosition === 'top' && (
             <div
               className="sticky top-0 z-10 px-6 py-3 text-center text-sm font-semibold text-white shadow-md"
               style={{ backgroundColor: state.timerColor }}
@@ -204,7 +204,7 @@ export default function DesktopPreview({ companyId }: { companyId: string }) {
                         <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
                           <input type="checkbox" className="mt-0.5" disabled />
                           <span>
-                            {state.privacyRequired && <span className="text-red-500">* </span>}
+                            {state.requirePrivacyConsent && <span className="text-red-500">* </span>}
                             개인정보 수집·이용 동의
                           </span>
                         </label>
@@ -213,7 +213,7 @@ export default function DesktopPreview({ companyId }: { companyId: string }) {
                         <label className="flex items-start gap-2 text-sm text-gray-700 cursor-pointer">
                           <input type="checkbox" className="mt-0.5" disabled />
                           <span>
-                            {state.marketingRequired && <span className="text-red-500">* </span>}
+                            {state.requireMarketingConsent && <span className="text-red-500">* </span>}
                             마케팅 활용 동의
                           </span>
                         </label>
@@ -234,7 +234,7 @@ export default function DesktopPreview({ companyId }: { companyId: string }) {
           </div>
 
           {/* Call Button (if enabled and sticky bottom) */}
-          {state.callButtonEnabled && state.callButtonSticky === 'bottom' && (
+          {state.callButtonEnabled && state.callButtonStickyPosition === 'bottom' && (
             <div className="sticky bottom-0 bg-white border-t border-gray-200 shadow-lg">
               <div className="max-w-4xl mx-auto px-6 py-4">
                 <button

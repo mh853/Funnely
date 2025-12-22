@@ -134,7 +134,7 @@ function LandingPageFormContent({ companyId, userId, landingPage }: LandingPageN
       <CompletionPageSection companyId={companyId} />
 
       {/* Deployment Section */}
-      <DeploymentSection companyShortId={state.companyShortId} />
+      <DeploymentSection companyShortId={state.companyShortId ?? undefined} />
 
       {/* Preview Container */}
       <PreviewContainer companyId={companyId} />

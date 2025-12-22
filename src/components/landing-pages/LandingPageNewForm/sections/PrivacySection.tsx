@@ -27,8 +27,8 @@ export default function PrivacySection() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={state.privacyRequired}
-              onChange={(e) => actions.setPrivacyRequired(e.target.checked)}
+              checked={state.requirePrivacyConsent}
+              onChange={(e) => actions.setRequirePrivacyConsent(e.target.checked)}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
             <span className="text-sm text-gray-700">필수</span>
@@ -56,8 +56,8 @@ export default function PrivacySection() {
           <label className="flex items-center gap-2 cursor-pointer">
             <input
               type="checkbox"
-              checked={state.marketingRequired}
-              onChange={(e) => actions.setMarketingRequired(e.target.checked)}
+              checked={state.requireMarketingConsent}
+              onChange={(e) => actions.setRequireMarketingConsent(e.target.checked)}
               className="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
             />
             <span className="text-sm text-gray-700">필수</span>
@@ -89,7 +89,7 @@ export default function PrivacySection() {
               className="mt-0.5 w-4 h-4 text-indigo-600 border-gray-300 rounded"
             />
             <span>
-              {state.privacyRequired && <span className="text-red-500">* </span>}
+              {state.requirePrivacyConsent && <span className="text-red-500">* </span>}
               개인정보 수집·이용 동의
               {state.privacyContent && ` (${state.privacyContent.substring(0, 30)}...)`}
             </span>
@@ -102,7 +102,7 @@ export default function PrivacySection() {
               className="mt-0.5 w-4 h-4 text-indigo-600 border-gray-300 rounded"
             />
             <span>
-              {state.marketingRequired && <span className="text-red-500">* </span>}
+              {state.requireMarketingConsent && <span className="text-red-500">* </span>}
               마케팅 활용 동의
               {state.marketingContent && ` (${state.marketingContent.substring(0, 30)}...)`}
             </span>

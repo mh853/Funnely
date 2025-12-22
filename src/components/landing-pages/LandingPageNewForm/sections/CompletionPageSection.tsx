@@ -26,8 +26,8 @@ export default function CompletionPageSection({ companyId }: { companyId: string
         <label className="block text-sm font-semibold text-gray-900">완료 메시지</label>
         <input
           type="text"
-          value={state.completionMessage}
-          onChange={(e) => actions.setCompletionMessage(e.target.value)}
+          value={state.successMessage}
+          onChange={(e) => actions.setSuccessMessage(e.target.value)}
           placeholder="예: 신청이 완료되었습니다!"
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         />
@@ -38,8 +38,8 @@ export default function CompletionPageSection({ companyId }: { companyId: string
       <div className="space-y-3">
         <label className="block text-sm font-semibold text-gray-900">완료 서브메시지</label>
         <textarea
-          value={state.completionSubmessage}
-          onChange={(e) => actions.setCompletionSubmessage(e.target.value)}
+          value={state.completionInfoMessage}
+          onChange={(e) => actions.setCompletionInfoMessage(e.target.value)}
           placeholder="예: 곧 연락드리겠습니다. 감사합니다!"
           rows={3}
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
@@ -157,10 +157,10 @@ export default function CompletionPageSection({ companyId }: { companyId: string
         <h3 className="text-sm font-semibold text-gray-900">완료 페이지 미리보기</h3>
         <div className="bg-white rounded-lg p-6 text-center space-y-4">
           <div className="text-2xl font-bold text-gray-900">
-            {state.completionMessage || '신청이 완료되었습니다!'}
+            {state.successMessage || '신청이 완료되었습니다!'}
           </div>
           <div className="text-sm text-gray-600">
-            {state.completionSubmessage || '곧 연락드리겠습니다. 감사합니다!'}
+            {state.completionInfoMessage || '곧 연락드리겠습니다. 감사합니다!'}
           </div>
           {state.realtimeEnabled && (
             <div className="mt-4 pt-4 border-t border-gray-200">
