@@ -1084,9 +1084,9 @@ export default function ReservationsClient({
             엑셀 다운로드
           </button>
           {/* 총 예약 건수 */}
-          <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
-            <div className="text-lg font-bold text-emerald-600">{leads.length}</div>
-            <div className="text-xs text-emerald-600">총 예약 건수</div>
+          <div className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800 gap-1">
+            <span className="text-lg font-bold">{leads.length}</span>
+            <span className="text-xs">건</span>
           </div>
         </div>
       </div>
