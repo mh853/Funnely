@@ -29,17 +29,17 @@ export default async function NotificationsPage() {
     )
   }
 
-  // Get all notifications
-  const { data: notifications } = await supabase
+  // Get all notifications (campaigns table doesn't exist yet, so we'll query notifications only)
+  const { data: notifications, error: notificationsError } = await supabase
     .from('notifications')
-    .select(`
-      *,
-      campaigns (
-        campaign_name
-      )
-    `)
+    .select('*')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
+
+  // Log error for debugging
+  if (notificationsError) {
+    console.error('Notifications error:', notificationsError)
+  }
 
   const getTypeLabel = (type: string) => {
     const labels: Record<string, string> = {
@@ -64,13 +64,18 @@ export default async function NotificationsPage() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">알림</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          예산, 성과, 캠페인 상태에 대한 알림을 확인합니다.
-        </p>
+    <div className="px-4 space-y-4">
+      {/* Header with Title */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+          <BellIcon className="w-6 h-6 text-white" />
+        </div>
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">알림</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            예산, 성과, 캠페인 상태에 대한 알림을 확인합니다.
+          </p>
+        </div>
       </div>
 
       {/* Notifications List */}
@@ -112,23 +117,10 @@ export default async function NotificationsPage() {
                       {notification.title}
                     </h3>
                     <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
-                    {notification.campaigns && (
-                      <p className="mt-1 text-xs text-gray-500">
-                        캠페인: {notification.campaigns.campaign_name}
-                      </p>
-                    )}
                     <p className="mt-2 text-xs text-gray-400">
                       {formatDateTime(notification.created_at)}
                     </p>
                   </div>
-                  {notification.campaign_id && (
-                    <a
-                      href={`/dashboard/campaigns/${notification.campaign_id}`}
-                      className="ml-4 flex-shrink-0 text-sm font-medium text-blue-600 hover:text-blue-700"
-                    >
-                      보기 →
-                    </a>
-                  )}
                 </div>
               </div>
             ))}
