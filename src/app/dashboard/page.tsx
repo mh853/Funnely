@@ -490,15 +490,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
                   {sortedDailyStats.map(({ date }, index) => {
                     const isToday = date === `${now.getMonth() + 1}/${now.getDate()}`
-                    const showLabel = index === 0 || (index + 1) % 5 === 0 || index === sortedDailyStats.length - 1
 
                     return (
                       <div key={`label-${date}`} className="flex-1 min-w-[8px] flex justify-center">
-                        {showLabel && (
-                          <span className={`text-[10px] ${isToday ? 'text-purple-600 font-bold' : 'text-gray-400'}`}>
-                            {date.split('/')[1]}일
-                          </span>
-                        )}
+                        <span className={`text-[10px] ${isToday ? 'text-purple-600 font-bold' : 'text-gray-400'}`}>
+                          {date.split('/')[1]}일
+                        </span>
                       </div>
                     )
                   })}
@@ -739,15 +736,12 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
                   {sortedPageViewStats.map(({ date }, index) => {
                     const isToday = isCurrentMonth && date === `${now.getMonth() + 1}/${now.getDate()}`
-                    const showLabel = index === 0 || (index + 1) % 5 === 0 || index === sortedPageViewStats.length - 1
 
                     return (
                       <div key={`traffic-label-${date}`} className="flex-1 min-w-[8px] flex justify-center">
-                        {showLabel && (
-                          <span className={`text-[10px] ${isToday ? 'text-purple-600 font-bold' : 'text-gray-400'}`}>
-                            {date.split('/')[1]}일
-                          </span>
-                        )}
+                        <span className={`text-[10px] ${isToday ? 'text-purple-600 font-bold' : 'text-gray-400'}`}>
+                          {date.split('/')[1]}일
+                        </span>
                       </div>
                     )
                   })}
