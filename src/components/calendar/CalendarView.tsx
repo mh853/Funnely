@@ -51,13 +51,14 @@ const EVENT_COLORS = {
   other: 'bg-gray-100 border-gray-500 text-gray-900',
 }
 
+// 무채색 스타일로 통일 (상태 구분 없이 동일한 스타일)
 const LEAD_STATUS_COLORS = {
-  new: 'bg-orange-100 border-orange-500 text-orange-900',
-  contacted: 'bg-sky-100 border-sky-500 text-sky-900',
-  qualified: 'bg-emerald-100 border-emerald-500 text-emerald-900',
-  converted: 'bg-teal-100 border-teal-500 text-teal-900',
-  contract_completed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
-  lost: 'bg-red-100 border-red-500 text-red-900',
+  new: 'bg-gray-100 border-gray-400 text-gray-900',
+  contacted: 'bg-gray-100 border-gray-400 text-gray-900',
+  qualified: 'bg-gray-100 border-gray-400 text-gray-900',
+  converted: 'bg-gray-100 border-gray-400 text-gray-900',
+  contract_completed: 'bg-gray-100 border-gray-400 text-gray-900',
+  lost: 'bg-gray-100 border-gray-400 text-gray-900',
 }
 
 const STATUS_LABELS: { [key: string]: string } = {
@@ -101,6 +102,41 @@ const STATUS_OPTIONS = [
   { value: 'other', label: '기타' },
 ]
 
+// localStorage 키 상수
+const LEAD_READ_STORAGE_KEY = 'calendar_lead_read_status'
+
+// 읽음 상태 관리 헬퍼 함수
+const getLeadReadStatus = (): Record<string, number> => {
+  if (typeof window === 'undefined') return {}
+  try {
+    const stored = localStorage.getItem(LEAD_READ_STORAGE_KEY)
+    return stored ? JSON.parse(stored) : {}
+  } catch {
+    return {}
+  }
+}
+
+const markLeadAsRead = (leadId: string) => {
+  if (typeof window === 'undefined') return
+  try {
+    const readStatus = getLeadReadStatus()
+    readStatus[leadId] = Date.now()
+    localStorage.setItem(LEAD_READ_STORAGE_KEY, JSON.stringify(readStatus))
+  } catch (error) {
+    console.error('Failed to save read status:', error)
+  }
+}
+
+const isLeadRead = (leadId: string): boolean => {
+  const readStatus = getLeadReadStatus()
+  const readTimestamp = readStatus[leadId]
+  if (!readTimestamp) return false
+
+  // 24시간(86400000ms) 이내에 읽었으면 true
+  const twentyFourHours = 24 * 60 * 60 * 1000
+  return (Date.now() - readTimestamp) < twentyFourHours
+}
+
 export default function CalendarView({
   events,
   leads,
@@ -132,6 +168,9 @@ export default function CalendarView({
   // Lead detail modal state
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false)
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null)
+
+  // 읽음 상태 추적용 state (리렌더링 트리거용)
+  const [readStatusVersion, setReadStatusVersion] = useState(0)
 
   // 캘린더에 표시할 상태만 필터링: 상담 전, 상담 진행중, 추가상담 필요, 기타
   const allowedStatuses = ['new', 'pending', 'contacting', 'contacted', 'qualified', 'needs_followup', 'other']
@@ -335,6 +374,9 @@ export default function CalendarView({
   // Handle lead click - open lead detail modal
   const handleLeadClick = async (lead: Lead, e: React.MouseEvent) => {
     e.stopPropagation()
+    // 읽음 표시
+    markLeadAsRead(lead.id)
+    setReadStatusVersion(prev => prev + 1) // 리렌더링 트리거
     setSelectedLead(lead)
     setShowLeadDetailModal(true)
   }
@@ -924,29 +966,32 @@ export default function CalendarView({
                     DB 신청
                   </h4>
                   <div className="space-y-2">
-                    {selectedDayData.leads.map((lead: Lead) => (
-                      <div
-                        key={lead.id}
-                        onClick={(e) => {
-                          // 날짜 모달을 닫지 않고 리드 상세 모달만 열어서 뒤로가기 UX 개선
-                          handleLeadClick(lead, e)
-                        }}
-                        className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
-                          LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <UserIcon className="h-4 w-4" />
-                            <span className="font-medium">{lead.name}</span>
+                    {selectedDayData.leads.map((lead: Lead) => {
+                      const isRead = isLeadRead(lead.id)
+                      return (
+                        <div
+                          key={lead.id}
+                          onClick={(e) => {
+                            // 날짜 모달을 닫지 않고 리드 상세 모달만 열어서 뒤로가기 UX 개선
+                            handleLeadClick(lead, e)
+                          }}
+                          className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
+                            LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
+                          } ${isRead ? 'opacity-50' : ''}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <UserIcon className="h-4 w-4" />
+                              <span className="font-medium">{lead.name}</span>
+                            </div>
+                            <span className="text-xs px-2 py-1 bg-white/50 rounded">
+                              {STATUS_STYLES[lead.status]?.label || STATUS_LABELS[lead.status] || lead.status}
+                            </span>
                           </div>
-                          <span className="text-xs px-2 py-1 bg-white/50 rounded">
-                            {STATUS_STYLES[lead.status]?.label || STATUS_LABELS[lead.status] || lead.status}
-                          </span>
+                          <p className="text-sm mt-1 opacity-75">{lead.phone}</p>
                         </div>
-                        <p className="text-sm mt-1 opacity-75">{lead.phone}</p>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
