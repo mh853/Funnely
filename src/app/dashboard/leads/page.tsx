@@ -197,7 +197,7 @@ export default async function LeadsPage({
     .order('sort_order')
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 space-y-6">
       {/* Header는 LeadsClient에서 Excel 버튼과 함께 렌더링 */}
 
       <LeadsClient
