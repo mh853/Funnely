@@ -1144,10 +1144,18 @@ export default function LeadsClient({
   }
 
   // 필터 해제 (전체 목록으로 이동 - 모든 날짜 범위 포함)
-  const handleClearFilter = async () => {
-    // Next.js App Router 방식: push 후 refresh로 서버 컴포넌트 재실행
+  const handleClearFilter = () => {
+    // 즉시 클라이언트 상태 초기화
+    setStartDate(null)
+    setEndDate(null)
+    setLandingPageId('')
+    setDeviceType('')
+    setStatus('')
+    setAssignedTo('')
+    setSearchQuery('')
+
+    // URL 업데이트 (useEffect가 자동으로 처리)
     router.push('/dashboard/leads?dateRange=all')
-    router.refresh()
   }
 
   return (
@@ -1182,36 +1190,6 @@ export default function LeadsClient({
         </div>
       </div>
 
-      {/* 필터 알림 배너 (URL에서 status, deviceType, date가 설정된 경우) */}
-      {(urlStatus || urlDeviceType || urlSingleDate) && !selectedLeadId && (
-        <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <span className="text-emerald-600 text-lg">🔍</span>
-            </div>
-            <div>
-              <p className="text-sm font-medium text-emerald-900">
-                {urlSingleDate && `${urlSingleDate} 날짜`}
-                {urlSingleDate && (urlStatus || urlDeviceType) && ' + '}
-                {urlStatus && (statusStyles[urlStatus]?.label || urlStatus)}
-                {urlStatus && urlDeviceType && ' + '}
-                {urlDeviceType && (urlDeviceType === 'pc' ? 'PC' : urlDeviceType === 'mobile' ? 'Mobile' : urlDeviceType)}
-                {' '}필터가 적용되었습니다 ({totalCount}건)
-              </p>
-              <p className="text-xs text-emerald-600">
-                전체 목록을 보려면 필터 해제 버튼을 클릭하세요
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleClearFilter}
-            className="flex items-center gap-2 px-4 py-2 bg-white border border-emerald-300 rounded-lg text-sm font-medium text-emerald-700 hover:bg-emerald-50 transition-colors"
-          >
-            <XMarkIcon className="h-4 w-4" />
-            필터 해제
-          </button>
-        </div>
-      )}
 
       {/* 특정 리드 필터링 알림 배너 */}
       {selectedLeadId && (
