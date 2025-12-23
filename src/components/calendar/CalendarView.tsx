@@ -823,7 +823,7 @@ export default function CalendarView({
                             onDragOver={(e) => handleDragOver(e, slotId)}
                             onDragLeave={handleDragLeave}
                             onDrop={(e) => handleDrop(e, day, timeSlot)}
-                            className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] transition-all duration-200 ${
+                            className={`p-1 border-r border-gray-100 last:border-r-0 min-h-[60px] min-w-0 transition-all duration-200 ${
                               isToday ? 'bg-indigo-50/30' : ''
                             } ${isDropTarget ? 'bg-indigo-100 ring-2 ring-indigo-400 ring-inset scale-[1.02]' : ''} ${
                               isDragging && !isDropTarget ? 'hover:bg-gray-50' : ''
@@ -836,12 +836,12 @@ export default function CalendarView({
                                 onDragStart={(e) => handleDragStart(e, lead)}
                                 onDragEnd={handleDragEnd}
                                 onClick={(e) => handleLeadClick(lead, e)}
-                                className={`p-1.5 mb-1 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition overflow-hidden ${
+                                className={`p-1.5 mb-1 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition overflow-hidden min-w-0 ${
                                   LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
                                 } border-l-2 ${draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
                               >
-                                <div className="font-medium truncate max-w-full">{lead.name}</div>
-                                <div className="text-[10px] opacity-75 truncate max-w-full">
+                                <div className="font-medium truncate">{lead.name}</div>
+                                <div className="text-[10px] opacity-75 truncate">
                                   {lead.preferred_time || formatTime(lead.created_at)}
                                 </div>
                               </div>
