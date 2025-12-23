@@ -1115,7 +1115,7 @@ export default function ReservationsClient({
                     onClick={goToCurrentMonth}
                     className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
                   >
-                    오늘
+                    이번달
                   </button>
                   <button
                     onClick={goToNextMonth}
@@ -1252,7 +1252,7 @@ export default function ReservationsClient({
                   onClick={goToCurrentWeek}
                   className="ml-2 px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition"
                 >
-                  오늘
+                  이번달
                 </button>
               </div>
               <button
@@ -1377,13 +1377,13 @@ export default function ReservationsClient({
                                     e.stopPropagation()
                                     handleLeadClick(lead)
                                   }}
-                                  className={`group bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-md p-2 text-xs cursor-grab active:cursor-grabbing hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm hover:shadow-md ${
+                                  className={`group bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-md p-2 text-xs cursor-grab active:cursor-grabbing hover:from-emerald-600 hover:to-teal-600 transition-all shadow-sm hover:shadow-md overflow-hidden ${
                                     draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''
                                   }`}
                                 >
-                                  <div className="flex items-center justify-between mb-0.5">
-                                    <span className="font-semibold truncate">{lead.name}</span>
-                                    <span className="text-emerald-100 text-[10px] ml-1">{exactTime}</span>
+                                  <div className="flex items-center justify-between gap-1 mb-0.5 min-w-0">
+                                    <span className="font-semibold truncate min-w-0 flex-1">{lead.name}</span>
+                                    <span className="text-emerald-100 text-[10px] flex-shrink-0">{exactTime}</span>
                                   </div>
                                   {phone && (
                                     <div className="text-emerald-100 text-[10px] truncate">{phone}</div>

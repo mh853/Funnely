@@ -557,7 +557,7 @@ export default function CalendarView({
                   onClick={today}
                   className="px-3 py-1 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition"
                 >
-                  오늘
+                  이번달
                 </button>
                 <button
                   onClick={nextMonth}
@@ -706,7 +706,7 @@ export default function CalendarView({
                 }}
                 className="ml-2 px-3 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-full hover:bg-indigo-100 transition"
               >
-                오늘
+                이번달
               </button>
             </div>
             <button
