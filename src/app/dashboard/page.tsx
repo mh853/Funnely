@@ -8,7 +8,6 @@ import {
   DocumentTextIcon,
   HomeIcon,
 } from '@heroicons/react/24/outline'
-import DashboardFilter from '@/components/dashboard/DashboardFilter'
 
 // ISR: Revalidate every 30 seconds for real-time dashboard updates
 export const revalidate = 30
@@ -282,29 +281,16 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   return (
     <div className="px-4 space-y-4">
-      {/* Header with Title and Filter */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
-            <HomeIcon className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">대시보드</h1>
-            <p className="text-xs text-gray-500 mt-0.5">
-              {userProfile?.companies?.name || '회사'} 데이터 현황을 확인하세요
-            </p>
-          </div>
+      {/* Header with Title */}
+      <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+          <HomeIcon className="w-6 h-6 text-white" />
         </div>
-
-        <div className="flex items-center gap-2">
-          {/* 선택된 월 표시 (현재 월이 아닌 경우) */}
-          {!isCurrentMonth && (
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
-              <span className="font-medium text-gray-900">{selectedYear}년 {selectedMonth}월</span>
-              <span className="text-gray-600">데이터 조회 중</span>
-            </div>
-          )}
-          <DashboardFilter />
+        <div>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">대시보드</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {userProfile?.companies?.name || '회사'} 데이터 현황을 확인하세요
+          </p>
         </div>
       </div>
 
