@@ -353,15 +353,6 @@ export default function CalendarView({
     setShowDayDetailModal(true)
   }
 
-  // Handle add event from day detail modal
-  const handleAddEventFromDay = (day: number) => {
-    const clickedDate = new Date(year, month, day)
-    setSelectedDate(clickedDate)
-    setSelectedEvent(null)
-    setShowDayDetailModal(false)
-    setShowEventModal(true)
-  }
-
   // Handle event click
   const handleEventClick = (event: any, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -1002,17 +993,6 @@ export default function CalendarView({
                   <p>이 날에는 일정이나 신청이 없습니다</p>
                 </div>
               )}
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-gray-200 bg-gray-50">
-              <button
-                onClick={() => handleAddEventFromDay(selectedDayData.day)}
-                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition flex items-center justify-center gap-2"
-              >
-                <PlusIcon className="h-5 w-5" />
-                새 일정 추가
-              </button>
             </div>
           </div>
         </div>
