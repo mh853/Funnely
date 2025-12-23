@@ -1,6 +1,6 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import SubscriptionClient from '@/components/subscription/SubscriptionClient'
+import NewSubscriptionClient from '@/components/subscription/NewSubscriptionClient'
 
 export default async function SubscriptionPage() {
   const supabase = await createClient()
@@ -19,12 +19,12 @@ export default async function SubscriptionPage() {
     redirect('/dashboard')
   }
 
-  // 구독 플랜 조회
+  // 구독 플랜 조회 (sort_order로 정렬)
   const { data: plans } = await supabase
     .from('subscription_plans')
     .select('*')
     .eq('is_active', true)
-    .order('price_monthly', { ascending: true })
+    .order('sort_order', { ascending: true })
 
   // 현재 구독 정보 조회
   const { data: currentSubscription } = await supabase
@@ -34,20 +34,13 @@ export default async function SubscriptionPage() {
     .in('status', ['trial', 'active', 'past_due'])
     .single()
 
-  // 구독 이력 조회 (최근 10개)
-  const { data: subscriptionHistory } = await supabase
-    .from('company_subscriptions')
-    .select('*, subscription_plans(*)')
-    .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
   return (
-    <SubscriptionClient
-      plans={plans || []}
-      currentSubscription={currentSubscription}
-      subscriptionHistory={subscriptionHistory || []}
-      companyId={userProfile.company_id}
-    />
+    <div className="px-4 py-8">
+      <NewSubscriptionClient
+        plans={plans || []}
+        currentSubscription={currentSubscription}
+        companyId={userProfile.company_id}
+      />
+    </div>
   )
 }
