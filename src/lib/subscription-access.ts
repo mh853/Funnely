@@ -199,3 +199,184 @@ export function getSubscriptionStatusColor(status: string): string {
   }
   return colors[status] || 'bg-gray-100 text-gray-700'
 }
+
+/**
+ * 플랜 제한사항 체크 - 랜딩페이지 생성 가능 여부
+ */
+export async function canCreateLandingPage(companyId: string): Promise<{
+  allowed: boolean
+  currentCount: number
+  maxAllowed: number | null
+  message?: string
+}> {
+  try {
+    const supabase = await createClient()
+
+    // 1. 현재 구독 정보 및 플랜 제한사항 조회
+    const { data: subscription, error: subError } = await supabase
+      .from('company_subscriptions')
+      .select(`
+        id,
+        status,
+        subscription_plans (
+          max_landing_pages
+        )
+      `)
+      .eq('company_id', companyId)
+      .in('status', ['active', 'trial', 'past_due'])
+      .single()
+
+    if (subError || !subscription) {
+      return {
+        allowed: false,
+        currentCount: 0,
+        maxAllowed: 0,
+        message: '활성 구독이 없습니다.',
+      }
+    }
+
+    const maxAllowed = (subscription.subscription_plans as any)?.max_landing_pages
+
+    // 무제한인 경우 (NULL)
+    if (maxAllowed === null) {
+      return {
+        allowed: true,
+        currentCount: 0,
+        maxAllowed: null,
+      }
+    }
+
+    // 2. 현재 랜딩페이지 개수 조회
+    const { count, error: countError } = await supabase
+      .from('landing_pages')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+      .eq('is_deleted', false)
+
+    if (countError) {
+      console.error('[Limit Check] 랜딩페이지 개수 조회 실패:', countError)
+      return {
+        allowed: false,
+        currentCount: 0,
+        maxAllowed,
+        message: '개수 조회에 실패했습니다.',
+      }
+    }
+
+    const currentCount = count || 0
+
+    // 3. 제한사항 체크
+    if (currentCount >= maxAllowed) {
+      return {
+        allowed: false,
+        currentCount,
+        maxAllowed,
+        message: `랜딩페이지 생성 한도에 도달했습니다. (${currentCount}/${maxAllowed})`,
+      }
+    }
+
+    return {
+      allowed: true,
+      currentCount,
+      maxAllowed,
+    }
+  } catch (error) {
+    console.error('[Limit Check] 랜딩페이지 제한 체크 실패:', error)
+    return {
+      allowed: false,
+      currentCount: 0,
+      maxAllowed: 0,
+      message: '제한사항 확인에 실패했습니다.',
+    }
+  }
+}
+
+/**
+ * 플랜 제한사항 체크 - 사용자 초대 가능 여부
+ */
+export async function canInviteUser(companyId: string): Promise<{
+  allowed: boolean
+  currentCount: number
+  maxAllowed: number | null
+  message?: string
+}> {
+  try {
+    const supabase = await createClient()
+
+    // 1. 현재 구독 정보 및 플랜 제한사항 조회
+    const { data: subscription, error: subError } = await supabase
+      .from('company_subscriptions')
+      .select(`
+        id,
+        status,
+        subscription_plans (
+          max_users
+        )
+      `)
+      .eq('company_id', companyId)
+      .in('status', ['active', 'trial', 'past_due'])
+      .single()
+
+    if (subError || !subscription) {
+      return {
+        allowed: false,
+        currentCount: 0,
+        maxAllowed: 0,
+        message: '활성 구독이 없습니다.',
+      }
+    }
+
+    const maxAllowed = (subscription.subscription_plans as any)?.max_users
+
+    // 무제한인 경우 (NULL)
+    if (maxAllowed === null) {
+      return {
+        allowed: true,
+        currentCount: 0,
+        maxAllowed: null,
+      }
+    }
+
+    // 2. 현재 관리자 수 조회
+    const { count, error: countError } = await supabase
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', companyId)
+
+    if (countError) {
+      console.error('[Limit Check] 사용자 수 조회 실패:', countError)
+      return {
+        allowed: false,
+        currentCount: 0,
+        maxAllowed,
+        message: '사용자 수 조회에 실패했습니다.',
+      }
+    }
+
+    const currentCount = count || 0
+
+    // 3. 제한사항 체크
+    if (currentCount >= maxAllowed) {
+      return {
+        allowed: false,
+        currentCount,
+        maxAllowed,
+        message: `관리자 초대 한도에 도달했습니다. (${currentCount}/${maxAllowed})`,
+      }
+    }
+
+    return {
+      allowed: true,
+      currentCount,
+      maxAllowed,
+    }
+  } catch (error) {
+    console.error('[Limit Check] 사용자 제한 체크 실패:', error)
+    return {
+      allowed: false,
+      currentCount: 0,
+      maxAllowed: 0,
+      message: '제한사항 확인에 실패했습니다.',
+    }
+  }
+}

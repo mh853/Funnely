@@ -40,11 +40,7 @@ INSERT INTO subscription_plans (
   19000, 205200,  -- 연간: 17,100원/월 × 12 = 205,200원
   '{
     "dashboard": true,
-    "db_status": true,
-    "db_schedule": true,
-    "reservation_schedule": true,
-    "analytics": true,
-    "reports": true
+    "db_status": true
   }'::jsonb,
   1, 1, true, 1
 ),

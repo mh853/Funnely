@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { canInviteUser } from '@/lib/subscription-access'
 
 // 초대 링크 생성 API
 export async function POST(request: Request) {
@@ -43,6 +44,19 @@ export async function POST(request: Request) {
     const validRoles = ['admin', 'manager', 'user']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: '유효하지 않은 권한입니다.' }, { status: 400 })
+    }
+
+    // Check plan limits - 플랜 제한사항 체크
+    const limitCheck = await canInviteUser(currentUserProfile.company_id)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.message || '관리자 초대 한도를 초과했습니다.',
+          currentCount: limitCheck.currentCount,
+          maxAllowed: limitCheck.maxAllowed
+        },
+        { status: 403 }
+      )
     }
 
     // Generate invitation code using the DB function

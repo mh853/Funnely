@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { canCreateLandingPage } from '@/lib/subscription-access'
 
 // GET /api/landing-pages - 랜딩 페이지 목록 조회
 export async function GET(request: NextRequest) {
@@ -72,6 +73,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: { message: 'Slug must contain only lowercase letters, numbers, and hyphens' } },
         { status: 400 }
+      )
+    }
+
+    // Check plan limits - 플랜 제한사항 체크
+    const limitCheck = await canCreateLandingPage(company_id)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: {
+            message: limitCheck.message || '랜딩페이지 생성 한도를 초과했습니다.',
+            currentCount: limitCheck.currentCount,
+            maxAllowed: limitCheck.maxAllowed
+          }
+        },
+        { status: 403 }
       )
     }
 
