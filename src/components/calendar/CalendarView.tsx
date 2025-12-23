@@ -840,8 +840,8 @@ export default function CalendarView({
                                   LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
                                 } border-l-2 ${draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
                               >
-                                <div className="font-medium truncate">{lead.name}</div>
-                                <div className="text-[10px] opacity-75 truncate">
+                                <div className="font-medium truncate overflow-hidden text-ellipsis">{lead.name}</div>
+                                <div className="text-[10px] opacity-75 truncate overflow-hidden text-ellipsis">
                                   {lead.preferred_time || formatTime(lead.created_at)}
                                 </div>
                               </div>
