@@ -63,10 +63,8 @@ function formatFeatures(plan: Plan): string[] {
       advanced_schedule: '스케줄 관리 기능',
       analytics: '분석',
       reports: '리포트',
-      team_collaboration: '팀 협업',
       priority_support: '우선 지원',
       customization: '커스터마이징',
-      dedicated_manager: '전담 매니저',
       custom_integration: '커스텀 통합',
     }
 

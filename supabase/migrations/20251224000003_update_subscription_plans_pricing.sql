@@ -74,8 +74,7 @@ INSERT INTO subscription_plans (
     "reservation_schedule": true,
     "advanced_schedule": true,
     "analytics": true,
-    "reports": true,
-    "team_collaboration": true
+    "reports": true
   }'::jsonb,
   3, 3, true, 3
 ),
@@ -93,7 +92,6 @@ INSERT INTO subscription_plans (
     "advanced_schedule": true,
     "analytics": true,
     "reports": true,
-    "team_collaboration": true,
     "priority_support": true
   }'::jsonb,
   20, 20, true, 4
@@ -112,10 +110,8 @@ INSERT INTO subscription_plans (
     "advanced_schedule": true,
     "analytics": true,
     "reports": true,
-    "team_collaboration": true,
     "priority_support": true,
     "customization": true,
-    "dedicated_manager": true,
     "custom_integration": true
   }'::jsonb,
   NULL, NULL, true, 5  -- 무제한
