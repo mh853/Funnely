@@ -110,7 +110,7 @@ export default function LandingPageNewForm({
   const [descriptionEnabled, setDescriptionEnabled] = useState(landingPage?.description_enabled ?? true)
   const [realtimeEnabled, setRealtimeEnabled] = useState(landingPage?.realtime_enabled ?? true)
   const [realtimeTemplate, setRealtimeTemplate] = useState(
-    landingPage?.realtime_template || '{name}님이 {location}에서 상담 신청했습니다'
+    landingPage?.realtime_template?.replace('{location}', '{device}') || '{name}님이 {device}에서 상담 신청했습니다'
   )
   const [realtimeSpeed, setRealtimeSpeed] = useState(landingPage?.realtime_speed || 5)
   const [realtimeCount, setRealtimeCount] = useState(landingPage?.realtime_count || 10)
@@ -218,26 +218,68 @@ export default function LandingPageNewForm({
 
   // Realtime rolling state
   const [currentRealtimeIndex, setCurrentRealtimeIndex] = useState(0)
+  const [realtimeLeads, setRealtimeLeads] = useState<Array<{ name: string; device: string }>>([])
 
-  // Demo realtime data (will be replaced with actual DB data)
-  const demoRealtimeData = [
-    { name: '김민수', location: '서울 강남구' },
-    { name: '이지은', location: '경기 성남시' },
-    { name: '박준영', location: '인천 남동구' },
-    { name: '최서연', location: '부산 해운대구' },
-    { name: '정현우', location: '대전 유성구' },
-  ]
+  // Fetch actual leads from Supabase with Realtime subscription
+  useEffect(() => {
+    if (!realtimeEnabled || !collectData || !landingPage?.id) return
+
+    // Initial fetch of recent leads
+    const fetchRecentLeads = async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('name, device_type, created_at')
+        .eq('landing_page_id', landingPage.id)
+        .order('created_at', { ascending: false })
+        .limit(realtimeCount)
+
+      if (data && data.length > 0) {
+        setRealtimeLeads(data.map(lead => ({
+          name: lead.name || '익명',
+          device: lead.device_type === 'pc' ? 'PC' : lead.device_type === 'mobile' ? '모바일' : lead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
+        })))
+      }
+    }
+
+    fetchRecentLeads()
+
+    // Set up Realtime subscription for new leads
+    const channel = supabase
+      .channel(`landing_page_leads_${landingPage.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'leads',
+          filter: `landing_page_id=eq.${landingPage.id}`
+        },
+        (payload) => {
+          const newLead = payload.new as any
+          const device = newLead.device_type === 'pc' ? 'PC' : newLead.device_type === 'mobile' ? '모바일' : newLead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
+          setRealtimeLeads(prev => [
+            { name: newLead.name || '익명', device },
+            ...prev.slice(0, realtimeCount - 1)
+          ])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [realtimeEnabled, collectData, landingPage?.id, realtimeCount])
 
   // Rolling animation effect
   useEffect(() => {
-    if (!realtimeEnabled || !collectData) return
+    if (!realtimeEnabled || !collectData || realtimeLeads.length === 0) return
 
     const interval = setInterval(() => {
-      setCurrentRealtimeIndex((prev) => (prev + 1) % demoRealtimeData.length)
+      setCurrentRealtimeIndex((prev) => (prev + 1) % realtimeLeads.length)
     }, realtimeSpeed * 1000)
 
     return () => clearInterval(interval)
-  }, [realtimeEnabled, collectData, realtimeSpeed, demoRealtimeData.length])
+  }, [realtimeEnabled, collectData, realtimeSpeed, realtimeLeads.length])
 
   // Timer countdown effect
   useEffect(() => {
@@ -483,13 +525,14 @@ export default function LandingPageNewForm({
         )
 
       case 'realtime_status':
-        if (!realtimeEnabled || !collectData) return null
+        if (!realtimeEnabled || !collectData || realtimeLeads.length === 0) return null
 
         // Replace template placeholders with actual data
-        const currentData = demoRealtimeData[currentRealtimeIndex]
+        const currentData = realtimeLeads[currentRealtimeIndex]
         const displayMessage = realtimeTemplate
           .replace('{name}', currentData.name)
-          .replace('{location}', currentData.location)
+          .replace('{device}', currentData.device)
+          .replace('{location}', currentData.device)
 
         return (
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-3 border border-blue-200 overflow-hidden">
@@ -676,12 +719,13 @@ export default function LandingPageNewForm({
         )
 
       case 'realtime_status':
-        if (!realtimeEnabled || !collectData) return null
+        if (!realtimeEnabled || !collectData || realtimeLeads.length === 0) return null
 
-        const currentData = demoRealtimeData[currentRealtimeIndex]
+        const currentData = realtimeLeads[currentRealtimeIndex]
         const displayMessage = realtimeTemplate
           .replace('{name}', currentData.name)
-          .replace('{location}', currentData.location)
+          .replace('{device}', currentData.device)
+          .replace('{location}', currentData.device)
 
         return (
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 overflow-hidden">
@@ -1825,13 +1869,13 @@ export default function LandingPageNewForm({
                     롤링 메시지 템플릿
                   </label>
                   <p className="text-xs text-gray-500">
-                    {'{name}'}과 {'{location}'}은 실제 DB 데이터로 자동 치환됩니다
+                    {'{name}'}과 {'{device}'}는 실제 DB 데이터로 자동 치환됩니다
                   </p>
                   <input
                     type="text"
                     value={realtimeTemplate}
                     onChange={(e) => setRealtimeTemplate(e.target.value)}
-                    placeholder="예: {name}님이 {location}에서 상담 신청했습니다"
+                    placeholder="예: {name}님이 {device}에서 상담 신청했습니다"
                     className="w-full px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all text-sm sm:text-base"
                   />
                 </div>
@@ -1864,19 +1908,6 @@ export default function LandingPageNewForm({
                       className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                     />
                   </div>
-                </div>
-
-                <div className="p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                  <p className="text-sm text-blue-800 flex items-start gap-2">
-                    <svg className="h-5 w-5 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>
-                      <strong>실시간 DB 연동 필요:</strong><br />
-                      실제 유입된 DB를 표시하려면 백엔드에서 Supabase Realtime 구독 설정이 필요합니다.
-                      현재는 미리보기용 데모 메시지가 표시됩니다.
-                    </span>
-                  </p>
                 </div>
               </div>
             )}

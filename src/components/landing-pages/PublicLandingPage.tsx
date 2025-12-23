@@ -5,6 +5,7 @@ import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
+import { createClient } from '@/lib/supabase/client'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -84,14 +85,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }))
   }, [landingPage.collect_fields])
 
-  // Demo realtime data (memoized to prevent recreation on every render)
-  const demoRealtimeData = useMemo(() => [
-    { name: '김민수', location: '서울 강남구' },
-    { name: '이지은', location: '경기 성남시' },
-    { name: '박준영', location: '인천 남동구' },
-    { name: '최서연', location: '부산 해운대구' },
-    { name: '정현우', location: '대전 유성구' },
-  ], [])
+  // Realtime leads state
+  const [realtimeLeads, setRealtimeLeads] = useState<Array<{ name: string; device: string }>>([])
+  const supabase = useMemo(() => createClient(), [])
 
   // Track page view on mount (bypasses ISR caching issue)
   useEffect(() => {
@@ -134,16 +130,66 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     return () => clearInterval(timer)
   }, [landingPage.timer_enabled, landingPage.timer_deadline])
 
+  // Fetch actual leads from Supabase with Realtime subscription
+  useEffect(() => {
+    if (!landingPage.realtime_enabled || !landingPage.collect_data || !landingPage.id) return
+
+    // Initial fetch of recent leads
+    const fetchRecentLeads = async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('name, device_type, created_at')
+        .eq('landing_page_id', landingPage.id)
+        .order('created_at', { ascending: false })
+        .limit(landingPage.realtime_count || 10)
+
+      if (data && data.length > 0) {
+        setRealtimeLeads(data.map(lead => ({
+          name: lead.name || '익명',
+          device: lead.device_type === 'pc' ? 'PC' : lead.device_type === 'mobile' ? '모바일' : lead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
+        })))
+      }
+    }
+
+    fetchRecentLeads()
+
+    // Set up Realtime subscription for new leads
+    const channel = supabase
+      .channel(`landing_page_leads_${landingPage.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'leads',
+          filter: `landing_page_id=eq.${landingPage.id}`
+        },
+        (payload) => {
+          const newLead = payload.new as any
+          const device = newLead.device_type === 'pc' ? 'PC' : newLead.device_type === 'mobile' ? '모바일' : newLead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
+          setRealtimeLeads(prev => [
+            { name: newLead.name || '익명', device },
+            ...prev.slice(0, (landingPage.realtime_count || 10) - 1)
+          ])
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.id, landingPage.realtime_count, supabase])
+
   // Realtime status rolling animation
   useEffect(() => {
-    if (!landingPage.realtime_enabled || !landingPage.collect_data) return
+    if (!landingPage.realtime_enabled || !landingPage.collect_data || realtimeLeads.length === 0) return
 
     const interval = setInterval(() => {
-      setCurrentRealtimeIndex((prev) => (prev + 1) % demoRealtimeData.length)
+      setCurrentRealtimeIndex((prev) => (prev + 1) % realtimeLeads.length)
     }, (landingPage.realtime_speed || 3) * 1000)
 
     return () => clearInterval(interval)
-  }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, demoRealtimeData.length])
+  }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, realtimeLeads.length])
 
   // 완료 페이지 프리페칭 (사용자가 폼과 상호작용하기 시작하면 prefetch)
   useEffect(() => {
@@ -521,15 +567,16 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         )}
 
         {/* Realtime Status */}
-        {isSectionEnabled('realtime_status') && landingPage.realtime_enabled && landingPage.collect_data && (
+        {isSectionEnabled('realtime_status') && landingPage.realtime_enabled && landingPage.collect_data && realtimeLeads.length > 0 && (
           <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 overflow-hidden">
             <div className="text-base font-semibold text-blue-900 mb-3">실시간 현황</div>
             <div className="flex items-center gap-3 text-base text-blue-700">
               <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
               <div key={currentRealtimeIndex} className="animate-in fade-in duration-500">
-                {(landingPage.realtime_template || '{name}님이 {location}에서 상담을 신청했습니다.')
-                  .replace('{name}', demoRealtimeData[currentRealtimeIndex].name)
-                  .replace('{location}', demoRealtimeData[currentRealtimeIndex].location)}
+                {(landingPage.realtime_template || '{name}님이 {device}에서 상담을 신청했습니다.')
+                  .replace('{name}', realtimeLeads[currentRealtimeIndex].name)
+                  .replace('{device}', realtimeLeads[currentRealtimeIndex].device)
+                  .replace('{location}', realtimeLeads[currentRealtimeIndex].device)}
               </div>
             </div>
           </div>
