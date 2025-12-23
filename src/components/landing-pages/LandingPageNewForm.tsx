@@ -43,6 +43,7 @@ interface CustomField {
   type: 'short_answer' | 'multiple_choice'
   question: string
   options?: string[]
+  required?: boolean // 필수 항목 여부
 }
 
 type SectionType =
@@ -83,6 +84,7 @@ export default function LandingPageNewForm({
         type: field.type,
         question: field.question || '',
         options: field.options || (field.type === 'multiple_choice' ? [''] : undefined),
+        required: field.required ?? false, // 필수 여부 (기본값: false)
       }))
   }
 
@@ -333,6 +335,7 @@ export default function LandingPageNewForm({
       type,
       question: '',
       options: type === 'multiple_choice' ? [''] : undefined,
+      required: false, // 기본값: 선택 항목
     }
     setCustomFields([...customFields, newField])
     setShowFieldTypeModal(false)
@@ -347,6 +350,13 @@ export default function LandingPageNewForm({
   const updateFieldQuestion = (id: string, question: string) => {
     setCustomFields(customFields.map(field =>
       field.id === id ? { ...field, question } : field
+    ))
+  }
+
+  // Toggle field required
+  const toggleFieldRequired = (id: string) => {
+    setCustomFields(customFields.map(field =>
+      field.id === id ? { ...field, required: !field.required } : field
     ))
   }
 
@@ -914,6 +924,7 @@ export default function LandingPageNewForm({
               <div key={field.id}>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   {field.question || `${index + 3}. 항목추가`}
+                  {field.required && <span className="text-red-500 ml-1">*</span>}
                 </label>
                 {field.type === 'short_answer' ? (
                   <input
@@ -1020,6 +1031,7 @@ export default function LandingPageNewForm({
           type: field.type,
           question: field.question,
           options: field.options,
+          required: field.required ?? false, // 필수 여부 포함
         })
       })
 
@@ -1684,6 +1696,24 @@ export default function LandingPageNewForm({
                         className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                         placeholder={`${index + 3}. 항목추가 질문`}
                       />
+                    </div>
+
+                    {/* Required Toggle */}
+                    <div className="flex items-center gap-3 pl-0 sm:pl-20">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={field.required ?? false}
+                          onChange={() => toggleFieldRequired(field.id)}
+                          className="w-4 h-4 text-indigo-600 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">필수 항목으로 설정</span>
+                      </label>
+                      {field.required && (
+                        <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full font-medium">
+                          필수
+                        </span>
+                      )}
                     </div>
 
                     {/* Multiple Choice Options */}
