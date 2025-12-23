@@ -51,14 +51,13 @@ const EVENT_COLORS = {
   other: 'bg-gray-100 border-gray-500 text-gray-900',
 }
 
-// 무채색 스타일로 통일 (상태 구분 없이 동일한 스타일)
 const LEAD_STATUS_COLORS = {
-  new: 'bg-gray-100 border-gray-400 text-gray-900',
-  contacted: 'bg-gray-100 border-gray-400 text-gray-900',
-  qualified: 'bg-gray-100 border-gray-400 text-gray-900',
-  converted: 'bg-gray-100 border-gray-400 text-gray-900',
-  contract_completed: 'bg-gray-100 border-gray-400 text-gray-900',
-  lost: 'bg-gray-100 border-gray-400 text-gray-900',
+  new: 'bg-orange-100 border-orange-500 text-orange-900',
+  contacted: 'bg-sky-100 border-sky-500 text-sky-900',
+  qualified: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  converted: 'bg-teal-100 border-teal-500 text-teal-900',
+  contract_completed: 'bg-emerald-100 border-emerald-500 text-emerald-900',
+  lost: 'bg-red-100 border-red-500 text-red-900',
 }
 
 const STATUS_LABELS: { [key: string]: string } = {
@@ -977,9 +976,9 @@ export default function CalendarView({
                           }}
                           className={`p-3 rounded-lg border-l-4 cursor-pointer hover:shadow-md transition ${
                             LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || LEAD_STATUS_COLORS.new
-                          } ${isRead ? 'opacity-50' : ''}`}
+                          }`}
                         >
-                          <div className="flex items-center justify-between">
+                          <div className={`flex items-center justify-between ${isRead ? 'opacity-50' : ''}`}>
                             <div className="flex items-center gap-2">
                               <UserIcon className="h-4 w-4" />
                               <span className="font-medium">{lead.name}</span>
@@ -988,7 +987,7 @@ export default function CalendarView({
                               {STATUS_STYLES[lead.status]?.label || STATUS_LABELS[lead.status] || lead.status}
                             </span>
                           </div>
-                          <p className="text-sm mt-1 opacity-75">{lead.phone}</p>
+                          <p className={`text-sm mt-1 ${isRead ? 'opacity-50' : 'opacity-75'}`}>{lead.phone}</p>
                         </div>
                       )
                     })}
