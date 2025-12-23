@@ -80,6 +80,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         type: field.type,
         question: field.question || '',
         options: field.options || [],
+        required: field.required ?? false, // 필수 여부
       }))
   }, [landingPage.collect_fields])
 
@@ -166,6 +167,17 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       setSubmitError('전화번호를 입력해주세요')
       return
     }
+    // 커스텀 필드 필수 검증
+    for (const field of customFields) {
+      if (field.required) {
+        const fieldKey = field.id || field.question
+        const value = customFieldValues[fieldKey]
+        if (!value || !value.trim()) {
+          setSubmitError(`${field.question}을(를) 입력해주세요`)
+          return
+        }
+      }
+    }
     if (landingPage.require_privacy_consent && !privacyConsent) {
       setSubmitError('개인정보 수집 및 이용에 동의해주세요')
       return
@@ -193,7 +205,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }
 
       // 커스텀 필드 추가
-      customFields.forEach((field: { id: string; type: string; question: string; options?: string[] }) => {
+      customFields.forEach((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }) => {
         const fieldKey = field.id || field.question
         if (customFieldValues[fieldKey]) {
           formData[field.question || fieldKey] = customFieldValues[fieldKey]
@@ -589,12 +601,13 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 </div>
               )}
               {/* Custom Fields */}
-              {customFields.map((field: { id: string; type: string; question: string; options?: string[] }, index: number) => {
+              {customFields.map((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }, index: number) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {field.question || `${index + 3}. 항목추가`}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     {field.type === 'short_answer' ? (
                       <input
@@ -789,12 +802,13 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               )}
 
               {/* Custom Fields */}
-              {customFields.map((field: { id: string; type: string; question: string; options?: string[] }, index: number) => {
+              {customFields.map((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }, index: number) => {
                 const fieldKey = field.id || field.question || `field_${index}`
                 return (
                   <div key={fieldKey}>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       {field.question || `${index + 3}. 항목추가`}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
                     </label>
                     {field.type === 'short_answer' ? (
                       <input
