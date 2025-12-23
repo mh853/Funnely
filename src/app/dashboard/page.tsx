@@ -6,6 +6,7 @@ import {
   CalendarDaysIcon,
   UserGroupIcon,
   DocumentTextIcon,
+  HomeIcon,
 } from '@heroicons/react/24/outline'
 import DashboardFilter from '@/components/dashboard/DashboardFilter'
 
@@ -282,23 +283,29 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   return (
     <div className="space-y-4">
       {/* Header with Title and Filter */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl p-5 text-white shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <HomeIcon className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold">대시보드</h1>
-            <p className="mt-1 text-sm text-indigo-100">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">대시보드</h1>
+            <p className="text-xs text-gray-500 mt-0.5">
               {userProfile?.companies?.name || '회사'} 데이터 현황을 확인하세요
             </p>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* 선택된 월 표시 (현재 월이 아닌 경우) */}
+          {!isCurrentMonth && (
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm">
+              <span className="font-medium text-gray-900">{selectedYear}년 {selectedMonth}월</span>
+              <span className="text-gray-600">데이터 조회 중</span>
+            </div>
+          )}
           <DashboardFilter />
         </div>
-        {/* 선택된 월 표시 (현재 월이 아닌 경우) */}
-        {!isCurrentMonth && (
-          <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 bg-white/20 rounded-lg text-sm">
-            <span className="font-medium">{selectedYear}년 {selectedMonth}월</span>
-            <span className="text-indigo-200">데이터 조회 중</span>
-          </div>
-        )}
       </div>
 
       {/* Stats Cards - 4 Cards in a row (현재 월일 때만 표시) */}
@@ -767,12 +774,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* Traffic Efficiency Section */}
       <div className="bg-white rounded-xl shadow-lg p-5">
-        <h2 className="text-lg font-bold text-gray-900 mb-4">트래픽 효율</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-4">최근 7일 데이터</h2>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {/* Traffic Source Table (Page Views by Date) */}
           <div>
-            <h3 className="text-base font-semibold text-gray-800 mb-3">트래픽 유입 (페이지뷰)</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">트래픽 유입 (페이지뷰)</h3>
+              <Link
+                href="/dashboard/analytics"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1"
+              >
+                더보기
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
@@ -845,7 +863,18 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
           {/* DB Conversion Table */}
           <div>
-            <h3 className="text-base font-semibold text-gray-800 mb-3">DB 유입 전환</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold text-gray-800">DB 유입 전환</h3>
+              <Link
+                href="/dashboard/reports"
+                className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1"
+              >
+                더보기
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </Link>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>

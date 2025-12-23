@@ -211,63 +211,63 @@ export default function ReportsClient({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <ChartBarIcon className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold">결과별 DB 리포트</h1>
-            <p className="mt-1 text-sm text-indigo-100">
-              부서별, 담당자별 DB 현황을 분석합니다
-            </p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">리포트</h1>
+            <p className="text-xs text-gray-500 mt-0.5">부서별, 담당자별 DB 현황을 분석합니다</p>
           </div>
+        </div>
 
+        <div className="flex items-center gap-2">
           {/* 월 선택 */}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => changeMonth('prev')}
-              className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-            >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
+          <button
+            onClick={() => changeMonth('prev')}
+            className="p-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+          >
+            <ChevronLeftIcon className="h-4 w-4 text-gray-600" />
+          </button>
 
-            <div className="relative">
-              <select
-                value={`${selectedYear}-${selectedMonth}`}
-                onChange={(e) => {
-                  const [year, month] = e.target.value.split('-')
-                  updateFilters({ year, month })
-                }}
-                className="appearance-none bg-white/10 hover:bg-white/20 text-white font-semibold px-4 py-2 pr-8 rounded-lg cursor-pointer transition-colors focus:outline-none"
-              >
-                {monthOptions.map((opt) => (
-                  <option
-                    key={`${opt.year}-${opt.month}`}
-                    value={`${opt.year}-${opt.month}`}
-                    className="text-gray-900"
-                  >
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <CalendarIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none" />
-            </div>
-
-            <button
-              onClick={() => changeMonth('next')}
-              disabled={isCurrentMonth}
-              className={`p-2 rounded-lg transition-colors ${
-                isCurrentMonth
-                  ? 'bg-white/5 text-white/30 cursor-not-allowed'
-                  : 'bg-white/10 hover:bg-white/20'
-              }`}
+          <div className="relative">
+            <select
+              value={`${selectedYear}-${selectedMonth}`}
+              onChange={(e) => {
+                const [year, month] = e.target.value.split('-')
+                updateFilters({ year, month })
+              }}
+              className="appearance-none bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold px-3 py-1.5 pr-8 rounded-lg cursor-pointer transition-colors focus:outline-none text-sm"
             >
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
+              {monthOptions.map((opt) => (
+                <option
+                  key={`${opt.year}-${opt.month}`}
+                  value={`${opt.year}-${opt.month}`}
+                >
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+            <CalendarIcon className="absolute right-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-gray-600 pointer-events-none" />
           </div>
+
+          <button
+            onClick={() => changeMonth('next')}
+            disabled={isCurrentMonth}
+            className={`p-1.5 rounded-lg transition-colors ${
+              isCurrentMonth
+                ? 'bg-gray-50 text-gray-300 cursor-not-allowed'
+                : 'bg-gray-100 hover:bg-gray-200 text-gray-600'
+            }`}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-xl shadow-lg p-4">
+      {/* Filters - Sticky */}
+      <div className="sticky top-16 z-40 bg-white rounded-xl shadow-lg p-4">
         <div className="flex flex-wrap items-end gap-3">
           {/* 월 필터 */}
           <div className="flex-shrink-0 w-44">
@@ -352,65 +352,6 @@ export default function ReportsClient({
               <ArrowDownTrayIcon className="h-4 w-4" />
               엑셀 다운로드
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500">총 DB</p>
-              <p className="mt-1 text-xl font-bold text-gray-900">
-                {summary.totalDB}건
-              </p>
-            </div>
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <ChartBarIcon className="h-5 w-5 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500">상담 완료</p>
-              <p className="mt-1 text-xl font-bold text-gray-900">
-                {summary.completed}건
-              </p>
-            </div>
-            <div className="p-2 bg-green-100 rounded-lg">
-              <CheckCircleIcon className="h-5 w-5 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500">예약 확정</p>
-              <p className="mt-1 text-xl font-bold text-emerald-600">
-                {summary.contractCompleted}건
-              </p>
-            </div>
-            <div className="p-2 bg-emerald-100 rounded-lg">
-              <DocumentCheckIcon className="h-5 w-5 text-emerald-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow p-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xs font-medium text-gray-500">전환율</p>
-              <p className="mt-1 text-xl font-bold text-purple-600">
-                {summary.conversionRate}%
-              </p>
-            </div>
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <ArrowTrendingUpIcon className="h-5 w-5 text-purple-600" />
-            </div>
           </div>
         </div>
       </div>
@@ -594,46 +535,92 @@ export default function ReportsClient({
             </tbody>
 
             {/* 합계 행 */}
-            {resultRows.length > 0 && (
-              <tfoot>
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-3 py-2 text-sm text-gray-900">합계</td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-900">
-                    {resultRows.reduce((sum, r) => sum + r.total, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-orange-600">
-                    {resultRows.reduce((sum, r) => sum + r.pending, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-red-600">
-                    {resultRows.reduce((sum, r) => sum + r.rejected, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-sky-600">
-                    {resultRows.reduce((sum, r) => sum + r.inProgress, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-green-600">
-                    {resultRows.reduce((sum, r) => sum + r.completed, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-emerald-600">
-                    {resultRows.reduce((sum, r) => sum + r.contractCompleted, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-yellow-600">
-                    {resultRows.reduce((sum, r) => sum + r.needsFollowUp, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-400">
-                    {resultRows.reduce((sum, r) => sum + r.other, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-blue-600">
-                    {resultRows
-                      .reduce((sum, r) => sum + r.paymentAmount, 0)
-                      .toLocaleString()}
-                    원
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-gray-600">
-                    {resultRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
-                  </td>
-                </tr>
-              </tfoot>
-            )}
+            {resultRows.length > 0 && (() => {
+              const totalSum = resultRows.reduce((sum, r) => sum + r.total, 0)
+              const pendingSum = resultRows.reduce((sum, r) => sum + r.pending, 0)
+              const rejectedSum = resultRows.reduce((sum, r) => sum + r.rejected, 0)
+              const inProgressSum = resultRows.reduce((sum, r) => sum + r.inProgress, 0)
+              const completedSum = resultRows.reduce((sum, r) => sum + r.completed, 0)
+              const contractCompletedSum = resultRows.reduce((sum, r) => sum + r.contractCompleted, 0)
+              const needsFollowUpSum = resultRows.reduce((sum, r) => sum + r.needsFollowUp, 0)
+              const otherSum = resultRows.reduce((sum, r) => sum + r.other, 0)
+
+              return (
+                <tfoot>
+                  <tr className="bg-gray-50 font-semibold">
+                    <td className="px-3 py-2 text-sm text-gray-900">합계</td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-900">
+                      {totalSum}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-orange-600">
+                      {pendingSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((pendingSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-red-600">
+                      {rejectedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((rejectedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-sky-600">
+                      {inProgressSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((inProgressSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-green-600">
+                      {completedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((completedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-emerald-600">
+                      {contractCompletedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((contractCompletedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-yellow-600">
+                      {needsFollowUpSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((needsFollowUpSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-400">
+                      {otherSum}
+                      {totalSum > 0 && otherSum > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((otherSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-blue-600">
+                      {resultRows
+                        .reduce((sum, r) => sum + r.paymentAmount, 0)
+                        .toLocaleString()}
+                      원
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-gray-600">
+                      {resultRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
+                    </td>
+                  </tr>
+                </tfoot>
+              )
+            })()}
           </table>
         </div>
       </div>
@@ -777,46 +764,92 @@ export default function ReportsClient({
             </tbody>
 
             {/* 합계 행 */}
-            {departmentRows.length > 0 && (
-              <tfoot>
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-3 py-2 text-sm text-gray-900">합계</td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-900">
-                    {departmentRows.reduce((sum, r) => sum + r.total, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-orange-600">
-                    {departmentRows.reduce((sum, r) => sum + r.pending, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-red-600">
-                    {departmentRows.reduce((sum, r) => sum + r.rejected, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-sky-600">
-                    {departmentRows.reduce((sum, r) => sum + r.inProgress, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-green-600">
-                    {departmentRows.reduce((sum, r) => sum + r.completed, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-emerald-600">
-                    {departmentRows.reduce((sum, r) => sum + r.contractCompleted, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-yellow-600">
-                    {departmentRows.reduce((sum, r) => sum + r.needsFollowUp, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-400">
-                    {departmentRows.reduce((sum, r) => sum + r.other, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-blue-600">
-                    {departmentRows
-                      .reduce((sum, r) => sum + r.paymentAmount, 0)
-                      .toLocaleString()}
-                    원
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-gray-600">
-                    {departmentRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
-                  </td>
-                </tr>
-              </tfoot>
-            )}
+            {departmentRows.length > 0 && (() => {
+              const totalSum = departmentRows.reduce((sum, r) => sum + r.total, 0)
+              const pendingSum = departmentRows.reduce((sum, r) => sum + r.pending, 0)
+              const rejectedSum = departmentRows.reduce((sum, r) => sum + r.rejected, 0)
+              const inProgressSum = departmentRows.reduce((sum, r) => sum + r.inProgress, 0)
+              const completedSum = departmentRows.reduce((sum, r) => sum + r.completed, 0)
+              const contractCompletedSum = departmentRows.reduce((sum, r) => sum + r.contractCompleted, 0)
+              const needsFollowUpSum = departmentRows.reduce((sum, r) => sum + r.needsFollowUp, 0)
+              const otherSum = departmentRows.reduce((sum, r) => sum + r.other, 0)
+
+              return (
+                <tfoot>
+                  <tr className="bg-gray-50 font-semibold">
+                    <td className="px-3 py-2 text-sm text-gray-900">합계</td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-900">
+                      {totalSum}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-orange-600">
+                      {pendingSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((pendingSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-red-600">
+                      {rejectedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((rejectedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-sky-600">
+                      {inProgressSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((inProgressSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-green-600">
+                      {completedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((completedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-emerald-600">
+                      {contractCompletedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((contractCompletedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-yellow-600">
+                      {needsFollowUpSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((needsFollowUpSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-400">
+                      {otherSum}
+                      {totalSum > 0 && otherSum > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((otherSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-blue-600">
+                      {departmentRows
+                        .reduce((sum, r) => sum + r.paymentAmount, 0)
+                        .toLocaleString()}
+                      원
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-gray-600">
+                      {departmentRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
+                    </td>
+                  </tr>
+                </tfoot>
+              )
+            })()}
           </table>
         </div>
       </div>
@@ -966,47 +999,93 @@ export default function ReportsClient({
             </tbody>
 
             {/* 합계 행 */}
-            {staffRows.length > 0 && (
-              <tfoot>
-                <tr className="bg-gray-50 font-semibold">
-                  <td className="px-3 py-2 text-sm text-gray-900">합계</td>
-                  <td className="px-3 py-2 text-sm text-gray-500"></td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-900">
-                    {staffRows.reduce((sum, r) => sum + r.total, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-orange-600">
-                    {staffRows.reduce((sum, r) => sum + r.pending, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-red-600">
-                    {staffRows.reduce((sum, r) => sum + r.rejected, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-sky-600">
-                    {staffRows.reduce((sum, r) => sum + r.inProgress, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-green-600">
-                    {staffRows.reduce((sum, r) => sum + r.completed, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-emerald-600">
-                    {staffRows.reduce((sum, r) => sum + r.contractCompleted, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-yellow-600">
-                    {staffRows.reduce((sum, r) => sum + r.needsFollowUp, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-center text-gray-400">
-                    {staffRows.reduce((sum, r) => sum + r.other, 0)}
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-blue-600">
-                    {staffRows
-                      .reduce((sum, r) => sum + r.paymentAmount, 0)
-                      .toLocaleString()}
-                    원
-                  </td>
-                  <td className="px-3 py-2 text-sm text-right text-gray-600">
-                    {staffRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
-                  </td>
-                </tr>
-              </tfoot>
-            )}
+            {staffRows.length > 0 && (() => {
+              const totalSum = staffRows.reduce((sum, r) => sum + r.total, 0)
+              const pendingSum = staffRows.reduce((sum, r) => sum + r.pending, 0)
+              const rejectedSum = staffRows.reduce((sum, r) => sum + r.rejected, 0)
+              const inProgressSum = staffRows.reduce((sum, r) => sum + r.inProgress, 0)
+              const completedSum = staffRows.reduce((sum, r) => sum + r.completed, 0)
+              const contractCompletedSum = staffRows.reduce((sum, r) => sum + r.contractCompleted, 0)
+              const needsFollowUpSum = staffRows.reduce((sum, r) => sum + r.needsFollowUp, 0)
+              const otherSum = staffRows.reduce((sum, r) => sum + r.other, 0)
+
+              return (
+                <tfoot>
+                  <tr className="bg-gray-50 font-semibold">
+                    <td className="px-3 py-2 text-sm text-gray-900">합계</td>
+                    <td className="px-3 py-2 text-sm text-gray-500"></td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-900">
+                      {totalSum}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-orange-600">
+                      {pendingSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((pendingSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-red-600">
+                      {rejectedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((rejectedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-sky-600">
+                      {inProgressSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((inProgressSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-green-600">
+                      {completedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((completedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-emerald-600">
+                      {contractCompletedSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((contractCompletedSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-yellow-600">
+                      {needsFollowUpSum}
+                      {totalSum > 0 && (
+                        <span className="text-gray-400 text-xs ml-0.5">
+                          ({Math.round((needsFollowUpSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-center text-gray-400">
+                      {otherSum}
+                      {totalSum > 0 && otherSum > 0 && (
+                        <span className="text-xs ml-0.5">
+                          ({Math.round((otherSum / totalSum) * 100)}%)
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-blue-600">
+                      {staffRows
+                        .reduce((sum, r) => sum + r.paymentAmount, 0)
+                        .toLocaleString()}
+                      원
+                    </td>
+                    <td className="px-3 py-2 text-sm text-right text-gray-600">
+                      {staffRows.reduce((sum, r) => sum + r.paymentCount, 0)}건
+                    </td>
+                  </tr>
+                </tfoot>
+              )
+            })()}
           </table>
         </div>
       </div>

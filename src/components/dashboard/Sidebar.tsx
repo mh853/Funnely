@@ -38,8 +38,8 @@ const navigation = [
   // [임시 비활성화] 캠페인, 광고 계정 - 나중에 복원 시 주석 해제
   // { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
-  { name: '분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
-  { name: '리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
+  { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
+  { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
   { name: '기술 지원', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon },
   // [설정 페이지로 통합] 구독 관리, 결제 내역, 팀 관리
   // { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },

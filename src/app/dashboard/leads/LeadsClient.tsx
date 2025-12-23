@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon, CircleStackIcon } from '@heroicons/react/24/outline'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
 import * as XLSX from 'xlsx'
@@ -1155,30 +1155,32 @@ export default function LeadsClient({
   return (
     <>
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <CircleStackIcon className="w-6 h-6 text-white" />
+          </div>
           <div>
-            <h1 className="text-2xl font-bold">DB 현황</h1>
-            <p className="mt-1 text-sm text-indigo-100">
-              랜딩페이지에서 수집된 고객 DB를 관리하세요
-            </p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">DB 현황</h1>
+            <p className="text-xs text-gray-500 mt-0.5">랜딩페이지에서 수집된 고객 DB를 관리하세요</p>
           </div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setShowAddLeadModal(true)}
-              className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
-            >
-              <UserPlusIcon className="h-5 w-5" />
-              DB 수동 추가
-            </button>
-            <button
-              onClick={handleExcelExport}
-              className="px-6 py-3 bg-white text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition-colors shadow-lg flex items-center gap-2"
-            >
-              <ArrowDownTrayIcon className="h-5 w-5" />
-              Excel
-            </button>
-          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddLeadModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl gap-2"
+          >
+            <UserPlusIcon className="h-4 w-4" />
+            DB 수동 추가
+          </button>
+          <button
+            onClick={handleExcelExport}
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl gap-2"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            Excel
+          </button>
         </div>
       </div>
 

@@ -1,9 +1,19 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import AnalyticsDashboard from '@/components/analytics/AnalyticsDashboard'
+import AnalyticsClient from './AnalyticsClient'
 
-export default async function AnalyticsPage() {
+export const revalidate = 30
+
+interface AnalyticsPageProps {
+  searchParams: Promise<{
+    year?: string
+    month?: string
+  }>
+}
+
+export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
   const supabase = await createClient()
+  const params = await searchParams
 
   const {
     data: { user },
@@ -23,123 +33,200 @@ export default async function AnalyticsPage() {
     )
   }
 
-  // Get all landing pages with metrics
-  const { data: landingPages } = await supabase
-    .from('landing_pages')
-    .select('*')
-    .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
+  const now = new Date()
+  const selectedYear = params.year ? parseInt(params.year) : now.getFullYear()
+  const selectedMonth = params.month ? parseInt(params.month) : now.getMonth() + 1
 
-  // Get all leads with UTM data
+  // 선택된 월의 시작일과 종료일
+  const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1)
+  const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0)
+  const daysInMonth = selectedMonthEnd.getDate()
+
+  const queryStart = selectedMonthStart.toISOString()
+  const queryEnd = new Date(selectedYear, selectedMonth, 1).toISOString()
+
+  // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
+  const { data: pageViewsData } = await supabase
+    .from('landing_page_analytics')
+    .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
+    .eq('landing_pages.company_id', userProfile.company_id)
+    .gte('date', queryStart.split('T')[0])
+    .lt('date', queryEnd.split('T')[0])
+
+  // 페이지뷰를 날짜별로 집계
+  const pageViewsByDate: { [key: string]: { total: number; pc: number; mobile: number; tablet: number } } = {}
+  pageViewsData?.forEach(pv => {
+    const dateStr = pv.date
+    if (!pageViewsByDate[dateStr]) {
+      pageViewsByDate[dateStr] = { total: 0, pc: 0, mobile: 0, tablet: 0 }
+    }
+    pageViewsByDate[dateStr].total += pv.page_views || 0
+    pageViewsByDate[dateStr].pc += pv.desktop_views || 0
+    pageViewsByDate[dateStr].mobile += pv.mobile_views || 0
+    pageViewsByDate[dateStr].tablet += pv.tablet_views || 0
+  })
+
+  // Get leads (conversions) by date and device with UTM data
   const { data: leads } = await supabase
     .from('leads')
-    .select(
-      `
-      *,
-      landing_pages (
-        id,
-        title,
-        slug
-      )
-    `
-    )
+    .select('id, created_at, device_type, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page_id')
+    .eq('company_id', userProfile.company_id)
+    .gte('created_at', queryStart)
+    .lt('created_at', queryEnd)
+
+  // Aggregate traffic data by date
+  const trafficByDate: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(selectedYear, selectedMonth - 1, day)
+    const dateStr = date.toISOString().split('T')[0]
+    trafficByDate[dateStr] = pageViewsByDate[dateStr] || { total: 0, pc: 0, mobile: 0, tablet: 0 }
+  }
+
+  // Aggregate conversion data by date
+  const conversionByDate: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
+
+  for (let day = 1; day <= daysInMonth; day++) {
+    const date = new Date(selectedYear, selectedMonth - 1, day)
+    const dateStr = date.toISOString().split('T')[0]
+    conversionByDate[dateStr] = { total: 0, pc: 0, mobile: 0, tablet: 0 }
+  }
+
+  leads?.forEach((lead) => {
+    const dateStr = lead.created_at.split('T')[0]
+    if (conversionByDate[dateStr]) {
+      conversionByDate[dateStr].total++
+      const deviceType = (lead.device_type || 'unknown').toLowerCase()
+      // pc, mobile, tablet로 분류 (manual, unknown은 pc로 분류)
+      if (deviceType === 'pc' || deviceType === 'manual' || deviceType === 'unknown') {
+        conversionByDate[dateStr].pc++
+      } else if (deviceType === 'mobile') {
+        conversionByDate[dateStr].mobile++
+      } else if (deviceType === 'tablet') {
+        conversionByDate[dateStr].tablet++
+      }
+    }
+  })
+
+  // Aggregate UTM data
+  const utmData = {
+    source: {} as Record<string, number>,
+    medium: {} as Record<string, number>,
+    campaign: {} as Record<string, number>,
+    content: {} as Record<string, number>,
+    term: {} as Record<string, number>,
+  }
+
+  leads?.forEach((lead) => {
+    // UTM Source
+    const source = lead.utm_source || 'Direct'
+    utmData.source[source] = (utmData.source[source] || 0) + 1
+
+    // UTM Medium
+    const medium = lead.utm_medium || 'Direct'
+    utmData.medium[medium] = (utmData.medium[medium] || 0) + 1
+
+    // UTM Campaign
+    const campaign = lead.utm_campaign || 'Direct'
+    utmData.campaign[campaign] = (utmData.campaign[campaign] || 0) + 1
+
+    // UTM Content
+    const content = lead.utm_content || 'Direct'
+    utmData.content[content] = (utmData.content[content] || 0) + 1
+
+    // UTM Term
+    const term = lead.utm_term || 'Direct'
+    utmData.term[term] = (utmData.term[term] || 0) + 1
+  })
+
+  // Aggregate landing page performance data
+  const { data: landingPages } = await supabase
+    .from('landing_pages')
+    .select('id, title, slug, created_at, views_count')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
-  // Calculate overall statistics
-  const totalLeads = leads?.length || 0
-  const totalViews = landingPages?.reduce((sum, page) => sum + (page.views || 0), 0) || 0
-  const totalSubmissions =
-    landingPages?.reduce((sum, page) => sum + (page.submissions || 0), 0) || 0
-  const overallConversionRate = totalViews > 0 ? (totalSubmissions / totalViews) * 100 : 0
+  // Get monthly device breakdown for landing pages from landing_page_analytics
+  const { data: monthlyAnalytics } = await supabase
+    .from('landing_page_analytics')
+    .select('landing_page_id, desktop_views, mobile_views, tablet_views, landing_pages!inner(company_id)')
+    .eq('landing_pages.company_id', userProfile.company_id)
+    .gte('date', queryStart.split('T')[0])
+    .lt('date', queryEnd.split('T')[0])
 
-  // Group leads by status
-  const leadsByStatus = {
-    new: leads?.filter((l) => l.status === 'new').length || 0,
-    assigned: leads?.filter((l) => l.status === 'assigned').length || 0,
-    contacting: leads?.filter((l) => l.status === 'contacting').length || 0,
-    consulting: leads?.filter((l) => l.status === 'consulting').length || 0,
-    completed: leads?.filter((l) => l.status === 'completed').length || 0,
-    on_hold: leads?.filter((l) => l.status === 'on_hold').length || 0,
-    cancelled: leads?.filter((l) => l.status === 'cancelled').length || 0,
-  }
-
-  // Group leads by source (UTM)
-  const leadsBySource: Record<string, number> = {}
-  leads?.forEach((lead) => {
-    const source = lead.utm_source || 'Direct'
-    leadsBySource[source] = (leadsBySource[source] || 0) + 1
+  // Aggregate monthly device breakdown by landing page
+  const deviceBreakdownByLandingPage: Record<string, { pc: number; mobile: number; tablet: number }> = {}
+  monthlyAnalytics?.forEach(analytics => {
+    const lpId = analytics.landing_page_id
+    if (!deviceBreakdownByLandingPage[lpId]) {
+      deviceBreakdownByLandingPage[lpId] = { pc: 0, mobile: 0, tablet: 0 }
+    }
+    deviceBreakdownByLandingPage[lpId].pc += analytics.desktop_views || 0
+    deviceBreakdownByLandingPage[lpId].mobile += analytics.mobile_views || 0
+    deviceBreakdownByLandingPage[lpId].tablet += analytics.tablet_views || 0
   })
 
-  // Group leads by campaign
-  const leadsByCampaign: Record<string, number> = {}
+  // Aggregate conversions by landing page
+  const conversionByLandingPage: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
   leads?.forEach((lead) => {
-    if (lead.utm_campaign) {
-      leadsByCampaign[lead.utm_campaign] = (leadsByCampaign[lead.utm_campaign] || 0) + 1
+    if (lead.landing_page_id) {
+      const lpId = lead.landing_page_id
+      if (!conversionByLandingPage[lpId]) {
+        conversionByLandingPage[lpId] = { total: 0, pc: 0, mobile: 0, tablet: 0 }
+      }
+      conversionByLandingPage[lpId].total++
+      const deviceType = (lead.device_type || 'unknown').toLowerCase()
+      // pc, mobile, tablet로 분류 (manual, unknown은 pc로 분류)
+      if (deviceType === 'pc' || deviceType === 'manual' || deviceType === 'unknown') {
+        conversionByLandingPage[lpId].pc++
+      } else if (deviceType === 'mobile') {
+        conversionByLandingPage[lpId].mobile++
+      } else if (deviceType === 'tablet') {
+        conversionByLandingPage[lpId].tablet++
+      }
     }
   })
 
-  // Landing page performance
-  const landingPagePerformance =
-    landingPages?.map((page) => ({
-      id: page.id,
-      title: page.title,
-      slug: page.slug,
-      views: page.views || 0,
-      submissions: page.submissions || 0,
-      conversionRate:
-        page.views && page.views > 0 ? ((page.submissions || 0) / page.views) * 100 : 0,
-      status: page.status,
-    })) || []
-
-  // Recent leads timeline (last 30 days)
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
-  const recentLeads = leads?.filter(
-    (lead) => new Date(lead.created_at) >= thirtyDaysAgo
-  ) || []
-
-  // Group by day for chart
-  const leadsByDay: Record<string, number> = {}
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date()
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
-    leadsByDay[dateStr] = 0
-  }
-
-  recentLeads.forEach((lead) => {
-    const dateStr = lead.created_at.split('T')[0]
-    if (leadsByDay[dateStr] !== undefined) {
-      leadsByDay[dateStr]++
+  // Build landing page performance rows
+  const landingPageRows = landingPages?.map(lp => {
+    const deviceBreakdown = deviceBreakdownByLandingPage[lp.id] || { pc: 0, mobile: 0, tablet: 0 }
+    // Use aggregated device breakdown for total to ensure sum matches
+    const trafficTotal = deviceBreakdown.pc + deviceBreakdown.mobile + deviceBreakdown.tablet
+    const traffic = {
+      total: trafficTotal,
+      pc: deviceBreakdown.pc,
+      mobile: deviceBreakdown.mobile,
+      tablet: deviceBreakdown.tablet
     }
-  })
+    const conversion = conversionByLandingPage[lp.id] || { total: 0, pc: 0, mobile: 0, tablet: 0 }
+    return {
+      id: lp.id,
+      title: lp.title,
+      slug: lp.slug,
+      createdAt: lp.created_at,
+      traffic,
+      conversion
+    }
+  }) || []
+
+  // Convert to sorted arrays
+  const trafficRows = Object.entries(trafficByDate)
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => b.date.localeCompare(a.date))
+
+  const conversionRows = Object.entries(conversionByDate)
+    .map(([date, data]) => ({ date, ...data }))
+    .sort((a, b) => b.date.localeCompare(a.date))
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">분석 대시보드</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          랜딩 페이지 성과와 리드 현황을 분석합니다.
-        </p>
-      </div>
-
-      {/* Dashboard */}
-      <AnalyticsDashboard
-        overallStats={{
-          totalLeads,
-          totalViews,
-          totalSubmissions,
-          overallConversionRate,
-        }}
-        leadsByStatus={leadsByStatus}
-        leadsBySource={leadsBySource}
-        leadsByCampaign={leadsByCampaign}
-        landingPagePerformance={landingPagePerformance}
-        leadsByDay={leadsByDay}
-      />
-    </div>
+    <AnalyticsClient
+      trafficRows={trafficRows}
+      conversionRows={conversionRows}
+      selectedYear={selectedYear}
+      selectedMonth={selectedMonth}
+      daysInMonth={daysInMonth}
+      utmData={utmData}
+      landingPageRows={landingPageRows}
+    />
   )
 }

@@ -95,19 +95,17 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header - team 페이지와 동일한 스타일 */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-              <Cog6ToothIcon className="h-8 w-8 text-white" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold">설정</h1>
-              <p className="mt-1 text-sm text-indigo-100">
-                회사 정보 및 계정 설정을 관리합니다.
-              </p>
-            </div>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <Cog6ToothIcon className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">설정</h1>
+            <p className="text-xs text-gray-500 mt-0.5">
+              회사 정보 및 계정 설정을 관리합니다.
+            </p>
           </div>
         </div>
       </div>

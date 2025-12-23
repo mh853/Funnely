@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Fragment } from 'react'
+import { Dialog, Transition } from '@headlessui/react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -13,11 +14,18 @@ import {
   AlertCircle,
   User,
   Shield,
+  Paperclip,
+  Download,
+  FileText,
+  Image as ImageIcon,
+  Eye,
+  X as XIcon,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 interface TicketDetail {
   id: string
@@ -28,6 +36,7 @@ interface TicketDetail {
   category: string
   created_at: string
   updated_at: string
+  attachments: string[] | null
   company: {
     id: string
     name: string
@@ -51,6 +60,17 @@ interface Message {
     id: string
     full_name: string
     is_super_admin: boolean
+  }
+}
+
+interface Reply {
+  id: string
+  reply_message: string
+  created_at: string
+  updated_at: string
+  reply_by: {
+    id: string
+    full_name: string
   }
 }
 
@@ -94,13 +114,53 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   const router = useRouter()
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
+  const [reply, setReply] = useState<Reply | null>(null)
   const [loading, setLoading] = useState(true)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [previewImage, setPreviewImage] = useState<string | null>(null)
+  const supabase = createClient()
 
   useEffect(() => {
     fetchTicketDetail()
   }, [params.id])
+
+  // Generate signed URL for private storage file
+  async function getSignedUrl(filePathOrUrl: string): Promise<string> {
+    console.log('getSignedUrl called with:', filePathOrUrl)
+
+    // Extract file path from URL if it's a full URL
+    let filePath = filePathOrUrl
+    if (filePathOrUrl.includes('http')) {
+      // Extract path from URL: .../support-attachments/PATH
+      const match = filePathOrUrl.match(/support-attachments\/(.+)$/)
+      if (match) {
+        filePath = match[1]
+        console.log('Extracted file path from URL:', filePath)
+      } else {
+        console.error('Could not extract file path from URL:', filePathOrUrl)
+        return ''
+      }
+    }
+
+    const { data, error } = await supabase.storage
+      .from('support-attachments')
+      .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+    if (error) {
+      console.error('Supabase error creating signed URL:', error)
+      console.error('Error details:', JSON.stringify(error, null, 2))
+      return ''
+    }
+
+    if (!data) {
+      console.error('No data returned from createSignedUrl')
+      return ''
+    }
+
+    console.log('Successfully created signed URL:', data.signedUrl)
+    return data.signedUrl
+  }
 
   async function fetchTicketDetail() {
     try {
@@ -109,12 +169,29 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       if (!response.ok) throw new Error('Failed to fetch ticket')
 
       const result = await response.json()
+      console.log('Ticket data received:', result.ticket)
+      console.log('Attachments:', result.ticket.attachments)
       setTicket(result.ticket)
       setMessages(result.messages || [])
+
+      // 답변 조회
+      await fetchReply()
     } catch (error) {
       console.error('Error fetching ticket:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function fetchReply() {
+    try {
+      const response = await fetch(`/api/support/tickets/${params.id}/reply`)
+      if (!response.ok) throw new Error('Failed to fetch reply')
+
+      const result = await response.json()
+      setReply(result.reply)
+    } catch (error) {
+      console.error('Error fetching reply:', error)
     }
   }
 
@@ -157,167 +234,230 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   const statusColor = STATUS_COLORS[ticket.status]
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8">
-      <div className="space-y-6">
+    <div className="px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-4xl mx-auto space-y-5">
         {/* 헤더 */}
         <div>
         <Link href="/dashboard/support">
-          <Button variant="ghost" className="mb-4">
-            <ArrowLeft className="h-4 w-4 mr-2" />
+          <Button variant="ghost" size="sm" className="mb-3 -ml-2">
+            <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
             목록으로 돌아가기
           </Button>
         </Link>
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900">{ticket.subject}</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              {format(new Date(ticket.created_at), 'yyyy년 MM월 dd일 HH:mm', {
-                locale: ko,
-              })}{' '}
-              • {ticket.created_by.full_name}
-            </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-semibold text-gray-900 mb-1.5">{ticket.subject}</h1>
+            <div className="flex items-center gap-2 text-xs text-gray-500">
+              <span>{format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}</span>
+              <span className="text-gray-300">•</span>
+              <span>{ticket.created_by.full_name}</span>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span
-              className={`inline-flex items-center px-3 py-1 text-sm font-medium rounded-full ${statusColor}`}
-            >
-              <Icon className="h-4 w-4 mr-2" />
-              {STATUS_LABELS[ticket.status]}
-            </span>
-          </div>
+          <span
+            className={`inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full ${statusColor} flex-shrink-0`}
+          >
+            <Icon className="h-3.5 w-3.5 mr-1.5" />
+            {STATUS_LABELS[ticket.status]}
+          </span>
         </div>
       </div>
 
       {/* 티켓 정보 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>문의 내용</CardTitle>
+      <Card className="border-gray-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium text-gray-700">문의 내용</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-0">
           <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="grid grid-cols-3 gap-4 pb-4 border-b border-gray-100">
               <div>
-                <div className="text-gray-500">카테고리</div>
-                <div className="font-medium text-gray-900 mt-1">
+                <div className="text-xs text-gray-500 mb-1">카테고리</div>
+                <div className="text-sm font-medium text-gray-900">
                   {CATEGORY_LABELS[ticket.category]}
                 </div>
               </div>
               <div>
-                <div className="text-gray-500">우선순위</div>
-                <div className="font-medium text-gray-900 mt-1">
+                <div className="text-xs text-gray-500 mb-1">우선순위</div>
+                <div className="text-sm font-medium text-gray-900">
                   {PRIORITY_LABELS[ticket.priority]}
                 </div>
               </div>
               <div>
-                <div className="text-gray-500">담당자</div>
-                <div className="font-medium text-gray-900 mt-1">
-                  {ticket.assigned_admin
-                    ? ticket.assigned_admin.full_name
-                    : '미할당'}
+                <div className="text-xs text-gray-500 mb-1">담당자</div>
+                <div className="text-sm font-medium text-gray-900">
+                  {ticket.assigned_admin ? ticket.assigned_admin.full_name : '미할당'}
                 </div>
               </div>
             </div>
-            <div className="pt-4 border-t">
-              <div className="text-gray-900 whitespace-pre-wrap">
-                {ticket.description}
-              </div>
+            <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+              {ticket.description}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* 대화 내역 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>대화 내역</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {messages.length === 0 ? (
-              <div className="text-center text-gray-500 py-8">
-                아직 답변이 없습니다
-              </div>
-            ) : (
-              messages.map((message) => {
-                const isAdmin = message.user.is_super_admin
+      {/* 첨부 파일 */}
+      {ticket.attachments && ticket.attachments.length > 0 && (
+        <Card className="border-gray-200">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-sm font-medium text-gray-700">
+              <Paperclip className="h-4 w-4" />
+              첨부 파일 ({ticket.attachments.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              {ticket.attachments.map((filePathOrUrl, index) => {
+                // Extract file path from URL if needed
+                let filePath = filePathOrUrl
+                if (filePathOrUrl.includes('http')) {
+                  const match = filePathOrUrl.match(/support-attachments\/(.+)$/)
+                  if (match) {
+                    filePath = match[1]
+                  }
+                }
+
+                const fileName = filePath.split('/').pop() || `attachment-${index + 1}`
+                const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName)
 
                 return (
                   <div
-                    key={message.id}
-                    className={`flex gap-3 ${isAdmin ? 'flex-row-reverse' : ''}`}
+                    key={index}
+                    className="flex items-center gap-2.5 p-2.5 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
-                    <div
-                      className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                        isAdmin ? 'bg-blue-100' : 'bg-gray-100'
-                      }`}
-                    >
-                      {isAdmin ? (
-                        <Shield className="h-5 w-5 text-blue-600" />
+                    <div className="flex-shrink-0">
+                      {isImage ? (
+                        <ImageIcon className="h-6 w-6 text-blue-500" />
                       ) : (
-                        <User className="h-5 w-5 text-gray-600" />
+                        <FileText className="h-6 w-6 text-gray-400" />
                       )}
                     </div>
-                    <div className={`flex-1 ${isAdmin ? 'text-right' : ''}`}>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-medium text-sm text-gray-900">
-                          {message.user.full_name}
-                          {isAdmin && (
-                            <span className="ml-2 text-xs text-blue-600">
-                              기술 지원팀
-                            </span>
-                          )}
-                        </span>
-                        <span className="text-xs text-gray-500">
-                          {format(
-                            new Date(message.created_at),
-                            'MM/dd HH:mm',
-                            { locale: ko }
-                          )}
-                        </span>
-                      </div>
-                      <div
-                        className={`inline-block px-4 py-2 rounded-lg ${
-                          isAdmin
-                            ? 'bg-blue-100 text-gray-900'
-                            : 'bg-gray-100 text-gray-900'
-                        }`}
-                      >
-                        <div className="whitespace-pre-wrap text-sm">
-                          {message.message}
-                        </div>
-                      </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-medium text-gray-900 truncate">
+                        {decodeURIComponent(fileName.split('_').slice(1).join('_'))}
+                      </p>
+                      {isImage && (
+                        <button
+                          onClick={async (e) => {
+                            e.preventDefault()
+                            e.stopPropagation()
+                            const signedUrl = await getSignedUrl(filePath)
+                            if (signedUrl) {
+                              setPreviewImage(signedUrl)
+                            }
+                          }}
+                          className="text-[10px] text-blue-600 hover:underline flex items-center gap-0.5 mt-0.5"
+                        >
+                          <Eye className="h-2.5 w-2.5" />
+                          미리보기
+                        </button>
+                      )}
                     </div>
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const signedUrl = await getSignedUrl(filePath)
+                        if (signedUrl) {
+                          const link = document.createElement('a')
+                          link.href = signedUrl
+                          link.download = fileName.split('_').slice(1).join('_')
+                          document.body.appendChild(link)
+                          link.click()
+                          document.body.removeChild(link)
+                        }
+                      }}
+                      className="flex-shrink-0 p-1.5 hover:bg-gray-100 rounded transition-colors"
+                      title="다운로드"
+                    >
+                      <Download className="h-3.5 w-3.5 text-gray-500" />
+                    </button>
                   </div>
                 )
-              })
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* 메시지 입력 */}
-      {ticket.status !== 'closed' && (
-        <Card>
-          <CardContent className="pt-6">
-            <form onSubmit={handleSendMessage} className="space-y-4">
-              <Textarea
-                value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="답변을 입력하세요..."
-                rows={4}
-                disabled={sending}
-              />
-              <div className="flex justify-end">
-                <Button type="submit" disabled={sending || !newMessage.trim()}>
-                  <Send className="h-4 w-4 mr-2" />
-                  {sending ? '전송 중...' : '메시지 전송'}
-                </Button>
-              </div>
-            </form>
+              })}
+            </div>
           </CardContent>
         </Card>
       )}
+
+      {/* 공식 답변 */}
+      <Card className="border-gray-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium text-gray-700">답변</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {reply ? (
+            <div className="bg-blue-50 border border-blue-100 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2.5">
+                <Shield className="h-4 w-4 text-blue-600" />
+                <span className="text-xs font-medium text-blue-900">기술 지원팀</span>
+                <span className="text-xs text-blue-600/70">
+                  {format(new Date(reply.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                </span>
+              </div>
+              <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">
+                {reply.reply_message}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center text-gray-400 py-12 text-sm">
+              답변 대기 중입니다
+            </div>
+          )}
+        </CardContent>
+      </Card>
       </div>
+
+      {/* 이미지 미리보기 모달 */}
+      <Transition appear show={!!previewImage} as={Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-50"
+          onClose={() => setPreviewImage(null)}
+        >
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black/75" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="relative max-w-5xl">
+                  <button
+                    onClick={() => setPreviewImage(null)}
+                    className="absolute -top-10 right-0 text-white hover:text-gray-300 transition-colors"
+                  >
+                    <XIcon className="h-8 w-8" />
+                  </button>
+                  {previewImage && (
+                    <img
+                      src={previewImage}
+                      alt="Preview"
+                      className="max-h-[80vh] max-w-full rounded-lg"
+                    />
+                  )}
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
     </div>
   )
 }

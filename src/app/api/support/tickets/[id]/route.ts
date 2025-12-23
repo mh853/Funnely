@@ -85,3 +85,59 @@ export async function GET(
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
+// 티켓 업데이트 (첨부파일 추가 등)
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const supabase = await createClient()
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
+    const body = await request.json()
+    const { attachments } = body
+
+    // 티켓 소유자 확인
+    const { data: ticket } = await supabase
+      .from('support_tickets')
+      .select('created_by_user_id')
+      .eq('id', params.id)
+      .single()
+
+    if (!ticket || ticket.created_by_user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
+    // 첨부파일 업데이트
+    const { data: updatedTicket, error } = await supabase
+      .from('support_tickets')
+      .update({
+        attachments: attachments || [],
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.id)
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Ticket update error:', error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      ticket: updatedTicket,
+    })
+  } catch (error) {
+    console.error('Ticket update API error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}

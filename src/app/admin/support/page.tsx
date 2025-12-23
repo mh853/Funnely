@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Pagination } from '@/components/ui/pagination'
 import {
   HeadphonesIcon,
   Clock,
@@ -11,6 +13,7 @@ import {
   AlertCircle,
   MessageSquare,
   TrendingUp,
+  Search,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -99,24 +102,49 @@ export default function AdminSupportPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [debouncedSearch, setDebouncedSearch] = useState('')
+  const [currentPage, setCurrentPage] = useState(1)
+  const [perPage, setPerPage] = useState(20)
+  const [totalPages, setTotalPages] = useState(0)
+  const [totalCount, setTotalCount] = useState(0)
+
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery)
+      setCurrentPage(1) // Reset to first page on search
+    }, 500)
+    return () => clearTimeout(handler)
+  }, [searchQuery])
 
   useEffect(() => {
     fetchData()
-  }, [filter])
+  }, [filter, debouncedSearch, currentPage, perPage])
 
   async function fetchData() {
     try {
       setLoading(true)
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        perPage: perPage.toString(),
+      })
+
+      if (filter !== 'all') params.append('status', filter)
+      if (debouncedSearch) params.append('search', debouncedSearch)
+
       const [ticketsResponse, statsResponse] = await Promise.all([
-        fetch(
-          `/api/admin/support/tickets?${filter !== 'all' ? `status=${filter}` : ''}`
-        ),
+        fetch(`/api/admin/support/tickets?${params.toString()}`),
         fetch('/api/admin/support/stats'),
       ])
 
       if (ticketsResponse.ok) {
         const ticketsData = await ticketsResponse.json()
         setTickets(ticketsData.tickets || [])
+        setTotalPages(ticketsData.pagination?.totalPages || 0)
+        setTotalCount(ticketsData.pagination?.total || 0)
       }
 
       if (statsResponse.ok) {
@@ -217,36 +245,61 @@ export default function AdminSupportPage() {
         </div>
       )}
 
-      {/* 필터 */}
+      {/* 검색 및 필터 */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 space-y-4">
+          {/* 검색창 */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input
+              type="text"
+              placeholder="회사명, 제목, 내용으로 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-9 text-sm"
+            />
+          </div>
+
+          {/* 검색 결과 카운트 */}
+          {debouncedSearch && (
+            <div className="text-xs text-gray-500">
+              검색 결과: {totalCount}개의 티켓
+            </div>
+          )}
+
+          {/* 상태 필터 */}
           <div className="flex gap-2">
             <Button
               variant={filter === 'all' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setFilter('all')}
             >
               전체
             </Button>
             <Button
               variant={filter === 'open' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setFilter('open')}
             >
               대기 중
             </Button>
             <Button
               variant={filter === 'in_progress' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setFilter('in_progress')}
             >
               처리 중
             </Button>
             <Button
               variant={filter === 'resolved' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setFilter('resolved')}
             >
               해결됨
             </Button>
             <Button
               variant={filter === 'closed' ? 'default' : 'outline'}
+              size="sm"
               onClick={() => setFilter('closed')}
             >
               종료
@@ -331,6 +384,16 @@ export default function AdminSupportPage() {
           })
         )}
       </div>
+
+      {/* 페이지네이션 */}
+      {!loading && totalPages > 0 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          className="mt-6"
+        />
+      )}
     </div>
   )
 }

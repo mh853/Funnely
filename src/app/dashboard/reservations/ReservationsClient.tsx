@@ -16,6 +16,7 @@ import {
   PlusIcon,
   ArrowDownTrayIcon,
   UserIcon,
+  CalendarIcon,
 } from '@heroicons/react/24/outline'
 import * as XLSX from 'xlsx'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
@@ -1036,54 +1037,56 @@ export default function ReservationsClient({
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl p-5 text-white shadow-xl">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">예약 스케줄</h1>
-            <p className="mt-1 text-sm text-emerald-100">
-              예약 확정된 일정을 관리합니다
-            </p>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
+            <CalendarIcon className="w-6 h-6 text-white" />
           </div>
-          <div className="flex items-center gap-4">
-            {/* 뷰 모드 토글 */}
-            <div className="flex items-center bg-white/20 rounded-lg p-1">
-              <button
-                onClick={() => setViewMode('calendar')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  viewMode === 'calendar'
-                    ? 'bg-white text-emerald-600 shadow-sm'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <CalendarDaysIcon className="h-4 w-4" />
-                캘린더
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
-                  viewMode === 'list'
-                    ? 'bg-white text-emerald-600 shadow-sm'
-                    : 'text-white/80 hover:text-white hover:bg-white/10'
-                }`}
-              >
-                <ListBulletIcon className="h-4 w-4" />
-                리스트
-              </button>
-            </div>
-            {/* 엑셀 다운로드 버튼 */}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">예약 스케줄</h1>
+            <p className="text-xs text-gray-500 mt-0.5">예약 확정된 일정을 관리합니다</p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* 뷰 모드 토글 */}
+          <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
-              onClick={handleExcelDownload}
-              className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-all"
-              title="예약 스케줄 엑셀 다운로드"
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'calendar'
+                  ? 'bg-white text-emerald-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
             >
-              <ArrowDownTrayIcon className="h-4 w-4" />
-              엑셀 다운로드
+              <CalendarDaysIcon className="h-3.5 w-3.5" />
+              캘린더
             </button>
-            {/* 총 예약 건수 */}
-            <div className="text-right">
-              <div className="text-3xl font-bold">{leads.length}</div>
-              <div className="text-xs text-emerald-100">총 예약 건수</div>
-            </div>
+            <button
+              onClick={() => setViewMode('list')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+                viewMode === 'list'
+                  ? 'bg-white text-emerald-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <ListBulletIcon className="h-3.5 w-3.5" />
+              리스트
+            </button>
+          </div>
+          {/* 엑셀 다운로드 버튼 */}
+          <button
+            onClick={handleExcelDownload}
+            className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-sm font-semibold hover:from-emerald-600 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl gap-2"
+            title="예약 스케줄 엑셀 다운로드"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            엑셀 다운로드
+          </button>
+          {/* 총 예약 건수 */}
+          <div className="bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200">
+            <div className="text-lg font-bold text-emerald-600">{leads.length}</div>
+            <div className="text-xs text-emerald-600">총 예약 건수</div>
           </div>
         </div>
       </div>
