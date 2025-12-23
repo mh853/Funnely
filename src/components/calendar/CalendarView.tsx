@@ -225,7 +225,9 @@ export default function CalendarView({
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay()
+    // 월요일 시작으로 조정 (일요일=0이면 6, 그 외는 -1)
+    const dayOfWeek = firstDay.getDay()
+    const startingDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
 
     return { daysInMonth, startingDayOfWeek, year, month }
   }
@@ -543,11 +545,11 @@ export default function CalendarView({
         <div className="p-6">
           {/* Weekday headers */}
           <div className="grid grid-cols-7 gap-px mb-2">
-            {['일', '월', '화', '수', '목', '금', '토'].map((day, index) => (
+            {['월', '화', '수', '목', '금', '토', '일'].map((day, index) => (
               <div
                 key={day}
                 className={`text-center text-sm font-medium py-2 ${
-                  index === 0 ? 'text-red-600' : index === 6 ? 'text-blue-600' : 'text-gray-700'
+                  index === 5 ? 'text-blue-600' : index === 6 ? 'text-red-600' : 'text-gray-700'
                 }`}
               >
                 {day}
@@ -577,10 +579,10 @@ export default function CalendarView({
                     className={`text-sm font-medium mb-1 ${
                       isTodayDay
                         ? 'bg-blue-600 text-white w-7 h-7 rounded-full flex items-center justify-center'
-                        : index % 7 === 0
-                        ? 'text-red-600'
-                        : index % 7 === 6
+                        : index % 7 === 5
                         ? 'text-blue-600'
+                        : index % 7 === 6
+                        ? 'text-red-600'
                         : 'text-gray-900'
                     }`}
                   >
