@@ -127,8 +127,8 @@ export default function PaymentsClient({
             <div className="text-right">
               <p className="text-3xl font-bold">
                 {subscription.billing_cycle === 'monthly'
-                  ? subscription.subscription_plans.monthly_price.toLocaleString()
-                  : subscription.subscription_plans.yearly_price.toLocaleString()}
+                  ? subscription.subscription_plans.monthly_price?.toLocaleString() || '0'
+                  : subscription.subscription_plans.yearly_price?.toLocaleString() || '0'}
                 원
               </p>
               <p className="text-sm opacity-90 mt-1">
