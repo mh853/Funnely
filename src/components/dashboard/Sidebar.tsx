@@ -28,30 +28,37 @@ interface SidebarProps {
   setMobileMenuOpen: (open: boolean) => void
   collapsed?: boolean
   onToggleCollapse?: () => void
+  planFeatures?: { [key: string]: boolean } // 플랜별 기능 권한
 }
 
 const navigation = [
-  { name: '대시보드', href: '/dashboard', icon: HomeIcon },
-  { name: 'DB 현황', href: '/dashboard/leads', icon: PhoneIcon },
-  { name: 'DB 스케줄', href: '/dashboard/calendar', icon: CalendarIcon },
-  { name: '예약 스케줄', href: '/dashboard/reservations', icon: CalendarIcon },
-  { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon },
+  { name: '대시보드', href: '/dashboard', icon: HomeIcon, requiredFeature: 'dashboard' },
+  { name: 'DB 현황', href: '/dashboard/leads', icon: PhoneIcon, requiredFeature: 'db_status' },
+  { name: 'DB 스케줄', href: '/dashboard/calendar', icon: CalendarIcon, requiredFeature: 'db_schedule' },
+  { name: '예약 스케줄', href: '/dashboard/reservations', icon: CalendarIcon, requiredFeature: 'reservation_schedule' },
+  { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon, requiredFeature: 'dashboard' },
   // [임시 비활성화] 캠페인, 광고 계정 - 나중에 복원 시 주석 해제
   // { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
-  { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon },
-  { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon },
-  { name: '기술 지원', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon },
+  { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon, requiredFeature: 'analytics' },
+  { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon, requiredFeature: 'reports' },
+  { name: '기술 지원', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon, requiredFeature: 'dashboard' },
   // [설정 페이지로 통합] 구독 관리, 결제 내역, 팀 관리
   // { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
   // { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },
   // { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
-  { name: '설정', href: '/dashboard/settings', icon: CogIcon },
-  { name: 'DB 블랙리스트', href: '/dashboard/blacklist', icon: ShieldExclamationIcon },
+  { name: '설정', href: '/dashboard/settings', icon: CogIcon, requiredFeature: 'dashboard' },
+  { name: 'DB 블랙리스트', href: '/dashboard/blacklist', icon: ShieldExclamationIcon, requiredFeature: 'dashboard' },
 ]
 
-export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse }: SidebarProps) {
+export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {} }: SidebarProps) {
   const pathname = usePathname()
+
+  // 플랜 기능에 따라 메뉴 필터링
+  const filteredNavigation = navigation.filter(item => {
+    if (!item.requiredFeature) return true
+    return planFeatures[item.requiredFeature] === true
+  })
 
   // 접힌 상태의 사이드바 콘텐츠
   const CollapsedSidebarContent = () => (
@@ -73,7 +80,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       {/* Navigation - Icons Only */}
       <nav className="flex flex-col">
         <ul role="list" className="space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = pathname === item.href
             return (
               <li key={item.name}>
@@ -135,7 +142,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       {/* Navigation */}
       <nav className="flex flex-col">
         <ul role="list" className="-mx-2 space-y-1">
-          {navigation.map((item) => {
+          {filteredNavigation.map((item) => {
             const isActive = pathname === item.href
             return (
               <li key={item.name}>

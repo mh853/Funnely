@@ -1,6 +1,8 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReportsClient from './ReportsClient'
+import UpgradeNotice from '@/components/UpgradeNotice'
+import { hasFeatureAccess } from '@/lib/subscription-access'
 
 export const revalidate = 30
 
@@ -33,6 +35,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         <p className="text-gray-500">사용자 정보를 불러올 수 없습니다.</p>
       </div>
     )
+  }
+
+  // 기능 접근 권한 체크
+  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'reports')
+  if (!hasAccess) {
+    return <UpgradeNotice featureName="DB 리포트" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
 
   const now = new Date()

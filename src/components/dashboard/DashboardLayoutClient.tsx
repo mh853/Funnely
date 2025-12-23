@@ -8,6 +8,7 @@ interface DashboardLayoutClientProps {
   user: any
   userProfile: any
   children: React.ReactNode
+  planFeatures?: { [key: string]: boolean }
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
@@ -16,6 +17,7 @@ export default function DashboardLayoutClient({
   user,
   userProfile,
   children,
+  planFeatures = {},
 }: DashboardLayoutClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -43,6 +45,7 @@ export default function DashboardLayoutClient({
         setMobileMenuOpen={setMobileMenuOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
+        planFeatures={planFeatures}
       />
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-[200px]'}`}>
         <Header

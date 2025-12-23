@@ -1,6 +1,8 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReservationsClient from './ReservationsClient'
+import UpgradeNotice from '@/components/UpgradeNotice'
+import { hasFeatureAccess } from '@/lib/subscription-access'
 
 export default async function ReservationsPage() {
   const supabase = await createClient()
@@ -21,6 +23,12 @@ export default async function ReservationsPage() {
         <p className="text-gray-500">사용자 정보를 불러올 수 없습니다.</p>
       </div>
     )
+  }
+
+  // 기능 접근 권한 체크
+  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'reservation_schedule')
+  if (!hasAccess) {
+    return <UpgradeNotice featureName="예약 스케줄" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
 
   // Get contract completed leads with scheduled dates

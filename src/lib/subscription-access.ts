@@ -292,6 +292,42 @@ export async function canCreateLandingPage(companyId: string): Promise<{
 }
 
 /**
+ * 기능 접근 권한 체크 - 플랜별 기능 사용 가능 여부
+ */
+export async function hasFeatureAccess(
+  companyId: string,
+  featureName: string
+): Promise<boolean> {
+  try {
+    const supabase = await createClient()
+
+    // 현재 구독 정보 및 플랜 기능 조회
+    const { data: subscription, error: subError } = await supabase
+      .from('company_subscriptions')
+      .select(`
+        id,
+        status,
+        subscription_plans (
+          features
+        )
+      `)
+      .eq('company_id', companyId)
+      .in('status', ['active', 'trial', 'past_due'])
+      .single()
+
+    if (subError || !subscription) {
+      return false
+    }
+
+    const features = (subscription.subscription_plans as any)?.features || {}
+    return features[featureName] === true
+  } catch (error) {
+    console.error('[Feature Access] 기능 접근 체크 실패:', error)
+    return false
+  }
+}
+
+/**
  * 플랜 제한사항 체크 - 사용자 초대 가능 여부
  */
 export async function canInviteUser(companyId: string): Promise<{

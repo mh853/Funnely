@@ -139,8 +139,10 @@ export default function NewSubscriptionClient({
 
         if (billingCycle === 'monthly') {
           newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+          newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
         } else {
           newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
+          newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
         }
 
         const { error: updateError } = await supabase
@@ -166,8 +168,10 @@ export default function NewSubscriptionClient({
         const periodEndDate = new Date()
         if (billingCycle === 'monthly') {
           periodEndDate.setMonth(periodEndDate.getMonth() + 1)
+          periodEndDate.setDate(periodEndDate.getDate() - 1)
         } else {
           periodEndDate.setFullYear(periodEndDate.getFullYear() + 1)
+          periodEndDate.setDate(periodEndDate.getDate() - 1)
         }
 
         const { error: subError } = await supabase
