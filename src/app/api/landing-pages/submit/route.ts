@@ -81,7 +81,8 @@ export async function POST(request: NextRequest) {
     const [
       { data: landingPage, error: lpError },
       { data: referrerCompany },
-      { data: existingLead }
+      { data: existingLead },
+      { data: blacklistedPhone }
     ] = await Promise.all([
       // 1. Landing page 조회
       supabase
@@ -106,6 +107,13 @@ export async function POST(request: NextRequest) {
         .eq('phone_hash', phoneHash)
         .gte('created_at', threeHoursAgo)
         .limit(1)
+        .maybeSingle(),
+
+      // 4. 블랙리스트 체크
+      supabase
+        .from('phone_blacklist')
+        .select('id')
+        .eq('phone_number', phone.replace(/\D/g, ''))
         .maybeSingle()
     ])
 
@@ -120,6 +128,15 @@ export async function POST(request: NextRequest) {
     if (landingPage.status !== 'published') {
       return NextResponse.json(
         { error: { message: '게시되지 않은 페이지입니다' } },
+        { status: 403 }
+      )
+    }
+
+    // 블랙리스트 체크
+    if (blacklistedPhone) {
+      console.log('[Landing Page Submit] Blocked blacklisted phone:', phone)
+      return NextResponse.json(
+        { error: { message: '등록할 수 없는 전화번호입니다' } },
         { status: 403 }
       )
     }

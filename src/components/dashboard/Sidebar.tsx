@@ -19,6 +19,7 @@ import {
   CreditCardIcon,
   CurrencyDollarIcon,
   ChatBubbleLeftRightIcon,
+  ShieldExclamationIcon,
 } from '@heroicons/react/24/outline'
 
 interface SidebarProps {
@@ -46,6 +47,7 @@ const navigation = [
   // { name: '결제 내역', href: '/dashboard/payments', icon: CurrencyDollarIcon },
   // { name: '팀 관리', href: '/dashboard/team', icon: UsersIcon },
   { name: '설정', href: '/dashboard/settings', icon: CogIcon },
+  { name: 'DB 블랙리스트', href: '/dashboard/blacklist', icon: ShieldExclamationIcon },
 ]
 
 export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse }: SidebarProps) {
