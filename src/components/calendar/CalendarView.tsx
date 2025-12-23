@@ -15,6 +15,7 @@ import {
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
+import { decryptPhone } from '@/lib/encryption/phone'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 
@@ -978,7 +979,7 @@ export default function CalendarView({
                               {STATUS_STYLES[lead.status]?.label || STATUS_LABELS[lead.status] || lead.status}
                             </span>
                           </div>
-                          <p className={`text-sm mt-1 ${isRead ? 'opacity-50' : 'opacity-75'}`}>{lead.phone}</p>
+                          <p className={`text-sm mt-1 truncate ${isRead ? 'opacity-50' : 'opacity-75'}`}>{decryptPhone(lead.phone)}</p>
                         </div>
                       )
                     })}
