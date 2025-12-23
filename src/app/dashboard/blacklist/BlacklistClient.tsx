@@ -56,7 +56,7 @@ export default function BlacklistClient({ blacklist: initialBlacklist, userProfi
   }
 
   return (
-    <div className="px-4 py-8">
+    <div className="px-4">
       {/* Header - 다른 페이지와 동일한 디자인 */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-3">
