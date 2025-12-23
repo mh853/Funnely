@@ -1023,15 +1023,30 @@ export default function LeadsClient({
     setCurrentPage(page)
   }
 
-  const handleExcelExport = () => {
+  const handleExcelExport = async () => {
     if (!leads || leads.length === 0) {
       alert('내보낼 데이터가 없습니다.')
       return
     }
 
     try {
+      // 현재 필터 조건으로 전체 데이터 가져오기
+      const params = new URLSearchParams(searchParams.toString())
+      const response = await fetch(`/api/leads/export?${params.toString()}`)
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch export data')
+      }
+
+      const { leads: allLeads } = await response.json()
+
+      if (!allLeads || allLeads.length === 0) {
+        alert('내보낼 데이터가 없습니다.')
+        return
+      }
+
       // 엑셀 데이터 생성 (사용자 경험 최적화 - 한글 헤더, 정리된 순서)
-      const excelData = leads.map((lead: any, index: number) => {
+      const excelData = allLeads.map((lead: any, index: number) => {
         // 상태 라벨 가져오기
         const statusLabel = statusStyles[lead.status]?.label || lead.status || '-'
 
