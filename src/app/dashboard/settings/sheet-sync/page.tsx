@@ -44,20 +44,25 @@ export default async function SheetSyncPage() {
     .order('title')
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Link
           href="/dashboard/settings"
-          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
         >
-          <ArrowLeftIcon className="h-5 w-5 text-gray-500" />
+          <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Google Sheets 동기화</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Meta 광고 데이터를 Google Sheets에서 자동으로 가져옵니다
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Google Sheets 동기화</h1>
+            <p className="text-xs text-gray-500 mt-0.5">Meta 광고 데이터를 Google Sheets에서 자동으로 가져옵니다</p>
+          </div>
         </div>
       </div>
 

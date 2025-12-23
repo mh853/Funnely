@@ -35,20 +35,25 @@ export default async function LeadStatusesPage() {
   const canEdit = userProfile.simple_role === 'admin'
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Link
           href="/dashboard/settings"
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+          className="p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
         >
-          <ArrowLeftIcon className="h-5 w-5" />
+          <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">리드 상태 관리</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            DB현황 페이지의 결과 컬럼에 표시되는 상태 항목을 관리합니다.
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">리드 상태 관리</h1>
+            <p className="text-xs text-gray-500 mt-0.5">DB현황 페이지의 결과 컬럼에 표시되는 상태 항목을 관리합니다</p>
+          </div>
         </div>
       </div>
 

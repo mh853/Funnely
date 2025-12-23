@@ -90,7 +90,22 @@ export default function PaymentsClient({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">결제 관리</h1>
+            <p className="text-xs text-gray-500 mt-0.5">구독 플랜과 결제 내역을 확인합니다</p>
+          </div>
+        </div>
+      </div>
+
       {/* 구독 정보 카드 */}
       {subscription && (
         <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg p-6 text-white">

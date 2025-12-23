@@ -180,12 +180,20 @@ export default function ApiCredentialsPage() {
   const { meta, kakao, google } = state.platforms
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">광고 플랫폼 API 연동 설정</h1>
-        <p className="mt-2 text-sm text-gray-600">
-          각 광고 플랫폼의 API 인증 정보를 안전하게 관리합니다.
-        </p>
+    <div className="px-4 max-w-4xl mx-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-600 rounded-xl shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">광고 플랫폼 API 연동 설정</h1>
+            <p className="text-xs text-gray-500 mt-0.5">각 광고 플랫폼의 API 인증 정보를 안전하게 관리합니다</p>
+          </div>
+        </div>
       </div>
 
       {/* Message */}

@@ -39,21 +39,24 @@ export default async function NewLandingPagePage() {
   }
 
   return (
-    <div className="space-y-4 sm:space-y-6">
-      {/* Header - 모바일 최적화 */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl sm:rounded-2xl p-4 sm:p-8 text-white shadow-xl">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link
-            href="/dashboard/landing-pages"
-            className="p-1.5 sm:p-2 hover:bg-white/20 rounded-lg transition-colors flex-shrink-0"
-          >
-            <ArrowLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-          </Link>
-          <div className="min-w-0">
-            <h1 className="text-xl sm:text-3xl font-bold truncate">랜딩페이지 만들기</h1>
-            <p className="mt-1 sm:mt-2 text-xs sm:text-base text-indigo-100 truncate">
-              DB 수집을 위한 랜딩페이지를 만들어보세요
-            </p>
+    <div className="px-4 space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link
+          href="/dashboard/landing-pages"
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
+        >
+          <ArrowLeftIcon className="h-5 w-5 text-gray-600" />
+        </Link>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">랜딩페이지 만들기</h1>
+            <p className="text-xs text-gray-500 mt-0.5">DB 수집을 위한 랜딩페이지를 만들어보세요</p>
           </div>
         </div>
       </div>

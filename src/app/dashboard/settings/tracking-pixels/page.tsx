@@ -33,18 +33,16 @@ export default async function TrackingPixelsPage() {
     .single()
 
   return (
-    <div className="space-y-6">
+    <div className="px-4 space-y-6">
       {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 text-white shadow-xl">
-        <div className="flex items-center gap-4">
-          <div className="bg-white/20 backdrop-blur-sm rounded-xl p-3">
-            <ChartBarIcon className="h-8 w-8 text-white" />
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl shadow-lg">
+            <ChartBarIcon className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">픽셀 관리</h1>
-            <p className="mt-1 text-sm text-indigo-100">
-              광고 플랫폼 픽셀 ID를 설정하고 관리합니다
-            </p>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">픽셀 관리</h1>
+            <p className="text-xs text-gray-500 mt-0.5">광고 플랫폼 픽셀 ID를 설정하고 관리합니다</p>
           </div>
         </div>
       </div>
