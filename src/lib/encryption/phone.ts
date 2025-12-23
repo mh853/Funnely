@@ -5,11 +5,12 @@
 
 import CryptoJS from 'crypto-js';
 
-// 환경변수에서 비밀키 가져오기
+// 환경변수에서 비밀키 가져오기 (서버/클라이언트 모두 지원)
 const getSecretKey = (): string => {
-  const key = process.env.PHONE_ENCRYPTION_KEY;
+  // 서버 사이드에서는 PHONE_ENCRYPTION_KEY, 클라이언트에서는 NEXT_PUBLIC_PHONE_ENCRYPTION_KEY 사용
+  const key = process.env.PHONE_ENCRYPTION_KEY || process.env.NEXT_PUBLIC_PHONE_ENCRYPTION_KEY;
   if (!key) {
-    throw new Error('PHONE_ENCRYPTION_KEY environment variable is not set');
+    throw new Error('PHONE_ENCRYPTION_KEY or NEXT_PUBLIC_PHONE_ENCRYPTION_KEY environment variable is not set');
   }
   return key;
 };
@@ -38,7 +39,7 @@ export function encryptPhone(phone: string): string {
 export function decryptPhone(encrypted: string): string {
   try {
     // 환경변수가 없으면 원본 그대로 반환 (암호화되지 않은 데이터)
-    const key = process.env.PHONE_ENCRYPTION_KEY;
+    const key = process.env.PHONE_ENCRYPTION_KEY || process.env.NEXT_PUBLIC_PHONE_ENCRYPTION_KEY;
     if (!key) {
       // 암호화 키가 없으면 입력값이 이미 평문일 가능성이 높음
       return encrypted;
