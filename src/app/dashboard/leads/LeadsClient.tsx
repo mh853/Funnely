@@ -1088,7 +1088,6 @@ export default function LeadsClient({
           'UTM_Medium': lead.utm_medium || '-',
           'UTM_Campaign': lead.utm_campaign || '-',
           // 추가 정보 (엑셀에만 포함)
-          '이메일': lead.email || '-',
           'utm_content': lead.utm_content || '-',
           'utm_term': lead.utm_term || '-',
           'Referrer': lead.referrer || '-',
@@ -1119,7 +1118,6 @@ export default function LeadsClient({
         { wch: 15 },  // UTM_Source
         { wch: 15 },  // UTM_Medium
         { wch: 20 },  // UTM_Campaign
-        { wch: 25 },  // 이메일
         { wch: 15 },  // utm_content
         { wch: 15 },  // utm_term
         { wch: 30 },  // Referrer
