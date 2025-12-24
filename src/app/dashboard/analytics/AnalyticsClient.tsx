@@ -223,31 +223,31 @@ export default function AnalyticsClient({
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-gray-900">
                       {row.total}
-                      {trafficTotals.total > 0 && (
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({Math.round((row.total / trafficTotals.total) * 100)}%)
-                        </span>
-                      )}
+                      <span className="text-gray-400 text-xs ml-1">(100%)</span>
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-blue-600">
                       {row.pc}
-                      {trafficTotals.pc > 0 && (
+                      {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-1">
-                          ({Math.round((row.pc / trafficTotals.pc) * 100)}%)
+                          ({((row.pc / row.total) * 100).toFixed(1)}%)
                         </span>
                       )}
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-green-600">
                       {row.mobile}
-                      <span className="text-gray-400 text-xs ml-1">
-                        ({trafficTotals.mobile > 0 ? Math.round((row.mobile / trafficTotals.mobile) * 100) : 0}%)
-                      </span>
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-1">
+                          ({((row.mobile / row.total) * 100).toFixed(1)}%)
+                        </span>
+                      )}
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-purple-600">
                       {row.tablet}
-                      <span className="text-gray-400 text-xs ml-1">
-                        ({trafficTotals.tablet > 0 ? Math.round((row.tablet / trafficTotals.tablet) * 100) : 0}%)
-                      </span>
+                      {row.total > 0 && (
+                        <span className="text-gray-400 text-xs ml-1">
+                          ({((row.tablet / row.total) * 100).toFixed(1)}%)
+                        </span>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -339,31 +339,31 @@ export default function AnalyticsClient({
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-gray-900">
                         {conversion.total}
-                        {conversionTotals.total > 0 && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            ({Math.round((conversion.total / conversionTotals.total) * 100)}%)
-                          </span>
-                        )}
+                        <span className="text-gray-400 text-xs ml-1">(100%)</span>
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-blue-600">
                         {conversion.pc}
-                        {conversionTotals.pc > 0 && (
+                        {conversion.total > 0 && (
                           <span className="text-gray-400 text-xs ml-1">
-                            ({Math.round((conversion.pc / conversionTotals.pc) * 100)}%)
+                            ({((conversion.pc / conversion.total) * 100).toFixed(1)}%)
                           </span>
                         )}
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-green-600">
                         {conversion.mobile}
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({conversionTotals.mobile > 0 ? Math.round((conversion.mobile / conversionTotals.mobile) * 100) : 0}%)
-                        </span>
+                        {conversion.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-1">
+                            ({((conversion.mobile / conversion.total) * 100).toFixed(1)}%)
+                          </span>
+                        )}
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-purple-600">
                         {conversion.tablet}
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({conversionTotals.tablet > 0 ? Math.round((conversion.tablet / conversionTotals.tablet) * 100) : 0}%)
-                        </span>
+                        {conversion.total > 0 && (
+                          <span className="text-gray-400 text-xs ml-1">
+                            ({((conversion.tablet / conversion.total) * 100).toFixed(1)}%)
+                          </span>
+                        )}
                       </td>
                     </tr>
                   )
