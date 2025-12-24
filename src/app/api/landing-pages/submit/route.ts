@@ -132,13 +132,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 블랙리스트 체크
+    // 블랙리스트 체크 - Silent handling (사용자에게 에러 표시 안 함)
     if (blacklistedPhone) {
-      console.log('[Landing Page Submit] Blocked blacklisted phone:', phone)
-      return NextResponse.json(
-        { error: { message: '등록할 수 없는 전화번호입니다' } },
-        { status: 403 }
-      )
+      // 서버 로그에 차단 기록 (전화번호 마스킹으로 개인정보 보호)
+      console.log('[Landing Page Submit] Blocked blacklisted phone (silent):', {
+        phone: phone.replace(/\d{4}$/, '****'), // 뒷자리 마스킹
+        landing_page_id,
+        company_id: landingPage.company_id,
+        timestamp: new Date().toISOString(),
+        ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip'),
+        user_agent: metadata?.user_agent
+      })
+
+      // ✅ 정상 성공 응답 반환 (실제로는 DB 저장 안 함)
+      // 사용자는 블랙리스트 여부를 알 수 없음 → 우회 시도 방지
+      return NextResponse.json({
+        success: true,
+        data: {
+          lead_id: null, // 실제 lead_id 없음 (DB 저장 안 했으므로)
+          message: '신청이 완료되었습니다',
+        },
+      })
     }
 
     // Referrer company ID 설정
