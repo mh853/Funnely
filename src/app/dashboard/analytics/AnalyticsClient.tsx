@@ -226,7 +226,6 @@ export default function AnalyticsClient({
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-gray-900">
                       {row.total}
-                      <span className="text-gray-400 text-xs ml-1">(100%)</span>
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-blue-600">
                       {row.pc}
@@ -256,7 +255,6 @@ export default function AnalyticsClient({
                   <td className="px-3 py-2 text-sm text-gray-900">합계</td>
                   <td className="px-3 py-2 text-sm text-center text-gray-900">
                     {trafficTotals.total}
-                    <span className="text-gray-400 text-xs ml-1">(100%)</span>
                   </td>
                   <td className="px-3 py-2 text-sm text-center text-blue-600">
                     {trafficTotals.pc}
