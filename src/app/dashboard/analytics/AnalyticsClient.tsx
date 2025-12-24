@@ -67,6 +67,9 @@ export default function AnalyticsClient({
 }: AnalyticsClientProps) {
   const router = useRouter()
 
+  // Sort data in ascending order (oldest to newest)
+  const sortedTrafficRows = [...trafficRows].sort((a, b) => a.date.localeCompare(b.date))
+
   // Navigation handlers
   const handlePrevMonth = () => {
     const prevMonth = selectedMonth === 1 ? 12 : selectedMonth - 1
@@ -216,10 +219,10 @@ export default function AnalyticsClient({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {trafficRows.map((row) => (
+                {sortedTrafficRows.map((row) => (
                   <tr key={row.date} className="hover:bg-gray-50">
                     <td className="px-3 py-2 text-sm text-gray-900">
-                      {new Date(row.date).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                      {row.date}
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-gray-900">
                       {row.total}
@@ -227,27 +230,21 @@ export default function AnalyticsClient({
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-blue-600">
                       {row.pc}
-                      {row.total > 0 && (
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({((row.pc / row.total) * 100).toFixed(1)}%)
-                        </span>
-                      )}
+                      <span className="text-gray-400 text-xs ml-1">
+                        {row.total > 0 ? `(${((row.pc / row.total) * 100).toFixed(1)}%)` : '(0.0%)'}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-green-600">
                       {row.mobile}
-                      {row.total > 0 && (
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({((row.mobile / row.total) * 100).toFixed(1)}%)
-                        </span>
-                      )}
+                      <span className="text-gray-400 text-xs ml-1">
+                        {row.total > 0 ? `(${((row.mobile / row.total) * 100).toFixed(1)}%)` : '(0.0%)'}
+                      </span>
                     </td>
                     <td className="px-3 py-2 text-sm text-center text-purple-600">
                       {row.tablet}
-                      {row.total > 0 && (
-                        <span className="text-gray-400 text-xs ml-1">
-                          ({((row.tablet / row.total) * 100).toFixed(1)}%)
-                        </span>
-                      )}
+                      <span className="text-gray-400 text-xs ml-1">
+                        {row.total > 0 ? `(${((row.tablet / row.total) * 100).toFixed(1)}%)` : '(0.0%)'}
+                      </span>
                     </td>
                   </tr>
                 ))}
@@ -324,7 +321,7 @@ export default function AnalyticsClient({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {trafficRows.map((trafficRow) => {
+                {sortedTrafficRows.map((trafficRow) => {
                   const conversion = conversionMap.get(trafficRow.date) || {
                     total: 0,
                     pc: 0,
@@ -335,35 +332,43 @@ export default function AnalyticsClient({
                   return (
                     <tr key={trafficRow.date} className="hover:bg-gray-50">
                       <td className="px-3 py-2 text-sm text-gray-900">
-                        {new Date(trafficRow.date).toLocaleDateString('ko-KR', { month: '2-digit', day: '2-digit' })}
+                        {trafficRow.date}
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-gray-900">
                         {conversion.total}
-                        <span className="text-gray-400 text-xs ml-1">(100%)</span>
+                        <span className="text-gray-400 text-xs ml-1">
+                          {trafficRow.total > 0
+                            ? `(${((conversion.total / trafficRow.total) * 100).toFixed(1)}%)`
+                            : '(0.0%)'
+                          }
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-blue-600">
                         {conversion.pc}
-                        {conversion.total > 0 && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            ({((conversion.pc / conversion.total) * 100).toFixed(1)}%)
-                          </span>
-                        )}
+                        <span className="text-gray-400 text-xs ml-1">
+                          {trafficRow.pc > 0
+                            ? `(${((conversion.pc / trafficRow.pc) * 100).toFixed(1)}%)`
+                            : '(0.0%)'
+                          }
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-green-600">
                         {conversion.mobile}
-                        {conversion.total > 0 && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            ({((conversion.mobile / conversion.total) * 100).toFixed(1)}%)
-                          </span>
-                        )}
+                        <span className="text-gray-400 text-xs ml-1">
+                          {trafficRow.mobile > 0
+                            ? `(${((conversion.mobile / trafficRow.mobile) * 100).toFixed(1)}%)`
+                            : '(0.0%)'
+                          }
+                        </span>
                       </td>
                       <td className="px-3 py-2 text-sm text-center text-purple-600">
                         {conversion.tablet}
-                        {conversion.total > 0 && (
-                          <span className="text-gray-400 text-xs ml-1">
-                            ({((conversion.tablet / conversion.total) * 100).toFixed(1)}%)
-                          </span>
-                        )}
+                        <span className="text-gray-400 text-xs ml-1">
+                          {trafficRow.tablet > 0
+                            ? `(${((conversion.tablet / trafficRow.tablet) * 100).toFixed(1)}%)`
+                            : '(0.0%)'
+                          }
+                        </span>
                       </td>
                     </tr>
                   )
@@ -376,31 +381,39 @@ export default function AnalyticsClient({
                   <td className="px-3 py-2 text-sm text-gray-900">합계</td>
                   <td className="px-3 py-2 text-sm text-center text-gray-900">
                     {conversionTotals.total}
-                    <span className="text-gray-400 text-xs ml-1">(100%)</span>
+                    <span className="text-gray-400 text-xs ml-1">
+                      {trafficTotals.total > 0
+                        ? `(${((conversionTotals.total / trafficTotals.total) * 100).toFixed(1)}%)`
+                        : '(0.0%)'
+                      }
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-sm text-center text-blue-600">
                     {conversionTotals.pc}
-                    {conversionTotals.total > 0 && (
-                      <span className="text-gray-400 text-xs ml-1">
-                        ({Math.round((conversionTotals.pc / conversionTotals.total) * 100)}%)
-                      </span>
-                    )}
+                    <span className="text-gray-400 text-xs ml-1">
+                      {trafficTotals.pc > 0
+                        ? `(${((conversionTotals.pc / trafficTotals.pc) * 100).toFixed(1)}%)`
+                        : '(0.0%)'
+                      }
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-sm text-center text-green-600">
                     {conversionTotals.mobile}
-                    {conversionTotals.total > 0 && (
-                      <span className="text-gray-400 text-xs ml-1">
-                        ({Math.round((conversionTotals.mobile / conversionTotals.total) * 100)}%)
-                      </span>
-                    )}
+                    <span className="text-gray-400 text-xs ml-1">
+                      {trafficTotals.mobile > 0
+                        ? `(${((conversionTotals.mobile / trafficTotals.mobile) * 100).toFixed(1)}%)`
+                        : '(0.0%)'
+                      }
+                    </span>
                   </td>
                   <td className="px-3 py-2 text-sm text-center text-purple-600">
                     {conversionTotals.tablet}
-                    {conversionTotals.total > 0 && (
-                      <span className="text-gray-400 text-xs ml-1">
-                        ({Math.round((conversionTotals.tablet / conversionTotals.total) * 100)}%)
-                      </span>
-                    )}
+                    <span className="text-gray-400 text-xs ml-1">
+                      {trafficTotals.tablet > 0
+                        ? `(${((conversionTotals.tablet / trafficTotals.tablet) * 100).toFixed(1)}%)`
+                        : '(0.0%)'
+                      }
+                    </span>
                   </td>
                 </tr>
               </tfoot>
