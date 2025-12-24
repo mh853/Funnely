@@ -134,6 +134,8 @@ export default function LandingPageNewForm({
   const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
   const [timerText, setTimerText] = useState(landingPage?.timer_text || '특별 할인 마감까지')
   const [timerCountdown, setTimerCountdown] = useState('00:00:00')
+  const [timerAutoUpdate, setTimerAutoUpdate] = useState(landingPage?.timer_auto_update ?? false)
+  const [timerAutoUpdateDays, setTimerAutoUpdateDays] = useState(landingPage?.timer_auto_update_days || 7)
   const [callButtonEnabled, setCallButtonEnabled] = useState(landingPage?.call_button_enabled ?? true)
   const [callButtonPhone, setCallButtonPhone] = useState(landingPage?.call_button_phone || '')
   const [callButtonColor, setCallButtonColor] = useState(landingPage?.call_button_color || '#10b981')
@@ -1103,6 +1105,8 @@ export default function LandingPageNewForm({
         timer_deadline: timerDeadline || null, // 빈 문자열을 null로 변환
         timer_color: timerColor,
         timer_sticky_position: timerStickyPosition,
+        timer_auto_update: timerAutoUpdate,
+        timer_auto_update_days: timerAutoUpdateDays,
         call_button_enabled: callButtonEnabled,
         call_button_phone: callButtonPhone || null, // 빈 문자열을 null로 변환
         call_button_color: callButtonColor,
@@ -2030,7 +2034,7 @@ export default function LandingPageNewForm({
 
         {/* Timer Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-2">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">타이머 사용</h2>
             <div className="flex items-center gap-3 sm:gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
@@ -2052,7 +2056,27 @@ export default function LandingPageNewForm({
                 <span className="font-semibold text-gray-600 text-sm sm:text-base">사용 안함</span>
               </label>
             </div>
+            {timerEnabled && (
+              <label className="flex items-center gap-2 cursor-pointer ml-auto">
+                <input
+                  type="checkbox"
+                  checked={timerAutoUpdate}
+                  onChange={(e) => setTimerAutoUpdate(e.target.checked)}
+                  className="w-4 h-4 text-indigo-600 rounded"
+                />
+                <span className="text-sm font-medium text-gray-700">자동 마감일 업데이트</span>
+              </label>
+            )}
           </div>
+
+          {/* 경고 메시지 */}
+          {timerEnabled && (
+            <div className="mb-4">
+              <p className="text-xs text-red-600 font-medium">
+                ⚠️ 설정하신 마감 날짜가 지나면 신청 접수가 비활성됩니다. 반드시 마감 날짜를 확인하시기 바랍니다.
+              </p>
+            </div>
+          )}
 
           <div>
             {timerEnabled && (
@@ -2122,6 +2146,29 @@ export default function LandingPageNewForm({
                     className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                   />
                 </div>
+
+                {/* 자동 업데이트 설정 */}
+                {timerAutoUpdate && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                    <label className="text-sm font-medium text-indigo-900 sm:w-24">
+                      업데이트 주기
+                    </label>
+                    <div className="flex items-center gap-2 flex-1">
+                      <input
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={timerAutoUpdateDays}
+                        onChange={(e) => setTimerAutoUpdateDays(Number(e.target.value))}
+                        className="w-20 px-3 py-2 border-2 border-indigo-300 rounded-lg focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-center"
+                      />
+                      <span className="text-sm text-indigo-900">일 후 자동 연장</span>
+                    </div>
+                    <p className="text-xs text-indigo-700 sm:ml-auto">
+                      💡 마감 시간이 지나면 자동으로 {timerAutoUpdateDays}일 후로 업데이트됩니다
+                    </p>
+                  </div>
+                )}
 
                 {/* 타이머 색상 */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
