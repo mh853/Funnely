@@ -44,16 +44,32 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }
 
   const now = new Date()
-  const selectedYear = params.year ? parseInt(params.year) : now.getFullYear()
-  const selectedMonth = params.month ? parseInt(params.month) : now.getMonth() + 1
+
+  // "전체" 필터는 명시적으로 year='all' 또는 month='all'로 표시
+  const isAllMonths = params.year === 'all' || params.month === 'all'
+
+  // 파라미터가 없으면 현재 월로 리다이렉트
+  if (!params.year && !params.month) {
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const queryParams = new URLSearchParams()
+    queryParams.set('year', currentYear.toString())
+    queryParams.set('month', currentMonth.toString())
+    if (params.department) queryParams.set('department', params.department)
+    if (params.assignedTo) queryParams.set('assignedTo', params.assignedTo)
+    redirect(`/dashboard/reports?${queryParams.toString()}`)
+  }
+
+  const selectedYear = isAllMonths ? now.getFullYear() : parseInt(params.year!)
+  const selectedMonth = isAllMonths ? now.getMonth() + 1 : parseInt(params.month!)
 
   // 선택된 월의 시작일과 종료일
   const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1)
   const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0)
   const daysInMonth = selectedMonthEnd.getDate()
 
-  const queryStart = selectedMonthStart.toISOString()
-  const queryEnd = new Date(selectedYear, selectedMonth, 1).toISOString()
+  const queryStart = isAllMonths ? undefined : selectedMonthStart.toISOString()
+  const queryEnd = isAllMonths ? undefined : new Date(selectedYear, selectedMonth, 1).toISOString()
 
   // 팀원 목록 조회 (부서 정보 포함)
   const { data: teamMembers } = await supabase
@@ -83,9 +99,13 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       call_assigned_to
     `)
     .eq('company_id', userProfile.company_id)
-    .gte('created_at', queryStart)
-    .lt('created_at', queryEnd)
-    .order('created_at', { ascending: true })
+
+  // "전체" 필터가 아닌 경우에만 날짜 범위 필터 적용
+  if (!isAllMonths && queryStart && queryEnd) {
+    leadsQuery = leadsQuery.gte('created_at', queryStart).lt('created_at', queryEnd)
+  }
+
+  leadsQuery = leadsQuery.order('created_at', { ascending: true })
 
   // 담당자 필터
   if (params.assignedTo) {
@@ -106,33 +126,68 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }
 
   // 결제 데이터 조회
-  const { data: paymentData } = await supabase
+  let paymentQuery = supabase
     .from('lead_payments')
     .select('lead_id, amount, leads!inner(created_at)')
     .eq('company_id', userProfile.company_id)
-    .gte('leads.created_at', queryStart)
-    .lt('leads.created_at', queryEnd)
 
-  // 날짜별 결과 집계 - 선택된 월의 모든 날짜 먼저 초기화
+  // "전체" 필터가 아닌 경우에만 날짜 범위 필터 적용
+  if (!isAllMonths && queryStart && queryEnd) {
+    paymentQuery = paymentQuery.gte('leads.created_at', queryStart).lt('leads.created_at', queryEnd)
+  }
+
+  const { data: paymentData } = await paymentQuery
+
+  // 날짜별 결과 집계
   const resultsByDate: Record<string, any> = {}
 
-  // 1단계: 모든 날짜 초기화 (1일 ~ 말일)
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    resultsByDate[dateStr] = {
-      date: dateStr,
-      total: 0,
-      pending: 0,
-      rejected: 0,
-      inProgress: 0,
-      completed: 0,
-      contractCompleted: 0,
-      needsFollowUp: 0,
-      other: 0,
-      pcCount: 0,
-      mobileCount: 0,
-      paymentAmount: 0,
-      paymentCount: 0,
+  // "전체" 필터인 경우, 리드 데이터에서 모든 고유 날짜를 추출하여 초기화
+  if (isAllMonths) {
+    // 모든 리드의 날짜를 추출
+    const allDates = new Set<string>()
+    filteredLeads.forEach((lead) => {
+      const leadDate = new Date(lead.created_at)
+      const dateStr = leadDate.toISOString().split('T')[0]
+      allDates.add(dateStr)
+    })
+
+    // 각 날짜별로 초기화
+    allDates.forEach((dateStr) => {
+      resultsByDate[dateStr] = {
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }
+    })
+  } else {
+    // 1단계: 선택된 월의 모든 날짜 초기화 (1일 ~ 말일)
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      resultsByDate[dateStr] = {
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }
     }
   }
 
@@ -235,6 +290,147 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     b.total - a.total
   )
 
+  // 부서별 월별 데이터 생성
+  const departmentMonthlyData: Record<string, any[]> = {}
+
+  if (isAllMonths) {
+    // "전체" 필터인 경우, 실제 리드 데이터에서 날짜를 추출하여 초기화
+    const allDates = Object.keys(resultsByDate).sort()
+
+    departments.forEach((dept) => {
+      departmentMonthlyData[dept] = allDates.map((dateStr) => ({
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }))
+    })
+
+    // 미배정 부서도 초기화
+    departmentMonthlyData['미배정'] = allDates.map((dateStr) => ({
+      date: dateStr,
+      total: 0,
+      pending: 0,
+      rejected: 0,
+      inProgress: 0,
+      completed: 0,
+      contractCompleted: 0,
+      needsFollowUp: 0,
+      other: 0,
+      pcCount: 0,
+      mobileCount: 0,
+      paymentAmount: 0,
+      paymentCount: 0,
+    }))
+  } else {
+    // 선택된 월의 모든 날짜 초기화
+    departments.forEach((dept) => {
+      departmentMonthlyData[dept] = []
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        departmentMonthlyData[dept].push({
+          date: dateStr,
+          total: 0,
+          pending: 0,
+          rejected: 0,
+          inProgress: 0,
+          completed: 0,
+          contractCompleted: 0,
+          needsFollowUp: 0,
+          other: 0,
+          pcCount: 0,
+          mobileCount: 0,
+          paymentAmount: 0,
+          paymentCount: 0,
+        })
+      }
+    })
+
+    // 미배정 부서도 초기화
+    departmentMonthlyData['미배정'] = []
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      departmentMonthlyData['미배정'].push({
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      })
+    }
+  }
+
+  // 리드 데이터로 부서별 월별 데이터 업데이트
+  filteredLeads.forEach((lead) => {
+    const leadDate = new Date(lead.created_at)
+    const dateStr = leadDate.toISOString().split('T')[0]
+    const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
+    const deptName = assignedUser?.department || '미배정'
+
+    if (departmentMonthlyData[deptName]) {
+      const dayData = departmentMonthlyData[deptName].find(d => d.date === dateStr)
+      if (dayData) {
+        dayData.total++
+
+        // Device type
+        const deviceType = lead.device_type || 'unknown'
+        if (deviceType === 'pc') dayData.pcCount++
+        else if (deviceType === 'mobile') dayData.mobileCount++
+
+        // Status
+        const status = lead.status || 'pending'
+        if (status === 'new' || status === 'pending') dayData.pending++
+        else if (status === 'rejected') dayData.rejected++
+        else if (status === 'contacted' || status === 'qualified') dayData.inProgress++
+        else if (status === 'converted') dayData.completed++
+        else if (status === 'contract_completed') dayData.contractCompleted++
+        else if (status === 'needs_followup') dayData.needsFollowUp++
+        else dayData.other++
+      }
+    }
+  })
+
+  // 부서별 월별 결제 데이터 집계
+  paymentData?.forEach((payment: any) => {
+    const leadId = payment.lead_id
+    const lead = filteredLeads.find(l => l.id === leadId)
+    if (lead) {
+      const leadCreatedAt = payment.leads?.created_at
+      if (leadCreatedAt) {
+        const paymentDate = new Date(leadCreatedAt)
+        const dateStr = paymentDate.toISOString().split('T')[0]
+        const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
+        const deptName = assignedUser?.department || '미배정'
+
+        if (departmentMonthlyData[deptName]) {
+          const dayData = departmentMonthlyData[deptName].find(d => d.date === dateStr)
+          if (dayData) {
+            dayData.paymentAmount += payment.amount || 0
+            dayData.paymentCount += 1
+          }
+        }
+      }
+    }
+  })
+
   // 담당자별 집계
   const resultsByStaff: Record<string, any> = {}
 
@@ -292,6 +488,107 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     b.total - a.total
   )
 
+  // 담당자별 월별 데이터 생성
+  const staffMonthlyData: Record<string, any[]> = {}
+
+  if (isAllMonths) {
+    // "전체" 필터인 경우, 실제 리드 데이터에서 날짜를 추출하여 초기화
+    const allDates = Object.keys(resultsByDate).sort()
+
+    Object.keys(resultsByStaff).forEach((staffId) => {
+      staffMonthlyData[staffId] = allDates.map((dateStr) => ({
+        date: dateStr,
+        total: 0,
+        pending: 0,
+        rejected: 0,
+        inProgress: 0,
+        completed: 0,
+        contractCompleted: 0,
+        needsFollowUp: 0,
+        other: 0,
+        pcCount: 0,
+        mobileCount: 0,
+        paymentAmount: 0,
+        paymentCount: 0,
+      }))
+    })
+  } else {
+    // 선택된 월의 모든 날짜 초기화
+    Object.keys(resultsByStaff).forEach((staffId) => {
+      staffMonthlyData[staffId] = []
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        staffMonthlyData[staffId].push({
+          date: dateStr,
+          total: 0,
+          pending: 0,
+          rejected: 0,
+          inProgress: 0,
+          completed: 0,
+          contractCompleted: 0,
+          needsFollowUp: 0,
+          other: 0,
+          pcCount: 0,
+          mobileCount: 0,
+          paymentAmount: 0,
+          paymentCount: 0,
+        })
+      }
+    })
+  }
+
+  // 리드 데이터로 담당자별 월별 데이터 업데이트
+  filteredLeads.forEach((lead) => {
+    const leadDate = new Date(lead.created_at)
+    const dateStr = leadDate.toISOString().split('T')[0]
+    const staffId = lead.call_assigned_to || 'unassigned'
+
+    if (staffMonthlyData[staffId]) {
+      const dayData = staffMonthlyData[staffId].find(d => d.date === dateStr)
+      if (dayData) {
+        dayData.total++
+
+        // Device type
+        const deviceType = lead.device_type || 'unknown'
+        if (deviceType === 'pc') dayData.pcCount++
+        else if (deviceType === 'mobile') dayData.mobileCount++
+
+        // Status
+        const status = lead.status || 'pending'
+        if (status === 'new' || status === 'pending') dayData.pending++
+        else if (status === 'rejected') dayData.rejected++
+        else if (status === 'contacted' || status === 'qualified') dayData.inProgress++
+        else if (status === 'converted') dayData.completed++
+        else if (status === 'contract_completed') dayData.contractCompleted++
+        else if (status === 'needs_followup') dayData.needsFollowUp++
+        else dayData.other++
+      }
+    }
+  })
+
+  // 담당자별 월별 결제 데이터 집계
+  paymentData?.forEach((payment: any) => {
+    const leadId = payment.lead_id
+    const lead = filteredLeads.find(l => l.id === leadId)
+    if (lead) {
+      const leadCreatedAt = payment.leads?.created_at
+      if (leadCreatedAt) {
+        const paymentDate = new Date(leadCreatedAt)
+        const dateStr = paymentDate.toISOString().split('T')[0]
+        const staffId = lead.call_assigned_to || 'unassigned'
+
+        if (staffMonthlyData[staffId]) {
+          const dayData = staffMonthlyData[staffId].find(d => d.date === dateStr)
+          if (dayData) {
+            dayData.paymentAmount += payment.amount || 0
+            dayData.paymentCount += 1
+          }
+        }
+      }
+    }
+  })
+
   // 요약 통계
   const summary = {
     totalDB: filteredLeads.length,
@@ -316,6 +613,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       resultRows={resultRows}
       departmentRows={departmentRows}
       staffRows={staffRows}
+      departmentMonthlyData={departmentMonthlyData}
+      staffMonthlyData={staffMonthlyData}
       summary={summary}
       departments={departments}
       teamMembers={teamMembers || []}
@@ -324,6 +623,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       selectedDepartment={params.department || ''}
       selectedAssignedTo={params.assignedTo || ''}
       daysInMonth={daysInMonth}
+      isAllMonths={isAllMonths}
     />
   )
 }
