@@ -296,6 +296,9 @@ export default function AnalyticsClient({
           <div className="p-4 border-b border-gray-100 bg-yellow-50">
             <h2 className="text-base font-bold text-gray-900">
               DB 전환수 (전환율)
+              <span className="ml-2 text-xs font-normal text-gray-500">
+                트래픽 유입 대비 DB 전환된 비율
+              </span>
             </h2>
           </div>
 
