@@ -113,47 +113,53 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     .gte('leads.created_at', queryStart)
     .lt('leads.created_at', queryEnd)
 
-  // 날짜별 결과 집계
+  // 날짜별 결과 집계 - 선택된 월의 모든 날짜 먼저 초기화
   const resultsByDate: Record<string, any> = {}
 
+  // 1단계: 모든 날짜 초기화 (1일 ~ 말일)
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+    resultsByDate[dateStr] = {
+      date: dateStr,
+      total: 0,
+      pending: 0,
+      rejected: 0,
+      inProgress: 0,
+      completed: 0,
+      contractCompleted: 0,
+      needsFollowUp: 0,
+      other: 0,
+      pcCount: 0,
+      mobileCount: 0,
+      paymentAmount: 0,
+      paymentCount: 0,
+    }
+  }
+
+  // 2단계: 실제 리드 데이터로 업데이트
   filteredLeads.forEach((lead) => {
     const leadDate = new Date(lead.created_at)
     const dateStr = leadDate.toISOString().split('T')[0]
 
-    if (!resultsByDate[dateStr]) {
-      resultsByDate[dateStr] = {
-        date: dateStr,
-        total: 0,
-        pending: 0,
-        rejected: 0,
-        inProgress: 0,
-        completed: 0,
-        contractCompleted: 0,
-        needsFollowUp: 0,
-        other: 0,
-        pcCount: 0,
-        mobileCount: 0,
-        paymentAmount: 0,
-        paymentCount: 0,
-      }
+    // 이미 초기화되어 있으므로 존재 체크만
+    if (resultsByDate[dateStr]) {
+      resultsByDate[dateStr].total++
+
+      // Device type
+      const deviceType = lead.device_type || 'unknown'
+      if (deviceType === 'pc') resultsByDate[dateStr].pcCount++
+      else if (deviceType === 'mobile') resultsByDate[dateStr].mobileCount++
+
+      // Status
+      const status = lead.status || 'pending'
+      if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
+      else if (status === 'rejected') resultsByDate[dateStr].rejected++
+      else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
+      else if (status === 'converted') resultsByDate[dateStr].completed++
+      else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
+      else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
+      else resultsByDate[dateStr].other++
     }
-
-    resultsByDate[dateStr].total++
-
-    // Device type
-    const deviceType = lead.device_type || 'unknown'
-    if (deviceType === 'pc') resultsByDate[dateStr].pcCount++
-    else if (deviceType === 'mobile') resultsByDate[dateStr].mobileCount++
-
-    // Status
-    const status = lead.status || 'pending'
-    if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
-    else if (status === 'rejected') resultsByDate[dateStr].rejected++
-    else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
-    else if (status === 'converted') resultsByDate[dateStr].completed++
-    else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
-    else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
-    else resultsByDate[dateStr].other++
   })
 
   // 결제 데이터 집계
@@ -169,9 +175,9 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     }
   })
 
-  // 정렬된 결과 (최신순)
+  // 정렬된 결과 (오름차순 - 오래된 날짜 위로)
   const resultRows = Object.values(resultsByDate).sort((a: any, b: any) =>
-    b.date.localeCompare(a.date)
+    a.date.localeCompare(b.date)
   )
 
   // 부서별 집계
