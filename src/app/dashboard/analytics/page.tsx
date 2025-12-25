@@ -50,6 +50,12 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0)
   const daysInMonth = selectedMonthEnd.getDate()
 
+  // Date 문자열 생성 (타임존 문제 방지)
+  const queryStartDate = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-01`
+  const nextMonth = selectedMonth === 12 ? 1 : selectedMonth + 1
+  const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear
+  const queryEndDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
+
   const queryStart = selectedMonthStart.toISOString()
   const queryEnd = new Date(selectedYear, selectedMonth, 1).toISOString()
 
@@ -58,8 +64,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     .from('landing_page_analytics')
     .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
     .eq('landing_pages.company_id', userProfile.company_id)
-    .gte('date', queryStart.split('T')[0])
-    .lt('date', queryEnd.split('T')[0])
+    .gte('date', queryStartDate)
+    .lt('date', queryEndDate)
 
   // 페이지뷰를 날짜별로 집계
   const pageViewsByDate: { [key: string]: { total: number; pc: number; mobile: number; tablet: number } } = {}
@@ -159,8 +165,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     .from('landing_page_analytics')
     .select('landing_page_id, desktop_views, mobile_views, tablet_views, landing_pages!inner(company_id)')
     .eq('landing_pages.company_id', userProfile.company_id)
-    .gte('date', queryStart.split('T')[0])
-    .lt('date', queryEnd.split('T')[0])
+    .gte('date', queryStartDate)
+    .lt('date', queryEndDate)
 
   // Aggregate monthly device breakdown by landing page
   const deviceBreakdownByLandingPage: Record<string, { pc: number; mobile: number; tablet: number }> = {}
