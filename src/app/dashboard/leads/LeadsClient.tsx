@@ -194,6 +194,14 @@ export default function LeadsClient({
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
 
+  // 콜 담당자 분배 상태
+  const [isDistributing, setIsDistributing] = useState(false)
+  const [distributionResult, setDistributionResult] = useState<{
+    message: string
+    distributed: number
+    stats?: Array<{ userName: string; assignedCount: number }>
+  } | null>(null)
+
   // 모든 리드에서 custom_fields (JSONB) 수집하여 동적 컬럼 생성
   // 형식: [{ label: "질문명", value: "답변값" }]
   const customFieldColumns = useMemo(() => {
@@ -1158,6 +1166,47 @@ export default function LeadsClient({
     }
   }
 
+  // 콜 담당자 수동 분배
+  const handleDistributeLeads = async () => {
+    // 확인 다이얼로그
+    const confirmed = window.confirm(
+      '미배정 리드를 일반 사용자에게 균등 분배하시겠습니까?'
+    )
+    if (!confirmed) return
+
+    try {
+      setIsDistributing(true)
+      setDistributionResult(null)
+
+      const response = await fetch('/api/leads/distribute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error?.message || '분배 실패')
+      }
+
+      // 성공 메시지 저장
+      setDistributionResult({
+        message: result.data.message,
+        distributed: result.data.distributed,
+        stats: result.data.stats,
+      })
+
+      // 분배 완료 후 페이지 새로고침
+      setTimeout(() => {
+        window.location.reload()
+      }, 2000) // 2초 후 새로고침 (사용자가 결과를 볼 시간 제공)
+    } catch (error: any) {
+      console.error('Distribution error:', error)
+      alert(`리드 분배 실패: ${error.message}`)
+      setIsDistributing(false)
+    }
+  }
+
   // 필터 해제 (전체 목록으로 이동 - 모든 날짜 범위 포함)
   const handleClearFilter = () => {
     // 즉시 클라이언트 상태 초기화
@@ -1188,6 +1237,76 @@ export default function LeadsClient({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 분배 결과 메시지 */}
+          {distributionResult && (
+            <div className="bg-green-50 border border-green-200 rounded-lg px-4 py-2">
+              <p className="text-sm text-green-800 font-medium">
+                {distributionResult.message}
+              </p>
+              {distributionResult.stats && distributionResult.stats.length > 0 && (
+                <p className="text-xs text-green-600 mt-1">
+                  {distributionResult.stats
+                    .map((s) => `${s.userName}: ${s.assignedCount}개`)
+                    .join(', ')}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* 콜 담당자 분배 버튼 */}
+          <button
+            onClick={handleDistributeLeads}
+            disabled={isDistributing}
+            className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold transition-all gap-2 ${
+              isDistributing
+                ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-white cursor-wait shadow-lg'
+                : 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700 shadow-lg hover:shadow-xl'
+            }`}
+          >
+            {isDistributing ? (
+              <>
+                <svg
+                  className="animate-spin h-4 w-4 text-white"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  ></circle>
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+                <span>분배 중...</span>
+              </>
+            ) : (
+              <>
+                <svg
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+                <span>DB 배분</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => setShowAddLeadModal(true)}
             className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl text-sm font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl gap-2"
