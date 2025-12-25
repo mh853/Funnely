@@ -235,7 +235,7 @@ export default function ReportsClient({
     : teamMembers
 
   return (
-    <div className="px-4 space-y-4">
+    <div className="px-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -421,41 +421,41 @@ export default function ReportsClient({
             </h2>
           </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto px-2">
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
                   날짜
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   DB유입
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   상담전
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   거절
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   진행중
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   완료
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   예약확정
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   추가상담
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   기타
                 </th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                   결제금액
                 </th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                   결제횟수
                 </th>
               </tr>
@@ -467,7 +467,7 @@ export default function ReportsClient({
                     key={row.date}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                       <Link
                         href={`/dashboard/leads?date=${row.date}`}
                         className="hover:text-indigo-600 hover:underline"
@@ -475,7 +475,7 @@ export default function ReportsClient({
                         {row.date}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
                       <Link
                         href={`/dashboard/leads?date=${row.date}`}
                         className="hover:text-indigo-600"
@@ -483,7 +483,7 @@ export default function ReportsClient({
                         {row.total}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-orange-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-orange-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=new`}
                         className="hover:underline"
@@ -496,7 +496,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-red-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-red-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=rejected`}
                         className="hover:underline"
@@ -509,7 +509,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-sky-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=contacted`}
                         className="hover:underline"
@@ -522,7 +522,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-green-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=converted`}
                         className="hover:underline"
@@ -535,7 +535,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=contract_completed`}
                         className="hover:underline"
@@ -548,7 +548,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-yellow-600">
                       <Link
                         href={`/dashboard/leads?date=${row.date}&status=needs_followup`}
                         className="hover:underline"
@@ -561,7 +561,7 @@ export default function ReportsClient({
                         )}
                       </Link>
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-gray-400">
                       {row.other}
                       {row.total > 0 && row.other > 0 && (
                         <span className="text-xs ml-0.5">
@@ -569,12 +569,12 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
                       {row.paymentAmount > 0
                         ? `${row.paymentAmount.toLocaleString()}원`
                         : '-'}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-gray-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-600">
                       {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
                     </td>
                   </tr>
@@ -691,37 +691,37 @@ export default function ReportsClient({
               <div className="p-4 border-b border-gray-100">
                 <h3 className="text-lg font-bold text-purple-600">{dept}</h3>
               </div>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto px-2">
                 <table className="min-w-full">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
-                      <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
-                      <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {monthlyRows.map((row) => (
                       <tr key={row.date} className="hover:bg-gray-50">
-                        <td className="px-3 py-2 text-sm text-gray-900">{row.date}</td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-900">{row.total}</td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-900">{row.pending} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.pending / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-red-600">{row.rejected} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.rejected / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-blue-600">{row.inProgress} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.inProgress / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-green-600">{row.completed} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.completed / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-purple-600">{row.contractCompleted} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.contractCompleted / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-orange-600">{row.needsFollowUp} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.needsFollowUp / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                        <td className="px-3 py-2 text-sm text-center text-gray-600">{row.other}</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-900">{row.paymentAmount?.toLocaleString() || '-'}원</td>
-                        <td className="px-3 py-2 text-sm text-right text-gray-600">{row.paymentCount || 0}건</td>
+                        <td className="px-4 py-2 text-sm text-gray-900">{row.date}</td>
+                        <td className="px-4 py-2 text-sm text-center text-gray-900">{row.total}</td>
+                        <td className="px-4 py-2 text-sm text-center text-gray-900">{row.pending} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.pending / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-red-600">{row.rejected} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.rejected / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-blue-600">{row.inProgress} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.inProgress / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-green-600">{row.completed} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.completed / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-purple-600">{row.contractCompleted} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.contractCompleted / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-orange-600">{row.needsFollowUp} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.needsFollowUp / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                        <td className="px-4 py-2 text-sm text-center text-gray-600">{row.other}</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-900">{row.paymentAmount?.toLocaleString() || '-'}원</td>
+                        <td className="px-4 py-2 text-sm text-right text-gray-600">{row.paymentCount || 0}건</td>
                       </tr>
                     ))}
                   </tbody>
@@ -742,17 +742,17 @@ export default function ReportsClient({
 
                       return (
                         <tr className="bg-gray-50 font-semibold">
-                          <td className="px-3 py-2 text-sm text-gray-900">합계</td>
-                          <td className="px-3 py-2 text-sm text-center text-gray-900">{totals.total}</td>
-                          <td className="px-3 py-2 text-sm text-center text-gray-900">{totals.pending}</td>
-                          <td className="px-3 py-2 text-sm text-center text-red-600">{totals.rejected}</td>
-                          <td className="px-3 py-2 text-sm text-center text-blue-600">{totals.inProgress}</td>
-                          <td className="px-3 py-2 text-sm text-center text-green-600">{totals.completed}</td>
-                          <td className="px-3 py-2 text-sm text-center text-purple-600">{totals.contractCompleted}</td>
-                          <td className="px-3 py-2 text-sm text-center text-orange-600">{totals.needsFollowUp}</td>
-                          <td className="px-3 py-2 text-sm text-center text-gray-600">{totals.other}</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-900">{totals.paymentAmount.toLocaleString()}원</td>
-                          <td className="px-3 py-2 text-sm text-right text-gray-600">{totals.paymentCount}건</td>
+                          <td className="px-4 py-2 text-sm text-gray-900">합계</td>
+                          <td className="px-4 py-2 text-sm text-center text-gray-900">{totals.total}</td>
+                          <td className="px-4 py-2 text-sm text-center text-gray-900">{totals.pending}</td>
+                          <td className="px-4 py-2 text-sm text-center text-red-600">{totals.rejected}</td>
+                          <td className="px-4 py-2 text-sm text-center text-blue-600">{totals.inProgress}</td>
+                          <td className="px-4 py-2 text-sm text-center text-green-600">{totals.completed}</td>
+                          <td className="px-4 py-2 text-sm text-center text-purple-600">{totals.contractCompleted}</td>
+                          <td className="px-4 py-2 text-sm text-center text-orange-600">{totals.needsFollowUp}</td>
+                          <td className="px-4 py-2 text-sm text-center text-gray-600">{totals.other}</td>
+                          <td className="px-4 py-2 text-sm text-right text-gray-900">{totals.paymentAmount.toLocaleString()}원</td>
+                          <td className="px-4 py-2 text-sm text-right text-gray-600">{totals.paymentCount}건</td>
                         </tr>
                       )
                     })()}
@@ -799,37 +799,37 @@ export default function ReportsClient({
                       )}
                     </h3>
                   </div>
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto px-2">
                     <table className="min-w-full">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
-                          <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
-                          <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {monthlyRows.map((row) => (
                           <tr key={row.date} className="hover:bg-gray-50">
-                            <td className="px-3 py-2 text-sm text-gray-900">{row.date}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-900">{row.total}</td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-900">{row.pending} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.pending / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-red-600">{row.rejected} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.rejected / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-blue-600">{row.inProgress} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.inProgress / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-green-600">{row.completed} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.completed / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-purple-600">{row.contractCompleted} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.contractCompleted / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-orange-600">{row.needsFollowUp} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.needsFollowUp / row.total) * 100).toFixed(1) : 0}%)</span></td>
-                            <td className="px-3 py-2 text-sm text-center text-gray-600">{row.other}</td>
-                            <td className="px-3 py-2 text-sm text-right text-gray-900">{row.paymentAmount?.toLocaleString() || '-'}원</td>
-                            <td className="px-3 py-2 text-sm text-right text-gray-600">{row.paymentCount || 0}건</td>
+                            <td className="px-4 py-2 text-sm text-gray-900">{row.date}</td>
+                            <td className="px-4 py-2 text-sm text-center text-gray-900">{row.total}</td>
+                            <td className="px-4 py-2 text-sm text-center text-gray-900">{row.pending} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.pending / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-red-600">{row.rejected} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.rejected / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-blue-600">{row.inProgress} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.inProgress / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-green-600">{row.completed} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.completed / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-purple-600">{row.contractCompleted} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.contractCompleted / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-orange-600">{row.needsFollowUp} <span className="text-xs text-gray-400">({row.total > 0 ? ((row.needsFollowUp / row.total) * 100).toFixed(1) : 0}%)</span></td>
+                            <td className="px-4 py-2 text-sm text-center text-gray-600">{row.other}</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-900">{row.paymentAmount?.toLocaleString() || '-'}원</td>
+                            <td className="px-4 py-2 text-sm text-right text-gray-600">{row.paymentCount || 0}건</td>
                           </tr>
                         ))}
                       </tbody>
@@ -850,17 +850,17 @@ export default function ReportsClient({
 
                           return (
                             <tr className="bg-gray-50 font-semibold">
-                              <td className="px-3 py-2 text-sm text-gray-900">합계</td>
-                              <td className="px-3 py-2 text-sm text-center text-gray-900">{totals.total}</td>
-                              <td className="px-3 py-2 text-sm text-center text-gray-900">{totals.pending}</td>
-                              <td className="px-3 py-2 text-sm text-center text-red-600">{totals.rejected}</td>
-                              <td className="px-3 py-2 text-sm text-center text-blue-600">{totals.inProgress}</td>
-                              <td className="px-3 py-2 text-sm text-center text-green-600">{totals.completed}</td>
-                              <td className="px-3 py-2 text-sm text-center text-purple-600">{totals.contractCompleted}</td>
-                              <td className="px-3 py-2 text-sm text-center text-orange-600">{totals.needsFollowUp}</td>
-                              <td className="px-3 py-2 text-sm text-center text-gray-600">{totals.other}</td>
-                              <td className="px-3 py-2 text-sm text-right text-gray-900">{totals.paymentAmount.toLocaleString()}원</td>
-                              <td className="px-3 py-2 text-sm text-right text-gray-600">{totals.paymentCount}건</td>
+                              <td className="px-4 py-2 text-sm text-gray-900">합계</td>
+                              <td className="px-4 py-2 text-sm text-center text-gray-900">{totals.total}</td>
+                              <td className="px-4 py-2 text-sm text-center text-gray-900">{totals.pending}</td>
+                              <td className="px-4 py-2 text-sm text-center text-red-600">{totals.rejected}</td>
+                              <td className="px-4 py-2 text-sm text-center text-blue-600">{totals.inProgress}</td>
+                              <td className="px-4 py-2 text-sm text-center text-green-600">{totals.completed}</td>
+                              <td className="px-4 py-2 text-sm text-center text-purple-600">{totals.contractCompleted}</td>
+                              <td className="px-4 py-2 text-sm text-center text-orange-600">{totals.needsFollowUp}</td>
+                              <td className="px-4 py-2 text-sm text-center text-gray-600">{totals.other}</td>
+                              <td className="px-4 py-2 text-sm text-right text-gray-900">{totals.paymentAmount.toLocaleString()}원</td>
+                              <td className="px-4 py-2 text-sm text-right text-gray-600">{totals.paymentCount}건</td>
                             </tr>
                           )
                         })()}
@@ -888,37 +888,37 @@ export default function ReportsClient({
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
                   부서
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   DB유입
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   상담전
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   거절
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   진행중
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   완료
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   예약확정
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   추가상담
                 </th>
-                <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                   기타
                 </th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                   결제금액
                 </th>
-                <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                   결제횟수
                 </th>
               </tr>
@@ -930,13 +930,13 @@ export default function ReportsClient({
                     key={row.department}
                     className="hover:bg-gray-50 transition-colors"
                   >
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                       {row.department}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
                       {row.total}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-orange-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-orange-600">
                       {row.pending}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -944,7 +944,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-red-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-red-600">
                       {row.rejected}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -952,7 +952,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-sky-600">
                       {row.inProgress}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -960,7 +960,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-green-600">
                       {row.completed}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -968,7 +968,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
                       {row.contractCompleted}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -976,7 +976,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-yellow-600">
                       {row.needsFollowUp}
                       {row.total > 0 && (
                         <span className="text-gray-400 text-xs ml-0.5">
@@ -984,7 +984,7 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-gray-400">
                       {row.other}
                       {row.total > 0 && row.other > 0 && (
                         <span className="text-xs ml-0.5">
@@ -992,12 +992,12 @@ export default function ReportsClient({
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
                       {row.paymentAmount > 0
                         ? `${row.paymentAmount.toLocaleString()}원`
                         : '-'}
                     </td>
-                    <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-gray-600">
+                    <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-600">
                       {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
                     </td>
                   </tr>
@@ -1115,44 +1115,44 @@ export default function ReportsClient({
             </h2>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto px-2">
             <table className="min-w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
                     담당자
                   </th>
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
                     부서
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     DB유입
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     상담전
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     거절
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     진행중
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     완료
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     예약확정
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     추가상담
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
                     기타
                   </th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                     결제금액
                   </th>
-                  <th className="px-3 py-2 text-right text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
                     결제횟수
                   </th>
                 </tr>
@@ -1164,16 +1164,16 @@ export default function ReportsClient({
                       key={row.staffId}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">
                         {row.staffName}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-gray-500">
                         {row.department || '-'}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-semibold text-gray-900">
                         {row.total}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-orange-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-orange-600">
                         {row.pending}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1181,7 +1181,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-red-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-red-600">
                         {row.rejected}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1189,7 +1189,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-sky-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-sky-600">
                         {row.inProgress}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1197,7 +1197,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-green-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-green-600">
                         {row.completed}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1205,7 +1205,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center font-medium text-emerald-600">
                         {row.contractCompleted}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1213,7 +1213,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-yellow-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-yellow-600">
                         {row.needsFollowUp}
                         {row.total > 0 && (
                           <span className="text-gray-400 text-xs ml-0.5">
@@ -1221,7 +1221,7 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-center text-gray-400">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-center text-gray-400">
                         {row.other}
                         {row.total > 0 && row.other > 0 && (
                           <span className="text-xs ml-0.5">
@@ -1229,12 +1229,12 @@ export default function ReportsClient({
                           </span>
                         )}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-blue-600 font-medium">
                         {row.paymentAmount > 0
                           ? `${row.paymentAmount.toLocaleString()}원`
                           : '-'}
                       </td>
-                      <td className="px-3 py-1.5 whitespace-nowrap text-sm text-right text-gray-600">
+                      <td className="px-4 py-2 whitespace-nowrap text-sm text-right text-gray-600">
                         {row.paymentCount > 0 ? `${row.paymentCount}건` : '-'}
                       </td>
                     </tr>
