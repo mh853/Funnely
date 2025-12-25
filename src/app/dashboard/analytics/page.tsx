@@ -156,6 +156,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     .from('landing_pages')
     .select('id, title, slug, created_at, views_count')
     .eq('company_id', userProfile.company_id)
+    .gte('created_at', queryStart)
+    .lt('created_at', queryEnd)
     .order('created_at', { ascending: false })
 
   // Get monthly device breakdown for landing pages from landing_page_analytics
