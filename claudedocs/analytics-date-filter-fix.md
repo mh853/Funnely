@@ -97,7 +97,7 @@ WHERE date >= '2024-12-01' AND date < '2025-01-01'
 └─ 결과: 2024-12-01 ~ 2024-12-31 데이터 조회 (정확)
 ```
 
-## 🎯 영향받는 쿼리
+## 🎯 영향받는 코드 부분
 
 ### 1. 페이지뷰 데이터 쿼리 (line 63-68)
 ```typescript
@@ -117,7 +117,27 @@ const { data: monthlyAnalytics } = await supabase
   .lt('date', queryEndDate)     // ✅ 수정됨
 ```
 
-### 3. Leads 데이터 쿼리 (line 82-83)
+### 3. Traffic 데이터 날짜 초기화 (line 94-96)
+```typescript
+// ❌ Before
+const date = new Date(selectedYear, selectedMonth - 1, day)
+const dateStr = date.toISOString().split('T')[0]
+
+// ✅ After
+const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+```
+
+### 4. Conversion 데이터 날짜 초기화 (line 102-104)
+```typescript
+// ❌ Before
+const date = new Date(selectedYear, selectedMonth - 1, day)
+const dateStr = date.toISOString().split('T')[0]
+
+// ✅ After
+const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+```
+
+### 5. Leads 데이터 쿼리 (line 88-89)
 ```typescript
 const { data: leads } = await supabase
   .from('leads')
@@ -133,8 +153,10 @@ const { data: leads } = await supabase
 
 **변경 라인**:
 - Line 53-57: Date 문자열 직접 생성 로직 추가
-- Line 67-68: `queryStartDate`, `queryEndDate` 사용으로 변경
-- Line 168-169: `queryStartDate`, `queryEndDate` 사용으로 변경
+- Line 67-68: 페이지뷰 쿼리에서 `queryStartDate`, `queryEndDate` 사용
+- Line 95: Traffic 데이터 초기화 시 직접 날짜 문자열 생성
+- Line 103: Conversion 데이터 초기화 시 직접 날짜 문자열 생성
+- Line 168-169: 랜딩페이지 분석 쿼리에서 `queryStartDate`, `queryEndDate` 사용
 
 ## 🎓 배운 점
 

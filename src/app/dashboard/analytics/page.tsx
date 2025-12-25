@@ -92,8 +92,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const trafficByDate: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(selectedYear, selectedMonth - 1, day)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     trafficByDate[dateStr] = pageViewsByDate[dateStr] || { total: 0, pc: 0, mobile: 0, tablet: 0 }
   }
 
@@ -101,8 +100,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const conversionByDate: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
 
   for (let day = 1; day <= daysInMonth; day++) {
-    const date = new Date(selectedYear, selectedMonth - 1, day)
-    const dateStr = date.toISOString().split('T')[0]
+    const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
     conversionByDate[dateStr] = { total: 0, pc: 0, mobile: 0, tablet: 0 }
   }
 
