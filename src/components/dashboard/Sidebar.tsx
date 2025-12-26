@@ -2,9 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
-import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, ChevronLeftIcon, ChevronRightIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import {
   HomeIcon,
   ChartBarIcon,
@@ -21,6 +21,7 @@ import {
   ChatBubbleLeftRightIcon,
   ShieldExclamationIcon,
 } from '@heroicons/react/24/outline'
+import UpgradePromptModal from '@/components/modals/UpgradePromptModal'
 
 interface SidebarProps {
   userProfile: any
@@ -53,12 +54,50 @@ const navigation = [
 
 export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {} }: SidebarProps) {
   const pathname = usePathname()
+  const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
+  const [selectedFeature, setSelectedFeature] = useState<'트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄'>('트래픽 분석')
 
-  // 플랜 기능에 따라 메뉴 필터링
-  const filteredNavigation = navigation.filter(item => {
-    if (!item.requiredFeature) return true
-    return planFeatures[item.requiredFeature] === true
-  })
+  // 디버깅: planFeatures 확인
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📱 [Sidebar] Received planFeatures:', planFeatures)
+    console.log('📱 [Sidebar] User profile:', userProfile?.email, userProfile?.company_id)
+  }
+
+  // Feature name mapping
+  const featureNameMap: { [key: string]: '트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄' } = {
+    'analytics': '트래픽 분석',
+    'reports': 'DB 리포트',
+    'db_schedule': 'DB 스케줄',
+    'reservation_schedule': '예약 스케줄'
+  }
+
+  // 플랜 기능에 따라 메뉴 비활성화 처리 (필터링하지 않고 모두 표시)
+  const processedNavigation = navigation.map(item => ({
+    ...item,
+    disabled: item.requiredFeature ? planFeatures[item.requiredFeature] !== true : false,
+    disabledReason: item.requiredFeature && planFeatures[item.requiredFeature] !== true
+      ? '프로 플랜 이상 필요 (클릭하면 업그레이드)'
+      : undefined
+  }))
+
+  // 디버깅: processedNavigation 확인
+  if (process.env.NODE_ENV === 'development') {
+    console.log('📱 [Sidebar] Processed navigation:', processedNavigation.map(item => ({
+      name: item.name,
+      requiredFeature: item.requiredFeature,
+      featureValue: item.requiredFeature ? planFeatures[item.requiredFeature] : 'N/A',
+      disabled: item.disabled
+    })))
+  }
+
+  const handleDisabledClick = (e: React.MouseEvent, requiredFeature: string) => {
+    e.preventDefault()
+    const featureName = featureNameMap[requiredFeature]
+    if (featureName) {
+      setSelectedFeature(featureName)
+      setUpgradeModalOpen(true)
+    }
+  }
 
   // 접힌 상태의 사이드바 콘텐츠
   const CollapsedSidebarContent = () => (
@@ -80,8 +119,25 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       {/* Navigation - Icons Only */}
       <nav className="flex flex-col">
         <ul role="list" className="space-y-1">
-          {filteredNavigation.map((item) => {
+          {processedNavigation.map((item) => {
             const isActive = pathname === item.href
+            const isDisabled = item.disabled
+
+            if (isDisabled) {
+              return (
+                <li key={item.name} className="relative group">
+                  <button
+                    onClick={(e) => item.requiredFeature && handleDisabledClick(e, item.requiredFeature)}
+                    title={item.disabledReason}
+                    className="w-full group flex items-center justify-center rounded-md p-2 text-gray-300 hover:text-gray-400 hover:bg-gray-50 cursor-not-allowed opacity-50 transition-all"
+                  >
+                    <item.icon className="h-6 w-6 shrink-0 text-gray-300" aria-hidden="true" />
+                    <LockClosedIcon className="h-3 w-3 absolute top-1 right-1 text-gray-400" />
+                  </button>
+                </li>
+              )
+            }
+
             return (
               <li key={item.name}>
                 <Link
@@ -142,8 +198,36 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       {/* Navigation */}
       <nav className="flex flex-col">
         <ul role="list" className="-mx-2 space-y-1">
-          {filteredNavigation.map((item) => {
+          {processedNavigation.map((item) => {
             const isActive = pathname === item.href
+            const isDisabled = item.disabled
+
+            if (isDisabled) {
+              return (
+                <li key={item.name} className="relative group">
+                  <button
+                    onClick={(e) => {
+                      if (item.requiredFeature) {
+                        handleDisabledClick(e, item.requiredFeature)
+                      }
+                    }}
+                    title={item.disabledReason}
+                    className="w-full group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold text-gray-300 hover:text-gray-400 hover:bg-gray-50 cursor-not-allowed opacity-50 transition-all"
+                  >
+                    <div className="relative">
+                      <item.icon className="h-6 w-6 shrink-0 text-gray-300" aria-hidden="true" />
+                      <LockClosedIcon className="h-3 w-3 absolute -top-1 -right-1 text-gray-400" />
+                    </div>
+                    {item.name}
+                  </button>
+                  {/* Tooltip on hover */}
+                  <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                    {item.disabledReason}
+                  </div>
+                </li>
+              )
+            }
+
             return (
               <li key={item.name}>
                 <Link
@@ -234,6 +318,13 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       <div className={`hidden lg:fixed lg:inset-y-0 lg:z-50 lg:flex lg:flex-col transition-all duration-300 ${collapsed ? 'lg:w-20' : 'lg:w-[200px]'}`}>
         {collapsed ? <CollapsedSidebarContent /> : <ExpandedSidebarContent />}
       </div>
+
+      {/* Upgrade Prompt Modal */}
+      <UpgradePromptModal
+        isOpen={upgradeModalOpen}
+        onClose={() => setUpgradeModalOpen(false)}
+        featureName={selectedFeature}
+      />
     </>
   )
 }

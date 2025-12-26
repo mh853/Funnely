@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export interface SubscriptionAccessResult {
   hasAccess: boolean
@@ -210,7 +210,7 @@ export async function canCreateLandingPage(companyId: string): Promise<{
   message?: string
 }> {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 1. 현재 구독 정보 및 플랜 제한사항 조회
     const { data: subscription, error: subError } = await supabase
@@ -299,7 +299,7 @@ export async function hasFeatureAccess(
   featureName: string
 ): Promise<boolean> {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 현재 구독 정보 및 플랜 기능 조회
     const { data: subscription, error: subError } = await supabase
@@ -316,6 +316,7 @@ export async function hasFeatureAccess(
       .single()
 
     if (subError || !subscription) {
+      console.error('[Feature Access] 구독 조회 실패:', subError)
       return false
     }
 
@@ -337,7 +338,7 @@ export async function canInviteUser(companyId: string): Promise<{
   message?: string
 }> {
   try {
-    const supabase = await createClient()
+    const supabase = createServiceClient()
 
     // 1. 현재 구독 정보 및 플랜 제한사항 조회
     const { data: subscription, error: subError } = await supabase

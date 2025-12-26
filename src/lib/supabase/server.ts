@@ -43,6 +43,27 @@ export async function createClient() {
 }
 
 /**
+ * Service Role Client for admin operations
+ * Use sparingly and only for trusted server-side operations
+ */
+export function createServiceClient() {
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return []
+        },
+        setAll() {
+          // No-op for service role
+        },
+      },
+    }
+  )
+}
+
+/**
  * Cached function to get user profile with hospital info
  * Reduces duplicate queries across layout and pages
  */

@@ -69,9 +69,9 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
               <div className="px-3 py-2 border-b border-gray-100">
                 <p className="text-xs text-gray-500">로그인 정보</p>
                 <p className="text-sm font-medium text-gray-900 truncate">{user.email}</p>
-                {userProfile?.role && (
+                {userProfile?.simple_role && (
                   <p className="text-xs text-gray-500 mt-1">
-                    권한: {getRoleLabel(userProfile.role)}
+                    권한: {getSimpleRoleLabel(userProfile.simple_role)}
                   </p>
                 )}
               </div>
@@ -109,13 +109,10 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
   )
 }
 
-function getRoleLabel(role: string): string {
+function getSimpleRoleLabel(simpleRole: string): string {
   const labels: Record<string, string> = {
-    hospital_owner: '회사 관리자',
-    hospital_admin: '회사 어드민',
-    marketing_manager: '마케팅 매니저',
-    marketing_staff: '마케팅 스태프',
-    viewer: '뷰어',
+    admin: '관리자',
+    user: '일반 사용자',
   }
-  return labels[role] || role
+  return labels[simpleRole] || simpleRole
 }
