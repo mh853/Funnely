@@ -1,13 +1,9 @@
-import { Metadata } from 'next'
+'use client'
+
 import ContactHero from '@/components/marketing/contact/ContactHero'
 import ContactForm from '@/components/marketing/contact/ContactForm'
 import Link from 'next/link'
 import { QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
-
-export const metadata: Metadata = {
-  title: '문의하기 - 퍼널리',
-  description: '궁금한 점이나 도움이 필요하신가요? 퍼널리 고객 지원팀이 도와드리겠습니다.',
-}
 
 const quickLinks = [
   {
@@ -32,6 +28,12 @@ const quickLinks = [
 ]
 
 export default function ContactPage() {
+  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, comingSoon?: boolean) => {
+    if (comingSoon) {
+      e.preventDefault()
+    }
+  }
+
   return (
     <main className="bg-gray-50">
       {/* Hero Section */}
@@ -64,7 +66,7 @@ export default function ContactPage() {
                 className={`relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-lg transition-all hover:scale-105 ${
                   link.comingSoon ? 'opacity-60 cursor-not-allowed' : ''
                 }`}
-                onClick={(e) => link.comingSoon && e.preventDefault()}
+                onClick={(e) => handleClick(e, link.comingSoon)}
               >
                 {link.comingSoon && (
                   <div className="absolute top-4 right-4">
