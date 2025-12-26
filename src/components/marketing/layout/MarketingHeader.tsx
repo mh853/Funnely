@@ -16,6 +16,16 @@ export default function MarketingHeader() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    e.preventDefault()
+    const targetId = href.replace('#', '')
+    const element = document.getElementById(targetId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' })
+      setMobileMenuOpen(false)
+    }
+  }
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
@@ -51,19 +61,22 @@ export default function MarketingHeader() {
           <div className="hidden lg:flex lg:gap-x-12">
             <a
               href="#features"
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+              onClick={(e) => handleSmoothScroll(e, '#features')}
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
             >
               기능
             </a>
             <a
               href="#pricing"
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+              onClick={(e) => handleSmoothScroll(e, '#pricing')}
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
             >
               요금제
             </a>
             <a
               href="#faq"
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+              onClick={(e) => handleSmoothScroll(e, '#faq')}
+              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
             >
               FAQ
             </a>
@@ -112,22 +125,22 @@ export default function MarketingHeader() {
                 <div className="space-y-2 py-6">
                   <a
                     href="#features"
-                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={(e) => handleSmoothScroll(e, '#features')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                   >
                     기능
                   </a>
                   <a
                     href="#pricing"
-                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={(e) => handleSmoothScroll(e, '#pricing')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                   >
                     요금제
                   </a>
                   <a
                     href="#faq"
-                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    onClick={() => setMobileMenuOpen(false)}
+                    onClick={(e) => handleSmoothScroll(e, '#faq')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                   >
                     FAQ
                   </a>
