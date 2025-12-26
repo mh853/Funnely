@@ -33,6 +33,7 @@
     "crypto-js": "^4.2.0",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
+    "framer-motion": "^12.23.26",
     "googleapis": "^167.0.0",
     "jspdf": "^3.0.3",
     "jspdf-autotable": "^5.0.2",

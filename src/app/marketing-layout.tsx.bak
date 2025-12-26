@@ -1,0 +1,16 @@
+import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
+import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
+
+export default function MarketingLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <div className="min-h-screen bg-white">
+      <MarketingHeader />
+      <main>{children}</main>
+      <MarketingFooter />
+    </div>
+  )
+}

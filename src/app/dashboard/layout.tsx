@@ -27,42 +27,24 @@ export default async function DashboardLayout({
     const serviceSupabase = createServiceClient()
 
     // Step 1: Get active subscription
-    const { data: subscription, error: subError } = await serviceSupabase
+    const { data: subscription } = await serviceSupabase
       .from('company_subscriptions')
       .select('plan_id')
       .eq('company_id', userProfile.company_id)
       .in('status', ['active', 'trial', 'past_due'])
       .single()
 
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 [DEBUG] User:', user.email)
-      console.log('🔍 [DEBUG] Company ID:', userProfile.company_id)
-      console.log('🔍 [DEBUG] Subscription:', subscription)
-      console.log('🔍 [DEBUG] Subscription Error:', subError)
-    }
-
     // Step 2: Get plan features if subscription exists
     if (subscription?.plan_id) {
-      const { data: plan, error: planError } = await serviceSupabase
+      const { data: plan } = await serviceSupabase
         .from('subscription_plans')
         .select('features')
         .eq('id', subscription.plan_id)
         .single()
 
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🔍 [DEBUG] Plan:', plan)
-        console.log('🔍 [DEBUG] Plan Error:', planError)
-      }
-
       if (plan?.features) {
         planFeatures = plan.features
       }
-    } else if (process.env.NODE_ENV === 'development') {
-      console.log('⚠️ [DEBUG] No active subscription found for company')
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('🔍 [DEBUG] Final planFeatures:', JSON.stringify(planFeatures, null, 2))
     }
   }
 
