@@ -122,6 +122,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
 
                   {/* Close button */}
                   <button
+                    type="button"
                     onClick={onClose}
                     className="absolute top-4 right-4 rounded-full p-2 text-white/80 hover:bg-white/20 hover:text-white transition-all"
                   >
