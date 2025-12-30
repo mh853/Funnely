@@ -113,7 +113,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
             >
               <Dialog.Panel className="w-full max-w-2xl transform overflow-hidden rounded-3xl bg-white shadow-2xl transition-all">
                 {/* Gradient Header */}
-                <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 px-8 py-10">
+                <div className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 px-6 py-6">
                   {/* Background decoration */}
                   <div className="absolute inset-0 opacity-20">
                     <div className="absolute top-0 left-0 w-40 h-40 bg-white rounded-full blur-3xl" />
@@ -130,12 +130,12 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
 
                   {/* Header content */}
                   <div className="relative text-center">
-                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm mb-4 shadow-xl">
-                      <SparklesIcon className="h-8 w-8 text-white" />
+                    <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-sm mb-3 shadow-xl">
+                      <SparklesIcon className="h-6 w-6 text-white" />
                     </div>
                     <Dialog.Title
                       as="h3"
-                      className="text-3xl font-bold text-white mb-2"
+                      className="text-2xl font-bold text-white mb-1"
                     >
                       {isSales ? '영업팀과 상담하기' : '문의하기'}
                     </Dialog.Title>
@@ -148,17 +148,17 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                 </div>
 
                 {/* Content */}
-                <div className="px-8 py-8">
+                <div className="px-6 py-5">
                   {/* Success State */}
                   {isSuccess && (
-                    <div className="text-center py-12">
-                      <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 mb-6 shadow-xl">
-                        <CheckCircleIcon className="h-12 w-12 text-white" />
+                    <div className="text-center py-8">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-green-400 to-emerald-500 mb-4 shadow-xl">
+                        <CheckCircleIcon className="h-10 w-10 text-white" />
                       </div>
-                      <h4 className="text-2xl font-bold text-gray-900 mb-3">
+                      <h4 className="text-xl font-bold text-gray-900 mb-2">
                         문의가 접수되었습니다!
                       </h4>
-                      <p className="text-gray-600 text-lg">
+                      <p className="text-gray-600">
                         {isSales
                           ? '영업팀이 영업일 기준 1일 이내에 연락드립니다.'
                           : '빠른 시일 내에 담당자가 연락드리겠습니다.'}
@@ -168,10 +168,10 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
 
                   {/* Form */}
                   {!isSuccess && (
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                    <form onSubmit={handleSubmit} className="space-y-4">
                       {/* Name & Email */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
                           <label
                             htmlFor="name"
                             className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -190,7 +190,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                             placeholder="홍길동"
                           />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <label
                             htmlFor="email"
                             className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -212,8 +212,8 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       </div>
 
                       {/* Phone & Company */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
                           <label
                             htmlFor="phone"
                             className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -231,7 +231,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                             placeholder="010-1234-5678"
                           />
                         </div>
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <label
                             htmlFor="company"
                             className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -253,7 +253,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       </div>
 
                       {/* Subject */}
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <label
                           htmlFor="subject"
                           className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -277,7 +277,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       </div>
 
                       {/* Message */}
-                      <div className="space-y-2">
+                      <div className="space-y-1">
                         <label
                           htmlFor="message"
                           className="flex items-center gap-2 text-sm font-semibold text-gray-900"
@@ -289,7 +289,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                           id="message"
                           name="message"
                           required
-                          rows={6}
+                          rows={4}
                           value={formData.message}
                           onChange={handleChange}
                           className="w-full rounded-xl border-2 border-gray-200 px-4 py-3 text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none transition-all resize-none"
@@ -330,18 +330,18 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       </div>
 
                       {/* Buttons */}
-                      <div className="flex gap-4 pt-4">
+                      <div className="flex gap-4 pt-2">
                         <button
                           type="button"
                           onClick={onClose}
-                          className="flex-1 rounded-xl border-2 border-gray-300 px-6 py-4 text-base font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
+                          className="flex-1 rounded-xl border-2 border-gray-300 px-6 py-3 text-base font-semibold text-gray-700 hover:bg-gray-50 hover:border-gray-400 transition-all"
                         >
                           취소
                         </button>
                         <button
                           type="submit"
                           disabled={isSubmitting}
-                          className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-4 text-base font-semibold text-white hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
+                          className="flex-1 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-semibold text-white hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-xl hover:shadow-2xl hover:scale-[1.02] active:scale-[0.98]"
                         >
                           {isSubmitting ? (
                             <span className="flex items-center justify-center gap-2">
