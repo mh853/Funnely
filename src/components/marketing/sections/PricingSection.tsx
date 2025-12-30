@@ -12,9 +12,9 @@ const plans = [
     price: 19000,
     description: '스타트업, 개인 사업자에게 추천',
     features: [
-      { name: '랜딩페이지 3개 생성', included: true },
+      { name: '랜딩페이지 1개 생성', included: true },
       { name: '기본 리드 관리', included: true },
-      { name: '팀원 3명까지', included: true },
+      { name: '팀원 1명까지', included: true },
       { name: '기본 지원', included: true },
       { name: '트래픽 분석 대시보드', included: false, pro: true },
       { name: 'DB 리포트 시스템', included: false, pro: true },
