@@ -1,8 +1,10 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { RocketLaunchIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
+import InquiryModal from '@/components/marketing/modals/InquiryModal'
 
 const benefits = [
   '14일 무료 체험',
@@ -12,8 +14,23 @@ const benefits = [
 ]
 
 export default function FinalCTASection() {
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false)
+  const [isSalesModalOpen, setIsSalesModalOpen] = useState(false)
+
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 py-24 sm:py-32">
+    <>
+      <InquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+        inquiryType="general"
+      />
+      <InquiryModal
+        isOpen={isSalesModalOpen}
+        onClose={() => setIsSalesModalOpen(false)}
+        inquiryType="sales"
+      />
+
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 py-24 sm:py-32">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
@@ -71,12 +88,12 @@ export default function FinalCTASection() {
                 <span className="relative inline-flex rounded-full h-4 w-4 bg-white"></span>
               </span>
             </Link>
-            <a
-              href="#"
+            <button
+              onClick={() => setIsSalesModalOpen(true)}
               className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold text-white hover:bg-white/20 transition-all"
             >
               영업팀과 상담하기
-            </a>
+            </button>
           </motion.div>
 
           {/* Trust indicator */}
