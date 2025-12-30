@@ -26,7 +26,7 @@ const plans = [
   {
     name: '프로 플랜',
     id: 'pro',
-    price: 49000,
+    price: 200000,
     description: '성장하는 기업, 마케팅 팀에게 최적',
     badge: '가장 인기',
     features: [
@@ -40,7 +40,7 @@ const plans = [
     ],
     cta: '14일 무료 체험',
     highlighted: true,
-    savings: '연간 결제 시 2개월 무료 (₩98,000 절약)',
+    savings: '연간 결제 시 2개월 무료',
   },
 ]
 
