@@ -83,16 +83,16 @@ export default function MarketingHeader() {
           </div>
 
           {/* CTA buttons */}
-          <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4">
+          <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4 lg:items-center">
             <Link
               href="/auth/login"
-              className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors"
+              className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center"
             >
               로그인
             </Link>
             <Link
               href="/auth/signup"
-              className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all"
+              className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
             >
               무료 체험
             </Link>
