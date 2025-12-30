@@ -124,7 +124,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                   <button
                     type="button"
                     onClick={onClose}
-                    className="absolute top-4 right-4 rounded-full p-2 text-white/80 hover:bg-white/20 hover:text-white transition-all"
+                    className="absolute top-4 right-4 z-10 rounded-full p-2 text-white/80 hover:bg-white/20 hover:text-white transition-all"
                   >
                     <XMarkIcon className="h-6 w-6" />
                   </button>
