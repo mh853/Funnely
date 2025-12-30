@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
+import InquiryModal from '@/components/marketing/modals/InquiryModal'
 
 const faqs = [
   {
@@ -43,9 +44,17 @@ const faqs = [
 
 export default function FAQSection() {
   const [openIndex, setOpenIndex] = useState<number | null>(null)
+  const [isInquiryModalOpen, setIsInquiryModalOpen] = useState(false)
 
   return (
-    <section id="faq" className="py-24 sm:py-32 bg-white">
+    <>
+      <InquiryModal
+        isOpen={isInquiryModalOpen}
+        onClose={() => setIsInquiryModalOpen(false)}
+        inquiryType="general"
+      />
+
+      <section id="faq" className="py-24 sm:py-32 bg-white">
       <div className="mx-auto max-w-4xl px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
@@ -124,14 +133,15 @@ export default function FAQSection() {
           <p className="text-gray-600 mb-6">
             고객 지원팀이 언제든 도와드리겠습니다
           </p>
-          <a
-            href="#"
+          <button
+            onClick={() => setIsInquiryModalOpen(true)}
             className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           >
             문의하기
-          </a>
+          </button>
         </motion.div>
       </div>
     </section>
+    </>
   )
 }

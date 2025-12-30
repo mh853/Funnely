@@ -89,6 +89,12 @@ export default function FinalCTASection() {
               </span>
             </Link>
             <button
+              onClick={() => setIsInquiryModalOpen(true)}
+              className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold text-white hover:bg-white/20 transition-all"
+            >
+              문의하기
+            </button>
+            <button
               onClick={() => setIsSalesModalOpen(true)}
               className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold text-white hover:bg-white/20 transition-all"
             >
