@@ -63,8 +63,7 @@ export async function POST(request: NextRequest) {
         *,
         users (
           id,
-          name,
-          email
+          full_name
         )
       `
       )
