@@ -1170,7 +1170,7 @@ export default function LeadsClient({
   const handleDistributeLeads = async () => {
     // 확인 다이얼로그
     const confirmed = window.confirm(
-      '미배정 리드를 일반 사용자에게 균등 분배하시겠습니까?'
+      '미배정 DB를 일반 사용자에게 균등 분배하시겠습니까?'
     )
     if (!confirmed) return
 
