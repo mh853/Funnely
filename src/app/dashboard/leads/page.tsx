@@ -11,7 +11,8 @@ interface SearchParams {
   landingPageId?: string
   deviceType?: string
   status?: string
-  assignedTo?: string  // 담당자 필터
+  callAssignedTo?: string  // 콜담당자 필터
+  counselorAssignedTo?: string  // 상담담당자 필터
   search?: string
   page?: string
   id?: string  // 특정 리드 ID로 필터링 (캘린더에서 클릭 시)
@@ -50,7 +51,8 @@ export default async function LeadsPage({
   const landingPageId = searchParams.landingPageId
   const deviceType = searchParams.deviceType
   const status = searchParams.status
-  const assignedTo = searchParams.assignedTo  // 담당자 필터
+  const callAssignedTo = searchParams.callAssignedTo  // 콜담당자 필터
+  const counselorAssignedTo = searchParams.counselorAssignedTo  // 상담담당자 필터
   const search = searchParams.search
   const page = Number(searchParams.page) || 1
   const pageSize = 20
@@ -158,8 +160,12 @@ export default async function LeadsPage({
       query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
     }
 
-    if (assignedTo) {
-      query = query.eq('call_assigned_to', assignedTo)
+    if (callAssignedTo) {
+      query = query.eq('call_assigned_to', callAssignedTo)
+    }
+
+    if (counselorAssignedTo) {
+      query = query.eq('counselor_assigned_to', counselorAssignedTo)
     }
   }
 
