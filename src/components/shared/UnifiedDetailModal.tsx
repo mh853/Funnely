@@ -528,7 +528,7 @@ export default function UnifiedDetailModal({
                   <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 flex items-center justify-center gap-4">
                     {/* 콜 담당자 */}
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">콜담당자</label>
+                      <label className="text-sm font-bold text-gray-700">콜담당자</label>
                       <select
                         value={callAssignedTo}
                         onChange={(e) => handleCallAssigneeChange(e.target.value)}
@@ -546,7 +546,7 @@ export default function UnifiedDetailModal({
 
                     {/* 상담 담당자 */}
                     <div className="flex items-center gap-2">
-                      <label className="text-sm font-medium text-gray-700">상담 담당자</label>
+                      <label className="text-sm font-bold text-gray-700">상담 담당자</label>
                       <select
                         value={counselorAssignedTo}
                         onChange={(e) => handleCounselorChange(e.target.value)}
