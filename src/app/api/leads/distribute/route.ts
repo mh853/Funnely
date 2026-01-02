@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        message: `${unassignedLeads.length}개의 리드가 ${userCount}명의 담당자에게 분배되었습니다.`,
+        message: `${unassignedLeads.length}개의 DB가 ${userCount}명의 담당자에게 분배되었습니다.`,
         distributed: unassignedLeads.length,
         userCount,
         stats: distributionStats,
