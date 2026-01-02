@@ -844,12 +844,14 @@ export default function UnifiedDetailModal({
                                           {memo.content}
                                         </p>
                                         <p className="text-xs text-gray-500 mt-1">
-                                          {new Date(memo.created_at).toLocaleString('ko-KR', {
+                                          {new Date(memo.created_at).toLocaleDateString('ko-KR', {
                                             year: 'numeric',
                                             month: '2-digit',
                                             day: '2-digit',
+                                          }).replace(/\. /g, '-').replace('.', '')} {new Date(memo.created_at).toLocaleTimeString('ko-KR', {
                                             hour: '2-digit',
                                             minute: '2-digit',
+                                            hour12: false,
                                           })}
                                           {memo.users?.full_name && ` · ${memo.users.full_name}`}
                                         </p>
