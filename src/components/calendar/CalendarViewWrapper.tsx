@@ -18,6 +18,8 @@ interface Lead {
   landing_page_id?: string
   contract_completed_at?: string
   previous_contract_completed_at?: string
+  call_assigned_to?: string | null
+  counselor_assigned_to?: string | null
 }
 
 interface CalendarViewWrapperProps {
@@ -37,6 +39,12 @@ export default function CalendarViewWrapper({
 }: CalendarViewWrapperProps) {
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
   const [reservationCount, setReservationCount] = useState(leads.length)
+  const [selectedCallAssignee, setSelectedCallAssignee] = useState<string>('all')
+
+  // 콜담당자로 필터링된 리드
+  const filteredLeads = selectedCallAssignee === 'all'
+    ? leads
+    : leads.filter(lead => lead.call_assigned_to === selectedCallAssignee)
 
   return (
     <div className="px-4 space-y-4">
@@ -55,6 +63,19 @@ export default function CalendarViewWrapper({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 콜담당자 필터 */}
+          <select
+            value={selectedCallAssignee}
+            onChange={(e) => setSelectedCallAssignee(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          >
+            <option value="all">전체 콜담당자</option>
+            {teamMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.full_name}
+              </option>
+            ))}
+          </select>
           {/* 뷰 모드 토글 */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
@@ -92,7 +113,7 @@ export default function CalendarViewWrapper({
       {/* Calendar or List View */}
       <CalendarView
         events={events}
-        leads={leads}
+        leads={filteredLeads}
         teamMembers={teamMembers}
         currentUserId={currentUserId}
         statusFilter={statusFilter}

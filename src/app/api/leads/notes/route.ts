@@ -217,7 +217,7 @@ export async function DELETE(request: NextRequest) {
       .eq('id', note_id)
       .single()
 
-    if (!note || note.leads.company_id !== userProfile.company_id) {
+    if (!note || (note.leads as any).company_id !== userProfile.company_id) {
       return NextResponse.json({ error: { message: 'Note not found' } }, { status: 404 })
     }
 

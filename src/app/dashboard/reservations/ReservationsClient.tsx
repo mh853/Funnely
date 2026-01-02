@@ -130,6 +130,9 @@ export default function ReservationsClient({
   // 뷰 모드 상태 (calendar가 기본값)
   const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar')
 
+  // 상담담당자 필터 상태
+  const [selectedCounselor, setSelectedCounselor] = useState<string>('all')
+
   // 주간 캘린더 뷰 상태 (월요일 시작)
   const [weekStartDate, setWeekStartDate] = useState(() => {
     const today = new Date()
@@ -1003,11 +1006,19 @@ export default function ReservationsClient({
     return `${year}-${month}-${day}`
   }
 
+  // 상담담당자로 필터링된 리드
+  const filteredLeads = useMemo(() => {
+    if (selectedCounselor === 'all') {
+      return leads
+    }
+    return leads.filter(lead => lead.counselor_assigned_to === selectedCounselor)
+  }, [leads, selectedCounselor])
+
   // 날짜별로 리드 그룹화
   const { leadsByDate, sortedDates } = useMemo(() => {
     const grouped: { [key: string]: Lead[] } = {}
 
-    leads.forEach((lead) => {
+    filteredLeads.forEach((lead) => {
       if (lead.contract_completed_at) {
         // 로컬 타임존 기준 날짜 문자열 생성
         const leadDate = new Date(lead.contract_completed_at)
@@ -1032,7 +1043,7 @@ export default function ReservationsClient({
       leadsByDate: grouped,
       sortedDates: Object.keys(grouped).sort(),
     }
-  }, [leads])
+  }, [filteredLeads])
 
   return (
     <div className="px-4 space-y-4">
@@ -1049,6 +1060,20 @@ export default function ReservationsClient({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 상담담당자 필터 */}
+          <select
+            value={selectedCounselor}
+            onChange={(e) => setSelectedCounselor(e.target.value)}
+            className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="all">전체 상담담당자</option>
+            {teamMembers.map((member) => (
+              <option key={member.id} value={member.id}>
+                {member.full_name}
+              </option>
+            ))}
+          </select>
+
           {/* 뷰 모드 토글 */}
           <div className="flex items-center bg-gray-100 rounded-lg p-1">
             <button
