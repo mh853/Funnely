@@ -117,7 +117,8 @@ export default function LeadsClient({
   const urlLandingPageId = searchParams.get('landingPageId') || ''
   const urlDeviceType = searchParams.get('deviceType') || ''
   const urlStatus = searchParams.get('status') || ''
-  const urlAssignedTo = searchParams.get('assignedTo') || ''
+  const urlCallAssignedTo = searchParams.get('callAssignedTo') || ''
+  const urlCounselorAssignedTo = searchParams.get('counselorAssignedTo') || ''
   const urlSearch = searchParams.get('search') || ''
 
   // 날짜 범위 상태 (Date 객체)
@@ -148,7 +149,8 @@ export default function LeadsClient({
   const [landingPageId, setLandingPageId] = useState(urlLandingPageId)
   const [deviceType, setDeviceType] = useState(urlDeviceType)
   const [status, setStatus] = useState(urlStatus)
-  const [assignedTo, setAssignedTo] = useState(urlAssignedTo)
+  const [callAssignedTo, setCallAssignedTo] = useState(urlCallAssignedTo)
+  const [counselorAssignedTo, setCounselorAssignedTo] = useState(urlCounselorAssignedTo)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
 
   // URL 파라미터가 변경될 때 (router.push 후) 필터 상태 동기화
@@ -187,9 +189,10 @@ export default function LeadsClient({
     setLandingPageId(urlLandingPageId)
     setDeviceType(urlDeviceType)
     setStatus(urlStatus)
-    setAssignedTo(urlAssignedTo)
+    setCallAssignedTo(urlCallAssignedTo)
+    setCounselorAssignedTo(urlCounselorAssignedTo)
     setSearchQuery(urlSearch)
-  }, [urlDateRange, urlStartDate, urlEndDate, urlSingleDate, urlLandingPageId, urlDeviceType, urlStatus, urlAssignedTo, urlSearch])
+  }, [urlDateRange, urlStartDate, urlEndDate, urlSingleDate, urlLandingPageId, urlDeviceType, urlStatus, urlCallAssignedTo, urlCounselorAssignedTo, urlSearch])
 
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
@@ -1009,7 +1012,8 @@ export default function LeadsClient({
       if (landingPageId) params.set('landingPageId', landingPageId)
       if (deviceType) params.set('deviceType', deviceType)
       if (status) params.set('status', status)
-      if (assignedTo) params.set('assignedTo', assignedTo)
+      if (callAssignedTo) params.set('callAssignedTo', callAssignedTo)
+      if (counselorAssignedTo) params.set('counselorAssignedTo', counselorAssignedTo)
       if (searchQuery) params.set('search', searchQuery)
       params.set('page', '1')
 
@@ -1022,7 +1026,7 @@ export default function LeadsClient({
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, landingPageId, deviceType, status, assignedTo, searchQuery])
+  }, [startDate, endDate, landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, searchQuery])
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -1215,7 +1219,8 @@ export default function LeadsClient({
     setLandingPageId('')
     setDeviceType('')
     setStatus('')
-    setAssignedTo('')
+    setCallAssignedTo('')
+    setCounselorAssignedTo('')
     setSearchQuery('')
 
     // URL 업데이트 (useEffect가 자동으로 처리)
@@ -1368,7 +1373,7 @@ export default function LeadsClient({
             </span>
           </div>
 
-          {(startDate || endDate || landingPageId || deviceType || status || assignedTo || searchQuery) && (
+          {(startDate || endDate || landingPageId || deviceType || status || callAssignedTo || counselorAssignedTo || searchQuery) && (
             <button
               onClick={handleClearFilter}
               className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors"
@@ -1447,14 +1452,33 @@ export default function LeadsClient({
             </select>
           </div>
 
-          {/* Assigned To */}
-          <div className="flex-shrink-0 w-28">
+          {/* Call Assigned To */}
+          <div className="flex-shrink-0 w-32">
             <label className="block text-xs font-medium text-gray-700 mb-1.5">
-              담당자
+              콜담당자
             </label>
             <select
-              value={assignedTo}
-              onChange={(e) => setAssignedTo(e.target.value)}
+              value={callAssignedTo}
+              onChange={(e) => setCallAssignedTo(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">전체</option>
+              {teamMembers?.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.full_name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Counselor Assigned To */}
+          <div className="flex-shrink-0 w-32">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              상담담당자
+            </label>
+            <select
+              value={counselorAssignedTo}
+              onChange={(e) => setCounselorAssignedTo(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             >
               <option value="">전체</option>
