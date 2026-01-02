@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useRef, useCallback, useMemo, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon, CircleStackIcon } from '@heroicons/react/24/outline'
@@ -108,6 +108,7 @@ export default function LeadsClient({
   }, [leadStatuses])
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [isPending, startTransition] = useTransition()
 
   // URL 파라미터에서 필터 상태 추출
   const urlDateRange = searchParams.get('dateRange') || ''
@@ -982,51 +983,79 @@ export default function LeadsClient({
     setEndDate(end)
   }
 
-  // 실시간 필터링을 위한 debounce 타이머 ref
-  const filterTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  // 실시간 필터링을 위한 debounce 타이머 ref (검색어만 사용)
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const isInitialMount = useRef(true)
 
-  // 필터 변경 시 자동으로 URL 업데이트 (debounce 적용)
+  // 즉시 필터 업데이트 (셀렉트 박스용 - debounce 없음)
+  const updateFiltersInstantly = useCallback(() => {
+    const params = new URLSearchParams()
+
+    // 날짜 범위 설정
+    if (startDate && endDate) {
+      params.set('startDate', formatDateForUrl(startDate))
+      params.set('endDate', formatDateForUrl(endDate))
+    } else if (!startDate && !endDate) {
+      params.set('dateRange', 'all')
+    }
+
+    if (landingPageId) params.set('landingPageId', landingPageId)
+    if (deviceType) params.set('deviceType', deviceType)
+    if (status) params.set('status', status)
+    if (callAssignedTo) params.set('callAssignedTo', callAssignedTo)
+    if (counselorAssignedTo) params.set('counselorAssignedTo', counselorAssignedTo)
+    if (searchQuery) params.set('search', searchQuery)
+    params.set('page', '1')
+
+    // useTransition으로 비차단 업데이트
+    startTransition(() => {
+      router.push(`/dashboard/leads?${params.toString()}`)
+    })
+  }, [startDate, endDate, landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, searchQuery, router])
+
+  // 셀렉트 박스 필터 변경 시 즉시 업데이트
   useEffect(() => {
-    // 초기 마운트 시에는 실행하지 않음 (URL에서 이미 필터가 적용되어 있으므로)
     if (isInitialMount.current) {
       isInitialMount.current = false
       return
     }
 
-    if (filterTimeoutRef.current) {
-      clearTimeout(filterTimeoutRef.current)
+    updateFiltersInstantly()
+  }, [landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, updateFiltersInstantly])
+
+  // 검색어 변경 시 debounce 적용
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return
     }
 
-    filterTimeoutRef.current = setTimeout(() => {
-      const params = new URLSearchParams()
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current)
+    }
 
-      // 날짜 범위 설정
-      if (startDate && endDate) {
-        params.set('startDate', formatDateForUrl(startDate))
-        params.set('endDate', formatDateForUrl(endDate))
-      } else if (!startDate && !endDate) {
-        params.set('dateRange', 'all')
-      }
-
-      if (landingPageId) params.set('landingPageId', landingPageId)
-      if (deviceType) params.set('deviceType', deviceType)
-      if (status) params.set('status', status)
-      if (callAssignedTo) params.set('callAssignedTo', callAssignedTo)
-      if (counselorAssignedTo) params.set('counselorAssignedTo', counselorAssignedTo)
-      if (searchQuery) params.set('search', searchQuery)
-      params.set('page', '1')
-
-      router.push(`/dashboard/leads?${params.toString()}`)
-    }, 100) // 100ms debounce - 빠른 반응
+    searchTimeoutRef.current = setTimeout(() => {
+      updateFiltersInstantly()
+    }, 300) // 검색어는 300ms debounce
 
     return () => {
-      if (filterTimeoutRef.current) {
-        clearTimeout(filterTimeoutRef.current)
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current)
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [startDate, endDate, landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, searchQuery])
+  }, [searchQuery, updateFiltersInstantly])
+
+  // 날짜 변경 시 약간의 debounce (날짜 피커 조작 중 여러 번 호출 방지)
+  useEffect(() => {
+    if (isInitialMount.current) {
+      return
+    }
+
+    const dateTimeout = setTimeout(() => {
+      updateFiltersInstantly()
+    }, 150)
+
+    return () => clearTimeout(dateTimeout)
+  }, [startDate, endDate, updateFiltersInstantly])
 
   const handlePageChange = (page: number) => {
     const params = new URLSearchParams(searchParams.toString())
@@ -1460,7 +1489,8 @@ export default function LeadsClient({
             <select
               value={callAssignedTo}
               onChange={(e) => setCallAssignedTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              disabled={isPending}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-wait transition-opacity"
             >
               <option value="">전체</option>
               {teamMembers?.map((member) => (
@@ -1479,7 +1509,8 @@ export default function LeadsClient({
             <select
               value={counselorAssignedTo}
               onChange={(e) => setCounselorAssignedTo(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              disabled={isPending}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent disabled:opacity-50 disabled:cursor-wait transition-opacity"
             >
               <option value="">전체</option>
               {teamMembers?.map((member) => (
