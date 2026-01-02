@@ -1570,11 +1570,11 @@ export default function LeadsClient({
                         ) : '-'}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-900 max-w-[110px]">
+                    <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-900 min-w-[130px]">
                       <span className="truncate block" title={lead.phone || ''}>
                         {lead.phone ? (
-                          lead.phone.length > 13
-                            ? `${lead.phone.slice(0, 13)}...`
+                          lead.phone.length > 15
+                            ? `${lead.phone.slice(0, 15)}...`
                             : lead.phone
                         ) : '-'}
                       </span>
