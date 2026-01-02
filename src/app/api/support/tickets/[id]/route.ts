@@ -31,11 +31,7 @@ export async function GET(
       .eq('id', params.id)
       .single()
 
-    if (ticketError) {
-      return NextResponse.json({ error: ticketError.message }, { status: 500 })
-    }
-
-    if (!ticket) {
+    if (ticketError || !ticket) {
       return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
     }
 

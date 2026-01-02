@@ -9,10 +9,12 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 export async function GET(request: NextRequest) {
   try {
     // 1. 관리자 인증
-    const adminUser = await getSuperAdminUser()
-    if (!adminUser) {
+    const adminData = await getSuperAdminUser()
+    if (!adminData) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+
+    const adminUserId = adminData.user.id
 
     // 2. 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url)
@@ -27,10 +29,11 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Count 쿼리
+    // Count 쿼리 - 관리자 본인에게 온 알림만
     let countQuery = supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
+      .eq('user_id', adminUserId)
 
     if (unreadOnly) {
       countQuery = countQuery.eq('is_read', false)
@@ -38,13 +41,14 @@ export async function GET(request: NextRequest) {
 
     const { count } = await countQuery
 
-    // 읽지 않은 알림 개수 (통계용)
+    // 읽지 않은 알림 개수 (통계용) - 관리자 본인 것만
     const { count: unreadCount } = await supabase
       .from('notifications')
       .select('*', { count: 'exact', head: true })
+      .eq('user_id', adminUserId)
       .eq('is_read', false)
 
-    // 데이터 쿼리
+    // 데이터 쿼리 - 관리자 본인에게 온 알림만
     let dataQuery = supabase
       .from('notifications')
       .select(
@@ -56,9 +60,11 @@ export async function GET(request: NextRequest) {
         is_read,
         created_at,
         company_id,
-        campaign_id
+        campaign_id,
+        metadata
       `
       )
+      .eq('user_id', adminUserId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1)
 

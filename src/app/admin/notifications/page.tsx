@@ -14,6 +14,8 @@ import {
   CreditCard,
   Clock,
   AlertTriangle,
+  MessageSquare,
+  Inbox,
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
@@ -54,6 +56,8 @@ const TYPE_ICONS: Record<string, any> = {
   subscription_expiring_soon: Clock,
   subscription_expired: AlertTriangle,
   subscription_in_grace_period: Clock,
+  support_reply: MessageSquare,
+  new_support_ticket: Inbox,
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -67,6 +71,8 @@ const TYPE_COLORS: Record<string, string> = {
   subscription_expiring_soon: 'text-orange-600 bg-orange-50',
   subscription_expired: 'text-red-600 bg-red-50',
   subscription_in_grace_period: 'text-yellow-600 bg-yellow-50',
+  support_reply: 'text-indigo-600 bg-indigo-50',
+  new_support_ticket: 'text-blue-600 bg-blue-50',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -80,6 +86,8 @@ const TYPE_LABELS: Record<string, string> = {
   subscription_expiring_soon: '구독 만료 예정',
   subscription_expired: '구독 만료',
   subscription_in_grace_period: '결제 지연',
+  support_reply: '기술지원 답변',
+  new_support_ticket: '새 기술지원 문의',
 }
 
 export default function NotificationsPage() {

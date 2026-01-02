@@ -45,8 +45,8 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
           {/* Notification Bell */}
-          {userProfile?.company_id && (
-            <NotificationBell companyId={userProfile.company_id} />
+          {userProfile?.company_id && user?.id && (
+            <NotificationBell companyId={userProfile.company_id} userId={user.id} />
           )}
 
           {/* Separator */}

@@ -116,6 +116,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   const [messages, setMessages] = useState<Message[]>([])
   const [reply, setReply] = useState<Reply | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -165,8 +166,17 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
   async function fetchTicketDetail() {
     try {
       setLoading(true)
+      setError(null)
       const response = await fetch(`/api/support/tickets/${params.id}`)
-      if (!response.ok) throw new Error('Failed to fetch ticket')
+
+      if (response.status === 404) {
+        setError('티켓을 찾을 수 없습니다.')
+        return
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch ticket')
+      }
 
       const result = await response.json()
       console.log('Ticket data received:', result.ticket)
@@ -178,6 +188,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       await fetchReply()
     } catch (error) {
       console.error('Error fetching ticket:', error)
+      setError('티켓을 불러오는 중 오류가 발생했습니다.')
     } finally {
       setLoading(false)
     }
@@ -226,6 +237,35 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">로딩 중...</div>
+      </div>
+    )
+  }
+
+  // 에러 상태 표시
+  if (error) {
+    return (
+      <div className="px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-4xl mx-auto">
+          <Link href="/dashboard/support">
+            <Button variant="ghost" size="sm" className="mb-3 -ml-2">
+              <ArrowLeft className="h-3.5 w-3.5 mr-1.5" />
+              목록으로 돌아가기
+            </Button>
+          </Link>
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="py-12 text-center">
+              <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">오류 발생</h3>
+              <p className="text-sm text-gray-600">{error}</p>
+              <Button
+                onClick={() => router.push('/dashboard/support')}
+                className="mt-4"
+              >
+                목록으로 돌아가기
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     )
   }

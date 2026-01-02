@@ -231,9 +231,54 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   })
 
   // 정렬된 결과 (오름차순 - 오래된 날짜 위로)
-  const resultRows = Object.values(resultsByDate).sort((a: any, b: any) =>
+  let resultRows = Object.values(resultsByDate).sort((a: any, b: any) =>
     a.date.localeCompare(b.date)
   )
+
+  // "전체" 필터인 경우, 월별로 그룹화
+  if (isAllMonths) {
+    const monthlyResults: Record<string, any> = {}
+
+    resultRows.forEach((row: any) => {
+      const month = row.date.substring(0, 7) // YYYY-MM 형식으로 월 추출
+
+      if (!monthlyResults[month]) {
+        monthlyResults[month] = {
+          date: month, // YYYY-MM 형식
+          total: 0,
+          pending: 0,
+          rejected: 0,
+          inProgress: 0,
+          completed: 0,
+          contractCompleted: 0,
+          needsFollowUp: 0,
+          other: 0,
+          pcCount: 0,
+          mobileCount: 0,
+          paymentAmount: 0,
+          paymentCount: 0,
+        }
+      }
+
+      // 월별 합계 계산
+      monthlyResults[month].total += row.total
+      monthlyResults[month].pending += row.pending
+      monthlyResults[month].rejected += row.rejected
+      monthlyResults[month].inProgress += row.inProgress
+      monthlyResults[month].completed += row.completed
+      monthlyResults[month].contractCompleted += row.contractCompleted
+      monthlyResults[month].needsFollowUp += row.needsFollowUp
+      monthlyResults[month].other += row.other
+      monthlyResults[month].pcCount += row.pcCount
+      monthlyResults[month].mobileCount += row.mobileCount
+      monthlyResults[month].paymentAmount += row.paymentAmount
+      monthlyResults[month].paymentCount += row.paymentCount
+    })
+
+    resultRows = Object.values(monthlyResults).sort((a: any, b: any) =>
+      a.date.localeCompare(b.date)
+    )
+  }
 
   // 부서별 집계
   const resultsByDepartment: Record<string, any> = {}
@@ -588,6 +633,99 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       }
     }
   })
+
+  // "전체" 필터인 경우, 부서별/담당자별 월별 데이터도 월별로 그룹화
+  if (isAllMonths) {
+    // 부서별 월별 데이터 그룹화
+    Object.keys(departmentMonthlyData).forEach((deptName) => {
+      const dailyData = departmentMonthlyData[deptName]
+      const monthlyResults: Record<string, any> = {}
+
+      dailyData.forEach((row: any) => {
+        const month = row.date.substring(0, 7) // YYYY-MM
+
+        if (!monthlyResults[month]) {
+          monthlyResults[month] = {
+            date: month,
+            total: 0,
+            pending: 0,
+            rejected: 0,
+            inProgress: 0,
+            completed: 0,
+            contractCompleted: 0,
+            needsFollowUp: 0,
+            other: 0,
+            pcCount: 0,
+            mobileCount: 0,
+            paymentAmount: 0,
+            paymentCount: 0,
+          }
+        }
+
+        monthlyResults[month].total += row.total
+        monthlyResults[month].pending += row.pending
+        monthlyResults[month].rejected += row.rejected
+        monthlyResults[month].inProgress += row.inProgress
+        monthlyResults[month].completed += row.completed
+        monthlyResults[month].contractCompleted += row.contractCompleted
+        monthlyResults[month].needsFollowUp += row.needsFollowUp
+        monthlyResults[month].other += row.other
+        monthlyResults[month].pcCount += row.pcCount
+        monthlyResults[month].mobileCount += row.mobileCount
+        monthlyResults[month].paymentAmount += row.paymentAmount
+        monthlyResults[month].paymentCount += row.paymentCount
+      })
+
+      departmentMonthlyData[deptName] = Object.values(monthlyResults).sort((a: any, b: any) =>
+        a.date.localeCompare(b.date)
+      )
+    })
+
+    // 담당자별 월별 데이터 그룹화
+    Object.keys(staffMonthlyData).forEach((staffId) => {
+      const dailyData = staffMonthlyData[staffId]
+      const monthlyResults: Record<string, any> = {}
+
+      dailyData.forEach((row: any) => {
+        const month = row.date.substring(0, 7) // YYYY-MM
+
+        if (!monthlyResults[month]) {
+          monthlyResults[month] = {
+            date: month,
+            total: 0,
+            pending: 0,
+            rejected: 0,
+            inProgress: 0,
+            completed: 0,
+            contractCompleted: 0,
+            needsFollowUp: 0,
+            other: 0,
+            pcCount: 0,
+            mobileCount: 0,
+            paymentAmount: 0,
+            paymentCount: 0,
+          }
+        }
+
+        monthlyResults[month].total += row.total
+        monthlyResults[month].pending += row.pending
+        monthlyResults[month].rejected += row.rejected
+        monthlyResults[month].inProgress += row.inProgress
+        monthlyResults[month].completed += row.completed
+        monthlyResults[month].contractCompleted += row.contractCompleted
+        monthlyResults[month].needsFollowUp += row.needsFollowUp
+        monthlyResults[month].other += row.other
+        monthlyResults[month].pcCount += row.pcCount
+        monthlyResults[month].mobileCount += row.mobileCount
+        monthlyResults[month].paymentAmount += row.paymentAmount
+        monthlyResults[month].paymentCount += row.paymentCount
+      })
+
+      staffMonthlyData[staffId] = Object.values(monthlyResults).sort((a: any, b: any) =>
+        a.date.localeCompare(b.date)
+      )
+    })
+  }
 
   // 요약 통계
   const summary = {

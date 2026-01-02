@@ -8,15 +8,18 @@ import { formatDateTime } from '@/lib/utils/date'
 
 interface Notification {
   id: string
+  user_id: string
+  company_id: string
   title: string
   message: string
   type: string
-  campaign_id: string | null
+  metadata: Record<string, any>
+  campaign_id?: string | null
   is_read: boolean
   created_at: string
 }
 
-export default function NotificationBell({ companyId }: { companyId: string }) {
+export default function NotificationBell({ companyId, userId }: { companyId: string; userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -24,36 +27,49 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
   useEffect(() => {
     fetchNotifications()
 
-    // Subscribe to realtime notifications
+    // Subscribe to realtime notifications (both user-specific and company-wide)
     const supabase = createClient()
     const channel = supabase
-      .channel('notifications')
+      .channel('notifications-bell-dropdown')
       .on(
         'postgres_changes',
         {
-          event: 'INSERT',
+          event: '*',
           schema: 'public',
           table: 'notifications',
-          filter: `company_id=eq.${companyId}`,
         },
         (payload) => {
-          setNotifications((prev) => [payload.new as Notification, ...prev])
+          // Filter: show if user_id matches OR (user_id is null AND company_id matches)
+          const notification = payload.new as Notification
+          const isRelevant =
+            notification.user_id === userId ||
+            (notification.user_id === null && notification.company_id === companyId)
+
+          if (isRelevant) {
+            console.log('🔔 [NotificationBell Dropdown] Realtime notification change:', payload.eventType)
+            fetchNotifications()
+          }
         }
       )
-      .subscribe()
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ [NotificationBell Dropdown] Successfully subscribed to notifications')
+        }
+      })
 
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [companyId])
+  }, [userId, companyId])
 
   const fetchNotifications = async () => {
     try {
       const supabase = createClient()
+      // Fetch both user-specific and company-wide notifications
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('company_id', companyId)
+        .or(`user_id.eq.${userId},and(user_id.is.null,company_id.eq.${companyId})`)
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -74,6 +90,7 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
+        .eq('user_id', userId)
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
@@ -89,7 +106,7 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
       await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('company_id', companyId)
+        .eq('user_id', userId)
         .eq('is_read', false)
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
@@ -102,22 +119,30 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
+      support_reply: 'text-indigo-600',
+      new_support_ticket: 'text-blue-600',
       budget_warning: 'text-yellow-600',
       budget_critical: 'text-red-600',
       performance_anomaly: 'text-orange-600',
       campaign_status: 'text-blue-600',
       sync_complete: 'text-green-600',
+      subscription_changed: 'text-purple-600',
+      subscription_started: 'text-green-600',
     }
     return colors[type] || 'text-gray-600'
   }
 
   const getTypeIcon = (type: string) => {
     const icons: Record<string, string> = {
+      support_reply: '💬',
+      new_support_ticket: '📩',
       budget_warning: '⚠️',
       budget_critical: '🚨',
       performance_anomaly: '📊',
       campaign_status: 'ℹ️',
       sync_complete: '✅',
+      subscription_changed: '🔄',
+      subscription_started: '🎉',
     }
     return icons[type] || '📢'
   }
@@ -187,7 +212,10 @@ export default function NotificationBell({ companyId }: { companyId: string }) {
                     }`}
                     onClick={() => {
                       markAsRead(notification.id)
-                      if (notification.campaign_id) {
+                      // Handle different notification types
+                      if ((notification.type === 'support_reply' || notification.type === 'new_support_ticket') && notification.metadata?.ticket_id) {
+                        window.location.href = `/dashboard/support/${notification.metadata.ticket_id}`
+                      } else if (notification.campaign_id) {
                         window.location.href = `/dashboard/campaigns/${notification.campaign_id}`
                       }
                     }}
