@@ -84,6 +84,12 @@ export default function UnifiedDetailModal({
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [reservationDate, setReservationDate] = useState<string | null>(null)
 
+  // 메모 관리
+  const [memos, setMemos] = useState<any[]>([])
+  const [loadingMemos, setLoadingMemos] = useState(false)
+  const [newMemo, setNewMemo] = useState('')
+  const [addingMemo, setAddingMemo] = useState(false)
+
   // 결제 관리
   const [payments, setPayments] = useState<any[]>([])
   const [paymentsTotalAmount, setPaymentsTotalAmount] = useState(0)
@@ -115,11 +121,76 @@ export default function UnifiedDetailModal({
         setDecryptedPhone('')
       }
 
-      // 결제 내역 및 변경이력 조회
+      // 메모, 결제 내역 및 변경이력 조회
+      fetchMemos(lead.id)
       fetchPayments(lead.id)
       fetchChangeLogs(lead.id)
     }
   }, [lead])
+
+  // 메모 조회
+  const fetchMemos = async (leadId: string) => {
+    setLoadingMemos(true)
+    try {
+      const response = await fetch(`/api/leads/notes?lead_id=${leadId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setMemos(data.data || [])
+      }
+    } catch (error) {
+      console.error('Failed to fetch memos:', error)
+    } finally {
+      setLoadingMemos(false)
+    }
+  }
+
+  // 메모 추가
+  const handleAddMemo = async () => {
+    if (!lead || !newMemo.trim()) return
+
+    setAddingMemo(true)
+    try {
+      const response = await fetch('/api/leads/notes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          lead_id: lead.id,
+          content: newMemo.trim(),
+        }),
+      })
+
+      if (!response.ok) throw new Error('메모 추가 실패')
+
+      const data = await response.json()
+      setMemos((prev) => [data.data, ...prev])
+      setNewMemo('')
+      onUpdate?.()
+    } catch (error) {
+      console.error('Add memo error:', error)
+      setError('메모 추가에 실패했습니다.')
+    } finally {
+      setAddingMemo(false)
+    }
+  }
+
+  // 메모 삭제
+  const handleDeleteMemo = async (memoId: string) => {
+    if (!confirm('이 메모를 삭제하시겠습니까?')) return
+
+    try {
+      const response = await fetch(`/api/leads/notes?id=${memoId}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) throw new Error('메모 삭제 실패')
+
+      setMemos((prev) => prev.filter((m) => m.id !== memoId))
+      onUpdate?.()
+    } catch (error) {
+      console.error('Delete memo error:', error)
+      setError('메모 삭제에 실패했습니다.')
+    }
+  }
 
   // 결제 내역 조회
   const fetchPayments = async (leadId: string) => {
@@ -727,6 +798,77 @@ export default function UnifiedDetailModal({
 
                     {/* 오른쪽 열 (40%) */}
                     <div className="lg:col-span-2 flex flex-col gap-3 min-h-0 overflow-y-auto">
+                      {/* 메모 */}
+                      <div className="bg-white border-2 border-gray-200 rounded-xl p-3">
+                        <h3 className="text-base font-bold text-gray-900 mb-2">메모</h3>
+
+                        {loadingMemos ? (
+                          <p className="text-sm text-gray-500">로딩 중...</p>
+                        ) : (
+                          <>
+                            {/* 메모 추가 폼 */}
+                            <div className="space-y-1 mb-2">
+                              <input
+                                type="text"
+                                value={newMemo}
+                                onChange={(e) => setNewMemo(e.target.value)}
+                                placeholder="메모"
+                                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                                onKeyPress={(e) => {
+                                  if (e.key === 'Enter' && !addingMemo && newMemo.trim()) {
+                                    handleAddMemo()
+                                  }
+                                }}
+                              />
+                              <button
+                                onClick={handleAddMemo}
+                                disabled={addingMemo || !newMemo.trim()}
+                                className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                              >
+                                <PlusIcon className="h-4 w-4" />
+                                추가
+                              </button>
+                            </div>
+
+                            {/* 메모 목록 */}
+                            {memos.length > 0 && (
+                              <div className="space-y-1 max-h-[180px] overflow-y-auto">
+                                {memos.map((memo) => (
+                                  <div
+                                    key={memo.id}
+                                    className="p-2 bg-blue-50 rounded-lg border border-blue-200"
+                                  >
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-gray-900 whitespace-pre-wrap break-words">
+                                          {memo.content}
+                                        </p>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                          {new Date(memo.created_at).toLocaleString('ko-KR', {
+                                            year: 'numeric',
+                                            month: '2-digit',
+                                            day: '2-digit',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                          })}
+                                          {memo.users?.full_name && ` · ${memo.users.full_name}`}
+                                        </p>
+                                      </div>
+                                      <button
+                                        onClick={() => handleDeleteMemo(memo.id)}
+                                        className="text-red-600 hover:text-red-800 text-xs flex-shrink-0"
+                                      >
+                                        삭제
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
                       {/* 결제금액 */}
                       <div className="bg-white border-2 border-gray-200 rounded-xl p-3">
                         <h3 className="text-base font-bold text-gray-900 mb-2">결제금액</h3>
