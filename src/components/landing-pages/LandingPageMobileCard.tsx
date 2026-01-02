@@ -41,10 +41,11 @@ export default function LandingPageMobileCard({ page, companyShortId }: LandingP
                 target="_blank"
                 rel="noopener noreferrer"
                 className="font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors truncate block"
+                title={page.title}
               >
                 {page.title}
               </a>
-              <p className="text-xs text-gray-500 mt-0.5">/{page.slug}</p>
+              <p className="text-xs text-gray-500 mt-0.5 truncate" title={`/${page.slug}`}>/{page.slug}</p>
               <p className="text-xs text-gray-400 mt-1">{formattedDate}</p>
             </div>
             <div className="flex-shrink-0">
