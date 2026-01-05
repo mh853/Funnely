@@ -241,6 +241,26 @@ WHERE sent = false AND retry_count >= 3;
 
 ## Troubleshooting
 
+### Issue: 이메일 등록이 저장되지 않음 (해결됨 ✅)
+
+**증상**:
+- 이메일 추가 시 성공 메시지 표시됨
+- 페이지 새로고침 시 등록된 이메일이 사라짐
+
+**원인**:
+- API 라우트가 ANON_KEY 사용하는 `createClient()` 사용
+- RLS 정책으로 인해 companies 테이블 업데이트가 차단됨
+- 에러가 반환되지 않아 프론트엔드에서 성공으로 표시
+
+**해결**:
+- `createServiceClient()` 사용으로 SERVICE_ROLE_KEY 활용
+- RLS 정책 우회하여 관리자 작업 수행
+- POST 및 DELETE 엔드포인트 모두 수정
+
+**커밋**: 3ae22dc - "fix: 이메일 알림 설정 DB 저장 오류 수정"
+
+---
+
 ### Issue: 이메일이 도착하지 않음
 
 **진단 단계**:
