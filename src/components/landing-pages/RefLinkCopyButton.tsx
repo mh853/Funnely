@@ -2,25 +2,24 @@
 
 import { useState } from 'react'
 import { LinkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 
 interface RefLinkCopyButtonProps {
-  baseUrl: string
   slug: string
   shortId?: string
 }
 
-export default function RefLinkCopyButton({ baseUrl, slug, shortId }: RefLinkCopyButtonProps) {
+export default function RefLinkCopyButton({ slug, shortId }: RefLinkCopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   const handleCopy = async () => {
-    // ref 파라미터가 slug 앞에 오는 URL 생성
-    // 형식: https://domain.com/landing?ref=abc123/slug
-    const urlWithRef = shortId
-      ? `${baseUrl}?ref=${shortId}/${slug}`
-      : `${baseUrl}/${slug}`
+    // Generate subdomain URL
+    const url = shortId
+      ? generateLandingPageURL(shortId, slug)
+      : `https://funnely.co.kr/landing/${slug}`
 
     try {
-      await navigator.clipboard.writeText(urlWithRef)
+      await navigator.clipboard.writeText(url)
       setCopied(true)
       setTimeout(() => setCopied(false), 2000)
     } catch (error) {
@@ -32,7 +31,7 @@ export default function RefLinkCopyButton({ baseUrl, slug, shortId }: RefLinkCop
     <button
       onClick={handleCopy}
       className="inline-flex items-center px-3 sm:px-4 py-2 border border-blue-300 rounded-lg shadow-sm text-sm font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 transition-colors"
-      title={shortId ? `내 유입 링크 복사 (?ref=${shortId})` : '링크 복사'}
+      title={shortId ? `서브도메인 링크 복사 (${shortId}.funnely.co.kr)` : '링크 복사'}
     >
       {copied ? (
         <>

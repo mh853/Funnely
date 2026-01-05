@@ -14,13 +14,15 @@ export const config = {
 } as const
 
 /**
- * Get full landing page URL
+ * @deprecated Use generateLandingPageURL from '@/lib/utils/landing-page-url' instead
+ * Get full landing page URL (legacy format without subdomain)
  */
 export function getLandingPageUrl(slug: string): string {
   return `${config.app.domain}/landing/${slug}`
 }
 
 /**
+ * @deprecated Use generateLandingPageURL from '@/lib/utils/landing-page-url' instead
  * Get landing page base URL (without slug)
  * Used for constructing URLs with ref parameter before slug
  */

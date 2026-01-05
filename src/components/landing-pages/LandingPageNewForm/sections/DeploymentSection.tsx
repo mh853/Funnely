@@ -2,6 +2,7 @@
 
 import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
 import { useLandingPageForm } from '../context'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 
 /**
  * Deployment Section
@@ -12,7 +13,7 @@ export default function DeploymentSection({ companyShortId }: { companyShortId?:
 
   // Generate preview URL
   const previewUrl = state.slug && companyShortId
-    ? `${window.location.origin}/lp/${state.slug}?ref=${companyShortId}`
+    ? generateLandingPageURL(companyShortId, state.slug)
     : ''
 
   const copyToClipboard = () => {
@@ -100,16 +101,16 @@ export default function DeploymentSection({ companyShortId }: { companyShortId?:
         </div>
       )}
 
-      {/* URL Parameters Info */}
+      {/* Subdomain URL Info */}
       <div className="bg-blue-50 rounded-lg p-4 space-y-2">
-        <h4 className="text-sm font-semibold text-blue-900">URL 파라미터 안내</h4>
+        <h4 className="text-sm font-semibold text-blue-900">서브도메인 URL 안내</h4>
         <div className="text-xs text-blue-800 space-y-1">
           <p>
-            <span className="font-semibold">ref</span>: 추천인 코드 (자동 추가됨)
+            <span className="font-semibold">회사별 전용 URL</span>: 각 회사는 고유한 서브도메인을 가집니다
           </p>
           <p className="mt-2 text-blue-700">
-            💡 팁: URL을 공유할 때 ref 파라미터가 포함되어 있는지 확인하세요. 이를 통해 DB
-            수집 시 추천인 정보가 자동으로 기록됩니다.
+            💡 팁: 서브도메인 URL을 통해 회사별 트래킹 픽셀이 자동으로 발화되며,
+            DB 수집 시 회사 정보가 자동으로 기록됩니다.
           </p>
         </div>
       </div>

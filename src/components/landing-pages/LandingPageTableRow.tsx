@@ -7,6 +7,7 @@ import DeleteLandingPageModal from './DeleteLandingPageModal'
 import { formatDate } from '@/lib/utils/date'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 
 interface LandingPageTableRowProps {
   page: {
@@ -32,8 +33,9 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
   const supabase = createClient()
 
   const formattedDate = formatDate(page.created_at)
-  const refParam = companyShortId ? `?ref=${companyShortId}` : ''
-  const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
+  const landingPageUrl = companyShortId
+    ? generateLandingPageURL(companyShortId, page.slug)
+    : `https://funnely.co.kr/landing/${page.slug}`
 
   const handleToggleStatus = async () => {
     if (isUpdating) return

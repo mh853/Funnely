@@ -8,7 +8,7 @@ import {
   ChartBarIcon,
 } from '@heroicons/react/24/outline'
 import LandingPageEditor from '@/components/landing-pages/LandingPageEditor'
-import { getLandingPageUrl, getLandingPageBaseUrl } from '@/lib/config'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 import RefLinkCopyButton from '@/components/landing-pages/RefLinkCopyButton'
 
 interface Props {
@@ -74,6 +74,10 @@ export default async function LandingPageDetailPage({ params }: Props) {
     )
   }
 
+  const landingPageUrl = companyShortId?.short_id
+    ? generateLandingPageURL(companyShortId.short_id, landingPage.slug)
+    : `https://funnely.co.kr/landing/${landingPage.slug}`
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header - 모바일 최적화 */}
@@ -91,7 +95,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
               {landingPage.status === 'published' ? (
                 <span className="inline-flex items-center">
                   <GlobeAltIcon className="mr-1 h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0" />
-                  <span className="truncate">{getLandingPageUrl(landingPage.slug).replace('https://', '')}</span>
+                  <span className="truncate">{landingPageUrl.replace('https://', '')}</span>
                 </span>
               ) : (
                 <span className="text-gray-500">초안</span>
@@ -104,12 +108,11 @@ export default async function LandingPageDetailPage({ params }: Props) {
           {landingPage.status === 'published' && (
             <>
               <RefLinkCopyButton
-                baseUrl={getLandingPageBaseUrl()}
                 slug={landingPage.slug}
                 shortId={companyShortId?.short_id}
               />
               <a
-                href={getLandingPageUrl(landingPage.slug)}
+                href={landingPageUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"

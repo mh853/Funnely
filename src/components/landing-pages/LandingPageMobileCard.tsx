@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { PencilIcon, TrashIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
 import { formatDate } from '@/lib/utils/date'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 
 interface LandingPageMobileCardProps {
   page: {
@@ -26,8 +27,9 @@ export default function LandingPageMobileCard({ page, companyShortId }: LandingP
   const [isExpanded, setIsExpanded] = useState(false)
 
   const formattedDate = formatDate(page.created_at)
-  const refParam = companyShortId ? `?ref=${companyShortId}` : ''
-  const landingPageUrl = `https://funnely.co.kr/landing/${page.slug}${refParam}`
+  const landingPageUrl = companyShortId
+    ? generateLandingPageURL(companyShortId, page.slug)
+    : `https://funnely.co.kr/landing/${page.slug}`
 
   return (
     <>

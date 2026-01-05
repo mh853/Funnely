@@ -2,7 +2,7 @@
 
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
-import { useState, useEffect, useMemo, memo, Suspense } from 'react'
+import { useState, useEffect, useMemo, memo, Suspense, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/client'
@@ -90,14 +90,29 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const supabase = useMemo(() => createClient(), [])
 
   // Track page view on mount (bypasses ISR caching issue)
+  // Session-based deduplication to prevent multiple counts from component remounts
   useEffect(() => {
     const trackPageView = async () => {
+      const viewKey = `viewed_${landingPage.id}`
+      const lastViewed = sessionStorage.getItem(viewKey)
+
+      // Skip if already viewed in this session (within last 30 minutes)
+      if (lastViewed) {
+        const timeSinceView = Date.now() - parseInt(lastViewed, 10)
+        if (timeSinceView < 30 * 60 * 1000) { // 30분
+          return
+        }
+      }
+
       try {
         await fetch('/api/landing-pages/view', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ pageId: landingPage.id }),
         })
+
+        // Mark as viewed in this session
+        sessionStorage.setItem(viewKey, Date.now().toString())
       } catch (error) {
         // Silently fail - page view tracking is non-critical
         console.error('Failed to track page view:', error)

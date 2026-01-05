@@ -4,16 +4,21 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { TrashIcon } from '@heroicons/react/24/outline'
-import { getLandingPageUrl } from '@/lib/config'
+import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
 
 interface LandingPageCardProps {
   page: any
+  companyShortId?: string | null
 }
 
-export default function LandingPageCard({ page }: LandingPageCardProps) {
+export default function LandingPageCard({ page, companyShortId }: LandingPageCardProps) {
   const router = useRouter()
   const [deleting, setDeleting] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+
+  const landingPageUrl = companyShortId
+    ? generateLandingPageURL(companyShortId, page.slug)
+    : `https://funnely.co.kr/landing/${page.slug}`
 
   const handleDelete = async (e: React.MouseEvent) => {
     e.preventDefault()
@@ -70,7 +75,7 @@ export default function LandingPageCard({ page }: LandingPageCardProps) {
 
           {page.status === 'published' && (
             <p className="text-sm text-blue-600 mb-4 truncate">
-              {getLandingPageUrl(page.slug).replace('https://', '')}
+              {landingPageUrl.replace('https://', '')}
             </p>
           )}
 
