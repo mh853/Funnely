@@ -98,14 +98,14 @@ export default async function NotificationSettingsPage() {
           <div>
             <h4 className="font-medium text-gray-900 mb-1">1. 이메일 추가</h4>
             <p className="text-xs">
-              알림받을 이메일 주소를 입력하고 "추가" 버튼을 클릭하세요. 최대 5개까지 등록
+              알림받을 이메일 주소를 입력하고 &ldquo;추가&rdquo; 버튼을 클릭하세요. 최대 5개까지 등록
               가능합니다.
             </p>
           </div>
           <div>
             <h4 className="font-medium text-gray-900 mb-1">2. 테스트 전송</h4>
             <p className="text-xs">
-              "테스트 메일 보내기" 버튼으로 알림이 정상적으로 전송되는지 확인하세요.
+              &ldquo;테스트 메일 보내기&rdquo; 버튼으로 알림이 정상적으로 전송되는지 확인하세요.
             </p>
           </div>
           <div>

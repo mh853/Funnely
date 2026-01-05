@@ -1,6 +1,14 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy initialization to avoid build-time errors when API key is not set
+let resend: Resend | null = null
+
+function getResendClient() {
+  if (!resend && process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY)
+  }
+  return resend
+}
 
 interface LeadNotificationData {
   recipientEmail: string
@@ -218,7 +226,13 @@ ${leadEmail ? `📧 이메일: ${leadEmail}\n` : ''}${landingPageTitle ? `📄 �
   `
 
   try {
-    const { data: emailData, error } = await resend.emails.send({
+    const client = getResendClient()
+
+    if (!client) {
+      throw new Error('Resend API key is not configured')
+    }
+
+    const { data: emailData, error } = await client.emails.send({
       from: 'Funnely <noreply@funnely.co.kr>',
       to: [recipientEmail],
       subject,
