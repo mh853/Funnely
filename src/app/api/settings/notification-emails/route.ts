@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 // GET - 이메일 목록 조회
 export async function GET(request: NextRequest) {
@@ -119,7 +119,9 @@ export async function POST(request: NextRequest) {
     // Add new email
     const updatedEmails = [...currentEmails, email]
 
-    const { error: updateError } = await supabase
+    // Use service client to bypass RLS for admin operation
+    const serviceSupabase = createServiceClient()
+    const { error: updateError } = await serviceSupabase
       .from('companies')
       .update({ notification_emails: updatedEmails })
       .eq('id', userProfile.company_id)
@@ -205,7 +207,9 @@ export async function DELETE(request: NextRequest) {
     // Remove email
     const updatedEmails = currentEmails.filter((e: string) => e !== email)
 
-    const { error: updateError } = await supabase
+    // Use service client to bypass RLS for admin operation
+    const serviceSupabase = createServiceClient()
+    const { error: updateError } = await serviceSupabase
       .from('companies')
       .update({ notification_emails: updatedEmails })
       .eq('id', userProfile.company_id)
