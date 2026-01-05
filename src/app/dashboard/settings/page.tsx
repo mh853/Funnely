@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
-import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 
 export default async function SettingsPage() {
@@ -129,7 +129,24 @@ export default async function SettingsPage() {
       )}
 
       {/* Quick Settings Links - 1행 그리드 */}
-      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-4' : 'grid-cols-1 sm:grid-cols-2'}`}>
+      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-5' : 'grid-cols-1 sm:grid-cols-3'}`}>
+        {/* Email Notifications */}
+        <Link
+          href="/dashboard/settings/notifications"
+          className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-orange-300 hover:bg-orange-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+        >
+          <div className="flex-shrink-0 bg-orange-100 rounded-lg p-2 group-hover:bg-orange-200 transition-colors">
+            <BellIcon className="h-5 w-5 text-orange-600" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm font-medium text-gray-900 truncate">이메일 알림</h3>
+            <p className="text-xs text-gray-500 truncate">리드 유입 알림 수신</p>
+          </div>
+          <svg className="h-4 w-4 text-gray-400 group-hover:text-orange-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </Link>
+
         {/* Tracking Pixels */}
         <Link
           href="/dashboard/settings/tracking-pixels"

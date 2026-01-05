@@ -10,6 +10,7 @@ import {
 } from '@/lib/google-sheets'
 import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
+import { sendLeadNotificationEmail } from '@/lib/email/send-lead-notification'
 
 /**
  * Unified daily tasks cron job
@@ -23,6 +24,7 @@ import type { Subscription } from '@/types/revenue'
  * - Calculate customer health scores
  * - Sync Google Sheets
  * - Detect growth opportunities
+ * - Send pending lead notification emails
  *
  * Note: All times stored in database are UTC. Frontend displays in user's timezone.
  */
@@ -134,6 +136,24 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Growth detection error:', error)
       results.tasksExecuted.push({
         task: 'growth_opportunities',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 5: Send Lead Notification Emails
+    console.log('[Cron] Running lead notification emails')
+    try {
+      const notificationResult = await sendLeadNotifications(supabase)
+      results.tasksExecuted.push({
+        task: 'lead_notifications',
+        status: 'success',
+        ...notificationResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Lead notification error:', error)
+      results.tasksExecuted.push({
+        task: 'lead_notifications',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -655,5 +675,130 @@ async function checkSubscriptionExpiry(supabase: any) {
     notificationsCreated,
     expiredCount: expiredSubs?.length || 0,
     subscriptionsExpired,
+  }
+}
+
+/**
+ * Send pending lead notification emails
+ * Processes unsent notifications from lead_notification_queue
+ */
+async function sendLeadNotifications(supabase: any) {
+  console.log('[Lead Notifications] Starting email processing')
+
+  // Query unsent notifications (retry_count < 3)
+  const { data: pendingNotifications, error: queryError } = await supabase
+    .from('lead_notification_queue')
+    .select('*')
+    .eq('sent', false)
+    .lt('retry_count', 3)
+    .order('created_at', { ascending: true })
+
+  if (queryError) {
+    throw new Error(`Failed to query notification queue: ${queryError.message}`)
+  }
+
+  if (!pendingNotifications || pendingNotifications.length === 0) {
+    console.log('[Lead Notifications] No pending notifications')
+    return {
+      processed: 0,
+      successful: 0,
+      failed: 0,
+      message: 'No pending notifications',
+    }
+  }
+
+  console.log(`[Lead Notifications] Found ${pendingNotifications.length} pending notifications`)
+
+  let successful = 0
+  let failed = 0
+  const dashboardUrl = process.env.NEXT_PUBLIC_DOMAIN
+    ? process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '') + '/dashboard/leads'
+    : 'https://funnely.co.kr/dashboard/leads'
+
+  for (const notification of pendingNotifications) {
+    const emails = notification.recipient_emails || []
+    const leadData = notification.lead_data
+    let allEmailsSent = true
+    let errorMessage = null
+
+    // Send to each recipient
+    for (const recipientEmail of emails) {
+      try {
+        await sendLeadNotificationEmail({
+          recipientEmail,
+          companyName: leadData.company_name,
+          leadName: leadData.name,
+          leadPhone: leadData.phone,
+          leadEmail: leadData.email,
+          landingPageTitle: leadData.landing_page_title,
+          deviceType: leadData.device_type,
+          createdAt: leadData.created_at,
+          dashboardUrl,
+        })
+
+        // Log successful send
+        await supabase.from('lead_notification_logs').insert({
+          notification_queue_id: notification.id,
+          company_id: notification.company_id,
+          lead_id: notification.lead_id,
+          recipient_email: recipientEmail,
+          sent_at: new Date().toISOString(),
+          success: true,
+          email_provider: 'resend',
+        })
+
+        console.log(`[Lead Notifications] Email sent to ${recipientEmail} for lead ${notification.lead_id}`)
+      } catch (error) {
+        allEmailsSent = false
+        errorMessage = error instanceof Error ? error.message : 'Unknown error'
+
+        console.error(`[Lead Notifications] Failed to send to ${recipientEmail}:`, error)
+
+        // Log failed send
+        await supabase.from('lead_notification_logs').insert({
+          notification_queue_id: notification.id,
+          company_id: notification.company_id,
+          lead_id: notification.lead_id,
+          recipient_email: recipientEmail,
+          sent_at: new Date().toISOString(),
+          success: false,
+          error_message: errorMessage,
+          email_provider: 'resend',
+        })
+      }
+    }
+
+    // Update notification queue status
+    if (allEmailsSent) {
+      await supabase
+        .from('lead_notification_queue')
+        .update({
+          sent: true,
+          sent_at: new Date().toISOString(),
+          error: null,
+        })
+        .eq('id', notification.id)
+
+      successful++
+      console.log(`[Lead Notifications] Successfully processed notification ${notification.id}`)
+    } else {
+      await supabase
+        .from('lead_notification_queue')
+        .update({
+          retry_count: notification.retry_count + 1,
+          error: errorMessage,
+        })
+        .eq('id', notification.id)
+
+      failed++
+      console.log(`[Lead Notifications] Failed notification ${notification.id}, retry count: ${notification.retry_count + 1}`)
+    }
+  }
+
+  return {
+    processed: pendingNotifications.length,
+    successful,
+    failed,
+    message: `Processed ${pendingNotifications.length} notifications: ${successful} successful, ${failed} failed`,
   }
 }
