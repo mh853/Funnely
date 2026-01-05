@@ -64,6 +64,7 @@ export default async function CompletedPage({ params }: Props) {
 
   const successMessage = landingPage.success_message || '신청이 완료되었습니다!'
   const infoMessage = landingPage.completion_info_message || '빠른 시일 내에 연락드리겠습니다.'
+  const primaryColor = landingPage.theme?.colors?.primary || '#10b981' // Default green color
 
   return (
     <div
@@ -105,7 +106,7 @@ export default async function CompletedPage({ params }: Props) {
         </p>
 
         {/* Close Window Button */}
-        <CloseWindowButton />
+        <CloseWindowButton primaryColor={primaryColor} />
       </div>
     </div>
   )
