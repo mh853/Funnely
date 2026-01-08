@@ -409,7 +409,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   }
 
   // Get tracking pixels
-  const trackingPixels = landingPage.companies?.tracking_pixels?.[0]
+  // Handle both object and array formats from Supabase
+  const trackingPixelsRaw = landingPage.companies?.tracking_pixels
+  const trackingPixels = Array.isArray(trackingPixelsRaw)
+    ? trackingPixelsRaw[0]
+    : trackingPixelsRaw
 
   return (
     <>
