@@ -34,9 +34,10 @@ interface Subscription {
   trial_end_date: string | null
   current_period_end: string | null
   subscription_plans: {
-    display_name: string
-    monthly_price: number
-    yearly_price: number
+    name: string
+    description: string
+    price_monthly: number
+    price_yearly: number
   }
 }
 
@@ -113,7 +114,7 @@ export default function PaymentsClient({
             <div>
               <p className="text-sm opacity-90">현재 플랜</p>
               <h2 className="text-2xl font-bold mt-1">
-                {subscription.subscription_plans.display_name}
+                {subscription.subscription_plans.name}
               </h2>
               <p className="mt-2 text-sm opacity-90">
                 {subscription.billing_cycle === 'monthly' ? '월간' : '연간'} 결제 •{' '}
@@ -127,8 +128,8 @@ export default function PaymentsClient({
             <div className="text-right">
               <p className="text-3xl font-bold">
                 {subscription.billing_cycle === 'monthly'
-                  ? subscription.subscription_plans.monthly_price?.toLocaleString() || '0'
-                  : subscription.subscription_plans.yearly_price?.toLocaleString() || '0'}
+                  ? subscription.subscription_plans.price_monthly?.toLocaleString() || '0'
+                  : subscription.subscription_plans.price_yearly?.toLocaleString() || '0'}
                 원
               </p>
               <p className="text-sm opacity-90 mt-1">
