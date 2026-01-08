@@ -49,6 +49,9 @@ async function fetchCompanyAndLandingPage(companyShortId: string, slug: string):
 
   if (companyError || !company) return null
 
+  // DEBUG: Log company data structure
+  console.log('[DEBUG] Company data:', JSON.stringify(company, null, 2))
+
   // 2. Fetch landing page for this company + slug
   const { data: landingPage, error: lpError } = await supabase
     .from('landing_pages')
@@ -62,10 +65,15 @@ async function fetchCompanyAndLandingPage(companyShortId: string, slug: string):
   if (lpError || !landingPage) return null
 
   // Combine company and landing page data
-  return {
+  const combinedData = {
     ...landingPage,
     companies: company
   }
+
+  // DEBUG: Log combined data structure
+  console.log('[DEBUG] Combined data:', JSON.stringify(combinedData, null, 2))
+
+  return combinedData
 }
 
 // Generate metadata for SEO
