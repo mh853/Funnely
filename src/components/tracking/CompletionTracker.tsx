@@ -79,23 +79,26 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
 
       {/* Kakao Pixel */}
       {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
-        <>
-          <Script
-            type="text/javascript"
-            src="//t1.daumcdn.net/kas/static/kp.js"
-            strategy="afterInteractive"
-          />
-          <Script
-            id="kakao-pixel-completion"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
-                kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
-              `,
-            }}
-          />
-        </>
+        <Script
+          id="kakao-pixel-completion"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = '//t1.daumcdn.net/kas/static/kp.js';
+                script.onload = function() {
+                  if (typeof kakaoPixel !== 'undefined') {
+                    kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
+                    kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
+                  }
+                };
+                document.head.appendChild(script);
+              })();
+            `,
+          }}
+        />
       )}
 
       {/* TikTok Pixel */}
