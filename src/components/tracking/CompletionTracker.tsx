@@ -6,6 +6,7 @@ interface CompletionTrackerProps {
   trackingPixels?: {
     facebook_pixel_id?: string
     google_analytics_id?: string
+    kakao_pixel_id?: string
     is_active?: boolean
   }
 }
@@ -72,6 +73,24 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
             }}
           />
         </>
+      )}
+
+      {/* Kakao Pixel */}
+      {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
+        <Script
+          id="kakao-pixel-completion"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(e,n,t,a,o,i){e[a]=e[a]||function(){(e[a].q=e[a].q||[]).push(arguments)},
+              e[a].l=1*new Date,o=n.createElement(t),i=n.getElementsByTagName(t)[0],
+              o.async=1,o.src="https://track.adtouch.kakao.com/kakao_track.js?pixel_id=${trackingPixels.kakao_pixel_id}",
+              i.parentNode.insertBefore(o,i)}(window,document,"script","kakaoPixel");
+              kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
+              kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
+            `,
+          }}
+        />
       )}
     </>
   )
