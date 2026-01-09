@@ -121,24 +121,34 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                console.log('🥕 Karrot Pixel (Completion): Starting initialization...');
                 var script = document.createElement('script');
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
                   try {
+                    console.log('🥕 Karrot Pixel (Completion): Script loaded');
+                    console.log('🥕 window.karrotPixel type:', typeof window.karrotPixel);
+
                     if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
+                      console.log('🥕 Initializing with ID: ${trackingPixels.karrot_pixel_id}');
                       window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+
+                      console.log('🥕 Tracking ViewPage...');
                       window.karrotPixel.track('ViewPage');
+
+                      console.log('🥕 Tracking CompleteRegistration...');
                       window.karrotPixel.track('CompleteRegistration');
-                      console.log('Karrot Pixel: Completion events tracked successfully');
+
+                      console.log('🥕 SUCCESS: Both events tracked');
                     } else {
-                      console.error('Karrot Pixel: window.karrotPixel not available');
+                      console.error('🥕 ERROR: karrotPixel not available');
                     }
                   } catch (error) {
-                    console.error('Karrot Pixel error:', error);
+                    console.error('🥕 ERROR:', error.message);
                   }
                 };
                 script.onerror = function() {
-                  console.error('Karrot Pixel: Failed to load script');
+                  console.error('🥕 ERROR: Failed to load karrot-pixel.js');
                 };
                 document.head.appendChild(script);
               })();

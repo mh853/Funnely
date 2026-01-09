@@ -542,23 +542,34 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                console.log('🥕 Karrot Pixel: Starting initialization...');
                 var script = document.createElement('script');
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
                   try {
+                    console.log('🥕 Karrot Pixel: Script loaded');
+                    console.log('🥕 window.karrotPixel type:', typeof window.karrotPixel);
+                    console.log('🥕 window.karrotPixel object:', window.karrotPixel);
+
                     if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
+                      console.log('🥕 Initializing with ID: ${trackingPixels.karrot_pixel_id}');
                       window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
-                      window.karrotPixel.track('ViewPage');
-                      console.log('Karrot Pixel: ViewPage tracked successfully');
+
+                      console.log('🥕 Tracking ViewPage event...');
+                      var result = window.karrotPixel.track('ViewPage');
+                      console.log('🥕 Track result:', result);
+                      console.log('🥕 SUCCESS: ViewPage tracked');
                     } else {
-                      console.error('Karrot Pixel: window.karrotPixel not available');
+                      console.error('🥕 ERROR: karrotPixel not available');
+                      console.error('🥕 Available methods:', Object.keys(window.karrotPixel || {}));
                     }
                   } catch (error) {
-                    console.error('Karrot Pixel error:', error);
+                    console.error('🥕 ERROR:', error.message);
+                    console.error('🥕 Stack:', error.stack);
                   }
                 };
                 script.onerror = function() {
-                  console.error('Karrot Pixel: Failed to load script');
+                  console.error('🥕 ERROR: Failed to load karrot-pixel.js');
                 };
                 document.head.appendChild(script);
               })();
