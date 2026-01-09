@@ -115,23 +115,24 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
 
       {/* Karrot Market Pixel */}
       {trackingPixels?.is_active && trackingPixels?.karrot_pixel_id && (
-        <>
-          <Script
-            src="https://karrot-pixel.business.daangn.com/karrot-pixel.js"
-            strategy="afterInteractive"
-          />
-          <Script
-            id="karrot-pixel-completion"
-            strategy="afterInteractive"
-            dangerouslySetInnerHTML={{
-              __html: `
-                window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
-                window.karrotPixel.track('ViewPage');
-                window.karrotPixel.track('CompleteRegistration');
-              `,
-            }}
-          />
-        </>
+        <Script
+          id="karrot-pixel-completion"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                var script = document.createElement('script');
+                script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
+                script.onload = function() {
+                  window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                  window.karrotPixel.track('ViewPage');
+                  window.karrotPixel.track('CompleteRegistration');
+                };
+                document.head.appendChild(script);
+              })();
+            `,
+          }}
+        />
       )}
     </>
   )
