@@ -79,20 +79,23 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
 
       {/* Kakao Pixel */}
       {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
-        <Script
-          id="kakao-pixel-completion"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              !function(e,n,t,a,o,i){e[a]=e[a]||function(){(e[a].q=e[a].q||[]).push(arguments)},
-              e[a].l=1*new Date,o=n.createElement(t),i=n.getElementsByTagName(t)[0],
-              o.async=1,o.src="https://track.adtouch.kakao.com/kakao_track.js?pixel_id=${trackingPixels.kakao_pixel_id}",
-              i.parentNode.insertBefore(o,i)}(window,document,"script","kakaoPixel");
-              kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
-              kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
-            `,
-          }}
-        />
+        <>
+          <Script
+            type="text/javascript"
+            src="//t1.daumcdn.net/kas/static/kp.js"
+            strategy="afterInteractive"
+          />
+          <Script
+            id="kakao-pixel-completion"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
+                kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
+              `,
+            }}
+          />
+        </>
       )}
 
       {/* TikTok Pixel */}
@@ -121,34 +124,14 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                console.log('🥕 Karrot Pixel (Completion): Starting initialization...');
                 var script = document.createElement('script');
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
-                  try {
-                    console.log('🥕 Karrot Pixel (Completion): Script loaded');
-                    console.log('🥕 window.karrotPixel type:', typeof window.karrotPixel);
-
-                    if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
-                      console.log('🥕 Initializing with ID: ${trackingPixels.karrot_pixel_id}');
-                      window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
-
-                      console.log('🥕 Tracking ViewPage...');
-                      window.karrotPixel.track('ViewPage');
-
-                      console.log('🥕 Tracking CompleteRegistration...');
-                      window.karrotPixel.track('CompleteRegistration');
-
-                      console.log('🥕 SUCCESS: Both events tracked');
-                    } else {
-                      console.error('🥕 ERROR: karrotPixel not available');
-                    }
-                  } catch (error) {
-                    console.error('🥕 ERROR:', error.message);
+                  if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
+                    window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                    window.karrotPixel.track('ViewPage');
+                    window.karrotPixel.track('CompleteRegistration');
                   }
-                };
-                script.onerror = function() {
-                  console.error('🥕 ERROR: Failed to load karrot-pixel.js');
                 };
                 document.head.appendChild(script);
               })();
