@@ -415,11 +415,6 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     ? trackingPixelsRaw[0]
     : trackingPixelsRaw
 
-  // DEBUG: Log tracking pixels data
-  console.log('[DEBUG Client] landingPage.companies:', landingPage.companies)
-  console.log('[DEBUG Client] trackingPixelsRaw:', trackingPixelsRaw)
-  console.log('[DEBUG Client] trackingPixels:', trackingPixels)
-
   return (
     <>
       {/* Facebook Pixel */}
