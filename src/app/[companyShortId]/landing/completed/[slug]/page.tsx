@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
 import CloseWindowButton from '@/app/landing/completed/[slug]/CloseWindowButton'
+import CompletionTracker from '@/components/tracking/CompletionTracker'
 
 interface Props {
   params: Promise<{
@@ -39,10 +40,15 @@ export default async function CompletedPage({ params }: Props) {
   const { companyShortId, slug } = await params
   const supabase = getServiceRoleClient()
 
-  // Fetch company by short_id
+  // Fetch company by short_id with tracking_pixels
   const { data: company } = await supabase
     .from('companies')
-    .select('id, short_id, name')
+    .select(`
+      id,
+      short_id,
+      name,
+      tracking_pixels(*)
+    `)
     .eq('short_id', companyShortId)
     .single()
 
@@ -62,52 +68,63 @@ export default async function CompletedPage({ params }: Props) {
     notFound()
   }
 
+  // Extract tracking pixels (handle both object and array formats)
+  const trackingPixelsRaw = (company as any).tracking_pixels
+  const trackingPixels = Array.isArray(trackingPixelsRaw)
+    ? trackingPixelsRaw[0]
+    : trackingPixelsRaw
+
   const successMessage = landingPage.success_message || '신청이 완료되었습니다!'
   const infoMessage = landingPage.completion_info_message || '빠른 시일 내에 연락드리겠습니다.'
   const primaryColor = landingPage.theme?.colors?.primary || '#10b981' // Default green color
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{
-        background: landingPage.completion_bg_image
-          ? `url(${landingPage.completion_bg_image}) center/cover no-repeat`
-          : landingPage.completion_bg_color || '#f9fafb'
-      }}
-    >
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
-        {/* Success Icon */}
-        <div className="mb-6">
-          <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-            <svg
-              className="w-10 h-10 text-green-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+    <>
+      {/* Tracking Pixels for Completion */}
+      <CompletionTracker trackingPixels={trackingPixels} />
+
+      <div
+        className="min-h-screen flex items-center justify-center px-4"
+        style={{
+          background: landingPage.completion_bg_image
+            ? `url(${landingPage.completion_bg_image}) center/cover no-repeat`
+            : landingPage.completion_bg_color || '#f9fafb'
+        }}
+      >
+        <div className="max-w-md w-full bg-white rounded-2xl shadow-2xl p-8 text-center">
+          {/* Success Icon */}
+          <div className="mb-6">
+            <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
+              <svg
+                className="w-10 h-10 text-green-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            </div>
           </div>
+
+          {/* Success Message */}
+          <h1 className="text-2xl font-bold text-gray-900 mb-4">
+            {successMessage}
+          </h1>
+
+          {/* Info Message */}
+          <p className="text-gray-600 mb-8 whitespace-pre-wrap">
+            {infoMessage}
+          </p>
+
+          {/* Close Window Button */}
+          <CloseWindowButton primaryColor={primaryColor} />
         </div>
-
-        {/* Success Message */}
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">
-          {successMessage}
-        </h1>
-
-        {/* Info Message */}
-        <p className="text-gray-600 mb-8 whitespace-pre-wrap">
-          {infoMessage}
-        </p>
-
-        {/* Close Window Button */}
-        <CloseWindowButton primaryColor={primaryColor} />
       </div>
-    </div>
+    </>
   )
 }
