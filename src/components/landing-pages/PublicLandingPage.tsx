@@ -536,22 +536,22 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
       {/* Karrot Market Pixel */}
       {trackingPixels?.is_active && trackingPixels?.karrot_pixel_id && (
-        <Script
-          id="karrot-pixel"
-          strategy="afterInteractive"
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function(k,a,r,r,o,t){
-                k.KarrotPixel=o;k[o]=k[o]||function(){
-                (k[o].q=k[o].q||[]).push(arguments)};
-                t=a.createElement(r);t.async=1;
-                t.src='https://pixel.daangn.com/pixel.js?id='+r;
-                a.getElementsByTagName('head')[0].appendChild(t);
-              })(window,document,'script','${trackingPixels.karrot_pixel_id}','kpx');
-              kpx('track', 'PageView');
-            `,
-          }}
-        />
+        <>
+          <Script
+            src="https://karrot-pixel.business.daangn.com/karrot-pixel.js"
+            strategy="afterInteractive"
+          />
+          <Script
+            id="karrot-pixel"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                window.karrotPixel.track('ViewPage');
+              `,
+            }}
+          />
+        </>
       )}
 
       <div className="min-h-screen bg-white relative">

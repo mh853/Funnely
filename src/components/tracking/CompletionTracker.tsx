@@ -8,6 +8,7 @@ interface CompletionTrackerProps {
     google_analytics_id?: string
     kakao_pixel_id?: string
     tiktok_pixel_id?: string
+    karrot_pixel_id?: string
     is_active?: boolean
   }
 }
@@ -110,6 +111,27 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
             `,
           }}
         />
+      )}
+
+      {/* Karrot Market Pixel */}
+      {trackingPixels?.is_active && trackingPixels?.karrot_pixel_id && (
+        <>
+          <Script
+            src="https://karrot-pixel.business.daangn.com/karrot-pixel.js"
+            strategy="afterInteractive"
+          />
+          <Script
+            id="karrot-pixel-completion"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                window.karrotPixel.track('ViewPage');
+                window.karrotPixel.track('CompleteRegistration');
+              `,
+            }}
+          />
+        </>
       )}
     </>
   )
