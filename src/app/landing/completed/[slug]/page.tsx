@@ -3,6 +3,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 import CloseWindowButton from './CloseWindowButton'
+import CompletionTracker from '@/components/tracking/CompletionTracker'
 
 // Force dynamic rendering to always fetch fresh data
 export const dynamic = 'force-dynamic'
@@ -27,29 +28,43 @@ function getServiceRoleClient() {
   )
 }
 
-// Fetch landing page info
-async function fetchLandingPage(slug: string) {
+// Fetch landing page info with tracking pixels
+async function fetchLandingPageWithPixels(slug: string) {
   const supabase = getServiceRoleClient()
 
-  const { data, error} = await supabase
+  // First fetch landing page
+  const { data: landingPage, error: lpError } = await supabase
     .from('landing_pages')
     .select('id, slug, title, success_message, completion_info_message, theme, company_id, completion_bg_image, completion_bg_color')
     .eq('slug', slug)
     .eq('status', 'published')
     .single()
 
-  if (error) {
-    console.error('Error fetching landing page for completed:', error)
-    return null
+  if (lpError || !landingPage) {
+    console.error('Error fetching landing page for completed:', lpError)
+    return { landingPage: null, trackingPixels: null }
   }
-  if (!data) return null
-  return data
+
+  // Fetch tracking pixels for the company
+  const { data: company } = await supabase
+    .from('companies')
+    .select('tracking_pixels(*)')
+    .eq('id', landingPage.company_id)
+    .single()
+
+  // Handle both object and array formats
+  const trackingPixelsRaw = company?.tracking_pixels
+  const trackingPixels = Array.isArray(trackingPixelsRaw)
+    ? trackingPixelsRaw[0]
+    : trackingPixelsRaw
+
+  return { landingPage, trackingPixels }
 }
 
 // Generate metadata
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
-  const landingPage = await fetchLandingPage(slug)
+  const { landingPage } = await fetchLandingPageWithPixels(slug)
 
   return {
     title: '신청 완료',
@@ -64,7 +79,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function CompletedPage({ params, searchParams }: Props) {
   const { slug } = await params
   const { ref } = await searchParams
-  const landingPage = await fetchLandingPage(slug)
+  const { landingPage, trackingPixels } = await fetchLandingPageWithPixels(slug)
 
   // 랜딩페이지를 찾지 못해도 기본 완료 페이지 표시 (404 대신)
   const primaryColor = (landingPage?.theme as any)?.primaryColor || '#3B82F6'
@@ -74,10 +89,14 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   const completionBgColor = landingPage?.completion_bg_color || '#5b8def'
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
-        {/* Success Card */}
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+    <>
+      {/* Tracking Pixels for Completion */}
+      <CompletionTracker trackingPixels={trackingPixels} />
+
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+        <div className="max-w-md w-full">
+          {/* Success Card */}
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           {/* Header with background image or color */}
           <div
             className="h-48 relative"
@@ -126,6 +145,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
 
       </div>
     </div>
+    </>
   )
 }
 
