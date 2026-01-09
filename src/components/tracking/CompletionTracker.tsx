@@ -1,6 +1,5 @@
 'use client'
 
-import { useEffect } from 'react'
 import Script from 'next/script'
 
 interface CompletionTrackerProps {
@@ -12,24 +11,13 @@ interface CompletionTrackerProps {
 }
 
 export default function CompletionTracker({ trackingPixels }: CompletionTrackerProps) {
-  useEffect(() => {
-    // Fire CompleteRegistration event after Facebook Pixel loads
-    if (trackingPixels?.is_active && trackingPixels?.facebook_pixel_id) {
-      // Wait for fbq to be available
-      const checkFbq = setInterval(() => {
-        if (typeof window !== 'undefined' && (window as any).fbq) {
-          clearInterval(checkFbq)
-          ;(window as any).fbq('track', 'CompleteRegistration')
-          console.log('✅ Meta Pixel: CompleteRegistration event fired')
-        }
-      }, 100)
-
-      // Cleanup after 5 seconds if fbq never loads
-      setTimeout(() => clearInterval(checkFbq), 5000)
-
-      return () => clearInterval(checkFbq)
+  const handlePixelLoad = () => {
+    // Fire CompleteRegistration event immediately after Pixel loads
+    if (typeof window !== 'undefined' && (window as any).fbq) {
+      ;(window as any).fbq('track', 'CompleteRegistration')
+      console.log('✅ Meta Pixel: CompleteRegistration event fired')
     }
-  }, [trackingPixels])
+  }
 
   return (
     <>
@@ -39,6 +27,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
           <Script
             id="facebook-pixel-completion"
             strategy="afterInteractive"
+            onLoad={handlePixelLoad}
             dangerouslySetInnerHTML={{
               __html: `
                 !function(f,b,e,v,n,t,s)
@@ -51,6 +40,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 'https://connect.facebook.net/en_US/fbevents.js');
                 fbq('init', '${trackingPixels.facebook_pixel_id}');
                 fbq('track', 'PageView');
+                fbq('track', 'CompleteRegistration');
               `,
             }}
           />
