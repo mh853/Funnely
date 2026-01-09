@@ -124,9 +124,21 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 var script = document.createElement('script');
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
-                  window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
-                  window.karrotPixel.track('ViewPage');
-                  window.karrotPixel.track('CompleteRegistration');
+                  try {
+                    if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
+                      window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                      window.karrotPixel.track('ViewPage');
+                      window.karrotPixel.track('CompleteRegistration');
+                      console.log('Karrot Pixel: Completion events tracked successfully');
+                    } else {
+                      console.error('Karrot Pixel: window.karrotPixel not available');
+                    }
+                  } catch (error) {
+                    console.error('Karrot Pixel error:', error);
+                  }
+                };
+                script.onerror = function() {
+                  console.error('Karrot Pixel: Failed to load script');
                 };
                 document.head.appendChild(script);
               })();
