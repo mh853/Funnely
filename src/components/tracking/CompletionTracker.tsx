@@ -30,6 +30,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
                 fbq('init', '${trackingPixels.facebook_pixel_id}');
+                fbq('track', 'PageView');
                 fbq('track', 'CompleteRegistration');
               `,
             }}
@@ -39,7 +40,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
               height="1"
               width="1"
               style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${trackingPixels.facebook_pixel_id}&ev=CompleteRegistration&noscript=1`}
+              src={`https://www.facebook.com/tr?id=${trackingPixels.facebook_pixel_id}&ev=PageView&noscript=1`}
               alt=""
             />
           </noscript>
