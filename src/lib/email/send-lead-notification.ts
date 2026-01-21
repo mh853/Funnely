@@ -233,8 +233,7 @@ ${leadEmail ? `📧 이메일: ${leadEmail}\n` : ''}${landingPageTitle ? `📄 �
     }
 
     const { data: emailData, error } = await client.emails.send({
-      // TODO: Change to 'Funnely <noreply@funnely.co.kr>' after domain verification
-      from: 'Funnely <onboarding@resend.dev>',
+      from: 'Funnely <noreply@funnely.co.kr>',
       to: [recipientEmail],
       subject,
       html: htmlContent,
