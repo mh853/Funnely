@@ -76,7 +76,7 @@ export default async function NotificationSettingsPage() {
             <div>
               <h2 className="text-lg font-semibold text-gray-900">리드 유입 알림</h2>
               <p className="text-sm text-gray-500">
-                랜딩페이지에서 리드가 제출되면 즉시 이메일로 알림을 받습니다
+                매일 오전 8시에 전날 접수된 리드를 정리하여 이메일로 발송합니다
               </p>
             </div>
           </div>
@@ -103,16 +103,15 @@ export default async function NotificationSettingsPage() {
             </p>
           </div>
           <div>
-            <h4 className="font-medium text-gray-900 mb-1">2. 테스트 전송</h4>
+            <h4 className="font-medium text-gray-900 mb-1">2. 이메일 발송 시간</h4>
             <p className="text-xs">
-              &ldquo;테스트 메일 보내기&rdquo; 버튼으로 알림이 정상적으로 전송되는지 확인하세요.
+              매일 오전 8시에 자동으로 전날 접수된 리드를 정리하여 다이제스트 형태로 발송합니다.
             </p>
           </div>
           <div>
-            <h4 className="font-medium text-gray-900 mb-1">3. 자동 알림</h4>
+            <h4 className="font-medium text-gray-900 mb-1">3. 이메일 내용</h4>
             <p className="text-xs">
-              랜딩페이지에서 고객이 상담을 신청하면 등록된 모든 이메일 주소로 즉시 알림이
-              전송됩니다.
+              이메일에는 고객명, 연락처, 랜딩페이지 정보, 유입 경로 등이 포함됩니다.
             </p>
           </div>
         </div>

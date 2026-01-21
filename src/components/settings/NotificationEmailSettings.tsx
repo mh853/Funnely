@@ -242,8 +242,8 @@ export default function NotificationEmailSettings({
         </div>
       )}
 
-      {/* 테스트 이메일 전송 */}
-      {canEdit && emails.length > 0 && (
+      {/* 테스트 이메일 전송 (개발 모드에서만 표시) */}
+      {process.env.NODE_ENV === 'development' && canEdit && emails.length > 0 && (
         <div>
           <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
             <PaperAirplaneIcon className="h-4 w-4 text-gray-500" />
@@ -272,14 +272,14 @@ export default function NotificationEmailSettings({
         </div>
       )}
 
-      {/* 알림 수신 조건 안내 */}
+      {/* 알림 발송 안내 */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-4">
-        <h4 className="text-sm font-medium text-blue-900 mb-2">⚠️ 알림 수신 조건</h4>
+        <h4 className="text-sm font-medium text-blue-900 mb-2">📧 이메일 발송 안내</h4>
         <ul className="text-xs text-blue-800 space-y-1">
-          <li>• 랜딩페이지에서 리드 제출 시 즉시 전송됩니다.</li>
-          <li>• 실시간으로 전송되며, 전송 실패 시 최대 3회 재시도합니다.</li>
+          <li>• 매일 오전 8시에 전날 접수된 리드를 정리하여 발송됩니다.</li>
+          <li>• 새로운 리드가 없는 경우 이메일이 발송되지 않습니다.</li>
           <li>• 최대 5개의 이메일 주소를 등록할 수 있습니다.</li>
-          <li>• 이메일에는 고객명, 연락처, 랜딩페이지 정보가 포함됩니다.</li>
+          <li>• 이메일에는 고객명, 연락처, 랜딩페이지 정보, 유입 경로가 포함됩니다.</li>
         </ul>
       </div>
     </div>
