@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const resend = new Resend(process.env.RESEND_API_KEY)
 
     // Process each company's notifications
-    for (const [companyId, notifications] of notificationsByCompany.entries()) {
+    for (const [companyId, notifications] of Array.from(notificationsByCompany.entries())) {
       const firstNotification = notifications[0]
       const recipientEmails = firstNotification.recipient_emails || []
 

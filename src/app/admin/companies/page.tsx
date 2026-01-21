@@ -301,10 +301,10 @@ export default function CompaniesPage() {
                       <td className="px-6 py-4">
                         <div>
                           <div className="text-sm text-gray-900">
-                            {company.admin_user.full_name}
+                            {company.admin_user?.full_name || '-'}
                           </div>
                           <div className="text-xs text-gray-500">
-                            {company.admin_user.email}
+                            {company.admin_user?.email || '-'}
                           </div>
                         </div>
                       </td>

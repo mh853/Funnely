@@ -41,7 +41,7 @@ export async function GET(
     }
 
     // 회사 담당자 (company_owner) 조회
-    const { data: adminUser } = await supabase
+    const { data: companyOwner } = await supabase
       .from('users')
       .select('id, full_name, email')
       .eq('company_id', params.id)
@@ -110,7 +110,7 @@ export async function GET(
     // 4. 응답 구성
     const companyDetail = {
       ...company,
-      admin_user: adminUser || null,
+      admin_user: companyOwner || null,
       users: formattedUsers,
       recent_activity: {
         login_count_30d: loginCount || 0,
