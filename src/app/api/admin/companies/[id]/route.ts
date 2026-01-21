@@ -40,6 +40,15 @@ export async function GET(
       return NextResponse.json({ error: 'Company not found' }, { status: 404 })
     }
 
+    // 회사 담당자 (company_owner) 조회
+    const { data: adminUser } = await supabase
+      .from('users')
+      .select('id, full_name, email')
+      .eq('company_id', params.id)
+      .eq('role', 'company_owner')
+      .limit(1)
+      .single()
+
     // 회사 소속 사용자 목록
     const { data: users } = await supabase
       .from('profiles')
@@ -101,6 +110,7 @@ export async function GET(
     // 4. 응답 구성
     const companyDetail = {
       ...company,
+      admin_user: adminUser || null,
       users: formattedUsers,
       recent_activity: {
         login_count_30d: loginCount || 0,

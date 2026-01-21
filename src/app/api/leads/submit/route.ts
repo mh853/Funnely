@@ -1,7 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { encryptPhone, hashPhone } from '@/lib/encryption/phone'
-import { sendLeadNotificationEmail } from '@/lib/email/send-lead-notification'
 
 // POST /api/leads/submit - Public endpoint for lead submission
 export async function POST(request: NextRequest) {
@@ -164,37 +163,8 @@ export async function POST(request: NextRequest) {
       page_id: landing_page_id,
     })
 
-    // Send email notification to company notification emails
-    try {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('notification_emails')
-        .eq('id', landingPage.company_id)
-        .single()
-
-      if (company?.notification_emails && Array.isArray(company.notification_emails)) {
-        for (const notificationEmail of company.notification_emails) {
-          await sendLeadNotificationEmail({
-            recipientEmail: notificationEmail,
-            leadData: {
-              name,
-              phone,
-              email: email || undefined,
-              consultation_items,
-              preferred_date,
-              preferred_time,
-              message,
-            },
-            companyId: landingPage.company_id,
-            landingPageId: landing_page_id,
-          })
-        }
-        console.log(`✅ Lead notification emails sent to ${company.notification_emails.length} recipients`)
-      }
-    } catch (emailError) {
-      // Log email error but don't fail the lead submission
-      console.error('❌ Failed to send lead notification email:', emailError)
-    }
+    // Lead notification will be sent by scheduled email digest (8 AM, 4 PM KST)
+    // via database trigger that adds to lead_notification_queue
 
     // Auto-assign lead to staff if enabled
     // This will be handled by a database trigger or separate function

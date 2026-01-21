@@ -46,7 +46,8 @@ export default function CompanyHeader({
                 가입일: {format(new Date(company.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
               </p>
               <p className="text-sm text-gray-500">
-                담당자: {company.admin_user.full_name} ({company.admin_user.email})
+                담당자: {company.admin_user?.full_name || '미지정'}
+                {company.admin_user?.email && `(${company.admin_user.email})`}
               </p>
             </div>
           </div>

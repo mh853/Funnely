@@ -12,7 +12,7 @@ export interface CompanyListItem {
     id: string
     full_name: string
     email: string
-  }
+  } | null
 
   // 통계
   stats: {
