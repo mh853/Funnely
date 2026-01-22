@@ -40,7 +40,11 @@ export async function POST(request: NextRequest) {
     }
 
     // 시트 데이터 가져오기
-    const range = `${sheetName}!A:Z`
+    // 시트 이름에 공백이나 특수문자가 있으면 작은따옴표로 감싸야 함
+    const sanitizedSheetName = sheetName.includes(' ') || sheetName.includes("'")
+      ? `'${sheetName.replace(/'/g, "''")}'`
+      : sheetName
+    const range = `${sanitizedSheetName}!A:Z`
     const rows = await fetchSheetData(spreadsheetId, range)
 
     if (rows.length < 2) {
