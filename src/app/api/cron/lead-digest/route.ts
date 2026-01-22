@@ -282,7 +282,7 @@ function generateDigestEmailHTML(
             <td style="padding: 24px 32px; background-color: #f9fafb; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; color: #6b7280; font-size: 14px;">
                 이 이메일은 <strong>${companyName}</strong>의 리드 알림 시스템에서 자동 발송되었습니다.<br>
-                매일 오전 8시, 오후 4시에 새로운 상담 신청을 정리하여 보내드립니다.
+                매일 오전 8시에 새로운 상담 신청을 정리하여 보내드립니다.
               </p>
               <p style="margin: 16px 0 0 0; color: #9ca3af; font-size: 12px;">
                 Powered by <strong>Funnely</strong>
@@ -348,7 +348,7 @@ ${dashboardUrl}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 이 이메일은 ${companyName}의 리드 알림 시스템에서 자동 발송되었습니다.
-매일 오전 8시, 오후 4시에 새로운 상담 신청을 정리하여 보내드립니다.
+매일 오전 8시에 새로운 상담 신청을 정리하여 보내드립니다.
 
 Powered by Funnely
   `
