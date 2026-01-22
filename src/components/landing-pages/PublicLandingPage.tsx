@@ -59,6 +59,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const [showExternalFormModal, setShowExternalFormModal] = useState(false)
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
+  const [isExpired, setIsExpired] = useState(false)
 
   // 폼 데이터 상태 관리
   const [nameInput, setNameInput] = useState('')
@@ -120,6 +121,21 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     }
     trackPageView()
   }, [landingPage.id])
+
+  // Check if timer is expired (client-side fallback)
+  useEffect(() => {
+    if (landingPage.timer_enabled &&
+        landingPage.timer_deadline &&
+        !landingPage.timer_auto_update) {
+
+      const deadline = new Date(landingPage.timer_deadline).getTime()
+      const now = Date.now()
+
+      if (now > deadline) {
+        setIsExpired(true)
+      }
+    }
+  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update])
 
   // Timer countdown calculation
   useEffect(() => {
@@ -327,6 +343,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
   // Render sticky buttons (matching preview logic)
   const renderStickyButtons = (position: 'top' | 'bottom') => {
+    // Don't show action buttons if expired
+    if (isExpired) return null
+
     const buttons = []
 
     // Timer (available for both modes)
@@ -634,8 +653,18 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           </div>
         )}
 
+        {/* Timer Expired Message */}
+        {isExpired && landingPage.collect_data && (
+          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-8 text-center">
+            <div className="text-gray-500 text-lg mb-2">⏰ 마감되었습니다</div>
+            <p className="text-gray-600">
+              신청 기간이 종료되어 더 이상 접수를 받지 않습니다.
+            </p>
+          </div>
+        )}
+
         {/* Form Section (Inline Mode) - Functional Form */}
-        {isSectionEnabled('form') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
+        {!isExpired && isSectionEnabled('form') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
             <div className="p-4 bg-indigo-50 border-b border-indigo-100">
               <p className="text-sm text-indigo-900">
@@ -714,7 +743,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         )}
 
         {/* Privacy Consent Section (Inline Mode) */}
-        {isSectionEnabled('privacy_consent') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
+        {!isExpired && isSectionEnabled('privacy_consent') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
           <div className="space-y-3 bg-white rounded-xl p-4 border border-gray-200">
             {landingPage.require_privacy_consent && (
               <label className="flex items-start gap-3 cursor-pointer">
@@ -768,14 +797,14 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         )}
 
         {/* 에러 메시지 - CTA 버튼 바로 위 */}
-        {submitError && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
+        {!isExpired && submitError && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
           <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
             {submitError}
           </div>
         )}
 
         {/* CTA Button (only if not sticky) */}
-        {isSectionEnabled('cta_button') && landingPage.cta_enabled && landingPage.collect_data && landingPage.cta_sticky_position === 'none' && (
+        {!isExpired && isSectionEnabled('cta_button') && landingPage.cta_enabled && landingPage.collect_data && landingPage.cta_sticky_position === 'none' && (
           <div className="flex justify-center">
             <button
               onClick={() => {
@@ -798,7 +827,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         )}
 
         {/* Call Button (only if not sticky) */}
-        {isSectionEnabled('call_button') && landingPage.call_button_enabled && landingPage.call_button_sticky_position === 'none' && (
+        {!isExpired && isSectionEnabled('call_button') && landingPage.call_button_enabled && landingPage.call_button_sticky_position === 'none' && (
           <div className="flex justify-center">
             <a
               href={`tel:${landingPage.call_button_phone}`}

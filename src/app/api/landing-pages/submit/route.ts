@@ -84,10 +84,10 @@ export async function POST(request: NextRequest) {
       { data: existingLead },
       { data: blacklistedPhone }
     ] = await Promise.all([
-      // 1. Landing page 조회
+      // 1. Landing page 조회 (timer 필드 추가)
       supabase
         .from('landing_pages')
-        .select('company_id, status, collect_fields')
+        .select('company_id, status, collect_fields, timer_enabled, timer_deadline, timer_auto_update')
         .eq('id', landing_page_id)
         .single(),
 
@@ -130,6 +130,19 @@ export async function POST(request: NextRequest) {
         { error: { message: '게시되지 않은 페이지입니다' } },
         { status: 403 }
       )
+    }
+
+    // Timer 만료 체크
+    if (landingPage.timer_enabled &&
+        landingPage.timer_deadline &&
+        !landingPage.timer_auto_update) {
+      const deadline = new Date(landingPage.timer_deadline)
+      if (new Date() > deadline) {
+        return NextResponse.json(
+          { error: { message: '신청 기간이 종료되었습니다.' } },
+          { status: 403 }
+        )
+      }
     }
 
     // 블랙리스트 체크 - Silent handling (사용자에게 에러 표시 안 함)

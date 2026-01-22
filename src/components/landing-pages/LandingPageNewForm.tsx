@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { utcToKstDatetimeLocal, kstDatetimeLocalToUtc } from '@/lib/utils/timezone'
 import {
   CheckIcon,
   XMarkIcon,
@@ -118,18 +119,9 @@ export default function LandingPageNewForm({
   const [ctaText, setCtaText] = useState(landingPage?.cta_text || '')
   const [ctaColor, setCtaColor] = useState(landingPage?.cta_color || '#6366f1')
   const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? true)
-  // Convert UTC timestamp to local datetime-local format (KST)
+  // Convert UTC timestamp to KST datetime-local format
   const [timerDeadline, setTimerDeadline] = useState(() => {
-    if (!landingPage?.timer_deadline) return ''
-    // Convert UTC to local time for datetime-local input
-    const utcDate = new Date(landingPage.timer_deadline)
-    const year = utcDate.getFullYear()
-    const month = String(utcDate.getMonth() + 1).padStart(2, '0')
-    const day = String(utcDate.getDate()).padStart(2, '0')
-    const hours = String(utcDate.getHours()).padStart(2, '0')
-    const minutes = String(utcDate.getMinutes()).padStart(2, '0')
-    // "2025-12-31T20:07" (KST = UTC+9)
-    return `${year}-${month}-${day}T${hours}:${minutes}`
+    return utcToKstDatetimeLocal(landingPage?.timer_deadline)
   })
   const [timerColor, setTimerColor] = useState(landingPage?.timer_color || '#ef4444')
   const [timerText, setTimerText] = useState(landingPage?.timer_text || '특별 할인 마감까지')
@@ -1102,7 +1094,7 @@ export default function LandingPageNewForm({
         cta_sticky_position: ctaStickyPosition,
         timer_enabled: timerEnabled,
         timer_text: timerText || null,
-        timer_deadline: timerDeadline || null, // 빈 문자열을 null로 변환
+        timer_deadline: kstDatetimeLocalToUtc(timerDeadline), // KST → UTC 변환
         timer_color: timerColor,
         timer_sticky_position: timerStickyPosition,
         timer_auto_update: timerAutoUpdate,
