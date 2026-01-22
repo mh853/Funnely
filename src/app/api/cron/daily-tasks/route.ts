@@ -733,7 +733,7 @@ async function sendLeadDigestEmails(supabase: any) {
 
   // Group notifications by company
   const notificationsByCompany = new Map<string, any[]>()
-  pendingNotifications.forEach((notification) => {
+  pendingNotifications.forEach((notification: any) => {
     const companyId = notification.company_id
     if (!notificationsByCompany.has(companyId)) {
       notificationsByCompany.set(companyId, [])
@@ -890,7 +890,7 @@ async function disableExpiredTimers(supabase: any) {
   console.log(`[Timer Expiry] Found ${expiredPages.length} expired landing pages`)
 
   // Disable expired pages
-  const expiredIds = expiredPages.map((page) => page.id)
+  const expiredIds = expiredPages.map((page: any) => page.id)
 
   const { error: updateError } = await supabase
     .from('landing_pages')
@@ -906,7 +906,7 @@ async function disableExpiredTimers(supabase: any) {
   return {
     checked: expiredPages.length,
     disabled: expiredPages.length,
-    landingPages: expiredPages.map((page) => ({
+    landingPages: expiredPages.map((page: any) => ({
       id: page.id,
       title: page.title,
       deadline: page.timer_deadline,
