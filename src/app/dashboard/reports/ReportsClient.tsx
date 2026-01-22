@@ -187,44 +187,178 @@ export default function ReportsClient({
 
   // 엑셀 다운로드
   const handleExport = () => {
-    // CSV 생성
-    const headers = [
-      '날짜',
-      'DB유입',
-      '상담전',
-      '상담거절',
-      '상담진행중',
-      '상담완료',
-      '예약확정',
-      '추가상담필요',
-      '기타',
-      '결제금액',
-      '결제횟수',
-    ]
+    let headers: string[] = []
+    let rows: any[][] = []
+    let filename = ''
 
-    const rows = resultRows.map((row) => [
-      row.date,
-      row.total,
-      row.pending,
-      row.rejected,
-      row.inProgress,
-      row.completed,
-      row.contractCompleted,
-      row.needsFollowUp,
-      row.other,
-      row.paymentAmount,
-      row.paymentCount,
-    ])
+    // 날짜 형식을 yyyy-mm-dd로 변환하는 함수
+    const formatDate = (dateStr: string): string => {
+      // 이미 yyyy-mm-dd 형식인 경우
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+        return dateStr
+      }
+      // yyyy-mm 형식인 경우 (월별 그룹화)
+      if (/^\d{4}-\d{2}$/.test(dateStr)) {
+        return dateStr
+      }
+      // 다른 형식인 경우 변환 시도
+      return dateStr
+    }
 
+    // 결제 금액 포맷 함수 (콤마 추가)
+    const formatPaymentAmount = (amount: number): string => {
+      return amount > 0 ? amount.toLocaleString() : '0'
+    }
+
+    // CSV 값을 쌍따옴표로 감싸는 함수 (CSV 표준)
+    const escapeCSV = (value: any): string => {
+      const strValue = String(value)
+      // 콤마, 따옴표, 줄바꿈이 포함된 경우 쌍따옴표로 감싸고, 내부 따옴표는 이스케이프
+      if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
+        return `"${strValue.replace(/"/g, '""')}"`
+      }
+      return strValue
+    }
+
+    if (activeTab === 'monthly') {
+      // 월별 요약 탭
+      headers = [
+        '날짜',
+        'DB유입',
+        '상담전',
+        '상담거절',
+        '상담진행중',
+        '상담완료',
+        '예약확정',
+        '추가상담필요',
+        '기타',
+        '결제금액',
+        '결제횟수',
+      ]
+
+      rows = resultRows.map((row) => [
+        formatDate(row.date),
+        row.total,
+        row.pending,
+        row.rejected,
+        row.inProgress,
+        row.completed,
+        row.contractCompleted,
+        row.needsFollowUp,
+        row.other,
+        formatPaymentAmount(row.paymentAmount),
+        row.paymentCount,
+      ])
+
+      filename = isAllMonths
+        ? `월별DB_전체.csv`
+        : `월별DB_${selectedYear}년${selectedMonth}월.csv`
+    } else if (activeTab === 'department') {
+      // 부서별 탭 - 모든 부서 데이터를 하나의 파일로
+      headers = [
+        '부서',
+        '날짜',
+        'DB유입',
+        '상담전',
+        '상담거절',
+        '상담진행중',
+        '상담완료',
+        '예약확정',
+        '추가상담필요',
+        '기타',
+        '결제금액',
+        '결제횟수',
+      ]
+
+      Object.entries(departmentMonthlyData).forEach(([dept, monthlyRows]) => {
+        monthlyRows.forEach((row) => {
+          rows.push([
+            dept,
+            formatDate(row.date),
+            row.total,
+            row.pending,
+            row.rejected,
+            row.inProgress,
+            row.completed,
+            row.contractCompleted,
+            row.needsFollowUp,
+            row.other,
+            formatPaymentAmount(row.paymentAmount),
+            row.paymentCount,
+          ])
+        })
+      })
+
+      filename = isAllMonths
+        ? `부서별DB_전체.csv`
+        : `부서별DB_${selectedYear}년${selectedMonth}월.csv`
+    } else if (activeTab === 'staff') {
+      // 담당자별 탭
+      headers = [
+        '담당자',
+        '부서',
+        '날짜',
+        'DB유입',
+        '상담전',
+        '상담거절',
+        '상담진행중',
+        '상담완료',
+        '예약확정',
+        '추가상담필요',
+        '기타',
+        '결제금액',
+        '결제횟수',
+      ]
+
+      // 부서 필터링
+      const filteredStaff = selectedDepartment
+        ? staffRows.filter(s => s.department === selectedDepartment)
+        : staffRows
+
+      // 검색 필터링
+      const searchedStaff = searchQuery
+        ? filteredStaff.filter(s => s.staffName.toLowerCase().includes(searchQuery.toLowerCase()))
+        : filteredStaff
+
+      searchedStaff.forEach((staff) => {
+        const monthlyRows = staffMonthlyData[staff.staffId] || []
+        monthlyRows.forEach((row) => {
+          rows.push([
+            staff.staffName,
+            staff.department || '미배정',
+            formatDate(row.date),
+            row.total,
+            row.pending,
+            row.rejected,
+            row.inProgress,
+            row.completed,
+            row.contractCompleted,
+            row.needsFollowUp,
+            row.other,
+            formatPaymentAmount(row.paymentAmount),
+            row.paymentCount,
+          ])
+        })
+      })
+
+      filename = isAllMonths
+        ? `담당자별DB_전체.csv`
+        : `담당자별DB_${selectedYear}년${selectedMonth}월.csv`
+    }
+
+    // CSV 생성 - 모든 값을 escapeCSV 처리
     const csvContent =
       '\uFEFF' +
-      [headers.join(','), ...rows.map((r) => r.join(','))].join('\n')
+      [
+        headers.map(escapeCSV).join(','),
+        ...rows.map((r) => r.map(escapeCSV).join(','))
+      ].join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `결과별DB_${selectedYear}년${selectedMonth}월.csv`
+    link.download = filename
     link.click()
     URL.revokeObjectURL(url)
   }

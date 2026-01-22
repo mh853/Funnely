@@ -512,10 +512,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold text-gray-900">결과별 DB</h2>
             <Link
-              href="/dashboard/reports/results"
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-1"
+              href="/dashboard/leads"
+              className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-2"
             >
-              전체보기
+              전체 DB 보기
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
@@ -626,19 +626,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* View All Link */}
-        <div className="bg-gray-50 px-5 py-3 border-t border-gray-200">
-          <Link
-            href="/dashboard/leads"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-700 transition-colors inline-flex items-center gap-2"
-          >
-            전체 DB 보기
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </Link>
         </div>
       </div>
 
