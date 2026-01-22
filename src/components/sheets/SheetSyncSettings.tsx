@@ -75,8 +75,8 @@ export default function SheetSyncSettings({
   }>({
     spreadsheet_id: '',
     sheet_name: 'Sheet1',
-    landing_page_id: '',
-    sync_interval_minutes: 60,
+    landing_page_id: '', // Not used, but kept for DB compatibility
+    sync_interval_minutes: 1440, // 24시간 고정 (오전 8시 실행)
     column_mapping: {
       name: '이름',
       phone: '전화번호',
@@ -176,8 +176,8 @@ export default function SheetSyncSettings({
     setNewConfig({
       spreadsheet_id: '',
       sheet_name: 'Sheet1',
-      landing_page_id: '',
-      sync_interval_minutes: 60,
+      landing_page_id: '', // Not used, but kept for DB compatibility
+      sync_interval_minutes: 1440, // 24시간 고정 (오전 8시 실행)
       column_mapping: {
         name: '이름',
         phone: '전화번호',
@@ -265,8 +265,8 @@ export default function SheetSyncSettings({
       {showAddForm && (
         <div className="bg-gray-50 rounded-xl p-6 border">
           <h4 className="font-medium mb-4">새 시트 연결</h4>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="space-y-4">
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Google Sheets URL 또는 스프레드시트 ID *
               </label>
@@ -291,7 +291,7 @@ export default function SheetSyncSettings({
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                시트 이름
+                시트 이름 *
               </label>
               <input
                 type="text"
@@ -300,22 +300,25 @@ export default function SheetSyncSettings({
                 placeholder="Sheet1"
                 className="w-full px-3 py-2 border rounded-lg text-sm"
               />
+              <p className="text-xs text-gray-500 mt-1">
+                스프레드시트 하단 탭에 표시되는 시트 이름을 입력하세요
+              </p>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                연결할 랜딩페이지
-              </label>
-              <select
-                value={newConfig.landing_page_id}
-                onChange={(e) => setNewConfig({ ...newConfig, landing_page_id: e.target.value })}
-                className="w-full px-3 py-2 border rounded-lg text-sm"
-              >
-                <option value="">선택 안함</option>
-                {landingPages.map((lp) => (
-                  <option key={lp.id} value={lp.id}>{lp.title}</option>
-                ))}
-              </select>
+            {/* 동기화 주기 정보 (고정값) */}
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-blue-900">자동 동기화</p>
+                  <p className="text-xs text-blue-700 mt-0.5">
+                    매일 오전 8시(KST)에 자동으로 동기화됩니다
+                  </p>
+                </div>
+              </div>
             </div>
+            {/* [향후 업데이트] 동기화 주기 선택 기능
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 동기화 주기
@@ -333,17 +336,33 @@ export default function SheetSyncSettings({
                 <option value={1440}>24시간</option>
               </select>
             </div>
+            */}
           </div>
 
-          <div className="mt-4">
-            <div className="flex items-center justify-between mb-2">
-              <h5 className="text-sm font-medium text-gray-700">컬럼 매핑</h5>
-              <span className="text-xs text-gray-500">시트의 열 이름을 입력하세요</span>
+          <div className="mt-6">
+            <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border-2 border-indigo-200 rounded-lg p-4 mb-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h5 className="text-base font-semibold text-gray-900 mb-1">📊 구글시트 컬럼 매핑</h5>
+                  <p className="text-sm text-gray-700">
+                    시트의 <strong>첫 번째 행(헤더)</strong>에 있는 열 이름과 정확히 일치하도록 입력해주세요
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="bg-white rounded-lg border p-4 space-y-4">
+            <div className="bg-white rounded-lg border-2 border-gray-200 p-5 space-y-5">
               {/* 기본 필드 */}
               <div>
-                <p className="text-xs font-medium text-gray-600 mb-2">기본 필드</p>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-indigo-600 text-white text-xs font-bold rounded-full">1</span>
+                  <p className="text-sm font-semibold text-gray-900">필수 필드</p>
+                  <span className="text-xs text-red-600">*</span>
+                </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">이름 열 *</label>
@@ -388,43 +407,54 @@ export default function SheetSyncSettings({
               </div>
 
               {/* 추가 기본 필드 */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">광고명/소스 열 (선택)</label>
-                  <input
-                    type="text"
-                    value={newConfig.column_mapping.source || ''}
-                    onChange={(e) => setNewConfig({
-                      ...newConfig,
-                      column_mapping: { ...newConfig.column_mapping, source: e.target.value }
-                    })}
-                    placeholder="예: 광고명, 캠페인, source"
-                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                  />
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="inline-flex items-center justify-center w-6 h-6 bg-gray-600 text-white text-xs font-bold rounded-full">2</span>
+                  <p className="text-sm font-semibold text-gray-900">선택 필드</p>
+                  <span className="text-xs text-gray-500">(있으면 매핑)</span>
                 </div>
-                <div>
-                  <label className="block text-xs text-gray-500 mb-1">생성일 열 (선택)</label>
-                  <input
-                    type="text"
-                    value={newConfig.column_mapping.createdAt || ''}
-                    onChange={(e) => setNewConfig({
-                      ...newConfig,
-                      column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
-                    })}
-                    placeholder="예: 생성일, 등록일, created_at"
-                    className="w-full px-3 py-2 border rounded-lg text-sm"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">광고명/소스 열</label>
+                    <input
+                      type="text"
+                      value={newConfig.column_mapping.source || ''}
+                      onChange={(e) => setNewConfig({
+                        ...newConfig,
+                        column_mapping: { ...newConfig.column_mapping, source: e.target.value }
+                      })}
+                      placeholder="예: 광고명, 캠페인, source"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">생성일 열</label>
+                    <input
+                      type="text"
+                      value={newConfig.column_mapping.createdAt || ''}
+                      onChange={(e) => setNewConfig({
+                        ...newConfig,
+                        column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
+                      })}
+                      placeholder="예: 생성일, 등록일, created_at"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* 커스텀 필드 */}
               <div className="border-t pt-4">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-medium text-gray-600">추가 필드 (선택)</p>
+                  <div className="flex items-center gap-2">
+                    <span className="inline-flex items-center justify-center w-6 h-6 bg-purple-600 text-white text-xs font-bold rounded-full">3</span>
+                    <p className="text-sm font-semibold text-gray-900">추가 커스텀 필드</p>
+                    <span className="text-xs text-gray-500">(선택사항)</span>
+                  </div>
                   <button
                     type="button"
                     onClick={addCustomField}
-                    className="inline-flex items-center text-xs text-indigo-600 hover:text-indigo-700"
+                    className="inline-flex items-center px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
                   >
                     <PlusIcon className="h-4 w-4 mr-1" />
                     필드 추가
@@ -465,15 +495,25 @@ export default function SheetSyncSettings({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400 text-center py-2">
+                  <p className="text-xs text-gray-400 text-center py-3">
                     시트에 다른 열이 있다면 &quot;필드 추가&quot;를 클릭하세요
                   </p>
                 )}
               </div>
 
-              <p className="text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-                💡 시트의 첫 번째 행(헤더)에 있는 열 이름과 정확히 일치해야 합니다
-              </p>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 mt-4">
+                <div className="flex items-start gap-2">
+                  <span className="text-lg">💡</span>
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-amber-900 mb-1">매핑 가이드</p>
+                    <ul className="text-xs text-amber-800 space-y-0.5">
+                      <li>• 시트의 <strong>첫 번째 행(헤더)</strong>에 있는 열 이름과 정확히 일치해야 합니다</li>
+                      <li>• 대소문자와 띄어쓰기까지 정확하게 입력해주세요</li>
+                      <li>• 예: 시트에 &quot;이름&quot;이라고 적혀있다면 정확히 &quot;이름&quot;으로 입력</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -36,13 +36,6 @@ export default async function SheetSyncPage() {
     )
   }
 
-  // 랜딩페이지 목록 가져오기
-  const { data: landingPages } = await supabase
-    .from('landing_pages')
-    .select('id, title')
-    .eq('company_id', userProfile.company_id)
-    .order('title')
-
   return (
     <div className="px-4 space-y-6">
       {/* Header */}
@@ -73,7 +66,7 @@ export default async function SheetSyncPage() {
       <div className="bg-white shadow rounded-xl p-6">
         <SheetSyncSettings
           companyId={userProfile.company_id}
-          landingPages={landingPages || []}
+          landingPages={[]}
         />
       </div>
     </div>
