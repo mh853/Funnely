@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import {
   fetchSheetData,
+  getSheetNames,
   parseSheetToLeads,
   ColumnMapping,
   DEFAULT_META_MAPPING,
@@ -39,11 +40,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 먼저 사용 가능한 시트 목록 확인
+    let availableSheets: string[] = []
+    try {
+      availableSheets = await getSheetNames(spreadsheetId)
+    } catch (error: any) {
+      console.error('Failed to get sheet names:', error)
+      return NextResponse.json(
+        {
+          error: '스프레드시트 접근 실패',
+          details: error.message,
+          hint: '스프레드시트 ID가 올바른지, 서비스 계정이 해당 시트에 대한 읽기 권한이 있는지 확인하세요.',
+        },
+        { status: 403 }
+      )
+    }
+
+    // 요청한 시트 이름이 존재하는지 확인
+    if (!availableSheets.includes(sheetName)) {
+      return NextResponse.json(
+        {
+          error: `시트 '${sheetName}'을(를) 찾을 수 없습니다`,
+          availableSheets,
+          hint: '위의 사용 가능한 시트 이름 중 하나를 선택하세요.',
+        },
+        { status: 404 }
+      )
+    }
+
     // 시트 데이터 가져오기
     // 시트 이름에 공백이나 특수문자가 있으면 작은따옴표로 감싸야 함
-    const sanitizedSheetName = sheetName.includes(' ') || sheetName.includes("'")
-      ? `'${sheetName.replace(/'/g, "''")}'`
-      : sheetName
+    const sanitizedSheetName =
+      sheetName.includes(' ') || sheetName.includes("'")
+        ? `'${sheetName.replace(/'/g, "''")}'`
+        : sheetName
     const range = `${sanitizedSheetName}!A:Z`
     const rows = await fetchSheetData(spreadsheetId, range)
 

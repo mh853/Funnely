@@ -17,6 +17,20 @@ export async function getGoogleSheetsClient() {
   return sheets
 }
 
+// 시트 메타데이터 가져오기 (시트 이름 목록)
+export async function getSheetNames(spreadsheetId: string): Promise<string[]> {
+  const sheets = await getGoogleSheetsClient()
+
+  const response = await sheets.spreadsheets.get({
+    spreadsheetId,
+    fields: 'sheets.properties.title',
+  })
+
+  return (
+    response.data.sheets?.map((sheet) => sheet.properties?.title || '') || []
+  )
+}
+
 // 시트 데이터 가져오기
 export async function fetchSheetData(spreadsheetId: string, range: string) {
   const sheets = await getGoogleSheetsClient()
