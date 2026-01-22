@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { ChevronLeftIcon, ChevronRightIcon, ChartBarIcon } from '@heroicons/react/24/outline'
+import { ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
 interface TrafficRow {
   date: string
@@ -111,6 +111,298 @@ export default function AnalyticsClient({
     return `${((conversions / traffic) * 100).toFixed(1)}%`
   }
 
+  // 날짜 형식 변환 함수 (DB리포트와 동일)
+  const formatDate = (dateStr: string): string => {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      return dateStr
+    }
+    return dateStr
+  }
+
+  // CSV 이스케이프 함수 (DB리포트와 동일)
+  const escapeCSV = (value: any): string => {
+    const strValue = String(value)
+    if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
+      return `"${strValue.replace(/"/g, '""')}"`
+    }
+    return strValue
+  }
+
+  // 트래픽 유입 다운로드
+  const handleExportTraffic = () => {
+    const headers = ['날짜', '합계', 'PC', 'PC(%)', 'MOBILE', 'MOBILE(%)', 'TABLET', 'TABLET(%)']
+
+    const rows = sortedTrafficRows.map(row => [
+      formatDate(row.date),
+      row.total,
+      row.pc,
+      row.total > 0 ? ((row.pc / row.total) * 100).toFixed(1) : '0.0',
+      row.mobile,
+      row.total > 0 ? ((row.mobile / row.total) * 100).toFixed(1) : '0.0',
+      row.tablet,
+      row.total > 0 ? ((row.tablet / row.total) * 100).toFixed(1) : '0.0',
+    ])
+
+    rows.push([
+      '합계',
+      trafficTotals.total,
+      trafficTotals.pc,
+      trafficTotals.total > 0 ? ((trafficTotals.pc / trafficTotals.total) * 100).toFixed(1) : '0.0',
+      trafficTotals.mobile,
+      trafficTotals.total > 0 ? ((trafficTotals.mobile / trafficTotals.total) * 100).toFixed(1) : '0.0',
+      trafficTotals.tablet,
+      trafficTotals.total > 0 ? ((trafficTotals.tablet / trafficTotals.total) * 100).toFixed(1) : '0.0',
+    ])
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(r => r.map(escapeCSV).join(','))
+      ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `traffic_${selectedYear}년${selectedMonth}월.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // DB 전환수 다운로드
+  const handleExportConversion = () => {
+    const headers = ['날짜', '합계', '전환율(%)', 'PC', 'PC전환율(%)', 'MOBILE', 'MOBILE전환율(%)', 'TABLET', 'TABLET전환율(%)']
+
+    const rows = sortedTrafficRows.map(trafficRow => {
+      const conversion = conversionMap.get(trafficRow.date) || { total: 0, pc: 0, mobile: 0, tablet: 0 }
+      return [
+        formatDate(trafficRow.date),
+        conversion.total,
+        trafficRow.total > 0 ? ((conversion.total / trafficRow.total) * 100).toFixed(1) : '0.0',
+        conversion.pc,
+        trafficRow.pc > 0 ? ((conversion.pc / trafficRow.pc) * 100).toFixed(1) : '0.0',
+        conversion.mobile,
+        trafficRow.mobile > 0 ? ((conversion.mobile / trafficRow.mobile) * 100).toFixed(1) : '0.0',
+        conversion.tablet,
+        trafficRow.tablet > 0 ? ((conversion.tablet / trafficRow.tablet) * 100).toFixed(1) : '0.0',
+      ]
+    })
+
+    rows.push([
+      '합계',
+      conversionTotals.total,
+      trafficTotals.total > 0 ? ((conversionTotals.total / trafficTotals.total) * 100).toFixed(1) : '0.0',
+      conversionTotals.pc,
+      trafficTotals.pc > 0 ? ((conversionTotals.pc / trafficTotals.pc) * 100).toFixed(1) : '0.0',
+      conversionTotals.mobile,
+      trafficTotals.mobile > 0 ? ((conversionTotals.mobile / trafficTotals.mobile) * 100).toFixed(1) : '0.0',
+      conversionTotals.tablet,
+      trafficTotals.tablet > 0 ? ((conversionTotals.tablet / trafficTotals.tablet) * 100).toFixed(1) : '0.0',
+    ])
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(r => r.map(escapeCSV).join(','))
+      ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `conversion_${selectedYear}년${selectedMonth}월.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // 랜딩페이지 분석 다운로드
+  const handleExportLandingPages = () => {
+    const headers = [
+      '생성날짜',
+      '랜딩페이지이름',
+      '트래픽합계',
+      'PC',
+      'PC(%)',
+      'MOBILE',
+      'MOBILE(%)',
+      'TABLET',
+      'TABLET(%)',
+      '전환수',
+      '전환율(%)',
+      'PC전환',
+      'PC(%)',
+      'MOBILE전환',
+      'MOBILE(%)',
+      'TABLET전환',
+      'TABLET(%)'
+    ]
+
+    const rows = landingPageRows.map(lp => {
+      const trafficTotal = lp.traffic.total
+      const trafficPcPct = trafficTotal > 0 ? ((lp.traffic.pc / trafficTotal) * 100).toFixed(1) : '0.0'
+      const trafficMobilePct = trafficTotal > 0 ? ((lp.traffic.mobile / trafficTotal) * 100).toFixed(1) : '0.0'
+      const trafficTabletPct = trafficTotal > 0 ? ((lp.traffic.tablet / trafficTotal) * 100).toFixed(1) : '0.0'
+
+      const conversionTotal = lp.conversion.total
+      const conversionPcPct = conversionTotal > 0 ? ((lp.conversion.pc / conversionTotal) * 100).toFixed(1) : '0.0'
+      const conversionMobilePct = conversionTotal > 0 ? ((lp.conversion.mobile / conversionTotal) * 100).toFixed(1) : '0.0'
+      const conversionTabletPct = conversionTotal > 0 ? ((lp.conversion.tablet / conversionTotal) * 100).toFixed(1) : '0.0'
+
+      const conversionRate = trafficTotal > 0 ? ((conversionTotal / trafficTotal) * 100).toFixed(1) : '0.0'
+
+      return [
+        new Date(lp.createdAt).toISOString().split('T')[0],
+        lp.title,
+        trafficTotal,
+        lp.traffic.pc,
+        trafficPcPct,
+        lp.traffic.mobile,
+        trafficMobilePct,
+        lp.traffic.tablet,
+        trafficTabletPct,
+        conversionTotal,
+        conversionRate,
+        lp.conversion.pc,
+        conversionPcPct,
+        lp.conversion.mobile,
+        conversionMobilePct,
+        lp.conversion.tablet,
+        conversionTabletPct,
+      ]
+    })
+
+    // 합계 행 추가
+    if (landingPageRows.length > 0) {
+      const totalTraffic = landingPageRows.reduce((sum, lp) => sum + lp.traffic.total, 0)
+      const totalTrafficPc = landingPageRows.reduce((sum, lp) => sum + lp.traffic.pc, 0)
+      const totalTrafficMobile = landingPageRows.reduce((sum, lp) => sum + lp.traffic.mobile, 0)
+      const totalTrafficTablet = landingPageRows.reduce((sum, lp) => sum + lp.traffic.tablet, 0)
+
+      const totalConversion = landingPageRows.reduce((sum, lp) => sum + lp.conversion.total, 0)
+      const totalConversionPc = landingPageRows.reduce((sum, lp) => sum + lp.conversion.pc, 0)
+      const totalConversionMobile = landingPageRows.reduce((sum, lp) => sum + lp.conversion.mobile, 0)
+      const totalConversionTablet = landingPageRows.reduce((sum, lp) => sum + lp.conversion.tablet, 0)
+
+      const totalTrafficPcPct = totalTraffic > 0 ? ((totalTrafficPc / totalTraffic) * 100).toFixed(1) : '0.0'
+      const totalTrafficMobilePct = totalTraffic > 0 ? ((totalTrafficMobile / totalTraffic) * 100).toFixed(1) : '0.0'
+      const totalTrafficTabletPct = totalTraffic > 0 ? ((totalTrafficTablet / totalTraffic) * 100).toFixed(1) : '0.0'
+
+      const totalConversionPcPct = totalConversion > 0 ? ((totalConversionPc / totalConversion) * 100).toFixed(1) : '0.0'
+      const totalConversionMobilePct = totalConversion > 0 ? ((totalConversionMobile / totalConversion) * 100).toFixed(1) : '0.0'
+      const totalConversionTabletPct = totalConversion > 0 ? ((totalConversionTablet / totalConversion) * 100).toFixed(1) : '0.0'
+
+      const totalConversionRate = totalTraffic > 0 ? ((totalConversion / totalTraffic) * 100).toFixed(1) : '0.0'
+
+      rows.push([
+        '합계',
+        '',
+        totalTraffic,
+        totalTrafficPc,
+        totalTrafficPcPct,
+        totalTrafficMobile,
+        totalTrafficMobilePct,
+        totalTrafficTablet,
+        totalTrafficTabletPct,
+        totalConversion,
+        totalConversionRate,
+        totalConversionPc,
+        totalConversionPcPct,
+        totalConversionMobile,
+        totalConversionMobilePct,
+        totalConversionTablet,
+        totalConversionTabletPct,
+      ])
+    }
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(r => r.map(escapeCSV).join(','))
+      ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `landing_pages_${selectedYear}년${selectedMonth}월.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // UTM 분석 다운로드
+  const handleExportUtm = () => {
+    const headers = ['UTM구분', '항목', '카운트', '비율(%)']
+    const rows: any[][] = []
+
+    // UTM Source
+    const sourceTotal = Object.values(utmData.source).reduce((sum, count) => sum + count, 0)
+    Object.entries(utmData.source)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .forEach(([key, count]) => {
+        const percentage = sourceTotal > 0 ? ((count / sourceTotal) * 100).toFixed(1) : '0.0'
+        rows.push(['Source', key, count, percentage])
+      })
+
+    // UTM Medium
+    const mediumTotal = Object.values(utmData.medium).reduce((sum, count) => sum + count, 0)
+    Object.entries(utmData.medium)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .forEach(([key, count]) => {
+        const percentage = mediumTotal > 0 ? ((count / mediumTotal) * 100).toFixed(1) : '0.0'
+        rows.push(['Medium', key, count, percentage])
+      })
+
+    // UTM Campaign
+    const campaignTotal = Object.values(utmData.campaign).reduce((sum, count) => sum + count, 0)
+    Object.entries(utmData.campaign)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .forEach(([key, count]) => {
+        const percentage = campaignTotal > 0 ? ((count / campaignTotal) * 100).toFixed(1) : '0.0'
+        rows.push(['Campaign', key, count, percentage])
+      })
+
+    // UTM Content
+    const contentTotal = Object.values(utmData.content).reduce((sum, count) => sum + count, 0)
+    Object.entries(utmData.content)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .forEach(([key, count]) => {
+        const percentage = contentTotal > 0 ? ((count / contentTotal) * 100).toFixed(1) : '0.0'
+        rows.push(['Content', key, count, percentage])
+      })
+
+    // UTM Term
+    const termTotal = Object.values(utmData.term).reduce((sum, count) => sum + count, 0)
+    Object.entries(utmData.term)
+      .sort(([, a], [, b]) => b - a)
+      .slice(0, 10)
+      .forEach(([key, count]) => {
+        const percentage = termTotal > 0 ? ((count / termTotal) * 100).toFixed(1) : '0.0'
+        rows.push(['Term', key, count, percentage])
+      })
+
+    const csvContent =
+      '\uFEFF' +
+      [
+        headers.map(escapeCSV).join(','),
+        ...rows.map(r => r.map(escapeCSV).join(','))
+      ].join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `utm_analysis_${selectedYear}년${selectedMonth}월.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   // Merge traffic and conversion data by date for easier lookup
   const conversionMap = new Map(conversionRows.map(row => [row.date, row]))
 
@@ -191,10 +483,17 @@ export default function AnalyticsClient({
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Traffic Table (Left) */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-yellow-50">
+          <div className="p-4 border-b border-gray-100 bg-yellow-50 flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-900">
               트래픽 유입 (페이지뷰)
             </h2>
+            <button
+              onClick={handleExportTraffic}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              엑셀 다운로드
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -288,13 +587,20 @@ export default function AnalyticsClient({
 
         {/* Conversion Table (Right) */}
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="p-4 border-b border-gray-100 bg-yellow-50">
+          <div className="p-4 border-b border-gray-100 bg-yellow-50 flex items-center justify-between">
             <h2 className="text-base font-bold text-gray-900">
               DB 전환수 (전환율)
               <span className="ml-2 text-xs font-normal text-gray-500">
                 트래픽 유입 대비 DB 전환된 비율
               </span>
             </h2>
+            <button
+              onClick={handleExportConversion}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              <ArrowDownTrayIcon className="h-4 w-4" />
+              엑셀 다운로드
+            </button>
           </div>
 
           <div className="overflow-x-auto">
@@ -422,10 +728,17 @@ export default function AnalyticsClient({
 
       {/* Landing Page Analysis Section */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-yellow-50">
+        <div className="p-4 border-b border-gray-100 bg-yellow-50 flex items-center justify-between">
           <h2 className="text-base font-bold text-gray-900">
             랜딩페이지 분석
           </h2>
+          <button
+            onClick={handleExportLandingPages}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            엑셀 다운로드
+          </button>
         </div>
 
         <div className="overflow-x-auto">
@@ -484,12 +797,13 @@ export default function AnalyticsClient({
                 return (
                   <tr key={lp.id}>
                     <td className="px-3 py-2 text-sm text-center text-gray-900">
-                      {new Date(lp.createdAt).toLocaleDateString('ko-KR')}
+                      {new Date(lp.createdAt).toISOString().split('T')[0]}
                     </td>
-                    <td className="px-3 py-2 text-sm text-left">
+                    <td className="px-3 py-2 text-sm text-left max-w-xs">
                       <a
                         href={`/dashboard/landing-pages/${lp.id}`}
-                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                        className="text-blue-600 hover:text-blue-800 hover:underline block truncate"
+                        title={lp.title}
                       >
                         {lp.title}
                       </a>
@@ -629,10 +943,17 @@ export default function AnalyticsClient({
 
       {/* UTM Analysis Section */}
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="p-4 border-b border-gray-100 bg-yellow-50">
+        <div className="p-4 border-b border-gray-100 bg-yellow-50 flex items-center justify-between">
           <h2 className="text-base font-bold text-gray-900">
             UTM 분석
           </h2>
+          <button
+            onClick={handleExportUtm}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-white border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+          >
+            <ArrowDownTrayIcon className="h-4 w-4" />
+            엑셀 다운로드
+          </button>
         </div>
 
         <div className="p-6">
