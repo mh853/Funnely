@@ -33,6 +33,16 @@ const calculateTimeRemaining = (deadline: string): string => {
   return `D-${days}일 ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
+// Check if timer has expired
+const isTimerExpired = (deadline: string | null): boolean => {
+  if (!deadline) return false
+
+  const now = new Date().getTime()
+  const target = new Date(deadline).getTime()
+
+  return now > target
+}
+
 interface LandingPageNewFormProps {
   companyId: string
   userId: string
@@ -292,6 +302,43 @@ export default function LandingPageNewForm({
 
     return () => clearInterval(interval)
   }, [timerEnabled, timerDeadline])
+
+  // Auto-disable landing page when timer expires
+  useEffect(() => {
+    // Only check if timer is enabled, has a deadline, and page is currently active
+    if (!timerEnabled || !timerDeadline || !isActive || !landingPage?.id) return
+
+    // Check if timer has expired
+    if (isTimerExpired(timerDeadline)) {
+      // Auto-disable the landing page
+      const autoDisable = async () => {
+        try {
+          const supabase = createClient()
+
+          const { error } = await supabase
+            .from('landing_pages')
+            .update({
+              is_active: false,
+              status: 'draft'
+            })
+            .eq('id', landingPage.id)
+
+          if (error) {
+            console.error('Failed to auto-disable landing page:', error)
+            setError('타이머 마감으로 인한 자동 비활성화 중 오류가 발생했습니다.')
+          } else {
+            // Update local state
+            setIsActive(false)
+            setError('타이머가 마감되어 랜딩페이지가 자동으로 비활성화되었습니다.')
+          }
+        } catch (err) {
+          console.error('Unexpected error during auto-disable:', err)
+        }
+      }
+
+      autoDisable()
+    }
+  }, [landingPage?.id, timerEnabled, timerDeadline, isActive])
 
   // Load privacy policy content
   useEffect(() => {
@@ -1447,7 +1494,14 @@ export default function LandingPageNewForm({
               </span>
             </div>
             <button
-              onClick={() => setIsActive(!isActive)}
+              onClick={() => {
+                // Prevent activation if timer is expired
+                if (!isActive && timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
+                  setError('타이머가 마감되었습니다. 먼저 타이머 설정을 변경해주세요.')
+                  return
+                }
+                setIsActive(!isActive)
+              }}
               className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
                 isActive ? 'bg-green-500' : 'bg-gray-300'
               }`}
@@ -2033,7 +2087,14 @@ export default function LandingPageNewForm({
                 <input
                   type="radio"
                   checked={timerEnabled}
-                  onChange={() => setTimerEnabled(true)}
+                  onChange={() => {
+                    // Warn if trying to enable expired timer
+                    if (!timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
+                      setError('마감된 날짜입니다. 새로운 마감 날짜를 설정해주세요.')
+                      return
+                    }
+                    setTimerEnabled(true)
+                  }}
                   className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-600"
                 />
                 <span className="font-semibold text-gray-900 text-sm sm:text-base">사용함</span>
@@ -2066,6 +2127,21 @@ export default function LandingPageNewForm({
             <div className="mb-4">
               <p className="text-xs text-red-600 font-medium">
                 ⚠️ 설정하신 마감 날짜가 지나면 신청 접수가 비활성됩니다. 반드시 마감 날짜를 확인하시기 바랍니다.
+              </p>
+            </div>
+          )}
+
+          {/* 타이머 만료 알림 */}
+          {timerEnabled && timerDeadline && isTimerExpired(timerDeadline) && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-center gap-2 text-red-600">
+                <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span className="text-sm font-semibold">타이머가 마감되었습니다</span>
+              </div>
+              <p className="text-xs text-red-500 mt-1 ml-7">
+                랜딩페이지가 자동으로 비활성화되었습니다. 타이머를 연장하시려면 새로운 마감 날짜를 설정해주세요.
               </p>
             </div>
           )}
