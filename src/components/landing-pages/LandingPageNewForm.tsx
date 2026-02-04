@@ -1522,6 +1522,19 @@ export default function LandingPageNewForm({
           <h2 className="text-lg sm:text-xl font-bold text-gray-900 mb-4 sm:mb-6">
             랜딩페이지 주소
           </h2>
+
+          {/* Preview URL at top */}
+          {slug && companyShortId && (
+            <div className="mb-4 pb-4 border-b border-gray-200">
+              <p className="text-xs text-gray-500 mb-1">최종 랜딩페이지 URL</p>
+              <div className="text-base font-medium break-all">
+                <span className="text-gray-600">https://</span>
+                <span className="text-indigo-600 font-bold">{slug}</span>
+                <span className="text-gray-600">.funnely.co.kr/landing</span>
+              </div>
+            </div>
+          )}
+
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="text-sm text-gray-600 flex-shrink-0">
