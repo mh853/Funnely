@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PencilIcon, TrashIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
@@ -29,13 +29,19 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isActive, setIsActive] = useState(page.is_active)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [landingPageUrl, setLandingPageUrl] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
   const formattedDate = formatDate(page.created_at)
-  const landingPageUrl = companyShortId
-    ? generateLandingPageURL(companyShortId, page.slug)
-    : `https://funnely.co.kr/landing/${page.slug}`
+
+  // Generate URL on client-side to detect correct port
+  useEffect(() => {
+    const url = companyShortId
+      ? generateLandingPageURL(companyShortId, page.slug)
+      : `https://funnely.co.kr/landing/${page.slug}`
+    setLandingPageUrl(url)
+  }, [companyShortId, page.slug])
 
   const handleToggleStatus = async () => {
     if (isUpdating) return

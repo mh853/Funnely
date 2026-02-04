@@ -1,12 +1,106 @@
 /**
- * Middleware - Session Management
- * Automatically refreshes Supabase auth sessions
+ * Middleware - Subdomain Routing & Session Management
+ * 1. Handles subdomain-based landing page routing
+ * 2. Manages Supabase auth sessions
  */
 
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const hostname = request.headers.get('host') || ''
+  const url = request.nextUrl.clone()
+
+  // ============================================================
+  // PHASE 1: Subdomain Routing (Public Landing Pages)
+  // ============================================================
+
+  // Development: localhost handling with subdomain support
+  if (hostname.includes('localhost') || hostname.includes('127.0.0.1')) {
+    const parts = hostname.split('.')
+
+    // Check for subdomain in localhost (e.g., q81d1c.localhost:3000)
+    if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      const companyShortId = parts[0]
+
+      // Rewrite /landing/* → /{companyShortId}/landing/*
+      if (url.pathname.startsWith('/landing/')) {
+        url.pathname = `/${companyShortId}${url.pathname}`
+        return NextResponse.rewrite(url)
+      }
+
+      // Rewrite /completed/* → /{companyShortId}/landing/completed/*
+      if (url.pathname.startsWith('/completed/')) {
+        url.pathname = url.pathname.replace('/completed/', `/${companyShortId}/landing/completed/`)
+        return NextResponse.rewrite(url)
+      }
+    }
+  }
+
+  // Production: subdomain handling
+  const parts = hostname.split('.')
+
+  // Legacy format migration: /landing/{slug}?ref={shortId} → {shortId}.funnely.co.kr/landing/{slug}
+  if (url.pathname.startsWith('/landing/') && url.searchParams.has('ref')) {
+    const shortId = url.searchParams.get('ref')!
+    const domain = parts.slice(-2).join('.') // funnely.co.kr
+
+    // Build new subdomain URL
+    url.hostname = `${shortId}.${domain}`
+    url.searchParams.delete('ref')
+
+    return NextResponse.redirect(url, 301) // Permanent redirect
+  }
+
+  // Legacy format migration: /completed/{slug}?ref={shortId}
+  if (url.pathname.startsWith('/completed/') && url.searchParams.has('ref')) {
+    const shortId = url.searchParams.get('ref')!
+    const domain = parts.slice(-2).join('.') // funnely.co.kr
+
+    // Build new subdomain URL with /landing/completed/ prefix
+    url.hostname = `${shortId}.${domain}`
+    url.pathname = url.pathname.replace('/completed/', '/landing/completed/')
+    url.searchParams.delete('ref')
+
+    return NextResponse.redirect(url, 301) // Permanent redirect
+  }
+
+  // Main domain (funnely.co.kr or www.funnely.co.kr) - skip subdomain processing
+  if (parts.length === 2 || (parts.length === 3 && parts[0] === 'www')) {
+    // Continue to authentication check below
+  }
+  // Subdomain exists (q81d1c.funnely.co.kr)
+  else if (parts.length === 3 && parts[0] !== 'www') {
+    const companyShortId = parts[0]
+
+    // Rewrite /landing/* → /{companyShortId}/landing/*
+    if (url.pathname.startsWith('/landing/')) {
+      url.pathname = `/${companyShortId}${url.pathname}`
+      return NextResponse.rewrite(url)
+    }
+
+    // Rewrite /completed/* → /{companyShortId}/landing/completed/*
+    if (url.pathname.startsWith('/completed/')) {
+      url.pathname = url.pathname.replace('/completed/', `/${companyShortId}/landing/completed/`)
+      return NextResponse.rewrite(url)
+    }
+  }
+
+  // ============================================================
+  // PHASE 2: Authentication Check (Protected Routes Only)
+  // ============================================================
+
+  // Skip authentication for public landing pages and completion pages
+  const pathname = request.nextUrl.pathname
+  if (
+    pathname.startsWith('/landing/') ||
+    pathname.startsWith('/completed/') ||
+    pathname.match(/^\/[^/]+\/landing\//) ||
+    pathname.match(/^\/[^/]+\/completed\//)
+  ) {
+    return NextResponse.next()
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,

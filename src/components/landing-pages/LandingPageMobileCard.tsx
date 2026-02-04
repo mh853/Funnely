@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { PencilIcon, TrashIcon, EyeIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline'
 import DeleteLandingPageModal from './DeleteLandingPageModal'
@@ -25,11 +25,17 @@ interface LandingPageMobileCardProps {
 export default function LandingPageMobileCard({ page, companyShortId }: LandingPageMobileCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isExpanded, setIsExpanded] = useState(false)
+  const [landingPageUrl, setLandingPageUrl] = useState('')
 
   const formattedDate = formatDate(page.created_at)
-  const landingPageUrl = companyShortId
-    ? generateLandingPageURL(companyShortId, page.slug)
-    : `https://funnely.co.kr/landing/${page.slug}`
+
+  // Generate URL on client-side to detect correct port
+  useEffect(() => {
+    const url = companyShortId
+      ? generateLandingPageURL(companyShortId, page.slug)
+      : `https://funnely.co.kr/landing/${page.slug}`
+    setLandingPageUrl(url)
+  }, [companyShortId, page.slug])
 
   return (
     <>

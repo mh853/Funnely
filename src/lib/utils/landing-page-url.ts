@@ -9,9 +9,24 @@
  * Get base domain from environment or default
  */
 export function getBaseDomain(): string {
-  // For development
+  // For development - use window.location if available (client-side)
   if (process.env.NODE_ENV === 'development') {
-    return 'localhost:3000'
+    // Client-side: detect port from current URL
+    if (typeof window !== 'undefined') {
+      const host = window.location.host
+      const parts = host.split('.')
+
+      // Check if it's a subdomain (e.g., q81d1c.localhost:3001)
+      if (parts.length >= 2 && parts[0] !== 'localhost') {
+        // Remove subdomain, keep the rest (localhost:3001)
+        return parts.slice(1).join('.')
+      }
+
+      // No subdomain (localhost:3001)
+      return host
+    }
+    // Server-side: use environment variable or default
+    return process.env.NEXT_PUBLIC_DEV_DOMAIN || 'localhost:3000'
   }
 
   // For production - extract from NEXT_PUBLIC_DOMAIN or default
