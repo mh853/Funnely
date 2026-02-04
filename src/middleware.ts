@@ -23,15 +23,15 @@ export async function middleware(request: NextRequest) {
     if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== '127') {
       const companyShortId = parts[0]
 
-      // Rewrite /landing/* → /{companyShortId}/landing/*
-      if (url.pathname.startsWith('/landing/')) {
+      // Rewrite /landing/{slug}/completed → /{companyShortId}/landing/{slug}/completed
+      if (url.pathname.match(/^\/landing\/[^/]+\/completed$/)) {
         url.pathname = `/${companyShortId}${url.pathname}`
         return NextResponse.rewrite(url)
       }
 
-      // Rewrite /completed/* → /{companyShortId}/landing/completed/*
-      if (url.pathname.startsWith('/completed/')) {
-        url.pathname = url.pathname.replace('/completed/', `/${companyShortId}/landing/completed/`)
+      // Rewrite /landing/* → /{companyShortId}/landing/*
+      if (url.pathname.startsWith('/landing/')) {
+        url.pathname = `/${companyShortId}${url.pathname}`
         return NextResponse.rewrite(url)
       }
     }
@@ -52,14 +52,15 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url, 301) // Permanent redirect
   }
 
-  // Legacy format migration: /completed/{slug}?ref={shortId}
-  if (url.pathname.startsWith('/completed/') && url.searchParams.has('ref')) {
+  // Legacy format migration: /landing/completed/{slug}?ref={shortId} → {shortId}.funnely.co.kr/landing/{slug}/completed
+  if (url.pathname.match(/^\/landing\/completed\/[^/]+$/) && url.searchParams.has('ref')) {
     const shortId = url.searchParams.get('ref')!
     const domain = parts.slice(-2).join('.') // funnely.co.kr
+    const slug = url.pathname.split('/')[3] // Extract slug from /landing/completed/{slug}
 
-    // Build new subdomain URL with /landing/completed/ prefix
+    // Build new subdomain URL with new format
     url.hostname = `${shortId}.${domain}`
-    url.pathname = url.pathname.replace('/completed/', '/landing/completed/')
+    url.pathname = `/landing/${slug}/completed`
     url.searchParams.delete('ref')
 
     return NextResponse.redirect(url, 301) // Permanent redirect
@@ -73,15 +74,15 @@ export async function middleware(request: NextRequest) {
   else if (parts.length === 3 && parts[0] !== 'www') {
     const companyShortId = parts[0]
 
-    // Rewrite /landing/* → /{companyShortId}/landing/*
-    if (url.pathname.startsWith('/landing/')) {
+    // Rewrite /landing/{slug}/completed → /{companyShortId}/landing/{slug}/completed
+    if (url.pathname.match(/^\/landing\/[^/]+\/completed$/)) {
       url.pathname = `/${companyShortId}${url.pathname}`
       return NextResponse.rewrite(url)
     }
 
-    // Rewrite /completed/* → /{companyShortId}/landing/completed/*
-    if (url.pathname.startsWith('/completed/')) {
-      url.pathname = url.pathname.replace('/completed/', `/${companyShortId}/landing/completed/`)
+    // Rewrite /landing/* → /{companyShortId}/landing/*
+    if (url.pathname.startsWith('/landing/')) {
+      url.pathname = `/${companyShortId}${url.pathname}`
       return NextResponse.rewrite(url)
     }
   }
@@ -94,9 +95,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname
   if (
     pathname.startsWith('/landing/') ||
-    pathname.startsWith('/completed/') ||
-    pathname.match(/^\/[^/]+\/landing\//) ||
-    pathname.match(/^\/[^/]+\/completed\//)
+    pathname.match(/^\/[^/]+\/landing\//)
   ) {
     return NextResponse.next()
   }

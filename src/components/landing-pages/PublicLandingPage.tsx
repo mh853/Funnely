@@ -226,10 +226,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   useEffect(() => {
     // nameInput 또는 phoneInput이 입력되면 완료 페이지 미리 로딩
     if (nameInput.length > 0 || phoneInput.length > 0) {
-      const refQuery = refParam ? `?ref=${refParam}` : ''
-      router.prefetch(`/landing/completed/${landingPage.slug}${refQuery}`)
+      router.prefetch(`/landing/${landingPage.slug}/completed`)
     }
-  }, [nameInput, phoneInput, landingPage.slug, refParam, router])
+  }, [nameInput, phoneInput, landingPage.slug, router])
 
   // 폼 제출 핸들러
   const handleFormSubmit = async () => {
@@ -316,8 +315,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }
 
       // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
-      const refQuery = refParam ? `?ref=${refParam}` : ''
-      router.replace(`/landing/completed/${landingPage.slug}${refQuery}`)
+      router.replace(`/landing/${landingPage.slug}/completed`)
     } catch (err: any) {
       setSubmitError(err.message)
     } finally {

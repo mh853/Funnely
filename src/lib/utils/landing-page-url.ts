@@ -68,7 +68,7 @@ export function generateLandingPageURL(
  *
  * @example
  * generateCompletionPageURL('q81d1c', 'dental-promo')
- * // Returns: 'https://q81d1c.funnely.co.kr/landing/completed/dental-promo'
+ * // Returns: 'https://q81d1c.funnely.co.kr/landing/dental-promo/completed'
  */
 export function generateCompletionPageURL(
   companyShortId: string,
@@ -79,7 +79,7 @@ export function generateCompletionPageURL(
   const defaultProtocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const finalProtocol = protocol || defaultProtocol
 
-  return `${finalProtocol}://${companyShortId}.${baseDomain}/landing/completed/${slug}`
+  return `${finalProtocol}://${companyShortId}.${baseDomain}/landing/${slug}/completed`
 }
 
 /**

@@ -74,7 +74,7 @@ export default function LeadForm({
       }
 
       // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
-      router.replace(`/landing/completed/${slug}`)
+      router.replace(`/landing/${slug}/completed`)
     } catch (err: any) {
       setError(err.message)
     } finally {

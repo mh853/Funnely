@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { notFound } from 'next/navigation'
 import { Metadata } from 'next'
-import CloseWindowButton from '@/app/landing/completed/[slug]/CloseWindowButton'
+import CloseWindowButton from './CloseWindowButton'
 import CompletionTracker from '@/components/tracking/CompletionTracker'
 
 interface Props {
