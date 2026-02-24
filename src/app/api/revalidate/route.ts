@@ -1,18 +1,11 @@
 import { revalidatePath } from 'next/cache'
 import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { slug, secret } = body
-
-    // Validate secret token for security
-    if (secret !== process.env.REVALIDATION_SECRET) {
-      return NextResponse.json(
-        { error: 'Invalid secret token' },
-        { status: 401 }
-      )
-    }
 
     if (!slug) {
       return NextResponse.json(
@@ -21,8 +14,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Revalidate the specific landing page
+    // 두 가지 인증 방식 허용:
+    // 1. Secret 토큰 (외부/서버 사이드 호출)
+    // 2. Supabase 세션 (대시보드 내부 호출 - secret 불필요)
+    const isSecretValid = secret && secret === process.env.REVALIDATION_SECRET
+
+    if (!isSecretValid) {
+      const supabase = await createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (!user) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+    }
+
     revalidatePath(`/landing/${slug}`)
+    revalidatePath(`/landing/${slug}/completed`)
 
     return NextResponse.json({
       success: true,

@@ -588,7 +588,7 @@ async function checkSubscriptionExpiry(supabase: any) {
         title: `구독 만료 예정 알림`,
         message: `${(sub.companies as any)?.name || '회사'}의 구독이 ${daysRemaining}일 후 만료됩니다. 서비스 중단을 방지하려면 결제를 진행해주세요.`,
         type: 'subscription_expiring_soon',
-        link: '/dashboard/subscription',
+        metadata: { subscription_id: sub.id },
       })
 
       if (notifError) {
@@ -674,7 +674,7 @@ async function checkSubscriptionExpiry(supabase: any) {
           title: `구독이 만료되었습니다`,
           message: `${(sub.companies as any)?.name || '회사'}의 구독이 만료되어 대시보드 접근이 제한됩니다. 서비스를 계속 이용하려면 플랜을 선택해주세요.`,
           type: 'subscription_expired',
-          link: '/dashboard/subscription',
+          metadata: { subscription_id: sub.id },
         })
 
         await supabase.from('notification_sent_logs').insert({
@@ -864,10 +864,10 @@ async function disableExpiredTimers(supabase: any) {
 
   const now = new Date().toISOString()
 
-  // Find expired landing pages
+  // Find expired landing pages (include company_id for notifications)
   const { data: expiredPages, error: selectError } = await supabase
     .from('landing_pages')
-    .select('id, title, timer_deadline')
+    .select('id, title, timer_deadline, company_id, slug')
     .eq('timer_enabled', true)
     .eq('timer_auto_update', false)
     .eq('is_active', true)
@@ -894,7 +894,7 @@ async function disableExpiredTimers(supabase: any) {
 
   const { error: updateError } = await supabase
     .from('landing_pages')
-    .update({ is_active: false })
+    .update({ is_active: false, status: 'draft' })
     .in('id', expiredIds)
 
   if (updateError) {
@@ -902,6 +902,32 @@ async function disableExpiredTimers(supabase: any) {
   }
 
   console.log(`[Timer Expiry] Disabled ${expiredPages.length} landing pages`)
+
+  // Send notifications for each disabled landing page
+  for (const page of expiredPages) {
+    try {
+      const deadlineStr = new Date(page.timer_deadline).toLocaleString('ko-KR', {
+        timeZone: 'Asia/Seoul',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+
+      await supabase.from('notifications').insert({
+        company_id: page.company_id,
+        title: '랜딩페이지 타이머 만료로 비활성화',
+        message: `"${page.title}" 랜딩페이지의 타이머가 ${deadlineStr}에 만료되어 자동으로 비활성화되었습니다. 다시 활성화하려면 새로운 마감 날짜를 설정해주세요.`,
+        type: 'landing_page_timer_expired',
+        metadata: { landing_page_id: page.id, slug: page.slug },
+      })
+
+      console.log(`[Timer Expiry] Notification sent for landing page: ${page.id} (${page.title})`)
+    } catch (notifError) {
+      console.error(`[Timer Expiry] Failed to create notification for page ${page.id}:`, notifError)
+    }
+  }
 
   return {
     checked: expiredPages.length,
