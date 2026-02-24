@@ -60,6 +60,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const [showPrivacyModal, setShowPrivacyModal] = useState(false)
   const [showMarketingModal, setShowMarketingModal] = useState(false)
   const [isExpired, setIsExpired] = useState(false)
+  const timerExpiredNotified = useRef(false)
 
   // 폼 데이터 상태 관리
   const [nameInput, setNameInput] = useState('')
@@ -122,7 +123,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     trackPageView()
   }, [landingPage.id])
 
-  // Check if timer is expired (client-side fallback)
+  // Check if timer is already expired on page load
   useEffect(() => {
     if (landingPage.timer_enabled &&
         landingPage.timer_deadline &&
@@ -133,13 +134,22 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
       if (now > deadline) {
         setIsExpired(true)
+        // Page was still served as active but timer has passed — notify server
+        if (!timerExpiredNotified.current) {
+          timerExpiredNotified.current = true
+          fetch('/api/landing-pages/timer-expired', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ landing_page_id: landingPage.id }),
+          }).catch(() => {})
+        }
       }
     }
-  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update])
+  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update, landingPage.id])
 
-  // Timer countdown calculation
+  // Timer countdown calculation + real-time expiry notification
   useEffect(() => {
-    if (!landingPage.timer_enabled || !landingPage.timer_deadline) return
+    if (!landingPage.timer_enabled || !landingPage.timer_deadline || landingPage.timer_auto_update) return
 
     const calculateTimeLeft = () => {
       const deadline = new Date(landingPage.timer_deadline!)
@@ -157,9 +167,27 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     }
 
     setTimeLeft(calculateTimeLeft())
-    const timer = setInterval(() => setTimeLeft(calculateTimeLeft()), 1000)
+    const timer = setInterval(() => {
+      const remaining = calculateTimeLeft()
+      setTimeLeft(remaining)
+
+      // Detect the moment timer hits zero and notify server once
+      const isNowExpired = remaining.days === 0 && remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0
+      if (isNowExpired && !timerExpiredNotified.current) {
+        timerExpiredNotified.current = true
+        setIsExpired(true)
+        // Notify server to disable the page and send dashboard notification
+        fetch('/api/landing-pages/timer-expired', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ landing_page_id: landingPage.id }),
+        }).catch(() => {
+          // Non-critical: cron job will catch it at next run
+        })
+      }
+    }, 1000)
     return () => clearInterval(timer)
-  }, [landingPage.timer_enabled, landingPage.timer_deadline])
+  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update, landingPage.id])
 
   // Fetch actual leads from Supabase with Realtime subscription
   useEffect(() => {
@@ -222,13 +250,21 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     return () => clearInterval(interval)
   }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, realtimeLeads.length])
 
-  // 완료 페이지 프리페칭 (사용자가 폼과 상호작용하기 시작하면 prefetch)
+  // 완료 페이지 URL 계산
+  // initialRef가 있는 경우: /{companyShortId}/landing/{slug}/completed (직접 경로 접근)
+  // initialRef가 없는 경우: /landing/{slug}/completed (서브도메인/레거시 접근)
+  //   - 서브도메인: 미들웨어가 /landing/* → /{shortId}/landing/*로 자동 rewrite
+  //   - 레거시 /landing/{slug}: 완료 페이지에서 /{shortId}/landing/{slug}/completed로 redirect
+  const completedUrl = initialRef
+    ? `/${initialRef}/landing/${landingPage.slug}/completed`
+    : `/landing/${landingPage.slug}/completed`
+
   useEffect(() => {
     // nameInput 또는 phoneInput이 입력되면 완료 페이지 미리 로딩
     if (nameInput.length > 0 || phoneInput.length > 0) {
-      router.prefetch(`/landing/${landingPage.slug}/completed`)
+      router.prefetch(completedUrl)
     }
-  }, [nameInput, phoneInput, landingPage.slug, router])
+  }, [nameInput, phoneInput, completedUrl, router])
 
   // 폼 제출 핸들러
   const handleFormSubmit = async () => {
@@ -314,11 +350,13 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         throw new Error(data.error?.message || '제출에 실패했습니다')
       }
 
-      // 신청 성공 시 완료 페이지로 리다이렉트 (replace로 뒤로가기 방지)
-      router.replace(`/landing/${landingPage.slug}/completed`)
+      // 신청 성공: 완료 페이지로 이동 (finally의 setIsSubmitting(false)가 실행되기 전에 이동)
+      // finally 블록의 React 상태 업데이트가 브라우저 네비게이션을 방해하지 않도록
+      // 즉시 반환하여 finally가 실행되지 않게 함
+      window.location.replace(completedUrl)
+      return
     } catch (err: any) {
       setSubmitError(err.message)
-    } finally {
       setIsSubmitting(false)
     }
   }

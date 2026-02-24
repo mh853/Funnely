@@ -54,6 +54,7 @@ async function fetchLandingPage(slug: string): Promise<any> {
       *,
       companies!inner(
         id,
+        short_id,
         tracking_pixels(*)
       )
     `)

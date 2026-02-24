@@ -1183,16 +1183,13 @@ export default function LandingPageNewForm({
         if (insertError) throw insertError
       }
 
-      // Revalidate the landing page cache if published
-      if (isActive && slug) {
+      // Revalidate landing page cache on every save (active or inactive)
+      if (slug) {
         try {
           await fetch('/api/revalidate', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              slug,
-              secret: process.env.NEXT_PUBLIC_REVALIDATION_SECRET,
-            }),
+            body: JSON.stringify({ slug }),
           })
         } catch (revalidateError) {
           console.warn('Cache revalidation failed:', revalidateError)
@@ -2065,10 +2062,8 @@ export default function LandingPageNewForm({
                   type="radio"
                   checked={timerEnabled}
                   onChange={() => {
-                    // Warn if trying to enable expired timer
                     if (!timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
                       setError('마감된 날짜입니다. 새로운 마감 날짜를 설정해주세요.')
-                      return
                     }
                     setTimerEnabled(true)
                   }}

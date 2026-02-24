@@ -29,6 +29,11 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isActive, setIsActive] = useState(page.is_active)
   const [isUpdating, setIsUpdating] = useState(false)
+
+  // Sync local state when parent updates is_active (e.g. Realtime timer expiry)
+  useEffect(() => {
+    setIsActive(page.is_active)
+  }, [page.is_active])
   const [landingPageUrl, setLandingPageUrl] = useState('')
   const router = useRouter()
   const supabase = createClient()
@@ -50,14 +55,29 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
     const newStatus = !isActive
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('landing_pages')
-        .update({ is_active: newStatus })
+        .update({
+          is_active: newStatus,
+          status: newStatus ? 'published' : 'draft',
+        })
         .eq('id', page.id)
 
       if (error) throw error
 
       setIsActive(newStatus)
+
+      // Revalidate landing page cache so changes reflect immediately
+      try {
+        await fetch('/api/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ slug: page.slug }),
+        })
+      } catch {
+        // Non-critical: cache will expire naturally
+      }
+
       router.refresh()
     } catch (error) {
       console.error('Failed to update status:', error)
