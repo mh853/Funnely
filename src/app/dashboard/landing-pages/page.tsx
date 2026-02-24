@@ -2,8 +2,8 @@ import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LandingPagesClient from './LandingPagesClient'
 
-// ISR: Revalidate every 5 minutes for better performance and reduced server load
-export const revalidate = 300
+// force-dynamic: authenticated dashboard page — ISR causes stale data and chunk mismatch errors on dev server restart
+export const dynamic = 'force-dynamic'
 
 export default async function LandingPagesPage() {
   const supabase = await createClient()
@@ -38,7 +38,7 @@ export default async function LandingPagesPage() {
   // Get all landing pages (no date filtering)
   const { data: landingPages } = await supabase
     .from('landing_pages')
-    .select('id, title, slug, is_active, created_at, views_count, company_id')
+    .select('id, title, slug, is_active, created_at, views_count, company_id, timer_enabled, timer_deadline, timer_auto_update')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
@@ -71,6 +71,9 @@ export default async function LandingPagesPage() {
       dbInflow: stats.dbInflow,
       rejectedCount: stats.rejectedCount,
       contractCount: stats.contractCount,
+      timer_enabled: page.timer_enabled ?? false,
+      timer_deadline: page.timer_deadline ?? null,
+      timer_auto_update: page.timer_auto_update ?? false,
     }
   })
 

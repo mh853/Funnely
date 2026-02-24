@@ -27,49 +27,48 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   useEffect(() => {
     fetchNotifications()
 
-    // Subscribe to realtime notifications (both user-specific and company-wide)
     const supabase = createClient()
-    const channel = supabase
-      .channel('notifications-bell-dropdown')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'notifications',
-        },
-        (payload) => {
-          // Filter: show if user_id matches OR (user_id is null AND company_id matches)
-          const notification = payload.new as Notification
-          const isRelevant =
-            notification.user_id === userId ||
-            (notification.user_id === null && notification.company_id === companyId)
 
-          if (isRelevant) {
-            console.log('🔔 [NotificationBell Dropdown] Realtime notification change:', payload.eventType)
+    // Realtime 구독 설정 함수 (재연결 시 재사용)
+    const subscribeToNotifications = () => {
+      return supabase
+        .channel(`notifications-bell-${companyId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'notifications',
+            filter: `company_id=eq.${companyId}`,
+          },
+          () => {
             fetchNotifications()
           }
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('✅ [NotificationBell Dropdown] Successfully subscribed to notifications')
-        }
-      })
+        )
+        .subscribe()
+    }
+
+    const channel = subscribeToNotifications()
+
+    // Realtime이 누락할 경우를 대비한 폴링 백업 (30초)
+    const pollInterval = setInterval(() => {
+      fetchNotifications()
+    }, 30000)
 
     return () => {
       supabase.removeChannel(channel)
+      clearInterval(pollInterval)
     }
   }, [userId, companyId])
 
   const fetchNotifications = async () => {
     try {
       const supabase = createClient()
-      // Fetch both user-specific and company-wide notifications
+      // notifications 테이블은 company_id 기반으로 동작
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .or(`user_id.eq.${userId},and(user_id.is.null,company_id.eq.${companyId})`)
+        .eq('company_id', companyId)
         .order('created_at', { ascending: false })
         .limit(10)
 
@@ -86,11 +85,11 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   const markAsRead = async (notificationId: string) => {
     try {
       const supabase = createClient()
+      // Notification may be user-specific (user_id set) or company-wide (user_id null)
       await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
-        .eq('user_id', userId)
 
       setNotifications((prev) =>
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
@@ -103,11 +102,14 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   const markAllAsRead = async () => {
     try {
       const supabase = createClient()
+      const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id)
+      if (unreadIds.length === 0) return
+
+      // Update by IDs to cover both user-specific (user_id set) and company-wide (user_id null)
       await supabase
         .from('notifications')
         .update({ is_read: true })
-        .eq('user_id', userId)
-        .eq('is_read', false)
+        .in('id', unreadIds)
 
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
     } catch (error) {
@@ -119,6 +121,7 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
+      new_lead: 'text-green-600',
       support_reply: 'text-indigo-600',
       new_support_ticket: 'text-blue-600',
       budget_warning: 'text-yellow-600',
@@ -128,12 +131,16 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
       sync_complete: 'text-green-600',
       subscription_changed: 'text-purple-600',
       subscription_started: 'text-green-600',
+      landing_page_timer_expired: 'text-orange-600',
+      subscription_expiring_soon: 'text-yellow-600',
+      subscription_expired: 'text-red-600',
     }
     return colors[type] || 'text-gray-600'
   }
 
   const getTypeIcon = (type: string) => {
     const icons: Record<string, string> = {
+      new_lead: '📋',
       support_reply: '💬',
       new_support_ticket: '📩',
       budget_warning: '⚠️',
@@ -143,6 +150,9 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
       sync_complete: '✅',
       subscription_changed: '🔄',
       subscription_started: '🎉',
+      landing_page_timer_expired: '⏰',
+      subscription_expiring_soon: '⏳',
+      subscription_expired: '🔒',
     }
     return icons[type] || '📢'
   }
@@ -213,8 +223,14 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
                     onClick={() => {
                       markAsRead(notification.id)
                       // Handle different notification types
-                      if ((notification.type === 'support_reply' || notification.type === 'new_support_ticket') && notification.metadata?.ticket_id) {
+                      if (notification.type === 'new_lead') {
+                        window.location.href = `/dashboard/leads`
+                      } else if ((notification.type === 'support_reply' || notification.type === 'new_support_ticket') && notification.metadata?.ticket_id) {
                         window.location.href = `/dashboard/support/${notification.metadata.ticket_id}`
+                      } else if (notification.type === 'landing_page_timer_expired') {
+                        window.location.href = `/dashboard/landing-pages`
+                      } else if (notification.type === 'subscription_expiring_soon' || notification.type === 'subscription_expired') {
+                        window.location.href = `/dashboard/subscription`
                       } else if (notification.campaign_id) {
                         window.location.href = `/dashboard/campaigns/${notification.campaign_id}`
                       }

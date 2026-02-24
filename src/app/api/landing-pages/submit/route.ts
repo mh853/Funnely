@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       // 1. Landing page 조회 (timer 필드 추가)
       supabase
         .from('landing_pages')
-        .select('company_id, status, collect_fields, timer_enabled, timer_deadline, timer_auto_update')
+        .select('company_id, title, status, collect_fields, timer_enabled, timer_deadline, timer_auto_update')
         .eq('id', landing_page_id)
         .single(),
 
@@ -263,6 +263,24 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // 상담신청 알림 생성 (fire and forget - non-blocking)
+    supabase.from('notifications').insert({
+      company_id: landingPage.company_id,
+      title: '새 상담 신청',
+      message: `"${landingPage.title}" 랜딩페이지에 ${name}님(${phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')})이 상담을 신청했습니다.`,
+      type: 'new_lead',
+      metadata: {
+        lead_id: lead.id,
+        landing_page_id,
+        name,
+        phone: phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3'),
+        email: email || null,
+        device_type: detectDeviceType(metadata?.user_agent),
+      },
+    }).then(({ error }) => {
+      if (error) console.error('[Submit] Failed to create lead notification:', error)
+    })
 
     // Increment submissions count (fire and forget - non-blocking)
     // Using .then() to convert to Promise before .catch()

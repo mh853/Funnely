@@ -1,11 +1,12 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import { PlusIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline'
 import { GlobeAltIcon } from '@heroicons/react/24/solid'
 import LandingPageTableRow from '@/components/landing-pages/LandingPageTableRow'
 import LandingPageMobileCard from '@/components/landing-pages/LandingPageMobileCard'
+import { createClient } from '@/lib/supabase/client'
 
 interface LandingPage {
   id: string
@@ -17,6 +18,9 @@ interface LandingPage {
   dbInflow: number
   rejectedCount: number
   contractCount: number
+  timer_enabled?: boolean
+  timer_deadline?: string | null
+  timer_auto_update?: boolean
 }
 
 interface LandingPagesClientProps {
@@ -25,10 +29,78 @@ interface LandingPagesClientProps {
 }
 
 export default function LandingPagesClient({
-  landingPages,
+  landingPages: initialLandingPages,
   companyShortId,
 }: LandingPagesClientProps) {
   const [searchQuery, setSearchQuery] = useState('')
+  const [landingPages, setLandingPages] = useState(initialLandingPages)
+
+  // Schedule precise timers for pages that will expire while the dashboard is open
+  useEffect(() => {
+    const now = Date.now()
+    const timers: ReturnType<typeof setTimeout>[] = []
+
+    const callExpiredApi = (pageId: string) => {
+      fetch('/api/landing-pages/timer-expired', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ landing_page_id: pageId }),
+      }).catch(() => {
+        // Non-critical: cron job will catch it on next run
+      })
+    }
+
+    for (const page of initialLandingPages) {
+      if (!page.is_active || !page.timer_enabled || page.timer_auto_update || !page.timer_deadline) continue
+
+      const deadline = new Date(page.timer_deadline).getTime()
+      const msUntilExpiry = deadline - now
+
+      if (msUntilExpiry <= 0) {
+        // Already expired — call immediately
+        callExpiredApi(page.id)
+      } else {
+        // Schedule to fire exactly when the timer runs out
+        timers.push(setTimeout(() => callExpiredApi(page.id), msUntilExpiry))
+      }
+    }
+
+    return () => timers.forEach(clearTimeout)
+  }, [initialLandingPages])
+
+  // Realtime: reflect is_active changes immediately (e.g. timer expiry)
+  // Note: Supabase Realtime only supports eq/neq/lt/lte/gt/gte filters for postgres_changes,
+  // so we subscribe to the whole table and filter by page ID in the handler
+  useEffect(() => {
+    const supabase = createClient()
+    const pageIds = new Set(initialLandingPages.map(p => p.id))
+    if (pageIds.size === 0) return
+
+    const channel = supabase
+      .channel('landing-pages-status')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'landing_pages',
+        },
+        (payload) => {
+          const updated = payload.new as { id: string; is_active: boolean }
+          if (!pageIds.has(updated.id)) return
+          setLandingPages(prev =>
+            prev.map(p => p.id === updated.id ? { ...p, is_active: updated.is_active } : p)
+          )
+        }
+      )
+      .subscribe((status) => {
+        console.log('[LandingPages Realtime] subscription status:', status)
+      })
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [initialLandingPages])
 
   // 실시간 필터링
   const filteredPages = useMemo(() => {
