@@ -111,6 +111,33 @@ export async function POST(request: Request) {
       )
     }
 
+    // 4. Free 플랜 자동 부여
+    const { data: freePlan } = await supabase
+      .from('subscription_plans')
+      .select('id')
+      .eq('name', 'Free')
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true })
+      .limit(1)
+      .single()
+
+    if (freePlan) {
+      const { error: subError } = await supabase
+        .from('company_subscriptions')
+        .insert({
+          company_id: (companyData as any).id,
+          plan_id: freePlan.id,
+          status: 'active',
+          billing_cycle: 'monthly',
+          has_used_trial: false,
+        } as any)
+
+      if (subError) {
+        // 구독 생성 실패는 가입 자체를 막지 않음 (로그만 남김)
+        console.error('Free plan subscription creation error:', subError)
+      }
+    }
+
     // Success
     return NextResponse.json({
       success: true,

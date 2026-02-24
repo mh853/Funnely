@@ -26,12 +26,13 @@ export default async function SubscriptionPage() {
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
-  // 현재 구독 정보 조회
+  // 현재 구독 정보 조회 (상태 무관하게 최신 1건 - Free 플랜 포함)
   const { data: currentSubscription } = await supabase
     .from('company_subscriptions')
     .select('*, subscription_plans(*)')
     .eq('company_id', userProfile.company_id)
-    .in('status', ['trial', 'active', 'past_due'])
+    .order('created_at', { ascending: false })
+    .limit(1)
     .single()
 
   return (

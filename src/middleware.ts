@@ -209,29 +209,61 @@ export async function middleware(request: NextRequest) {
 
         const { data: subscription } = await supabase
           .from('company_subscriptions')
-          .select('id, status, current_period_end, grace_period_end, trial_end')
+          .select('id, status, current_period_end, grace_period_end, trial_end_date, plan_id')
           .eq('company_id', profile.company_id)
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
 
-        // Check if subscription is expired
         if (subscription) {
-          const isExpired =
-            ['expired', 'cancelled', 'suspended'].includes(
-              subscription.status
-            ) ||
-            (subscription.status === 'trial' &&
-              subscription.trial_end &&
-              subscription.trial_end < now) ||
-            (subscription.current_period_end < now &&
-              (!subscription.grace_period_end ||
-                subscription.grace_period_end < now))
+          // 체험 만료 감지 → Free 플랜으로 다운그레이드
+          const isTrialExpired =
+            subscription.status === 'trial' &&
+            subscription.trial_end_date &&
+            subscription.trial_end_date < now
 
-          if (isExpired) {
-            const redirectUrl = request.nextUrl.clone()
-            redirectUrl.pathname = '/dashboard/subscription/expired'
-            return NextResponse.redirect(redirectUrl)
+          if (isTrialExpired) {
+            // Free 플랜 조회 후 다운그레이드
+            const { data: freePlan } = await supabase
+              .from('subscription_plans')
+              .select('id')
+              .eq('name', 'Free')
+              .eq('is_active', true)
+              .order('sort_order', { ascending: true })
+              .limit(1)
+              .single()
+
+            if (freePlan) {
+              await supabase
+                .from('company_subscriptions')
+                .update({
+                  plan_id: freePlan.id,
+                  status: 'active',
+                  billing_cycle: 'monthly',
+                  current_period_start: null,
+                  current_period_end: null,
+                  trial_start_date: null,
+                  trial_end_date: null,
+                  has_used_trial: true,
+                })
+                .eq('id', subscription.id)
+              // 다운그레이드 후 접근 허용 (배너는 클라이언트에서 표시)
+            }
+          } else {
+            // 명시적 만료/취소/정지 상태만 차단 (Free 플랜 active는 항상 허용)
+            const isBlocked =
+              ['expired', 'cancelled', 'suspended'].includes(subscription.status) ||
+              (subscription.status === 'active' &&
+                subscription.current_period_end !== null &&
+                subscription.current_period_end < now &&
+                (!subscription.grace_period_end ||
+                  subscription.grace_period_end < now))
+
+            if (isBlocked) {
+              const redirectUrl = request.nextUrl.clone()
+              redirectUrl.pathname = '/dashboard/subscription/expired'
+              return NextResponse.redirect(redirectUrl)
+            }
           }
         }
       }

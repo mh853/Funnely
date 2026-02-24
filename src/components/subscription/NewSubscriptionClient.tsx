@@ -26,6 +26,7 @@ interface CurrentSubscription {
   current_period_end: string | null
   cancelled_at: string | null
   created_at: string
+  has_used_trial: boolean
   subscription_plans: Plan
 }
 
@@ -35,25 +36,21 @@ interface NewSubscriptionClientProps {
   companyId: string
 }
 
-// Helper function to format features
 function formatFeatures(plan: Plan): string[] {
   const features: string[] = []
 
-  // 랜딩페이지 제한
   if (plan.max_landing_pages) {
     features.push(`랜딩페이지 ${plan.max_landing_pages}개`)
   } else if (plan.max_landing_pages === null) {
     features.push('랜딩페이지 무제한')
   }
 
-  // 관리자 제한
   if (plan.max_users) {
     features.push(`관리자 ${plan.max_users}명`)
   } else if (plan.max_users === null) {
     features.push('관리자 무제한')
   }
 
-  // 기능 features
   if (plan.features && typeof plan.features === 'object') {
     const featureLabels: { [key: string]: string } = {
       dashboard: '대시보드',
@@ -88,10 +85,19 @@ export default function NewSubscriptionClient({
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState(false)
 
-  // sort_order로 정렬
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
 
-  // Realtime 구독 - 내 구독 상태 변경 감지
+  // 체험 이력 여부: has_used_trial=true이거나 현재 trial 중이면 기존 사용자
+  const hasUsedTrial = currentSubscription?.has_used_trial === true
+  const isCurrentlyOnTrial = currentSubscription?.status === 'trial'
+  const isExistingUser = hasUsedTrial || isCurrentlyOnTrial
+
+  // 현재 Free 플랜인지
+  const isOnFreePlan =
+    currentSubscription?.status === 'active' &&
+    currentSubscription?.subscription_plans?.name === 'Free'
+
+  // Realtime 구독 상태 변경 감지
   useEffect(() => {
     if (!companyId) return
 
@@ -107,8 +113,7 @@ export default function NewSubscriptionClient({
           table: 'company_subscriptions',
           filter: `company_id=eq.${companyId}`,
         },
-        (payload) => {
-          console.log('🔔 My subscription changed:', payload)
+        () => {
           router.refresh()
         }
       )
@@ -120,7 +125,7 @@ export default function NewSubscriptionClient({
   }, [companyId, router])
 
   const handleSelectPlan = async (plan: Plan) => {
-    // 가격 협의 플랜 처리
+    // 가격 협의 플랜
     if (plan.price_monthly === 0 && plan.price_yearly === 0) {
       alert('대규모 조직을 위한 플랜은 별도 문의가 필요합니다. 고객센터로 연락해주세요.')
       return
@@ -131,66 +136,104 @@ export default function NewSubscriptionClient({
 
     try {
       const supabase = createClient()
+      const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
       if (currentSubscription) {
-        // 플랜 변경
-        const now = new Date()
-        const newPeriodEnd = new Date()
+        if (isFree) {
+          // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음
+          const { error } = await supabase
+            .from('company_subscriptions')
+            .update({
+              plan_id: plan.id,
+              status: 'active',
+              billing_cycle: 'monthly',
+              current_period_start: null,
+              current_period_end: null,
+              trial_start_date: null,
+              trial_end_date: null,
+            })
+            .eq('id', currentSubscription.id)
 
-        if (billingCycle === 'monthly') {
-          newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
-          newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
+          if (error) throw new Error(error.message)
+
+          alert('Free 플랜으로 변경되었습니다.')
+          router.refresh()
+        } else if (isExistingUser) {
+          // 기존 사용자 (체험 이력 있음) → 플랜 변경 후 결제 안내
+          const now = new Date()
+          const newPeriodEnd = new Date()
+          if (billingCycle === 'monthly') {
+            newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
+            newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
+          } else {
+            newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
+            newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
+          }
+
+          const { error } = await supabase
+            .from('company_subscriptions')
+            .update({
+              plan_id: plan.id,
+              billing_cycle: billingCycle,
+              status: 'active',
+              current_period_start: now.toISOString(),
+              current_period_end: newPeriodEnd.toISOString(),
+            })
+            .eq('id', currentSubscription.id)
+
+          if (error) throw new Error(error.message)
+
+          alert(`${plan.name} 플랜 (${billingCycle === 'monthly' ? '월간' : '연간'})으로 변경되었습니다.`)
+          router.refresh()
         } else {
-          newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
-          newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
+          // 신규 사용자 (Free → 유료 업그레이드, 첫 체험) → 7일 무료 체험 시작
+          const now = new Date()
+          const trialEndDate = new Date()
+          trialEndDate.setDate(trialEndDate.getDate() + 7)
+
+          const { error } = await supabase
+            .from('company_subscriptions')
+            .update({
+              plan_id: plan.id,
+              billing_cycle: billingCycle,
+              status: 'trial',
+              current_period_start: now.toISOString(),
+              current_period_end: null,
+              trial_start_date: now.toISOString(),
+              trial_end_date: trialEndDate.toISOString(),
+            })
+            .eq('id', currentSubscription.id)
+
+          if (error) throw new Error(error.message)
+
+          alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          router.refresh()
         }
-
-        const { error: updateError } = await supabase
-          .from('company_subscriptions')
-          .update({
-            plan_id: plan.id,
-            billing_cycle: billingCycle,
-            current_period_start: now.toISOString(),
-            current_period_end: newPeriodEnd.toISOString(),
-          })
-          .eq('id', currentSubscription.id)
-
-        if (updateError) throw new Error(updateError.message)
-
-        alert(`플랜이 ${plan.name}(으)로 변경되었습니다.`)
-        router.refresh()
       } else {
-        // 신규 구독 생성
+        // 구독 자체가 없는 경우 (예외 - 보통 회원가입 시 Free 부여됨)
         const now = new Date()
         const trialEndDate = new Date()
         trialEndDate.setDate(trialEndDate.getDate() + 7)
 
-        const periodEndDate = new Date()
-        if (billingCycle === 'monthly') {
-          periodEndDate.setMonth(periodEndDate.getMonth() + 1)
-          periodEndDate.setDate(periodEndDate.getDate() - 1)
-        } else {
-          periodEndDate.setFullYear(periodEndDate.getFullYear() + 1)
-          periodEndDate.setDate(periodEndDate.getDate() - 1)
-        }
-
-        const { error: subError } = await supabase
+        const { error } = await supabase
           .from('company_subscriptions')
           .insert({
             company_id: companyId,
             plan_id: plan.id,
-            status: 'trial',
+            status: isFree ? 'active' : 'trial',
             billing_cycle: billingCycle,
-            current_period_start: now.toISOString(),
-            current_period_end: periodEndDate.toISOString(),
-            trial_start_date: now.toISOString(),
-            trial_end_date: trialEndDate.toISOString(),
-            customer_key: `customer_${companyId}_${Date.now()}`,
+            current_period_start: isFree ? null : now.toISOString(),
+            current_period_end: null,
+            trial_start_date: isFree ? null : now.toISOString(),
+            trial_end_date: isFree ? null : trialEndDate.toISOString(),
+            has_used_trial: false,
           })
 
-        if (subError) throw new Error(subError.message)
+        if (error) throw new Error(error.message)
 
-        alert('7일 무료 체험이 시작되었습니다!')
+        if (!isFree) {
+          alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+        }
         router.refresh()
       }
     } catch (error: any) {
@@ -202,32 +245,50 @@ export default function NewSubscriptionClient({
     }
   }
 
+  const getButtonLabel = (plan: Plan, isCurrentPlan: boolean) => {
+    if (loading && selectedPlan?.id === plan.id) return '처리 중...'
+    if (isCurrentPlan) return '현재 사용 중'
+    if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
+    if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
+
+    // 유료 플랜
+    if (isExistingUser) return '결제하기'
+    return '7일 무료 체험'
+  }
+
   return (
     <div className="space-y-8">
       {/* 현재 구독 정보 */}
       {currentSubscription && (
-        <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-6 text-white">
+        <div className={`rounded-xl p-6 text-white ${
+          isCurrentlyOnTrial
+            ? 'bg-gradient-to-r from-purple-500 to-indigo-600'
+            : isOnFreePlan
+            ? 'bg-gradient-to-r from-gray-500 to-gray-700'
+            : 'bg-gradient-to-r from-blue-500 to-indigo-600'
+        }`}>
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-2xl font-bold">{currentSubscription.subscription_plans.name}</h2>
+              <h2 className="text-2xl font-bold">{currentSubscription.subscription_plans.name} 플랜</h2>
               <p className="mt-1 opacity-90">
-                {currentSubscription.status === 'trial'
+                {isCurrentlyOnTrial
                   ? '무료 체험 중'
+                  : isOnFreePlan
+                  ? '무료 플랜 이용 중'
                   : currentSubscription.status === 'active'
                   ? '구독 활성'
                   : '결제 지연'}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold">
-                {currentSubscription.billing_cycle === 'monthly'
-                  ? currentSubscription.subscription_plans.price_monthly?.toLocaleString() || '0'
-                  : currentSubscription.subscription_plans.price_yearly?.toLocaleString() || '0'}
-                원<span className="text-sm opacity-90">/{currentSubscription.billing_cycle === 'monthly' ? '월' : '연'}</span>
-              </p>
-              {currentSubscription.trial_end_date && currentSubscription.status === 'trial' && (
-                <p className="text-sm mt-2 opacity-90">
+              {isCurrentlyOnTrial && currentSubscription.trial_end_date && (
+                <p className="text-sm opacity-90">
                   체험 종료: {formatDate(currentSubscription.trial_end_date)}
+                </p>
+              )}
+              {!isOnFreePlan && !isCurrentlyOnTrial && currentSubscription.current_period_end && (
+                <p className="text-sm opacity-90">
+                  다음 결제일: {formatDate(currentSubscription.current_period_end)}
                 </p>
               )}
             </div>
@@ -239,14 +300,14 @@ export default function NewSubscriptionClient({
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">구독 플랜 선택</h1>
         <p className="mt-2 text-gray-600">
-          {currentSubscription
-            ? '더 많은 기능이 필요하신가요? 플랜을 업그레이드하세요'
-            : '7일 무료 체험을 시작하고 최적의 플랜을 선택하세요'}
+          {isExistingUser
+            ? '플랜을 선택하면 바로 결제가 진행됩니다'
+            : '7일 무료 체험 후 마음에 드시면 구독하세요. 카드 등록이 필요하지 않습니다.'}
         </p>
       </div>
 
-      {/* 결제 주기 선택 (월간/연간) */}
-      <div className="flex justify-center mb-8">
+      {/* 결제 주기 선택 */}
+      <div className="flex justify-center">
         <div className="inline-flex rounded-lg bg-gray-100 p-1">
           <button
             onClick={() => setBillingCycle('monthly')}
@@ -272,14 +333,16 @@ export default function NewSubscriptionClient({
         </div>
       </div>
 
-      {/* 플랜 카드 그리드 */}
+      {/* 플랜 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
         {sortedPlans.map((plan) => {
           const isCurrentPlan =
             currentSubscription?.subscription_plans.id === plan.id &&
-            currentSubscription?.billing_cycle === billingCycle
-          const isRecommended = plan.sort_order === 3 // 소규모 기업 플랜 추천
+            (currentSubscription?.billing_cycle === billingCycle ||
+              plan.name === 'Free')
+          const isRecommended = plan.sort_order === 3
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
+          const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
           const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
           const priceLabel = billingCycle === 'monthly' ? '월' : '연'
@@ -295,7 +358,7 @@ export default function NewSubscriptionClient({
                   : 'border-gray-200 hover:border-gray-300'
               }`}
             >
-              {isRecommended && (
+              {isRecommended && !isCurrentPlan && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
                   <span className="bg-gradient-to-r from-indigo-500 to-purple-600 text-white px-4 py-1 rounded-full text-xs font-bold">
                     추천
@@ -319,15 +382,20 @@ export default function NewSubscriptionClient({
               <div className="text-center mb-6">
                 {isEnterprise ? (
                   <p className="text-2xl font-bold text-gray-900">가격 협의</p>
+                ) : isFree ? (
+                  <p className="text-3xl font-bold text-gray-900">무료</p>
                 ) : (
                   <>
                     <p className="text-3xl font-bold text-gray-900">
                       {price.toLocaleString()}원<span className="text-sm text-gray-600">/{priceLabel}</span>
                     </p>
-                    {billingCycle === 'yearly' && (
+                    {billingCycle === 'yearly' && plan.price_monthly > 0 && (
                       <p className="text-xs text-green-600 mt-1">
                         연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약
                       </p>
+                    )}
+                    {!isExistingUser && (
+                      <p className="text-xs text-indigo-600 mt-1 font-medium">7일 무료 체험 가능</p>
                     )}
                   </>
                 )}
@@ -348,26 +416,25 @@ export default function NewSubscriptionClient({
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
                   isCurrentPlan
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : isFree
+                    ? 'bg-gray-700 text-white hover:bg-gray-800'
                     : isRecommended
                     ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
                     : 'bg-gray-900 text-white hover:bg-gray-800'
                 }`}
               >
-                {loading && selectedPlan?.id === plan.id
-                  ? '처리 중...'
-                  : isCurrentPlan
-                  ? '현재 사용 중'
-                  : isEnterprise
-                  ? '문의하기'
-                  : '선택하기'}
+                {getButtonLabel(plan, isCurrentPlan)}
               </button>
             </div>
           )
         })}
       </div>
 
-      {/* VAT 안내 */}
-      <div className="text-center text-sm text-gray-500 mt-8">
+      {/* 안내 문구 */}
+      <div className="text-center text-sm text-gray-500 space-y-1 mt-8">
+        {!isExistingUser && (
+          <p>* 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 Free 플랜으로 자동 전환됩니다.</p>
+        )}
         <p>* 모든 가격은 VAT 별도입니다</p>
       </div>
     </div>
