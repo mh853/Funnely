@@ -99,6 +99,15 @@ export default function LandingPageNewForm({
       }))
   }
 
+  const [companyShortId, setCompanyShortId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.from('companies').select('short_id').eq('id', companyId).single().then(({ data }) => {
+      if (data?.short_id) setCompanyShortId(data.short_id)
+    })
+  }, [companyId])
+
   // Form state - initialize with existing data if editing
   const [slug, setSlug] = useState(landingPage?.slug || '')
   const [title, setTitle] = useState(landingPage?.title || '')
@@ -1499,7 +1508,7 @@ export default function LandingPageNewForm({
           <div className="space-y-2">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <span className="text-sm text-gray-600 flex-shrink-0">
-                https://funnely.co.kr/landing/
+                {companyShortId ? `https://${companyShortId}.funnely.co.kr/landing/` : 'https://funnely.co.kr/landing/'}
               </span>
               <input
                 type="text"
@@ -1705,7 +1714,7 @@ export default function LandingPageNewForm({
             {collectionMode === 'external' && (
               <div className="bg-purple-50 rounded-xl p-3 sm:p-4 mb-4">
                 <p className="text-xs sm:text-sm text-purple-900 break-all">
-                  💡 외부 수집 페이지 URL: <span className="font-semibold">https://funnely.co.kr/landing/{slug || '[페이지-주소]'}/collect-detail</span>
+                  💡 외부 수집 페이지 URL: <span className="font-semibold">https://{companyShortId ? `${companyShortId}.` : ''}funnely.co.kr/landing/{slug || '[페이지-주소]'}/collect-detail</span>
                 </p>
                 <p className="text-xs text-purple-700 mt-2">
                   옵션2를 선택하면 위 URL로 별도의 수집 페이지가 생성됩니다. 아래에서 수집할 항목을 설정해주세요.
@@ -2892,7 +2901,7 @@ export default function LandingPageNewForm({
                       <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     </div>
                     <div className="flex-1 bg-white rounded px-3 py-1 text-xs text-gray-600 ml-2">
-                      https://funnely.co.kr/landing/{slug || 'your-page'}
+                      https://{companyShortId ? `${companyShortId}.` : ''}funnely.co.kr/landing/{slug || 'your-page'}
                     </div>
                   </div>
 
