@@ -6,8 +6,8 @@ import "../styles/globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Funnely - 회사 광고 통합 관리 플랫폼",
-  description: "회사 마케팅 담당자를 위한 통합 광고 관리 및 분석 플랫폼",
+  title: "퍼널리 - 비즈니스 성장 올인원 플랫폼",
+  description: "랜딩페이지 제작부터 리드 관리, 트래픽 분석까지. 비즈니스 성장에 필요한 모든 것을 한 곳에서.",
 };
 
 export default function RootLayout({

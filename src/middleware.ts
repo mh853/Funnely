@@ -7,9 +7,79 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+/**
+ * 커스텀 도메인으로 회사 정보 조회
+ * 미들웨어 Edge Runtime에서 Supabase REST API를 직접 호출
+ */
+async function lookupCustomDomain(domain: string): Promise<string | null> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) return null
+
+  try {
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/company_custom_domains?domain=eq.${encodeURIComponent(domain)}&verification_status=eq.verified&select=company_id,companies(short_id)`,
+      {
+        headers: {
+          apikey: supabaseServiceKey,
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          Accept: 'application/json',
+        },
+        // Edge Runtime 캐시: 60초 (성능 최적화)
+        next: { revalidate: 60 },
+      }
+    )
+
+    if (!res.ok) return null
+
+    const data = await res.json()
+    if (!data || data.length === 0) return null
+
+    // companies가 조인된 경우
+    const record = data[0]
+    const shortId = record?.companies?.short_id
+    return shortId || null
+  } catch {
+    return null
+  }
+}
+
+/** 자사 도메인인지 확인 */
+function isOwnDomain(hostname: string): boolean {
+  const ownDomains = ['funnely.co.kr', 'localhost', '127.0.0.1']
+  return (
+    ownDomains.some(d => hostname === d || hostname.endsWith(`.${d}`)) ||
+    hostname.includes('vercel.app')
+  )
+}
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const url = request.nextUrl.clone()
+
+  // ============================================================
+  // PHASE 0: Custom Domain Routing
+  // funnely.co.kr 계열이 아닌 도메인 → 커스텀 도메인 처리
+  // ============================================================
+  if (!isOwnDomain(hostname) && !hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
+    // /landing/* 경로에만 커스텀 도메인 적용
+    if (url.pathname.startsWith('/landing/')) {
+      const companyShortId = await lookupCustomDomain(hostname.split(':')[0]) // 포트 제거
+
+      if (companyShortId) {
+        // /{companyShortId}/landing/{slug} 로 리라이팅
+        url.pathname = `/${companyShortId}${url.pathname}`
+        return NextResponse.rewrite(url)
+      }
+    }
+
+    // 커스텀 도메인이지만 랜딩페이지 경로가 아닌 경우 → 루트 랜딩으로 리다이렉트
+    if (url.pathname === '/' || url.pathname === '') {
+      url.pathname = '/landing'
+      return NextResponse.redirect(url)
+    }
+  }
 
   // ============================================================
   // PHASE 1: Subdomain Routing (Public Landing Pages)

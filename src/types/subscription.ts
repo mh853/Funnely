@@ -9,6 +9,7 @@ export interface SubscriptionPlanFeatures {
   priority_support?: boolean
   customization?: boolean
   custom_integration?: boolean
+  custom_domain?: boolean
 }
 
 export interface SubscriptionPlan {

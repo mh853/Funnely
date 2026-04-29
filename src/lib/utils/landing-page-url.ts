@@ -1,9 +1,13 @@
 /**
  * Landing Page URL Utilities
  *
- * Generates subdomain-based URLs for landing pages:
- * {companyShortId}.funnely.co.kr/landing/{slug}
+ * URL 결정 우선순위:
+ * 1순위: landingPageDomain (랜딩페이지별 커스텀 도메인)
+ * 2순위: companyDefaultDomain (회사 기본 커스텀 도메인)
+ * 3순위: {companyShortId}.funnely.co.kr (서비스 서브도메인)
  */
+
+import type { LandingPageDomainContext } from '@/types/custom-domain.types'
 
 /**
  * Get base domain from environment or default
@@ -35,50 +39,102 @@ export function getBaseDomain(): string {
 }
 
 /**
- * Generate subdomain-based landing page URL
+ * Generate landing page URL with custom domain support
+ *
+ * URL 결정 우선순위:
+ * 1. options.landingPageDomain (랜딩페이지별 커스텀 도메인)
+ * 2. options.companyDefaultDomain (회사 기본 커스텀 도메인)
+ * 3. {companyShortId}.funnely.co.kr (서비스 서브도메인 폴백)
  *
  * @param companyShortId - Company short ID (e.g., 'q81d1c')
  * @param slug - Landing page slug (e.g., 'dental-promo')
- * @param protocol - 'http' or 'https' (default: 'https' in production, 'http' in dev)
+ * @param options - 커스텀 도메인 옵션
+ * @param protocol - 'http' or 'https'
  * @returns Full landing page URL
  *
  * @example
  * generateLandingPageURL('q81d1c', 'dental-promo')
  * // Returns: 'https://q81d1c.funnely.co.kr/landing/dental-promo'
+ *
+ * generateLandingPageURL('q81d1c', 'dental-promo', { companyDefaultDomain: 'my-clinic.com' })
+ * // Returns: 'https://my-clinic.com/landing/dental-promo'
  */
 export function generateLandingPageURL(
   companyShortId: string,
   slug: string,
+  options?: {
+    landingPageDomain?: string | null
+    companyDefaultDomain?: string | null
+  },
   protocol?: 'http' | 'https'
 ): string {
-  const baseDomain = getBaseDomain()
   const defaultProtocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const finalProtocol = protocol || defaultProtocol
 
+  // 1순위: 랜딩페이지별 커스텀 도메인
+  if (options?.landingPageDomain) {
+    return `${finalProtocol}://${options.landingPageDomain}/landing/${slug}`
+  }
+
+  // 2순위: 회사 기본 커스텀 도메인
+  if (options?.companyDefaultDomain) {
+    return `${finalProtocol}://${options.companyDefaultDomain}/landing/${slug}`
+  }
+
+  // 3순위: 서비스 서브도메인 폴백
+  const baseDomain = getBaseDomain()
   return `${finalProtocol}://${companyShortId}.${baseDomain}/landing/${slug}`
 }
 
 /**
- * Generate subdomain-based completion page URL
+ * LandingPageDomainContext로 URL 생성 (서버 컴포넌트 친화적)
+ */
+export function generateLandingPageURLFromContext(
+  context: LandingPageDomainContext,
+  slug: string,
+  protocol?: 'http' | 'https'
+): string {
+  return generateLandingPageURL(
+    context.companyShortId,
+    slug,
+    {
+      landingPageDomain: context.landingPageDomain,
+      companyDefaultDomain: context.companyDefaultDomain,
+    },
+    protocol
+  )
+}
+
+/**
+ * Generate completion page URL with custom domain support
  *
  * @param companyShortId - Company short ID (e.g., 'q81d1c')
  * @param slug - Landing page slug (e.g., 'dental-promo')
+ * @param options - 커스텀 도메인 옵션
  * @param protocol - 'http' or 'https'
  * @returns Full completion page URL
- *
- * @example
- * generateCompletionPageURL('q81d1c', 'dental-promo')
- * // Returns: 'https://q81d1c.funnely.co.kr/landing/dental-promo/completed'
  */
 export function generateCompletionPageURL(
   companyShortId: string,
   slug: string,
+  options?: {
+    landingPageDomain?: string | null
+    companyDefaultDomain?: string | null
+  },
   protocol?: 'http' | 'https'
 ): string {
-  const baseDomain = getBaseDomain()
   const defaultProtocol = process.env.NODE_ENV === 'development' ? 'http' : 'https'
   const finalProtocol = protocol || defaultProtocol
 
+  if (options?.landingPageDomain) {
+    return `${finalProtocol}://${options.landingPageDomain}/landing/${slug}/completed`
+  }
+
+  if (options?.companyDefaultDomain) {
+    return `${finalProtocol}://${options.companyDefaultDomain}/landing/${slug}/completed`
+  }
+
+  const baseDomain = getBaseDomain()
   return `${finalProtocol}://${companyShortId}.${baseDomain}/landing/${slug}/completed`
 }
 

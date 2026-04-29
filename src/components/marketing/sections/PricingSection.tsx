@@ -102,16 +102,16 @@ const plans: Plan[] = [
 function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted: boolean }) {
   if (typeof value === 'boolean') {
     return value ? (
-      <CheckIcon className={`h-5 w-5 mx-auto ${highlighted ? 'text-blue-200' : 'text-green-500'}`} />
+      <CheckIcon className={`h-5 w-5 mx-auto ${highlighted ? 'text-blue-600' : 'text-green-500'}`} />
     ) : (
-      <XMarkIcon className={`h-5 w-5 mx-auto ${highlighted ? 'text-blue-400/40' : 'text-gray-300'}`} />
+      <XMarkIcon className={`h-5 w-5 mx-auto text-gray-300`} />
     )
   }
   const isHighlight = value === '무제한' || value.endsWith('건')
   return (
     <span className={`text-sm font-semibold ${
       highlighted
-        ? isHighlight ? 'text-white' : 'text-blue-200'
+        ? isHighlight ? 'text-blue-700' : 'text-blue-500'
         : isHighlight ? 'text-blue-600' : 'text-gray-700'
     }`}>
       {value}
@@ -147,7 +147,7 @@ export default function PricingSection() {
           </div>
 
           {/* Plan cards row */}
-          <div className="mb-4 overflow-x-auto pb-4">
+          <div className="mb-4 overflow-x-auto pt-5 pb-4">
             <div className="min-w-[900px] grid grid-cols-5 gap-4">
               {plans.map((plan, index) => (
                 <motion.div

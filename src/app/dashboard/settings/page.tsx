@@ -2,8 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
-import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon } from '@heroicons/react/24/outline'
+import CustomDomainManager from '@/components/settings/CustomDomainManager'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
+import { canUseCustomDomain } from '@/lib/subscription-access'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -92,6 +94,9 @@ export default async function SettingsPage() {
   // Check if user has permission to edit company settings
   const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
   const isAdmin = userProfile.simple_role === 'admin'
+
+  // Check custom domain feature access
+  const { allowed: hasCustomDomain } = await canUseCustomDomain(userProfile.company_id)
 
   return (
     <div className="px-4 space-y-6">
@@ -288,6 +293,42 @@ export default async function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Custom Domain */}
+      {hasCustomDomain ? (
+        <CustomDomainManager />
+      ) : (
+        <div className="bg-white shadow-sm rounded-xl border border-gray-200 overflow-hidden">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-9 h-9 bg-gray-100 rounded-lg">
+                  <GlobeAltIcon className="w-5 h-5 text-gray-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-base font-semibold text-gray-500">커스텀 도메인</h2>
+                    <span className="px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-700 rounded-full">프리미엄 이상</span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-0.5">고객사 보유 도메인을 랜딩페이지에 연결합니다</p>
+                </div>
+              </div>
+              <Link
+                href="/dashboard/subscription"
+                className="px-3 py-1.5 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+              >
+                플랜 업그레이드 →
+              </Link>
+            </div>
+          </div>
+          <div className="px-6 py-8 text-center">
+            <GlobeAltIcon className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+            <p className="text-sm text-gray-400">
+              소규모 기업을 위한 플랜 이상에서 커스텀 도메인을 사용할 수 있습니다.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Company Settings */}
       <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-gray-100">

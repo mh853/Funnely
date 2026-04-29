@@ -40,14 +40,15 @@ export default function BasicInfoSection() {
           URL 슬러그 <span className="text-red-500">*</span>
         </label>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-500 whitespace-nowrap">funnely.co.kr/landing/</span>
+          <span className="text-sm text-gray-500 whitespace-nowrap">
+            {state.companyShortId ? `${state.companyShortId}.funnely.co.kr/landing/` : 'funnely.co.kr/landing/'}
+          </span>
           <input
             type="text"
             id="slug"
             name="slug"
             value={state.slug}
             onChange={(e) => {
-              // Only allow alphanumeric and hyphens
               const value = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '')
               actions.setSlug(value)
             }}
@@ -62,7 +63,8 @@ export default function BasicInfoSection() {
         {state.slug && (
           <div className="mt-2 p-2 bg-indigo-50 rounded-lg">
             <p className="text-xs text-indigo-700">
-              <span className="font-semibold">미리보기:</span> https://funnely.co.kr/landing/{state.slug}
+              <span className="font-semibold">미리보기:</span>{' '}
+              https://{state.companyShortId ? `${state.companyShortId}.` : ''}funnely.co.kr/landing/{state.slug}
             </p>
           </div>
         )}

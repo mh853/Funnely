@@ -343,6 +343,110 @@ export interface Database {
           created_at?: string
         }
       }
+      leads: {
+        Row: {
+          id: string
+          company_id: string
+          landing_page_id: string | null
+          name: string
+          phone: string
+          phone_hash: string
+          email: string | null
+          consultation_items: string[] | null
+          preferred_date: string | null
+          preferred_time: string | null
+          message: string | null
+          status: string
+          priority: string
+          call_assigned_to: string | null
+          counselor_assigned_to: string | null
+          tags: string[]
+          utm_source: string | null
+          utm_medium: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_term: string | null
+          referrer: string | null
+          ip_address: string | null
+          user_agent: string | null
+          device_type: string | null
+          custom_fields: Json | null
+          is_deleted: boolean
+          created_at: string
+          updated_at: string
+          first_contact_at: string | null
+          last_contact_at: string | null
+          completed_at: string | null
+        }
+        Insert: {
+          id?: string
+          company_id: string
+          landing_page_id?: string | null
+          name: string
+          phone: string
+          phone_hash: string
+          email?: string | null
+          consultation_items?: string[] | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          message?: string | null
+          status?: string
+          priority?: string
+          call_assigned_to?: string | null
+          counselor_assigned_to?: string | null
+          tags?: string[]
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          referrer?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          device_type?: string | null
+          custom_fields?: Json | null
+          is_deleted?: boolean
+          created_at?: string
+          updated_at?: string
+          first_contact_at?: string | null
+          last_contact_at?: string | null
+          completed_at?: string | null
+        }
+        Update: {
+          id?: string
+          company_id?: string
+          landing_page_id?: string | null
+          name?: string
+          phone?: string
+          phone_hash?: string
+          email?: string | null
+          consultation_items?: string[] | null
+          preferred_date?: string | null
+          preferred_time?: string | null
+          message?: string | null
+          status?: string
+          priority?: string
+          call_assigned_to?: string | null
+          counselor_assigned_to?: string | null
+          tags?: string[]
+          utm_source?: string | null
+          utm_medium?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_term?: string | null
+          referrer?: string | null
+          ip_address?: string | null
+          user_agent?: string | null
+          device_type?: string | null
+          custom_fields?: Json | null
+          is_deleted?: boolean
+          created_at?: string
+          updated_at?: string
+          first_contact_at?: string | null
+          last_contact_at?: string | null
+          completed_at?: string | null
+        }
+      }
       saved_reports: {
         Row: {
           id: string

@@ -1,5 +1,7 @@
 import Link from 'next/link'
 
+type NavItem = { name: string; href: string | null }
+
 const navigation = {
   product: [
     { name: '랜딩페이지 빌더', href: '#features' },
@@ -10,20 +12,20 @@ const navigation = {
     { name: '요금제', href: '#pricing' },
   ],
   company: [
-    { name: '회사 소개', href: '#' },
-    { name: '블로그', href: '#' },
-    { name: '고객 사례', href: '#' },
-    { name: '채용', href: '#' },
+    { name: '회사 소개', href: null },
+    { name: '블로그', href: null },
+    { name: '고객 사례', href: null },
+    { name: '채용', href: null },
   ],
   support: [
-    { name: '고객 지원', href: '#' },
+    { name: '고객 지원', href: null },
     { name: 'FAQ', href: '#faq' },
-    { name: '가이드', href: '#' },
+    { name: '가이드', href: null },
     { name: '문의하기', href: '/contact' },
   ],
   legal: [
-    { name: '개인정보처리방침', href: '#' },
-    { name: '이용약관', href: '#' },
+    { name: '개인정보처리방침', href: '/privacy' },
+    { name: '이용약관', href: '/terms' },
   ],
 }
 
@@ -66,14 +68,20 @@ export default function MarketingFooter() {
               <div className="mt-10 md:mt-0">
                 <h3 className="text-sm font-semibold leading-6 text-white">회사</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                  {navigation.company.map((item) => (
+                  {navigation.company.map((item: NavItem) => (
                     <li key={item.name}>
-                      <a
-                        href={item.href}
-                        className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
-                      >
-                        {item.name}
-                      </a>
+                      {item.href ? (
+                        <a
+                          href={item.href}
+                          className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
+                        >
+                          {item.name}
+                        </a>
+                      ) : (
+                        <span className="text-sm leading-6 text-gray-600 cursor-default">
+                          {item.name}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -83,14 +91,20 @@ export default function MarketingFooter() {
               <div>
                 <h3 className="text-sm font-semibold leading-6 text-white">지원</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                  {navigation.support.map((item) => (
+                  {navigation.support.map((item: NavItem) => (
                     <li key={item.name}>
-                      <Link
-                        href={item.href}
-                        className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
-                      >
-                        {item.name}
-                      </Link>
+                      {item.href ? (
+                        <Link
+                          href={item.href}
+                          className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
+                        >
+                          {item.name}
+                        </Link>
+                      ) : (
+                        <span className="text-sm leading-6 text-gray-600 cursor-default">
+                          {item.name}
+                        </span>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -98,14 +112,14 @@ export default function MarketingFooter() {
               <div className="mt-10 md:mt-0">
                 <h3 className="text-sm font-semibold leading-6 text-white">법률</h3>
                 <ul role="list" className="mt-6 space-y-4">
-                  {navigation.legal.map((item) => (
+                  {navigation.legal.map((item: NavItem) => (
                     <li key={item.name}>
-                      <a
-                        href={item.href}
+                      <Link
+                        href={item.href!}
                         className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                       >
                         {item.name}
-                      </a>
+                      </Link>
                     </li>
                   ))}
                 </ul>
@@ -115,7 +129,7 @@ export default function MarketingFooter() {
         </div>
         <div className="mt-16 border-t border-gray-800 pt-8 sm:mt-20 lg:mt-24">
           <p className="text-xs leading-5 text-gray-400">
-            &copy; 2025 Funnely. All rights reserved.
+            &copy; {new Date().getFullYear()} Funnely. All rights reserved.
           </p>
         </div>
       </div>

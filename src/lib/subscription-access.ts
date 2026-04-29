@@ -329,6 +329,31 @@ export async function hasFeatureAccess(
 }
 
 /**
+ * 기능 접근 권한 체크 - 커스텀 도메인 사용 가능 여부
+ * 소규모 기업을 위한 플랜 이상에서만 허용
+ */
+export async function canUseCustomDomain(companyId: string): Promise<{
+  allowed: boolean
+  message?: string
+}> {
+  try {
+    const allowed = await hasFeatureAccess(companyId, 'custom_domain')
+    return {
+      allowed,
+      message: allowed
+        ? undefined
+        : '커스텀 도메인 기능은 소규모 기업을 위한 플랜 이상에서 사용할 수 있습니다.',
+    }
+  } catch (error) {
+    console.error('[Feature Access] 커스텀 도메인 접근 체크 실패:', error)
+    return {
+      allowed: false,
+      message: '접근 권한 확인에 실패했습니다.',
+    }
+  }
+}
+
+/**
  * 플랜 제한사항 체크 - 사용자 초대 가능 여부
  */
 export async function canInviteUser(companyId: string): Promise<{
