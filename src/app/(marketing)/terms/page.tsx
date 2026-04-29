@@ -21,7 +21,7 @@ export default function TermsPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 mb-3">제1조 (목적)</h2>
               <p>
-                이 약관은 퍼널리(이하 "회사")가 제공하는 퍼널리 서비스(이하 "서비스")의 이용 조건 및
+                이 약관은 퍼널리(이하 &quot;회사&quot;)가 제공하는 퍼널리 서비스(이하 &quot;서비스&quot;)의 이용 조건 및
                 절차, 회사와 이용자 간의 권리·의무 및 책임 사항을 규정함을 목적으로 합니다.
               </p>
             </section>
@@ -30,14 +30,14 @@ export default function TermsPage() {
               <h2 className="text-xl font-semibold text-gray-900 mb-3">제2조 (정의)</h2>
               <ul className="list-disc pl-6 space-y-2">
                 <li>
-                  <strong>"서비스"</strong>란 회사가 제공하는 랜딩페이지 빌더, 리드 관리, 트래픽 분석 등의
+                  <strong>&quot;서비스&quot;</strong>란 회사가 제공하는 랜딩페이지 빌더, 리드 관리, 트래픽 분석 등의
                   마케팅 플랫폼 서비스를 의미합니다.
                 </li>
                 <li>
-                  <strong>"이용자"</strong>란 이 약관에 동의하고 서비스를 이용하는 개인 또는 법인을 의미합니다.
+                  <strong>&quot;이용자&quot;</strong>란 이 약관에 동의하고 서비스를 이용하는 개인 또는 법인을 의미합니다.
                 </li>
                 <li>
-                  <strong>"계정"</strong>이란 이용자가 서비스를 이용하기 위해 생성한 고유 식별 정보를 의미합니다.
+                  <strong>&quot;계정&quot;</strong>이란 이용자가 서비스를 이용하기 위해 생성한 고유 식별 정보를 의미합니다.
                 </li>
               </ul>
             </section>
