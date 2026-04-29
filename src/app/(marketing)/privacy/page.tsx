@@ -21,7 +21,7 @@ export default function PrivacyPage() {
             <section>
               <h2 className="text-xl font-semibold text-gray-900 mb-3">1. 개인정보 수집 항목 및 수집 방법</h2>
               <p>
-                퍼널리(이하 "회사")는 서비스 제공을 위해 아래와 같은 개인정보를 수집합니다.
+                퍼널리(이하 &quot;회사&quot;)는 서비스 제공을 위해 아래와 같은 개인정보를 수집합니다.
               </p>
               <ul className="mt-3 list-disc pl-6 space-y-1">
                 <li>필수 항목: 이메일 주소, 비밀번호(암호화), 회사명</li>
