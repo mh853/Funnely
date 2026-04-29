@@ -19,6 +19,7 @@ const features = [
     iconColor: 'from-pink-500 to-rose-500',
     features: ['이미지/영상 삽입', 'DB 수집 마감 타이머', '실시간 DB 수집현황', 'DB 수집 폼', '상담신청·전화연결 버튼'],
     isPro: false,
+    anchor: 'feature-landing',
   },
   {
     name: '실시간 DB 수집 및 관리',
@@ -27,6 +28,7 @@ const features = [
     iconColor: 'from-blue-500 to-cyan-500',
     features: ['DB 현황 리스트', 'DB 배분 (콜 담당자)', 'DB 수동 추가', '콜 결과 관리'],
     isPro: false,
+    anchor: 'feature-db',
   },
   {
     name: 'DB예약 스케줄 관리',
@@ -35,6 +37,7 @@ const features = [
     iconColor: 'from-green-500 to-emerald-500',
     features: ['DB 스케쥴 캘린더', '예약 스케쥴 관리', '월별·주간별 스케쥴 노트'],
     isPro: true,
+    anchor: 'feature-schedule',
   },
   {
     name: '트래픽 분석',
@@ -43,6 +46,7 @@ const features = [
     iconColor: 'from-violet-500 to-purple-500',
     features: ['실시간 트래픽 대시보드', '기기별 유입 분석', '유입경로별 전환율'],
     isPro: true,
+    anchor: 'feature-analytics',
   },
   {
     name: '부서별/담당자별 성과 분석',
@@ -51,6 +55,7 @@ const features = [
     iconColor: 'from-amber-500 to-orange-500',
     features: ['일별·월별 DB 현황', '담당자 성과 비교', '데일리 성과 측정'],
     isPro: true,
+    anchor: 'feature-analytics',
   },
   {
     name: '광고 픽셀 & API 연동',
@@ -59,6 +64,7 @@ const features = [
     iconColor: 'from-indigo-500 to-blue-500',
     features: ['광고 픽셀 연동', 'API 연동 가이드', '효율 및 전환 체크'],
     isPro: false,
+    anchor: 'feature-pixel',
   },
 ]
 
@@ -109,7 +115,11 @@ export default function FeaturesOverview() {
             <motion.div
               key={feature.name}
               variants={item}
-              className="group relative"
+              className="group relative cursor-pointer"
+              onClick={() => {
+                const el = document.getElementById(feature.anchor)
+                el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+              }}
             >
               <div
                 className={`relative rounded-2xl border ${
@@ -158,6 +168,14 @@ export default function FeaturesOverview() {
                     </li>
                   ))}
                 </ul>
+
+                {/* Scroll hint */}
+                <div className="flex items-center gap-1.5 text-xs font-medium text-blue-500 group-hover:text-blue-600 transition-colors">
+                  <span>자세히 보기</span>
+                  <svg className="h-3.5 w-3.5 group-hover:translate-y-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
 
               </div>
             </motion.div>

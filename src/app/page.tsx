@@ -2,6 +2,7 @@ import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 import HeroSection from '@/components/marketing/sections/HeroSection'
 import FeaturesOverview from '@/components/marketing/sections/FeaturesOverview'
+import FeatureShowcase from '@/components/marketing/sections/FeatureShowcase'
 import IndustrySection from '@/components/marketing/sections/IndustrySection'
 import PricingSection from '@/components/marketing/sections/PricingSection'
 import FAQSection from '@/components/marketing/sections/FAQSection'
@@ -27,6 +28,7 @@ export default function MarketingHomePage() {
       <main>
         <HeroSection />
         <FeaturesOverview />
+        <FeatureShowcase />
         <IndustrySection />
         <PricingSection />
         <FAQSection />
