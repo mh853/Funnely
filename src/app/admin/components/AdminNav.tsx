@@ -122,6 +122,12 @@ const mainNavItems: NavItem[] = [
     href: '/admin/support',
     description: '고객 문의사항 처리',
   },
+  {
+    icon: Mail,
+    label: '홈페이지 문의',
+    href: '/admin/support/inquiries',
+    description: '마케팅 홈페이지 접수 문의',
+  },
 ]
 
 const otherNavGroup: NavGroup = {
