@@ -24,11 +24,19 @@ export async function GET(request: Request) {
       query = query.eq('company_id', companyId)
     }
 
-    const { data: leads, error } = await query
+    const { data: leadsRaw, error } = await query
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
+
+    const leads = leadsRaw as Array<{
+      utm_source: string | null
+      utm_medium: string | null
+      utm_campaign: string | null
+      status: string
+      created_at: string
+    }> | null
 
     // 채널별 집계
     const channelStats = new Map<string, {
