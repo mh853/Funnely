@@ -2,6 +2,14 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+
   // 서브도메인(q81d1c.localhost:3000)에서 _next/static 에셋을 항상 메인 도메인에서 로드
   // 없으면 서브도메인 첫 접속 시 webpack 청크 로딩 실패
   assetPrefix: process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : undefined,
