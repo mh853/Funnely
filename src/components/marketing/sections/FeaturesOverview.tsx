@@ -1,70 +1,63 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import Link from 'next/link'
 import {
   PaintBrushIcon,
   ChartBarIcon,
   ChartPieIcon,
   DocumentChartBarIcon,
   CalendarDaysIcon,
-  UsersIcon,
+  SignalIcon,
   LockClosedIcon,
 } from '@heroicons/react/24/outline'
 
 const features = [
   {
-    name: '랜딩페이지 빌더',
-    slug: 'landing-page-builder',
-    description: '드래그 앤 드롭으로 누구나 쉽게 제작. Hero, Pricing, FAQ 등 다양한 섹션 제공',
+    name: '랜딩페이지 생성',
+    description: '누구나 5분만에 쉽고 빠르게 랜딩페이지 생성이 가능합니다. 홈페이지 및 DB수집용 랜딩페이지 제작 가능.',
     icon: PaintBrushIcon,
     iconColor: 'from-pink-500 to-rose-500',
-    features: ['비주얼 에디터', '실시간 모바일 프리뷰', '자동 폼 수집'],
+    features: ['이미지/영상 삽입', 'DB 수집 마감 타이머', '실시간 DB 수집현황', 'DB 수집 폼', '상담신청·전화연결 버튼'],
     isPro: false,
   },
   {
-    name: 'DB 관리',
-    slug: 'database-management',
-    description: '엑셀은 이제 그만. 상태별 자동 분류와 담당자 배정으로 효율적인 관리',
+    name: '실시간 DB 수집 및 관리',
+    description: '실시간으로 수집된 DB를 간편하게 관리. 콜센터 운영 중인 경우 DB배분 기능으로 콜 관리가 가능합니다.',
     icon: ChartBarIcon,
     iconColor: 'from-blue-500 to-cyan-500',
-    features: ['상태별 워크플로우', '담당자 자동 배정', '상담 히스토리 추적'],
+    features: ['DB 현황 리스트', 'DB 배분 (콜 담당자)', 'DB 수동 추가', '콜 결과 관리'],
     isPro: false,
+  },
+  {
+    name: 'DB예약 스케줄 관리',
+    description: '캘린더로 관리하는 DB 스케쥴. 예약, 방문 스케쥴 별도 관리가 가능합니다.',
+    icon: CalendarDaysIcon,
+    iconColor: 'from-green-500 to-emerald-500',
+    features: ['DB 스케쥴 캘린더', '예약 스케쥴 관리', '월별·주간별 스케쥴 노트'],
+    isPro: true,
   },
   {
     name: '트래픽 분석',
-    slug: 'traffic-analytics',
-    description: '실시간 방문자 추적, 전환율 분석, UTM 파라미터로 광고 성과 측정',
+    description: 'UTM, 기기별 유입경로 분석. DB 유입 경로를 PC·모바일·태블릿으로 구별하여 전환율까지 확인.',
     icon: ChartPieIcon,
     iconColor: 'from-violet-500 to-purple-500',
-    features: ['실시간 트래픽 대시보드', '유입 경로 분석', '전환 퍼널 추적'],
+    features: ['실시간 트래픽 대시보드', '기기별 유입 분석', '유입경로별 전환율'],
     isPro: true,
   },
   {
-    name: 'DB 리포트',
-    slug: 'database-reports',
-    description: '날짜별, 부서별, 담당자별 성과 분석으로 데이터 기반 의사결정',
+    name: '부서별/담당자별 성과 분석',
+    description: '콜 전환 성과 분석. 일별·월별 유입된 DB 결과를 한눈에 체크하고 월별·계정별 요약 리포트를 제공합니다.',
     icon: DocumentChartBarIcon,
     iconColor: 'from-amber-500 to-orange-500',
-    features: ['기간별 DB 현황', '팀원 성과 비교', '매출 분석'],
+    features: ['일별·월별 DB 현황', '담당자 성과 비교', '데일리 성과 측정'],
     isPro: true,
   },
   {
-    name: '스케줄 관리',
-    slug: 'schedule-management',
-    description: 'DB와 연동된 캘린더로 상담 일정과 예약을 한 곳에서 관리',
-    icon: CalendarDaysIcon,
-    iconColor: 'from-green-500 to-emerald-500',
-    features: ['캘린더 뷰', '담당자 배정', '자동 일정 생성'],
-    isPro: true,
-  },
-  {
-    name: '팀 협업',
-    slug: 'team-collaboration',
-    description: '회사 단위 관리로 모든 팀원이 실시간으로 DB와 일정을 공유',
-    icon: UsersIcon,
+    name: '광고 픽셀 & API 연동',
+    description: '광고 진행을 위한 픽셀 및 API 연동 가이드 제공. 성과 측정 및 효율 증대를 쉽게 하실 수 있습니다.',
+    icon: SignalIcon,
     iconColor: 'from-indigo-500 to-blue-500',
-    features: ['팀원 초대 시스템', '권한 관리', '활동 추적'],
+    features: ['광고 픽셀 연동', 'API 연동 가이드', '효율 및 전환 체크'],
     isPro: false,
   },
 ]
@@ -166,26 +159,6 @@ export default function FeaturesOverview() {
                   ))}
                 </ul>
 
-                {/* Learn more link */}
-                <Link
-                  href={`/features/${feature.slug}`}
-                  className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700 group-hover:gap-2 transition-all"
-                >
-                  자세히 보기
-                  <svg
-                    className="ml-1 h-4 w-4 group-hover:translate-x-1 transition-transform"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 5l7 7-7 7"
-                    />
-                  </svg>
-                </Link>
               </div>
             </motion.div>
           ))}

@@ -7,7 +7,7 @@ import { RocketLaunchIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
 
 const benefits = [
-  '14일 무료 체험',
+  '7일 무료체험',
   '언제든 취소 가능',
   '신용카드 등록 불필요',
   '모든 기능 제한 없이 사용',
@@ -43,7 +43,7 @@ export default function FinalCTASection() {
             지금 바로 시작하세요
           </h2>
           <p className="text-xl text-blue-100 mb-12">
-            14일 무료 체험, 신용카드 등록 필요 없음
+            7일 무료체험, 신용카드 등록 필요 없음
           </p>
 
           {/* Benefits grid */}

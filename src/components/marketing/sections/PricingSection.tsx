@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { CheckIcon, SparklesIcon } from '@heroicons/react/24/solid'
@@ -38,18 +39,27 @@ const plans = [
       { name: '스케줄 관리 (DB + 예약)', included: true, highlight: true },
       { name: '우선 고객 지원', included: true },
     ],
-    cta: '14일 무료 체험',
+    cta: '7일 무료체험',
     highlighted: true,
     savings: '연간 결제 시 2개월 무료',
   },
 ]
 
 export default function PricingSection() {
+  const [isAnnual, setIsAnnual] = useState(false)
+
+  const getPrice = (monthlyPrice: number) => {
+    if (isAnnual) {
+      return Math.floor((monthlyPrice * 10) / 12)
+    }
+    return monthlyPrice
+  }
+
   return (
     <section id="pricing" className="py-24 sm:py-32 bg-gradient-to-b from-gray-50 to-white">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         {/* Section header */}
-        <div className="mx-auto max-w-2xl text-center mb-16">
+        <div className="mx-auto max-w-2xl text-center mb-12">
           <h2 className="text-base font-semibold leading-7 text-blue-600">
             요금제
           </h2>
@@ -62,6 +72,36 @@ export default function PricingSection() {
           <p className="mt-6 text-lg leading-8 text-gray-600">
             모든 플랜에서 기본 기능을 사용할 수 있으며, 언제든 업그레이드 가능합니다
           </p>
+        </div>
+
+        {/* Billing toggle */}
+        <div className="flex items-center justify-center gap-4 mb-16">
+          <span className={`text-sm font-medium ${!isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+            월간 결제
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={isAnnual}
+            onClick={() => setIsAnnual(!isAnnual)}
+            className={`relative inline-flex h-7 w-14 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              isAnnual ? 'bg-blue-600' : 'bg-gray-200'
+            }`}
+          >
+            <span
+              className={`inline-block h-5 w-5 transform rounded-full bg-white shadow-lg transition-transform ${
+                isAnnual ? 'translate-x-8' : 'translate-x-1'
+              }`}
+            />
+          </button>
+          <span className={`text-sm font-medium ${isAnnual ? 'text-gray-900' : 'text-gray-500'}`}>
+            연간 결제
+          </span>
+          {isAnnual && (
+            <span className="inline-flex items-center rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+              2개월 무료
+            </span>
+          )}
         </div>
 
         {/* Pricing cards */}
@@ -118,7 +158,7 @@ export default function PricingSection() {
                         plan.highlighted ? 'text-white' : 'text-gray-900'
                       }`}
                     >
-                      ₩{plan.price.toLocaleString()}
+                      ₩{getPrice(plan.price).toLocaleString()}
                     </span>
                     <span
                       className={`text-lg ${
@@ -128,9 +168,19 @@ export default function PricingSection() {
                       /월
                     </span>
                   </div>
-                  {plan.savings && (
+                  {isAnnual && (
+                    <p className={`mt-1 text-sm ${plan.highlighted ? 'text-blue-100' : 'text-gray-500'}`}>
+                      연 ₩{(getPrice(plan.price) * 12).toLocaleString()} 결제
+                    </p>
+                  )}
+                  {plan.savings && !isAnnual && (
                     <p className="mt-2 text-sm font-medium text-blue-100">
                       💰 {plan.savings}
+                    </p>
+                  )}
+                  {plan.savings && isAnnual && (
+                    <p className="mt-2 text-sm font-medium text-green-300">
+                      ✓ 2개월 무료 적용됨
                     </p>
                   )}
                 </div>
@@ -189,6 +239,11 @@ export default function PricingSection() {
                 {plan.highlighted && (
                   <p className="mt-4 text-center text-xs text-blue-100">
                     신용카드 등록 불필요 • 언제든 취소 가능
+                  </p>
+                )}
+                {!plan.highlighted && (
+                  <p className="mt-4 text-center text-xs text-gray-400">
+                    미사용 기간 일할 계산 환불
                   </p>
                 )}
               </div>
