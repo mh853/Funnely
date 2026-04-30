@@ -1,8 +1,8 @@
 'use client'
 
-import { BellIcon } from '@heroicons/react/24/outline'
+import { BellIcon, XMarkIcon } from '@heroicons/react/24/outline'
 import { BellIcon as BellIconSolid } from '@heroicons/react/24/solid'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { formatDateTime } from '@/lib/utils/date'
 
@@ -19,17 +19,39 @@ interface Notification {
   created_at: string
 }
 
+interface ToastNotification {
+  id: string
+  title: string
+  message: string
+  type: string
+}
+
 export default function NotificationBell({ companyId, userId }: { companyId: string; userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [toasts, setToasts] = useState<ToastNotification[]>([])
+  const isInitialLoad = useRef(true)
+
+  const dismissToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }
+
+  const showToast = (notification: Notification) => {
+    setToasts((prev) => [...prev, {
+      id: notification.id,
+      title: notification.title,
+      message: notification.message,
+      type: notification.type,
+    }])
+    setTimeout(() => dismissToast(notification.id), 6000)
+  }
 
   useEffect(() => {
     fetchNotifications()
 
     const supabase = createClient()
 
-    // Realtime 구독 설정 함수 (재연결 시 재사용)
     const subscribeToNotifications = () => {
       return supabase
         .channel(`notifications-bell-${companyId}`)
@@ -41,8 +63,12 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
             table: 'notifications',
             filter: `company_id=eq.${companyId}`,
           },
-          () => {
+          (payload) => {
             fetchNotifications()
+            // 초기 로드 이후에만 토스트 표시
+            if (!isInitialLoad.current) {
+              showToast(payload.new as Notification)
+            }
           }
         )
         .subscribe()
@@ -74,6 +100,7 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
 
       if (data) {
         setNotifications(data)
+        isInitialLoad.current = false
       }
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
@@ -158,6 +185,35 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   }
 
   return (
+    <>
+      {/* Toast Notifications (fixed, top-right) */}
+      <div className="fixed top-20 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+        {toasts.map((toast) => (
+          <div
+            key={toast.id}
+            className="pointer-events-auto w-80 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-10 overflow-hidden animate-slide-in-right"
+          >
+            <div className="p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 text-xl">{getTypeIcon(toast.type)}</div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{toast.title}</p>
+                  <p className="text-sm text-gray-500 mt-0.5 line-clamp-2">{toast.message}</p>
+                </div>
+                <button
+                  onClick={() => dismissToast(toast.id)}
+                  className="flex-shrink-0 text-gray-400 hover:text-gray-600"
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+            {/* 자동 소멸 프로그레스 바 */}
+            <div className="h-0.5 bg-blue-500 animate-shrink-width" />
+          </div>
+        ))}
+      </div>
+
     <div className="relative">
       {/* Bell Icon */}
       <button
@@ -277,5 +333,6 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
         </>
       )}
     </div>
+    </>
   )
 }
