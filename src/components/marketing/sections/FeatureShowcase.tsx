@@ -137,35 +137,150 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
   if (type === 'landing') {
     return (
       <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 overflow-hidden">
-        <div className="flex items-center gap-2 bg-gray-50 px-4 py-3 border-b border-gray-100">
-          <div className="flex gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-red-400" />
-            <div className="w-3 h-3 rounded-full bg-yellow-400" />
-            <div className="w-3 h-3 rounded-full bg-green-400" />
+        {/* Header */}
+        <div className="flex items-center gap-3 bg-gray-50 px-4 py-3 border-b border-gray-100">
+          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center`}>
+            <PaintBrushIcon className="h-4 w-4 text-white" />
           </div>
-          <div className="flex-1 mx-3 h-5 rounded bg-gray-200 flex items-center px-2">
-            <span className="text-xs text-gray-400">funnely.io/landing/sample</span>
-          </div>
-        </div>
-        <div className={`bg-gradient-to-br ${accentColor} p-6 text-white`}>
-          <div className="inline-flex items-center gap-2 bg-white/20 rounded-full px-3 py-1 text-xs mb-3">
-            <ClockIcon className="h-3.5 w-3.5" />
-            <span>마감까지 02일 14시간 35분</span>
-          </div>
-          <div className="h-6 w-48 bg-white/30 rounded mb-2" />
-          <div className="h-4 w-64 bg-white/20 rounded mb-4" />
-          <div className="bg-yellow-400/30 rounded-lg px-3 py-2 text-xs">
-            현재 <span className="font-bold">247명</span> 신청 완료
+          <div>
+            <p className="text-xs font-semibold text-gray-900">랜딩페이지 수정</p>
+            <p className="text-xs text-gray-400">랜딩페이지 설정을 수정하고 업데이트하세요</p>
           </div>
         </div>
-        <div className="p-4 space-y-2">
-          {['이름', '연락처', '문의 내용'].map((f) => (
-            <div key={f} className="h-10 rounded-lg border border-gray-200 flex items-center px-3">
-              <span className="text-xs text-gray-400">{f}</span>
+
+        {/* Section 1: 랜딩 페이지 */}
+        <div className="border-b border-gray-200">
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+            <div className={`w-1 h-4 rounded-full bg-gradient-to-b ${accentColor}`} />
+            <span className="text-xs font-semibold text-gray-700">랜딩 페이지</span>
+          </div>
+          <div className="flex divide-x divide-gray-100">
+            {/* Left: Settings form */}
+            <div className="flex-1 p-3 space-y-2.5 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">상태</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-gray-400">OFF</span>
+                  <div className="w-8 h-4 rounded-full bg-gray-200" />
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">랜딩페이지 주소</p>
+                <div className="flex items-center gap-1 h-7 rounded border border-gray-200 px-2">
+                  <span className="text-xs text-gray-400 truncate">funnely.co.kr/</span>
+                  <span className="text-xs font-medium text-gray-700">sample</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">랜딩페이지 이름</p>
+                <div className="h-7 rounded border border-gray-200 flex items-center px-2">
+                  <span className="text-xs text-gray-700">이벤트 랜딩페이지</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">노출 요소</p>
+                <div className="space-y-1">
+                  {['DB수집 마감 타이머', '실시간 수집현황', '전화연결 버튼'].map((item) => (
+                    <div key={item} className="flex items-center gap-1.5">
+                      <div className={`w-3.5 h-3.5 rounded-sm bg-gradient-to-r ${accentColor} flex items-center justify-center shrink-0`}>
+                        <CheckCircleIcon className="h-2.5 w-2.5 text-white" />
+                      </div>
+                      <span className="text-xs text-gray-600">{item}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
-          ))}
-          <div className={`h-11 rounded-full bg-gradient-to-r ${accentColor} flex items-center justify-center`}>
-            <span className="text-sm font-semibold text-white">상담 신청하기</span>
+            {/* Right: Landing phone */}
+            <div className="w-40 shrink-0 p-3 bg-gray-50 flex justify-center">
+              <div className="w-28 rounded-[14px] border-2 border-gray-800 bg-white overflow-hidden shadow-md">
+                <div className="bg-gray-800 py-0.5 flex justify-center">
+                  <div className="w-8 h-1 rounded-full bg-gray-500" />
+                </div>
+                <div className={`bg-gradient-to-br ${accentColor} px-3 py-2.5`}>
+                  <div className="flex justify-between items-center mb-1.5">
+                    <span className="text-[10px] font-bold text-white">D-3일</span>
+                    <span className="text-[9px] text-white/80">실시간 현황</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-white/30">
+                    <div className="h-1.5 rounded-full bg-white w-2/3" />
+                  </div>
+                  <p className="text-[8px] text-white/70 mt-1 text-center">현재 128명 신청완료</p>
+                </div>
+                <div className="p-2.5 space-y-2">
+                  <div className="h-6 rounded border border-gray-200 bg-gray-50 flex items-center px-2">
+                    <span className="text-[10px] text-gray-400">이름</span>
+                  </div>
+                  <div className="h-6 rounded border border-gray-200 bg-gray-50 flex items-center px-2">
+                    <span className="text-[10px] text-gray-400">전화번호</span>
+                  </div>
+                  <div className="h-6 rounded border border-gray-200 bg-gray-50 flex items-center px-2">
+                    <span className="text-[10px] text-gray-400">지역 선택 ▾</span>
+                  </div>
+                  <div className={`h-7 rounded-full bg-gradient-to-r ${accentColor} flex items-center justify-center`}>
+                    <span className="text-[10px] font-semibold text-white">신청하기</span>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <PhoneIcon className="h-3 w-3 text-gray-400" />
+                    <span className="text-[9px] text-gray-400">전화연결</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 2: 완료 페이지 */}
+        <div>
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex items-center gap-2">
+            <div className={`w-1 h-4 rounded-full bg-gradient-to-b ${accentColor}`} />
+            <span className="text-xs font-semibold text-gray-700">완료 페이지</span>
+          </div>
+          <div className="flex divide-x divide-gray-100">
+            {/* Left: Completion settings */}
+            <div className="flex-1 p-3 space-y-2.5 min-w-0">
+              <div>
+                <p className="text-xs text-gray-500 mb-1">신청완료 이미지</p>
+                <div className="h-14 rounded border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center gap-2">
+                  <PhotoIcon className="h-4 w-4 text-gray-300" />
+                  <span className="text-[10px] text-gray-400">이미지 업로드</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">완료 메시지</p>
+                <div className="h-8 rounded border border-gray-200 bg-gray-50 flex items-center px-2">
+                  <span className="text-[10px] text-gray-700">신청이 완료되었습니다.</span>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500 mb-1">안내 멘트</p>
+                <div className="h-8 rounded border border-gray-200 bg-gray-50 flex items-center px-2">
+                  <span className="text-[10px] text-gray-400">담당자가 빠른 시일 내 연락드립니다.</span>
+                </div>
+              </div>
+            </div>
+            {/* Right: Completion phone */}
+            <div className="w-40 shrink-0 p-3 bg-gray-50 flex justify-center">
+              <div className="w-28 rounded-[14px] border-2 border-gray-800 bg-white overflow-hidden shadow-md">
+                <div className="bg-gray-800 py-0.5 flex justify-center">
+                  <div className="w-8 h-1 rounded-full bg-gray-500" />
+                </div>
+                <div className={`bg-gradient-to-br ${accentColor} p-4 flex items-center justify-center`}>
+                  <div className="w-10 h-10 rounded-full bg-white/25 flex items-center justify-center">
+                    <CheckCircleIcon className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+                <div className="p-2.5 space-y-2">
+                  <p className="text-[10px] font-semibold text-gray-900 text-center leading-tight">신청이 완료되었습니다.<br />곧 연락드리겠습니다.</p>
+                  <div className="rounded-lg bg-blue-50 border border-blue-100 p-1.5">
+                    <p className="text-[9px] text-blue-600 leading-tight">담당자가 빠른 시일 내에 연락드릴 예정입니다.</p>
+                  </div>
+                  <div className="h-6 rounded-full bg-gray-100 flex items-center justify-center">
+                    <span className="text-[10px] text-gray-500">× 창 닫기</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -174,37 +289,67 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
 
   if (type === 'db') {
     const rows = [
-      { name: '김민준', phone: '010-****-1234', status: '상담전', result: '—', color: 'bg-yellow-100 text-yellow-700' },
-      { name: '이서연', phone: '010-****-5678', status: '진행중', result: '관심', color: 'bg-blue-100 text-blue-700' },
-      { name: '박지호', phone: '010-****-9012', status: '예약확정', result: '확정', color: 'bg-green-100 text-green-700' },
-      { name: '최수아', phone: '010-****-3456', status: '거절', result: '거절', color: 'bg-red-100 text-red-700' },
+      { date: '05-08', name: '김민준', phone: '010-****-1234', device: 'PC', status: '상담전', manager: '홍길동', color: 'bg-yellow-100 text-yellow-700' },
+      { date: '05-07', name: '이서연', phone: '010-****-5678', device: 'Mobile', status: '진행중', manager: '김철수', color: 'bg-blue-100 text-blue-700' },
+      { date: '05-07', name: '박지호', phone: '010-****-9012', device: 'PC', status: '예약확정', manager: '이영희', color: 'bg-green-100 text-green-700' },
+      { date: '05-06', name: '최수아', phone: '010-****-3456', device: 'Mobile', status: '거절', manager: '홍길동', color: 'bg-red-100 text-red-700' },
     ]
     return (
       <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-900">DB 현황</span>
-          <div className={`h-7 rounded-full bg-gradient-to-r ${accentColor} px-3 flex items-center`}>
-            <span className="text-xs font-medium text-white">+ DB 배분</span>
+        <div className="flex items-center gap-2 px-3 py-3 border-b border-gray-100">
+          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center shrink-0`}>
+            <ChartBarIcon className="h-4 w-4 text-white" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-gray-900">DB 현황</p>
+            <p className="text-xs text-gray-400 truncate">수집된 고객 DB 관리</p>
+          </div>
+          <div className="flex gap-1 shrink-0">
+            <div className={`h-6 rounded-lg bg-gradient-to-r ${accentColor} px-2 flex items-center`}>
+              <span className="text-xs font-medium text-white whitespace-nowrap">DB 배분</span>
+            </div>
+            <div className="h-6 rounded-lg border border-gray-200 px-2 flex items-center">
+              <span className="text-xs text-gray-600 whitespace-nowrap">+ 수동추가</span>
+            </div>
+            <div className="h-6 rounded-lg border border-gray-200 px-2 flex items-center">
+              <span className="text-xs text-gray-600 whitespace-nowrap">↓ Excel</span>
+            </div>
           </div>
         </div>
+        {/* Filter bar */}
+        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-1.5 overflow-x-auto">
+          <div className="h-6 rounded border border-gray-200 px-2 flex items-center gap-1 shrink-0">
+            <span className="text-[10px] text-gray-600">📅 05-01 ~ 05-08</span>
+            <span className="text-gray-300 ml-0.5">×</span>
+          </div>
+          <div className="h-6 rounded border border-gray-200 px-2 flex items-center shrink-0">
+            <span className="text-[10px] text-gray-500">랜딩페이지 전체 ▾</span>
+          </div>
+          <div className="h-6 rounded border border-gray-200 px-2 flex items-center shrink-0">
+            <span className="text-[10px] text-gray-500">결과 전체 ▾</span>
+          </div>
+        </div>
+        {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+          <table className="w-full" style={{ fontSize: '10px' }}>
             <thead>
               <tr className="bg-gray-50 border-b border-gray-100">
-                {['이름', '연락처', '상태', '결과'].map((h) => (
-                  <th key={h} className="px-3 py-2 text-left text-gray-500 font-medium">{h}</th>
+                {['신청일', '이름', '전화번호', '기기', '결과', '담당자'].map((h) => (
+                  <th key={h} className="px-1.5 py-2 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {rows.map((r) => (
                 <tr key={r.name} className="border-b border-gray-50">
-                  <td className="px-3 py-2.5 font-medium text-gray-900">{r.name}</td>
-                  <td className="px-3 py-2.5 text-gray-500">{r.phone}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${r.color}`}>{r.status}</span>
+                  <td className="px-1.5 py-2 text-gray-500 whitespace-nowrap">{r.date}</td>
+                  <td className="px-1.5 py-2 font-medium text-gray-900">{r.name}</td>
+                  <td className="px-1.5 py-2 text-gray-500 whitespace-nowrap">{r.phone}</td>
+                  <td className="px-1.5 py-2 text-gray-500">{r.device}</td>
+                  <td className="px-1.5 py-2">
+                    <span className={`rounded-full px-1.5 py-0.5 font-medium whitespace-nowrap ${r.color}`}>{r.status}</span>
                   </td>
-                  <td className="px-3 py-2.5 text-gray-500">{r.result}</td>
+                  <td className="px-1.5 py-2 text-gray-500">{r.manager}</td>
                 </tr>
               ))}
             </tbody>
@@ -228,49 +373,103 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
   }
 
   if (type === 'analytics') {
+    const trafficRows = [
+      { date: '05-01', total: 128, pc: 74, pcPct: '57.8', mobile: 52, mobPct: '40.6', tablet: 2, tabPct: '1.6' },
+      { date: '05-02', total: 95, pc: 61, pcPct: '64.2', mobile: 31, mobPct: '32.6', tablet: 3, tabPct: '3.2' },
+      { date: '05-03', total: 143, pc: 89, pcPct: '62.2', mobile: 48, mobPct: '33.6', tablet: 6, tabPct: '4.2' },
+    ]
+    const convRows = [
+      { date: '05-01', total: 21, totalPct: '16.4', pc: 13, pcPct: '17.6', mobile: 8, mobPct: '15.4' },
+      { date: '05-02', total: 18, totalPct: '18.9', pc: 11, pcPct: '18.0', mobile: 7, mobPct: '22.6' },
+      { date: '05-03', total: 28, totalPct: '19.6', pc: 18, pcPct: '20.2', mobile: 10, mobPct: '20.8' },
+    ]
+    const Pct = ({ children }: { children: string }) => (
+      <span className="block text-gray-400" style={{ fontSize: '8px' }}>({children}%)</span>
+    )
     return (
       <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 overflow-hidden">
-        <div className="p-4 border-b border-gray-100">
-          <p className="text-sm font-semibold text-gray-900 mb-3">유입 경로 분석</p>
-          <div className="space-y-2">
-            {[
-              { label: 'PC', value: 58, color: 'bg-violet-500' },
-              { label: 'Mobile', value: 35, color: 'bg-purple-400' },
-              { label: 'Tablet', value: 7, color: 'bg-fuchsia-300' },
-            ].map((item) => (
-              <div key={item.label} className="flex items-center gap-2">
-                <span className="text-xs text-gray-500 w-12">{item.label}</span>
-                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden">
-                  <div className={`h-full ${item.color} rounded-full`} style={{ width: `${item.value}%` }} />
-                </div>
-                <span className="text-xs font-medium text-gray-700 w-8 text-right">{item.value}%</span>
-              </div>
-            ))}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <div className="flex items-center gap-2">
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center`}>
+              <ChartPieIcon className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-900">트래픽 분석</p>
+              <p className="text-xs text-gray-400">트래픽 현황 및 유입경로를 분석합니다</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1" style={{ fontSize: '11px' }}>
+            <button className="px-1 text-gray-400">‹</button>
+            <span className="font-semibold text-gray-700">2026년 5월</span>
+            <button className="px-1 text-gray-400">›</button>
           </div>
         </div>
-        <div className="p-4">
-          <p className="text-sm font-semibold text-gray-900 mb-3">데일리 DB 리포트</p>
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {[
-              { label: 'DB 유입', value: '128', delta: '+12' },
-              { label: '예약확정', value: '21', delta: '+3' },
-              { label: '전환율', value: '16.4%', delta: '+1.2%' },
-            ].map((s) => (
-              <div key={s.label} className="bg-gray-50 rounded-xl p-2 text-center">
-                <p className="text-xs text-gray-500">{s.label}</p>
-                <p className="text-base font-bold text-gray-900">{s.value}</p>
-                <p className="text-xs text-green-500 font-medium">{s.delta}</p>
-              </div>
-            ))}
+        <div className="flex divide-x divide-gray-100">
+          {/* Left: 트래픽 유입 */}
+          <div className="flex-1 min-w-0">
+            <div className="px-2 py-1.5 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+              <span className="font-medium text-gray-700" style={{ fontSize: '10px' }}>트래픽 유입</span>
+              <span className="text-gray-400" style={{ fontSize: '9px' }}>↓ 엑셀</span>
+            </div>
+            <table className="w-full" style={{ fontSize: '10px' }}>
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['날짜', '합계', 'PC', 'MOBILE', 'TAB'].map((h) => (
+                    <th key={h} className="px-1 py-1.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {trafficRows.map((r) => (
+                  <tr key={r.date} className="border-b border-gray-50">
+                    <td className="px-1 py-1.5 text-gray-600 whitespace-nowrap">{r.date}</td>
+                    <td className="px-1 py-1.5 font-medium text-gray-900">{r.total}</td>
+                    <td className="px-1 py-1.5 text-blue-600">{r.pc}<Pct>{r.pcPct}</Pct></td>
+                    <td className="px-1 py-1.5 text-green-600">{r.mobile}<Pct>{r.mobPct}</Pct></td>
+                    <td className="px-1 py-1.5 text-purple-600">{r.tablet}<Pct>{r.tabPct}</Pct></td>
+                  </tr>
+                ))}
+                <tr className="border-t border-gray-200 bg-gray-50 font-medium">
+                  <td className="px-1 py-1.5 text-gray-700">합계</td>
+                  <td className="px-1 py-1.5 font-bold text-gray-900">366</td>
+                  <td className="px-1 py-1.5 text-blue-700">224</td>
+                  <td className="px-1 py-1.5 text-green-700">131</td>
+                  <td className="px-1 py-1.5 text-purple-700">11</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div className="flex items-end gap-1 h-16 bg-gray-50 rounded-xl p-2">
-            {[30, 55, 45, 70, 60, 85, 75].map((h, i) => (
-              <div
-                key={i}
-                className="flex-1 rounded-t bg-violet-400 opacity-80"
-                style={{ height: `${h}%` }}
-              />
-            ))}
+          {/* Right: DB 전환수 */}
+          <div className="flex-1 min-w-0">
+            <div className="px-2 py-1.5 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+              <span className="font-medium text-gray-700" style={{ fontSize: '10px' }}>DB 전환수</span>
+              <span className="text-gray-400" style={{ fontSize: '9px' }}>↓ 엑셀</span>
+            </div>
+            <table className="w-full" style={{ fontSize: '10px' }}>
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  {['날짜', '합계', 'PC', 'MOBILE'].map((h) => (
+                    <th key={h} className="px-1 py-1.5 text-left text-gray-500 font-medium whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {convRows.map((r) => (
+                  <tr key={r.date} className="border-b border-gray-50">
+                    <td className="px-1 py-1.5 text-gray-600 whitespace-nowrap">{r.date}</td>
+                    <td className="px-1 py-1.5 font-medium text-gray-900">{r.total}<Pct>{r.totalPct}</Pct></td>
+                    <td className="px-1 py-1.5 text-blue-600">{r.pc}<Pct>{r.pcPct}</Pct></td>
+                    <td className="px-1 py-1.5 text-green-600">{r.mobile}<Pct>{r.mobPct}</Pct></td>
+                  </tr>
+                ))}
+                <tr className="border-t border-gray-200 bg-gray-50 font-medium">
+                  <td className="px-1 py-1.5 text-gray-700">합계</td>
+                  <td className="px-1 py-1.5 font-bold text-gray-900">67<Pct>18.3</Pct></td>
+                  <td className="px-1 py-1.5 text-blue-700">42</td>
+                  <td className="px-1 py-1.5 text-green-700">25</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -278,51 +477,85 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
   }
 
   if (type === 'schedule') {
-    const days = ['월', '화', '수', '목', '금']
-    const events = [
-      { day: 0, time: '10:00', name: '김민준 상담', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-      { day: 1, time: '14:00', name: '이서연 예약', color: 'bg-green-100 text-green-700 border-green-200' },
-      { day: 2, time: '11:00', name: '박지호 내원', color: 'bg-purple-100 text-purple-700 border-purple-200' },
-      { day: 3, time: '15:30', name: '최수아 상담', color: 'bg-blue-100 text-blue-700 border-blue-200' },
-      { day: 4, time: '13:00', name: '정하윤 예약', color: 'bg-green-100 text-green-700 border-green-200' },
+    const dayLabels = ['월', '화', '수', '목', '금', '토', '일']
+    const calendarDates = [
+      [null, null, null, 1, 2, 3, 4],
+      [5, 6, 7, 8, 9, 10, 11],
+      [12, 13, 14, 15, 16, 17, 18],
+      [19, 20, 21, 22, 23, 24, 25],
+      [26, 27, 28, 29, 30, 31, null],
     ]
+    const events: Record<number, { label: string; color: string }> = {
+      12: { label: '김민준', color: 'bg-blue-100 text-blue-700' },
+      15: { label: '이서연', color: 'bg-green-100 text-green-700' },
+      20: { label: '박지호', color: 'bg-green-100 text-green-700' },
+      23: { label: '최수아', color: 'bg-blue-100 text-blue-700' },
+    }
     return (
       <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-          <span className="text-sm font-semibold text-gray-900">2026년 4월 스케쥴</span>
-          <div className="flex gap-1.5">
-            <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-600">DB 스케쥴</span>
-            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-xs text-green-600">예약</span>
+          <div className="flex items-center gap-2">
+            <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center`}>
+              <CalendarDaysIcon className="h-4 w-4 text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-900">DB 스케줄</p>
+              <p className="text-xs text-gray-400">DB 상담 일정과 약속을 관리합니다</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="h-6 rounded border border-gray-200 px-2 flex items-center">
+              <span className="text-xs text-gray-500">전체 콜담당자 ▾</span>
+            </div>
+            <div className="flex rounded-lg border border-gray-200 overflow-hidden text-xs">
+              <div className={`px-2 py-1 bg-gradient-to-r ${accentColor} text-white font-medium`}>월별</div>
+              <div className="px-2 py-1 text-gray-500 bg-white">주별</div>
+            </div>
           </div>
         </div>
-        <div className="p-4">
-          <div className="grid grid-cols-5 gap-1.5">
-            {days.map((d, i) => {
-              const ev = events.find((e) => e.day === i)
-              return (
-                <div key={d} className="text-center">
-                  <p className="text-xs text-gray-400 mb-1.5">{d}</p>
-                  {ev ? (
-                    <div className={`rounded-lg border p-1.5 text-xs ${ev.color}`}>
-                      <p className="font-medium">{ev.time}</p>
-                      <p className="leading-tight">{ev.name}</p>
+        <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100">
+          <span className="text-sm font-bold text-gray-900">2026년 5월</span>
+          <div className="flex items-center gap-1">
+            <button className="text-gray-400 text-xs">‹</button>
+            <span className="text-xs text-blue-600 border border-blue-200 rounded px-1.5 py-0.5">이번달</span>
+            <button className="text-gray-400 text-xs">›</button>
+          </div>
+          <span className="ml-auto text-xs text-gray-400">0 건</span>
+        </div>
+        <div className="p-2">
+          <div className="grid grid-cols-7 mb-1">
+            {dayLabels.map((d, i) => (
+              <div key={d} className={`text-center text-xs font-medium py-1 ${i === 5 ? 'text-blue-500' : i === 6 ? 'text-red-500' : 'text-gray-500'}`}>{d}</div>
+            ))}
+          </div>
+          {calendarDates.map((week, wi) => (
+            <div key={wi} className="grid grid-cols-7 border-t border-gray-100">
+              {week.map((date, di) => (
+                <div key={di} className="min-h-[40px] border-r border-gray-100 p-0.5 last:border-r-0">
+                  {date && (
+                    <div className="flex flex-col gap-0.5">
+                      <span className={`w-5 h-5 flex items-center justify-center text-xs font-medium mx-auto ${
+                        date === 8 ? 'bg-blue-600 text-white rounded-full' :
+                        di === 5 ? 'text-blue-500' : di === 6 ? 'text-red-500' : 'text-gray-700'
+                      }`}>{date}</span>
+                      {events[date] && (
+                        <span className={`rounded px-0.5 text-xs leading-tight truncate ${events[date].color}`}>{events[date].label}</span>
+                      )}
                     </div>
-                  ) : (
-                    <div className="rounded-lg border border-dashed border-gray-200 p-1.5 h-14" />
                   )}
                 </div>
-              )
-            })}
-          </div>
+              ))}
+            </div>
+          ))}
         </div>
-        <div className="grid grid-cols-2 gap-2 px-4 pb-4">
+        <div className="grid grid-cols-2 gap-2 px-3 py-2 border-t border-gray-100">
           {[
             { label: 'DB 스케쥴', count: 12, color: 'bg-blue-50 text-blue-700' },
             { label: '예약 스케쥴', count: 8, color: 'bg-green-50 text-green-700' },
           ].map((s) => (
-            <div key={s.label} className={`rounded-xl p-3 ${s.color}`}>
+            <div key={s.label} className={`rounded-xl p-2.5 ${s.color}`}>
               <p className="text-xs font-medium">{s.label}</p>
-              <p className="text-2xl font-bold">{s.count}건</p>
+              <p className="text-xl font-bold">{s.count}건</p>
             </div>
           ))}
         </div>
@@ -333,38 +566,47 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
   // pixel
   return (
     <div className="rounded-2xl bg-white shadow-xl ring-1 ring-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-100">
-        <p className="text-sm font-semibold text-gray-900 mb-3">광고 픽셀 연동 현황</p>
-        <div className="space-y-2">
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-gray-100">
+        <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${accentColor} flex items-center justify-center`}>
+          <SignalIcon className="h-4 w-4 text-white" />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-900">설정</p>
+          <p className="text-xs text-gray-400">회사 정보 및 계정 설정을 관리합니다</p>
+        </div>
+      </div>
+      <div className="p-3 space-y-2">
+        <p className="text-xs font-semibold text-gray-500 px-1">연동</p>
+        <div className="space-y-1.5">
           {[
-            { name: 'Meta Pixel', status: '연동됨', color: 'bg-blue-100 text-blue-700', icon: '📘' },
-            { name: 'Google Ads', status: '연동됨', color: 'bg-green-100 text-green-700', icon: '🔍' },
-            { name: 'Kakao Pixel', status: '미연동', color: 'bg-gray-100 text-gray-500', icon: '💬' },
-          ].map((p) => (
-            <div key={p.name} className="flex items-center justify-between rounded-xl bg-gray-50 px-3 py-2.5">
+            { icon: '🔔', title: '이메일 알림', desc: '리드 유입 알림 수신' },
+            { icon: '📊', title: '픽셀 관리', desc: 'Facebook, Google, Kakao' },
+            { icon: '🔗', title: '광고 플랫폼 API', desc: 'Meta, Kakao, Google Ads' },
+            { icon: '📋', title: '리드 상태 관리', desc: 'DB현황 결과 상태 설정' },
+            { icon: '📈', title: 'Sheets 동기화', desc: 'Google Sheets 자동 연동' },
+          ].map((item) => (
+            <div key={item.title} className="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50 px-3 py-2">
               <div className="flex items-center gap-2">
-                <span className="text-base">{p.icon}</span>
-                <span className="text-sm font-medium text-gray-900">{p.name}</span>
+                <span className="text-sm">{item.icon}</span>
+                <div>
+                  <p className="text-xs font-medium text-gray-900">{item.title}</p>
+                  <p className="text-xs text-gray-400">{item.desc}</p>
+                </div>
               </div>
-              <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${p.color}`}>{p.status}</span>
+              <span className="text-gray-300 text-xs">›</span>
             </div>
           ))}
         </div>
-      </div>
-      <div className="p-4">
-        <p className="text-sm font-semibold text-gray-900 mb-3">전환 이벤트</p>
-        <div className="space-y-2">
+        <p className="text-xs font-semibold text-gray-500 px-1 pt-1">관리</p>
+        <div className="grid grid-cols-3 gap-1.5">
           {[
-            { event: 'Lead (신청완료)', count: 128, delta: '+12' },
-            { event: 'ViewContent (페이지뷰)', count: 1247, delta: '+89' },
-            { event: 'Contact (전화연결)', count: 43, delta: '+5' },
-          ].map((e) => (
-            <div key={e.event} className="flex items-center justify-between text-xs">
-              <span className="text-gray-600">{e.event}</span>
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-900">{e.count}</span>
-                <span className="text-green-500 font-medium">{e.delta}</span>
-              </div>
+            { icon: '💳', title: '구독 관리' },
+            { icon: '📄', title: '결제 내역' },
+            { icon: '👥', title: '팀 관리' },
+          ].map((item) => (
+            <div key={item.title} className="rounded-xl border border-gray-100 bg-gray-50 px-2 py-2.5 flex flex-col items-center gap-1">
+              <span className="text-base">{item.icon}</span>
+              <p className="text-xs font-medium text-gray-700 text-center">{item.title}</p>
             </div>
           ))}
         </div>
@@ -389,7 +631,7 @@ export default function FeatureShowcase() {
             setActiveIndex(index)
           }
         },
-        { threshold: 0.5, rootMargin: '-10% 0px -40% 0px' }
+        { threshold: 0, rootMargin: '-5% 0px -85% 0px' }
       )
       observer.observe(ref)
       observers.push(observer)
@@ -399,6 +641,7 @@ export default function FeatureShowcase() {
   }, [])
 
   const scrollToFeature = (index: number) => {
+    setActiveIndex(index)
     sectionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
