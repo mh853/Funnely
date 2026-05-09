@@ -138,7 +138,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       as="h3"
                       className="text-2xl font-bold text-white mb-1"
                     >
-                      {isSales ? '영업팀과 상담하기' : '문의하기'}
+                      {isSales ? '상담하기' : '문의하기'}
                     </Dialog.Title>
                     <p className="text-blue-100 text-sm">
                       {isSales
@@ -161,7 +161,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                       </h4>
                       <p className="text-gray-600">
                         {isSales
-                          ? '영업팀이 영업일 기준 1일 이내에 연락드립니다.'
+                          ? '담당자가 영업일 기준 1일 이내에 연락드립니다.'
                           : '빠른 시일 내에 담당자가 연락드리겠습니다.'}
                       </p>
                     </div>
@@ -324,7 +324,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
                           </div>
                           <p className="text-sm text-gray-700">
                             {isSales
-                              ? '영업팀이 영업일 기준 1일 이내에 연락드립니다. 빠른 상담을 원하시면 연락처를 꼭 남겨주세요.'
+                              ? '담당자가 영업일 기준 1일 이내에 연락드립니다. 빠른 상담을 원하시면 연락처를 꼭 남겨주세요.'
                               : '접수된 문의는 영업일 기준 2-3일 이내에 답변드립니다. 긴급한 문의는 채팅 상담을 이용해주세요.'}
                           </p>
                         </div>
