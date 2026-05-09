@@ -1,317 +1,211 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import {
-  FileText,
-  Download,
-  Trash2,
-  Calendar,
-  Building2,
-  User,
-} from 'lucide-react'
-import { format } from 'date-fns'
+import { format, subDays } from 'date-fns'
+import { ko } from 'date-fns/locale'
+import { Download } from 'lucide-react'
 
-interface Report {
-  id: string
-  name: string
-  period_start: string
-  period_end: string
-  generated_at: string
-  template: {
-    id: string
-    name: string
-    type: string
-  }
-  company: {
-    id: string
-    name: string
-  } | null
-  generated_by_user: {
-    id: string
-    full_name: string
-  } | null
+interface DailyRow {
+  date: string
+  leads: number
+  signups: number
+  trials: number
+  payments: number
+  revenue: number
+  withdrawals: number
+  cancellations: number
+  tickets: number
 }
 
-interface ReportsData {
-  reports: Report[]
-  pagination: {
-    total: number
-    page: number
-    limit: number
-    totalPages: number
-    hasNext: boolean
-    hasPrev: boolean
-  }
+interface AnalyticsData {
+  rows: DailyRow[]
+  totals: Omit<DailyRow, 'date'>
 }
 
-const TYPE_LABELS: Record<string, string> = {
-  conversion: '전환 분석',
-  performance: '성과 분석',
-  roi: 'ROI 분석',
-  channel: '채널 분석',
-  custom: '커스텀',
+function toInputDate(date: Date) {
+  return date.toISOString().split('T')[0]
 }
+
+const COLS = [
+  { key: 'leads',         label: '유입',    unit: '건' },
+  { key: 'signups',       label: '회원가입', unit: '처' },
+  { key: 'trials',        label: '무료체험', unit: '처' },
+  { key: 'payments',      label: '결제',    unit: '건' },
+  { key: 'revenue',       label: '매출',    unit: '원' },
+  { key: 'withdrawals',   label: '탈퇴',    unit: '처' },
+  { key: 'cancellations', label: '구독취소', unit: '처' },
+  { key: 'tickets',       label: '문의',    unit: '건' },
+] as const
 
 export default function ReportsPage() {
-  const [data, setData] = useState<ReportsData | null>(null)
+  const today = new Date()
+  const [fromDate, setFromDate] = useState(toInputDate(subDays(today, 6)))
+  const [toDate, setToDate] = useState(toInputDate(today))
+  const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(1)
 
   useEffect(() => {
-    fetchReports()
-  }, [page])
+    fetchData()
+  }, [fromDate, toDate])
 
-  async function fetchReports() {
+  async function fetchData() {
     try {
       setLoading(true)
-      const params = new URLSearchParams({
-        page: page.toString(),
-        limit: '20',
-      })
-
-      const response = await fetch(`/api/admin/reports?${params}`)
-      if (!response.ok) throw new Error('Failed to fetch reports')
-
-      const result = await response.json()
-      setData(result)
-    } catch (error) {
-      console.error('Error fetching reports:', error)
+      const params = new URLSearchParams({ from: fromDate, to: toDate })
+      const res = await fetch(`/admin/api/analytics/daily?${params}`)
+      if (!res.ok) throw new Error('fetch failed')
+      setData(await res.json())
+    } catch (e) {
+      console.error(e)
     } finally {
       setLoading(false)
     }
   }
 
-  async function handleExport(reportId: string, reportName: string) {
-    try {
-      const response = await fetch(`/api/admin/reports/${reportId}/export`)
-      if (!response.ok) throw new Error('Failed to export report')
-
-      const blob = await response.blob()
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${reportName}_${new Date().toISOString().split('T')[0]}.xlsx`
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error('Error exporting report:', error)
-      alert('리포트 내보내기에 실패했습니다')
-    }
+  function handleExportCSV() {
+    if (!data) return
+    const headers = ['날짜', ...COLS.map((c) => `${c.label}(${c.unit})`)]
+    const rows = data.rows.map((r) => [
+      r.date,
+      r.leads, r.signups, r.trials, r.payments,
+      r.revenue, r.withdrawals, r.cancellations, r.tickets,
+    ])
+    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `리포트_${fromDate}_${toDate}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  async function handleDelete(reportId: string) {
-    if (!confirm('이 리포트를 삭제하시겠습니까?')) return
-
-    try {
-      const response = await fetch(`/api/admin/reports/${reportId}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) throw new Error('Failed to delete report')
-
-      fetchReports()
-    } catch (error) {
-      console.error('Error deleting report:', error)
-      alert('리포트 삭제에 실패했습니다')
-    }
-  }
-
-  if (loading && !data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">로딩 중...</div>
-      </div>
-    )
-  }
-
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-red-500">데이터를 불러올 수 없습니다</div>
-      </div>
-    )
-  }
+  const totals = data?.totals
 
   return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-8">
+      {/* Page header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100 flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">리포트 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            생성된 리포트를 조회하고 다운로드합니다
-          </p>
+          <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Reports</p>
+          <h2 className="text-2xl font-bold text-white">리포트</h2>
+          <p className="text-indigo-200 text-sm mt-1">일별 지표를 확인합니다</p>
         </div>
-        <div className="flex gap-2">
-          <Button>
-            <FileText className="h-4 w-4 mr-2" />
-            새 리포트 생성
-          </Button>
-        </div>
+        <button
+          onClick={handleExportCSV}
+          disabled={!data}
+          className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 disabled:opacity-40 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors backdrop-blur-sm border border-white/30"
+        >
+          <Download className="h-4 w-4" />
+          CSV 다운로드
+        </button>
       </div>
 
-      {/* 리포트 통계 */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-gray-500">전체 리포트</div>
-            <div className="text-2xl font-bold text-gray-900 mt-2">
-              {data.pagination.total.toLocaleString()}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-gray-500">이번 달</div>
-            <div className="text-2xl font-bold text-blue-600 mt-2">
-              {data.reports.filter(r => {
-                const generated = new Date(r.generated_at)
-                const now = new Date()
-                return generated.getMonth() === now.getMonth() &&
-                  generated.getFullYear() === now.getFullYear()
-              }).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-gray-500">이번 주</div>
-            <div className="text-2xl font-bold text-green-600 mt-2">
-              {data.reports.filter(r => {
-                const generated = new Date(r.generated_at)
-                const now = new Date()
-                const weekStart = new Date(now)
-                weekStart.setDate(now.getDate() - now.getDay())
-                return generated >= weekStart
-              }).length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-sm font-medium text-gray-500">오늘</div>
-            <div className="text-2xl font-bold text-purple-600 mt-2">
-              {data.reports.filter(r => {
-                const generated = new Date(r.generated_at)
-                const now = new Date()
-                return generated.toDateString() === now.toDateString()
-              }).length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* 리포트 목록 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            리포트 목록 ({data.pagination.total.toLocaleString()}개)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {data.reports.map((report) => (
-              <div
-                key={report.id}
-                className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <h3 className="font-medium text-gray-900">{report.name}</h3>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          {format(new Date(report.period_start), 'yyyy.MM.dd')} -{' '}
-                          {format(new Date(report.period_end), 'yyyy.MM.dd')}
-                        </div>
-                        {report.company && (
-                          <div className="flex items-center gap-1">
-                            <Building2 className="h-4 w-4" />
-                            {report.company.name}
-                          </div>
-                        )}
-                        {report.generated_by_user && (
-                          <div className="flex items-center gap-1">
-                            <User className="h-4 w-4" />
-                            {report.generated_by_user.full_name}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-700">
-                      {TYPE_LABELS[report.template.type] || report.template.type}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      생성일: {format(new Date(report.generated_at), 'yyyy.MM.dd HH:mm')}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleExport(report.id, report.name)}
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Excel 다운로드
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleDelete(report.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-
-            {data.reports.length === 0 && (
-              <div className="text-center py-12 text-gray-500">
-                생성된 리포트가 없습니다
-              </div>
-            )}
+      {/* 날짜 선택 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 whitespace-nowrap">시작일</label>
+            <input
+              type="date"
+              value={fromDate}
+              max={toDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
           </div>
+          <span className="text-gray-300">~</span>
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 whitespace-nowrap">종료일</label>
+            <input
+              type="date"
+              value={toDate}
+              min={fromDate}
+              max={toInputDate(today)}
+              onChange={(e) => setToDate(e.target.value)}
+              className="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            />
+          </div>
+          <div className="flex gap-2 ml-2">
+            {[
+              { label: '7일',  days: 6  },
+              { label: '14일', days: 13 },
+              { label: '30일', days: 29 },
+            ].map(({ label, days }) => (
+              <button
+                key={label}
+                onClick={() => {
+                  setFromDate(toInputDate(subDays(today, days)))
+                  setToDate(toInputDate(today))
+                }}
+                className="px-3 py-1.5 text-sm rounded-lg bg-gray-100 text-gray-600 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium"
+              >
+                최근 {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-          {/* 페이지네이션 */}
-          {data.pagination.totalPages > 1 && (
-            <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-200">
-              <div className="text-sm text-gray-600">
-                전체 {data.pagination.total.toLocaleString()}개 중{' '}
-                {((page - 1) * 20 + 1).toLocaleString()}-
-                {Math.min(page * 20, data.pagination.total).toLocaleString()}개
-                표시
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={!data.pagination.hasPrev}
-                >
-                  이전
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={!data.pagination.hasNext}
-                >
-                  다음
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      {/* 테이블 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
+        {loading ? (
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-100 border-t-indigo-600 mx-auto" />
+          </div>
+        ) : !data || data.rows.length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">데이터가 없습니다</div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm table-fixed">
+              <colgroup>
+                <col className="w-[160px]" />
+                {COLS.map((c) => <col key={c.key} />)}
+              </colgroup>
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr>
+                  <th className="px-5 py-3 text-left text-xs font-semibold text-gray-500 tracking-wide">
+                    날짜
+                  </th>
+                  {COLS.map((c, i) => (
+                    <th
+                      key={c.key}
+                      className={`py-3 text-right text-xs font-semibold text-gray-500 tracking-wide whitespace-nowrap ${i === COLS.length - 1 ? 'pl-4 pr-6' : 'px-4'}`}
+                    >
+                      {c.label}
+                      <span className="text-gray-400 font-normal">({c.unit})</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {totals && (
+                  <tr className="bg-indigo-50">
+                    <td className="px-5 py-3 text-sm font-bold text-indigo-700">합계</td>
+                    {COLS.map((c, i) => (
+                      <td key={c.key} className={`py-3 text-right text-sm font-bold text-indigo-700 ${i === COLS.length - 1 ? 'pl-4 pr-6' : 'px-4'}`}>
+                        {(totals[c.key] as number).toLocaleString()}
+                      </td>
+                    ))}
+                  </tr>
+                )}
+                {[...data.rows].reverse().map((row) => (
+                  <tr key={row.date} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-5 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {format(new Date(row.date), 'yyyy.MM.dd (EEE)', { locale: ko })}
+                    </td>
+                    {COLS.map((c, i) => (
+                      <td key={c.key} className={`py-3 text-right text-sm text-gray-700 ${i === COLS.length - 1 ? 'pl-4 pr-6' : 'px-4'}`}>
+                        {(row[c.key] as number).toLocaleString()}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

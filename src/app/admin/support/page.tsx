@@ -1,18 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Pagination } from '@/components/ui/pagination'
 import {
-  HeadphonesIcon,
   Clock,
   CheckCircle,
   XCircle,
   AlertCircle,
   MessageSquare,
-  TrendingUp,
   Search,
 } from 'lucide-react'
 import { format } from 'date-fns'
@@ -61,18 +57,32 @@ const STATUS_LABELS: Record<string, string> = {
   closed: '종료',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  open: 'bg-yellow-100 text-yellow-700',
+const STATUS_BADGE: Record<string, string> = {
+  open: 'bg-amber-100 text-amber-700',
   in_progress: 'bg-blue-100 text-blue-700',
-  resolved: 'bg-green-100 text-green-700',
-  closed: 'bg-gray-100 text-gray-700',
+  resolved: 'bg-emerald-100 text-emerald-700',
+  closed: 'bg-gray-100 text-gray-600',
 }
 
-const STATUS_ICONS: Record<string, any> = {
+const STATUS_BORDER: Record<string, string> = {
+  open: 'border-l-amber-400',
+  in_progress: 'border-l-blue-400',
+  resolved: 'border-l-emerald-400',
+  closed: 'border-l-gray-300',
+}
+
+const STATUS_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   open: Clock,
   in_progress: AlertCircle,
   resolved: CheckCircle,
   closed: XCircle,
+}
+
+const PRIORITY_COLORS: Record<string, string> = {
+  low: 'text-gray-500',
+  medium: 'text-blue-600',
+  high: 'text-orange-600',
+  urgent: 'text-red-600',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -80,13 +90,6 @@ const PRIORITY_LABELS: Record<string, string> = {
   medium: '보통',
   high: '높음',
   urgent: '긴급',
-}
-
-const PRIORITY_COLORS: Record<string, string> = {
-  low: 'text-gray-600',
-  medium: 'text-blue-600',
-  high: 'text-orange-600',
-  urgent: 'text-red-600',
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -97,6 +100,14 @@ const CATEGORY_LABELS: Record<string, string> = {
   general: '일반 문의',
 }
 
+const FILTERS = [
+  { key: 'all',         label: '전체' },
+  { key: 'open',        label: '대기 중' },
+  { key: 'in_progress', label: '처리 중' },
+  { key: 'resolved',    label: '해결됨' },
+  { key: 'closed',      label: '종료' },
+]
+
 export default function AdminSupportPage() {
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -105,15 +116,14 @@ export default function AdminSupportPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
-  const [perPage, setPerPage] = useState(20)
+  const [perPage] = useState(20)
   const [totalPages, setTotalPages] = useState(0)
   const [totalCount, setTotalCount] = useState(0)
 
-  // Debounce search query
   useEffect(() => {
     const handler = setTimeout(() => {
       setDebouncedSearch(searchQuery)
-      setCurrentPage(1) // Reset to first page on search
+      setCurrentPage(1)
     }, 500)
     return () => clearTimeout(handler)
   }, [searchQuery])
@@ -125,31 +135,26 @@ export default function AdminSupportPage() {
   async function fetchData() {
     try {
       setLoading(true)
-
-      // Build query parameters
       const params = new URLSearchParams({
         page: currentPage.toString(),
         perPage: perPage.toString(),
       })
-
       if (filter !== 'all') params.append('status', filter)
       if (debouncedSearch) params.append('search', debouncedSearch)
 
-      const [ticketsResponse, statsResponse] = await Promise.all([
-        fetch(`/api/admin/support/tickets?${params.toString()}`),
+      const [ticketsRes, statsRes] = await Promise.all([
+        fetch(`/api/admin/support/tickets?${params}`),
         fetch('/api/admin/support/stats'),
       ])
 
-      if (ticketsResponse.ok) {
-        const ticketsData = await ticketsResponse.json()
-        setTickets(ticketsData.tickets || [])
-        setTotalPages(ticketsData.pagination?.totalPages || 0)
-        setTotalCount(ticketsData.pagination?.total || 0)
+      if (ticketsRes.ok) {
+        const d = await ticketsRes.json()
+        setTickets(d.tickets || [])
+        setTotalPages(d.pagination?.totalPages || 0)
+        setTotalCount(d.pagination?.total || 0)
       }
-
-      if (statsResponse.ok) {
-        const statsData = await statsResponse.json()
-        setStats(statsData)
+      if (statsRes.ok) {
+        setStats(await statsRes.json())
       }
     } catch (error) {
       console.error('Error fetching support data:', error)
@@ -160,225 +165,159 @@ export default function AdminSupportPage() {
 
   if (loading && !stats) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">로딩 중...</div>
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-100 border-t-indigo-600" />
       </div>
     )
   }
 
+  const done = stats ? (stats.byStatus.resolved || 0) + (stats.byStatus.closed || 0) : 0
+  const undone = stats ? (stats.byStatus.open || 0) + (stats.byStatus.in_progress || 0) : 0
+  const total = stats?.total || 1
+  const donePct = Math.round((done / total) * 100)
+  const undonePct = Math.round((undone / total) * 100)
+
   return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">기술 지원 관리</h2>
-        <p className="text-sm text-gray-500 mt-1">
-          고객 문의를 관리하고 답변합니다
-        </p>
+    <div className="space-y-8">
+      {/* Page header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100">
+        <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Support</p>
+        <h2 className="text-2xl font-bold text-white">문의 관리</h2>
+        <p className="text-indigo-200 text-sm mt-1">고객 문의를 관리하고 답변합니다</p>
       </div>
 
       {/* 통계 카드 */}
       {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-gray-500">전체 티켓</div>
-                  <div className="text-2xl font-bold text-gray-900 mt-2">
-                    {stats.total}
-                  </div>
-                </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <HeadphonesIcon className="h-6 w-6 text-blue-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-gray-500">처리 대기</div>
-                  <div className="text-2xl font-bold text-yellow-600 mt-2">
-                    {stats.openTickets}
-                  </div>
-                </div>
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <Clock className="h-6 w-6 text-yellow-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-gray-500">오늘 해결</div>
-                  <div className="text-2xl font-bold text-green-600 mt-2">
-                    {stats.resolvedToday}
-                  </div>
-                </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium text-gray-500">긴급 티켓</div>
-                  <div className="text-2xl font-bold text-red-600 mt-2">
-                    {stats.byPriority.urgent || 0}
-                  </div>
-                </div>
-                <div className="p-3 bg-red-50 rounded-lg">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-3 gap-4">
+          {/* 전체 */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">전체</p>
+              <p className="text-2xl font-bold text-gray-900 leading-none">
+                {stats.total.toLocaleString()}
+                <span className="text-xs font-normal text-gray-400 ml-1">건</span>
+              </p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-indigo-50 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-4 h-4 text-indigo-500" />
+            </div>
+          </div>
+          {/* 완료 */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">완료</p>
+              <p className="text-2xl font-bold text-gray-900 leading-none">
+                {done.toLocaleString()}
+                <span className="text-xs font-normal text-gray-400 ml-1">건</span>
+              </p>
+              <p className="text-xs text-emerald-600 font-medium mt-1.5">{donePct}%</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-emerald-50 flex items-center justify-center flex-shrink-0">
+              <CheckCircle className="w-4 h-4 text-emerald-500" />
+            </div>
+          </div>
+          {/* 미완료 */}
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
+            <div>
+              <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">미완료</p>
+              <p className="text-2xl font-bold text-gray-900 leading-none">
+                {undone.toLocaleString()}
+                <span className="text-xs font-normal text-gray-400 ml-1">건</span>
+              </p>
+              <p className="text-xs text-amber-600 font-medium mt-1.5">{undonePct}%</p>
+            </div>
+            <div className="w-9 h-9 rounded-lg bg-amber-50 flex items-center justify-center flex-shrink-0">
+              <Clock className="w-4 h-4 text-amber-500" />
+            </div>
+          </div>
         </div>
       )}
 
       {/* 검색 및 필터 */}
-      <Card>
-        <CardContent className="pt-6 space-y-4">
-          {/* 검색창 */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="회사명, 제목, 내용으로 검색..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-9 text-sm"
-            />
-          </div>
-
-          {/* 검색 결과 카운트 */}
-          {debouncedSearch && (
-            <div className="text-xs text-gray-500">
-              검색 결과: {totalCount}개의 티켓
-            </div>
-          )}
-
-          {/* 상태 필터 */}
-          <div className="flex gap-2">
-            <Button
-              variant={filter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('all')}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            type="text"
+            placeholder="회사명, 제목, 내용으로 검색..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 h-9 text-sm border-gray-200 focus:ring-indigo-500"
+          />
+        </div>
+        {debouncedSearch && (
+          <p className="text-xs text-gray-400">검색 결과: {totalCount}개의 티켓</p>
+        )}
+        <div className="flex gap-2 flex-wrap">
+          {FILTERS.map(({ key, label }) => (
+            <button
+              key={key}
+              onClick={() => { setFilter(key); setCurrentPage(1) }}
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+                filter === key
+                  ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
             >
-              전체
-            </Button>
-            <Button
-              variant={filter === 'open' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('open')}
-            >
-              대기 중
-            </Button>
-            <Button
-              variant={filter === 'in_progress' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('in_progress')}
-            >
-              처리 중
-            </Button>
-            <Button
-              variant={filter === 'resolved' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('resolved')}
-            >
-              해결됨
-            </Button>
-            <Button
-              variant={filter === 'closed' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setFilter('closed')}
-            >
-              종료
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {/* 티켓 목록 */}
-      <div className="space-y-4">
+      <div className="space-y-3">
         {loading ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-gray-500">
-              로딩 중...
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-100 border-t-indigo-600 mx-auto" />
+          </div>
         ) : tickets.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6 text-center text-gray-500">
-              티켓이 없습니다
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 text-center text-gray-400 text-sm">
+            티켓이 없습니다
+          </div>
         ) : (
           tickets.map((ticket) => {
             const Icon = STATUS_ICONS[ticket.status]
-            const statusColor = STATUS_COLORS[ticket.status]
-            const priorityColor = PRIORITY_COLORS[ticket.priority]
             const messageCount = ticket.messages?.[0]?.count || 0
 
             return (
               <Link key={ticket.id} href={`/admin/support/${ticket.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardContent className="pt-6">
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-medium text-gray-900">
-                            {ticket.subject}
-                          </h3>
-                          <span
-                            className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${statusColor}`}
-                          >
-                            <Icon className="h-3 w-3 mr-1" />
+                <div className={`bg-white rounded-xl border border-gray-100 shadow-sm border-l-4 ${STATUS_BORDER[ticket.status]} hover:shadow-md transition-shadow cursor-pointer`}>
+                  <div className="px-5 py-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <h3 className="font-semibold text-gray-900 text-sm">{ticket.subject}</h3>
+                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full ${STATUS_BADGE[ticket.status]}`}>
+                            <Icon className="h-3 w-3" />
                             {STATUS_LABELS[ticket.status]}
                           </span>
-                          <span className="text-xs text-gray-500">
-                            {CATEGORY_LABELS[ticket.category]}
-                          </span>
-                          <span className={`text-xs font-medium ${priorityColor}`}>
+                          <span className="text-xs text-gray-400">{CATEGORY_LABELS[ticket.category]}</span>
+                          <span className={`text-xs font-semibold ${PRIORITY_COLORS[ticket.priority]}`}>
                             {PRIORITY_LABELS[ticket.priority]}
                           </span>
                         </div>
-                        <div className="flex items-center gap-4 text-xs text-gray-500 mb-2">
-                          <div>{ticket.company.name}</div>
-                          <div>{ticket.created_by.full_name}</div>
-                          <div>
-                            {format(
-                              new Date(ticket.created_at),
-                              'yyyy.MM.dd HH:mm',
-                              { locale: ko }
-                            )}
-                          </div>
-                        </div>
-                        <p className="text-sm text-gray-600 line-clamp-2 mb-3">
-                          {ticket.description}
+                        <p className="text-xs text-gray-500 mb-2">
+                          <span className="font-medium text-gray-700">{ticket.company.name}</span>
+                          <span className="mx-1.5 text-gray-300">·</span>
+                          {ticket.created_by.full_name}
+                          <span className="mx-1.5 text-gray-300">·</span>
+                          {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
                         </p>
-                        <div className="flex items-center gap-4 text-xs text-gray-500">
-                          <div className="flex items-center gap-1">
-                            <MessageSquare className="h-3 w-3" />
-                            {messageCount}개 메시지
-                          </div>
-                          {ticket.assigned_admin && (
-                            <div>담당자: {ticket.assigned_admin.full_name}</div>
-                          )}
+                        <p className="text-sm text-gray-600 line-clamp-2">{ticket.description}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                        <div className="flex items-center gap-1 text-xs text-gray-400">
+                          <MessageSquare className="h-3 w-3" />
+                          {messageCount}
                         </div>
+                        {ticket.assigned_admin && (
+                          <p className="text-xs text-indigo-600 font-medium">{ticket.assigned_admin.full_name}</p>
+                        )}
                       </div>
                     </div>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               </Link>
             )
           })
