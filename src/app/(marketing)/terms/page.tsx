@@ -76,11 +76,12 @@ export default function TermsPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">제6조 (환불 정책)</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">제6조 (구독 취소 및 환불 정책)</h2>
               <ul className="list-disc pl-6 space-y-2">
                 <li>무료 체험 기간 중 취소 시: 요금이 청구되지 않습니다.</li>
-                <li>결제 후 7일 이내 취소 시: 서비스를 사용하지 않은 경우 전액 환불합니다.</li>
-                <li>결제 후 7일 초과 시: 당월 잔여 기간에 대한 일할 계산 환불이 불가합니다.</li>
+                <li>유료 구독 취소 시: 취소 즉시 반영되지 않으며, 이미 결제한 기간이 만료될 때까지 서비스를 정상적으로 이용하실 수 있습니다.</li>
+                <li>기간 만료 후: 자동으로 무료 플랜으로 전환됩니다.</li>
+                <li>환불: 구독 취소에 따른 잔여 기간 환불은 제공되지 않습니다.</li>
               </ul>
             </section>
 

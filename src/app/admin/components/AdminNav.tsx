@@ -27,7 +27,7 @@ export default function AdminNav({ user }: AdminNavProps) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-[200px] bg-white border-r border-gray-100 flex flex-col shadow-sm">
+    <aside className="w-[200px] bg-white border-r border-gray-100 flex flex-col shadow-sm sticky top-0 h-screen">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -42,7 +42,7 @@ export default function AdminNav({ user }: AdminNavProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-3 space-y-0.5">
+      <nav className="flex-1 p-3 space-y-0.5 overflow-y-auto">
         {navItems.map((item) => {
           const isActive =
             item.href === '/admin'

@@ -142,7 +142,7 @@ export default function PricingSection() {
               </span>
             </p>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              미사용 기간 일할 계산 환불 • 언제든 업그레이드 가능
+              언제든 취소 가능 • 취소 후 결제 기간 만료까지 이용 • 만료 후 무료 플랜 전환
             </p>
           </div>
 
@@ -285,7 +285,7 @@ export default function PricingSection() {
 
           {/* Footer note */}
           <p className="mt-6 text-center text-sm text-gray-400">
-            모든 플랜 미사용 기간 일할 계산 환불 • 7일 무료체험은 신용카드 등록 불필요
+            취소 시 결제 기간 만료까지 이용 가능 · 만료 후 자동 무료 플랜 전환 • 7일 무료체험은 신용카드 등록 불필요
           </p>
         </div>
       </section>
