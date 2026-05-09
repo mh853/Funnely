@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Download, Building2, Calendar, User, CreditCard, TrendingUp, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 
@@ -276,8 +275,8 @@ function SortButton({
       className="inline-flex flex-col -space-y-1 ml-1 opacity-50 hover:opacity-100"
       onClick={(e) => { e.stopPropagation(); onClick(column) }}
     >
-      <ChevronUp className={`w-3 h-3 ${active && order === 'asc' ? 'text-blue-600 opacity-100' : ''}`} />
-      <ChevronDown className={`w-3 h-3 ${active && order === 'desc' ? 'text-blue-600 opacity-100' : ''}`} />
+      <ChevronUp className={`w-3 h-3 ${active && order === 'asc' ? 'text-indigo-600 opacity-100' : ''}`} />
+      <ChevronDown className={`w-3 h-3 ${active && order === 'desc' ? 'text-indigo-600 opacity-100' : ''}`} />
     </button>
   )
 }
@@ -396,24 +395,29 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {selectedCompany && (
         <CompanyModal company={selectedCompany} onClose={() => setSelectedCompany(null)} />
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Page header */}
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100 flex items-end justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">고객사 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">전체 고객사 목록을 조회합니다</p>
+          <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Companies</p>
+          <h2 className="text-2xl font-bold text-white">고객사 관리</h2>
+          <p className="text-indigo-200 text-sm mt-1">전체 고객사 목록을 조회합니다</p>
         </div>
-        <Button variant="outline" onClick={handleExportCSV}>
-          <Download className="h-4 w-4 mr-2" />
+        <button
+          onClick={handleExportCSV}
+          className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors backdrop-blur-sm border border-white/30"
+        >
+          <Download className="h-4 w-4" />
           CSV 다운로드
-        </Button>
+        </button>
       </div>
 
       {/* 검색·필터 */}
-      <div className="bg-white rounded-xl border border-gray-200 p-4 flex items-center gap-4 flex-wrap">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex items-center gap-4 flex-wrap">
         <div className="relative flex-1 min-w-48">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
@@ -421,7 +425,7 @@ export default function CompaniesPage() {
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1) }}
             placeholder="회사명 검색..."
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
           />
         </div>
         <div className="flex gap-2">
@@ -429,9 +433,9 @@ export default function CompaniesPage() {
             <button
               key={s.value}
               onClick={() => { setStatus(s.value); setPage(1) }}
-              className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
                 status === s.value
-                  ? 'bg-blue-100 text-blue-700 font-medium'
+                  ? 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}
             >
@@ -442,16 +446,18 @@ export default function CompaniesPage() {
       </div>
 
       {/* 테이블 */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
         {loading ? (
-          <div className="p-8 text-center text-gray-500">로딩 중...</div>
+          <div className="p-8 text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-indigo-100 border-t-indigo-600 mx-auto" />
+          </div>
         ) : companies.length === 0 ? (
-          <div className="p-8 text-center text-gray-500">고객사가 없습니다</div>
+          <div className="p-8 text-center text-gray-400 text-sm">고객사가 없습니다</div>
         ) : (
           <>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
+                <thead className="bg-gray-50 border-b border-gray-100">
                   <tr>
                     <Th label="회사명"     col="name"                              sortBy={sortBy} sortOrder={sortOrder} onSort={handleSort} />
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">담당자</th>
@@ -472,7 +478,7 @@ export default function CompaniesPage() {
                   {companies.map((company) => (
                     <tr
                       key={company.id}
-                      className="hover:bg-blue-50/30 cursor-pointer transition-colors"
+                      className="hover:bg-indigo-50/30 cursor-pointer transition-colors"
                       onClick={() => setSelectedCompany(company)}
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">{company.name}</td>
@@ -529,14 +535,22 @@ export default function CompaniesPage() {
                   총 {pagination.total}개 중 {(pagination.page - 1) * pagination.limit + 1}–
                   {Math.min(pagination.page * pagination.limit, pagination.total)}개
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" size="sm" onClick={() => setPage(page - 1)} disabled={!pagination.hasPrev}>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPage(page - 1)}
+                    disabled={!pagination.hasPrev}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
                     <ChevronLeft className="h-4 w-4" />이전
-                  </Button>
-                  <span className="px-4 py-2 text-sm">{pagination.page} / {pagination.totalPages}</span>
-                  <Button variant="outline" size="sm" onClick={() => setPage(page + 1)} disabled={!pagination.hasNext}>
+                  </button>
+                  <span className="px-3 py-1.5 text-sm text-gray-600">{pagination.page} / {pagination.totalPages}</span>
+                  <button
+                    onClick={() => setPage(page + 1)}
+                    disabled={!pagination.hasNext}
+                    className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  >
                     다음<ChevronRight className="h-4 w-4" />
-                  </Button>
+                  </button>
                 </div>
               </div>
             )}
