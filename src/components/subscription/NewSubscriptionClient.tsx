@@ -84,6 +84,9 @@ export default function NewSubscriptionClient({
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState(false)
+  const [cancelModalOpen, setCancelModalOpen] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [cancelResult, setCancelResult] = useState<{ accessUntil: string | null } | null>(null)
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
 
@@ -245,6 +248,24 @@ export default function NewSubscriptionClient({
     }
   }
 
+  const handleCancelSubscription = async () => {
+    setCancelLoading(true)
+    try {
+      const res = await fetch('/api/subscription/cancel', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || '구독 취소에 실패했습니다.')
+        return
+      }
+      setCancelResult({ accessUntil: data.accessUntil })
+      router.refresh()
+    } catch {
+      alert('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
+
   const getButtonLabel = (plan: Plan, isCurrentPlan: boolean) => {
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
     if (isCurrentPlan) return '현재 사용 중'
@@ -265,13 +286,17 @@ export default function NewSubscriptionClient({
             ? 'bg-gradient-to-r from-purple-500 to-indigo-600'
             : isOnFreePlan
             ? 'bg-gradient-to-r from-gray-500 to-gray-700'
+            : currentSubscription.status === 'cancelled'
+            ? 'bg-gradient-to-r from-orange-400 to-amber-500'
             : 'bg-gradient-to-r from-blue-500 to-indigo-600'
         }`}>
-          <div className="flex items-center justify-between">
+          <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-2xl font-bold">{currentSubscription.subscription_plans.name} 플랜</h2>
               <p className="mt-1 opacity-90">
-                {isCurrentlyOnTrial
+                {currentSubscription.status === 'cancelled'
+                  ? '구독 취소됨'
+                  : isCurrentlyOnTrial
                   ? '무료 체험 중'
                   : isOnFreePlan
                   ? '무료 플랜 이용 중'
@@ -279,17 +304,96 @@ export default function NewSubscriptionClient({
                   ? '구독 활성'
                   : '결제 지연'}
               </p>
+              {currentSubscription.status === 'cancelled' && currentSubscription.current_period_end && (
+                <p className="mt-1 text-sm opacity-90">
+                  {formatDate(currentSubscription.current_period_end)}까지 이용 가능
+                </p>
+              )}
             </div>
-            <div className="text-right">
+            <div className="flex flex-col items-end gap-2">
               {isCurrentlyOnTrial && currentSubscription.trial_end_date && (
                 <p className="text-sm opacity-90">
                   체험 종료: {formatDate(currentSubscription.trial_end_date)}
                 </p>
               )}
-              {!isOnFreePlan && !isCurrentlyOnTrial && currentSubscription.current_period_end && (
+              {!isOnFreePlan && !isCurrentlyOnTrial && currentSubscription.current_period_end && currentSubscription.status !== 'cancelled' && (
                 <p className="text-sm opacity-90">
                   다음 결제일: {formatDate(currentSubscription.current_period_end)}
                 </p>
+              )}
+              {/* 구독 취소 버튼 - Free 플랜이 아니고 이미 취소되지 않은 경우만 표시 */}
+              {!isOnFreePlan && currentSubscription.status !== 'cancelled' && (
+                <button
+                  onClick={() => setCancelModalOpen(true)}
+                  className="mt-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors border border-white/30"
+                >
+                  구독 취소
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 구독 취소 확인 모달 */}
+      {cancelModalOpen && currentSubscription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">구독을 취소하시겠습니까?</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              {cancelResult ? (
+                <div className="text-center space-y-3">
+                  <div className="flex items-center justify-center w-14 h-14 bg-green-100 rounded-full mx-auto">
+                    <CheckIcon className="w-7 h-7 text-green-600" />
+                  </div>
+                  <p className="text-base font-semibold text-gray-900">구독이 취소되었습니다.</p>
+                  {cancelResult.accessUntil && (
+                    <p className="text-sm text-gray-600">
+                      <span className="font-medium">{formatDate(cancelResult.accessUntil)}</span>까지 서비스를 계속 이용하실 수 있습니다.
+                    </p>
+                  )}
+                  <button
+                    onClick={() => {
+                      setCancelModalOpen(false)
+                      setCancelResult(null)
+                    }}
+                    className="w-full mt-2 px-4 py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 transition-colors"
+                  >
+                    확인
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 space-y-2 text-sm text-amber-800">
+                    <p className="font-semibold">취소 전 확인해주세요</p>
+                    <ul className="space-y-1.5 text-amber-700">
+                      <li>• 현재 플랜: <span className="font-medium">{currentSubscription.subscription_plans.name}</span></li>
+                      {currentSubscription.current_period_end && (
+                        <li>• <span className="font-medium">{formatDate(currentSubscription.current_period_end)}</span>까지 서비스 이용 가능</li>
+                      )}
+                      <li>• 이후 Free 플랜으로 자동 전환됩니다.</li>
+                      <li>• 취소 후 기간 내 재구독이 가능합니다.</li>
+                    </ul>
+                  </div>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setCancelModalOpen(false)}
+                      disabled={cancelLoading}
+                      className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                    >
+                      돌아가기
+                    </button>
+                    <button
+                      onClick={handleCancelSubscription}
+                      disabled={cancelLoading}
+                      className="flex-1 px-4 py-3 bg-red-600 text-white text-sm font-semibold rounded-lg hover:bg-red-700 transition-colors disabled:bg-red-300"
+                    >
+                      {cancelLoading ? '처리 중...' : '구독 취소'}
+                    </button>
+                  </div>
+                </>
               )}
             </div>
           </div>

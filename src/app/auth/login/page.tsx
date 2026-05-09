@@ -213,7 +213,22 @@ export default function LoginPage() {
           </form>
 
           {/* Footer Links */}
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 space-y-3 text-center text-sm text-gray-600">
+            <div className="flex items-center justify-center gap-3">
+              <Link
+                href="/auth/find-email"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                아이디 찾기
+              </Link>
+              <span className="text-gray-300">|</span>
+              <Link
+                href="/auth/forgot-password"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                비밀번호 찾기
+              </Link>
+            </div>
             <p>
               계정이 없으신가요?{' '}
               <Link

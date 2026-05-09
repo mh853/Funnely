@@ -6,6 +6,7 @@ import CustomDomainManager from '@/components/settings/CustomDomainManager'
 import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 import { canUseCustomDomain } from '@/lib/subscription-access'
+import AccountDeletionSection from '@/components/settings/AccountDeletionSection'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -97,6 +98,34 @@ export default async function SettingsPage() {
 
   // Check custom domain feature access
   const { allowed: hasCustomDomain } = await canUseCustomDomain(userProfile.company_id)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any
+
+  // 팀원 수 조회 (본인 제외)
+  const { count: teamMemberCount } = await db
+    .from('users')
+    .select('*', { count: 'exact', head: true })
+    .eq('company_id', userProfile.company_id)
+    .eq('is_active', true)
+    .neq('id', user.id)
+
+  // 유료 구독 여부 확인
+  const { data: activeSubscription } = await db
+    .from('company_subscriptions')
+    .select('id, status, subscription_plans(name, price_monthly)')
+    .eq('company_id', userProfile.company_id)
+    .in('status', ['active', 'trial'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  const activePlan = activeSubscription?.subscription_plans as
+    | { name: string; price_monthly: number }
+    | null
+    | undefined
+  const hasPaidSubscription =
+    !!activePlan && !(activePlan.name === 'Free' && activePlan.price_monthly === 0)
 
   return (
     <div className="px-4 space-y-6">
@@ -403,6 +432,15 @@ export default async function SettingsPage() {
           </p>
         </div>
       </div>
+
+      {/* Account Deletion */}
+      <AccountDeletionSection
+        userEmail={user.email!}
+        userRole={userProfile.role}
+        teamMemberCount={teamMemberCount ?? 0}
+        hasPaidSubscription={hasPaidSubscription}
+        subscriptionPlanName={activePlan?.name}
+      />
     </div>
   )
 }
