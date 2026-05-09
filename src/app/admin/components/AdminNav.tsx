@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon } from 'lucide-react'
+import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -12,10 +12,11 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: '대시보드', href: '/admin' },
-  { icon: FileBarChart,    label: '리포트',    href: '/admin/reports' },
-  { icon: Building2,       label: '고객사 관리', href: '/admin/companies' },
-  { icon: HeadphonesIcon,  label: '문의',       href: '/admin/support' },
+  { icon: LayoutDashboard, label: '대시보드',    href: '/admin' },
+  { icon: FileBarChart,    label: '리포트',      href: '/admin/reports' },
+  { icon: Building2,       label: '고객사 관리',  href: '/admin/companies' },
+  { icon: HeadphonesIcon,  label: '문의',         href: '/admin/support' },
+  { icon: MessageSquare,   label: '홈페이지 문의', href: '/admin/support/inquiries' },
 ]
 
 interface AdminNavProps {
@@ -46,6 +47,8 @@ export default function AdminNav({ user }: AdminNavProps) {
           const isActive =
             item.href === '/admin'
               ? pathname === '/admin'
+              : item.href === '/admin/support'
+              ? pathname.startsWith('/admin/support') && !pathname.startsWith('/admin/support/inquiries')
               : pathname.startsWith(item.href)
           const Icon = item.icon
 
