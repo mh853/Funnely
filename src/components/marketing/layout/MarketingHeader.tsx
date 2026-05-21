@@ -71,21 +71,21 @@ export default function MarketingHeader() {
               <a
                 href="#features"
                 onClick={(e) => handleSmoothScroll(e, '#features')}
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+                className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 기능
               </a>
               <a
                 href="#pricing"
                 onClick={(e) => handleSmoothScroll(e, '#pricing')}
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+                className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 요금제
               </a>
               <a
                 href="#faq"
                 onClick={(e) => handleSmoothScroll(e, '#faq')}
-                className="text-sm font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
+                className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 FAQ
               </a>
@@ -95,20 +95,20 @@ export default function MarketingHeader() {
             <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4 lg:items-center">
               <Link
                 href="/auth/login"
-                className="text-sm font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center"
+                className="text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center"
               >
                 로그인
               </Link>
               <button
                 type="button"
                 onClick={() => setIsInquiryOpen(true)}
-                className="text-sm font-semibold text-gray-700 hover:text-blue-600 transition-colors inline-flex items-center"
+                className="text-base font-semibold text-gray-700 hover:text-blue-600 transition-colors inline-flex items-center"
               >
                 고객센터
               </button>
               <Link
                 href="/auth/signup?plan=pro&trial=true"
-                className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
+                className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
               >
                 7일 무료체험
               </Link>

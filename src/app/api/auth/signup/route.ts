@@ -21,15 +21,24 @@ function createAdminClient() {
   )
 }
 
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { email, password, fullName, companyName, businessNumber } = body
+    const { email, password, fullName, companyName, businessNumber, phone } = body
 
     // Validation
-    if (!email || !password || !fullName) {
+    if (!email || !password || !fullName || !companyName) {
       return NextResponse.json(
-        { error: '이메일, 비밀번호, 이름은 필수입니다.' },
+        { error: '이메일, 비밀번호, 이름, 회사명은 필수입니다.' },
+        { status: 400 }
+      )
+    }
+
+    if (!EMAIL_REGEX.test(email)) {
+      return NextResponse.json(
+        { error: '이메일 정보를 확인해주세요.' },
         { status: 400 }
       )
     }
@@ -55,10 +64,16 @@ export async function POST(request: Request) {
 
     if (authError) {
       console.error('Auth error:', authError)
-      return NextResponse.json(
-        { error: authError.message || '회원가입에 실패했습니다.' },
-        { status: 400 }
-      )
+      const msg = authError.message?.toLowerCase() ?? ''
+      let koreanError = '회원가입에 실패했습니다.'
+      if (msg.includes('already registered') || msg.includes('already been registered') || msg.includes('already exists')) {
+        koreanError = '이미 가입된 이메일 주소입니다.'
+      } else if (msg.includes('invalid email') || msg.includes('email address') || msg.includes('unable to validate')) {
+        koreanError = '이메일 정보를 확인해주세요.'
+      } else if (msg.includes('password')) {
+        koreanError = '비밀번호 형식을 확인해주세요.'
+      }
+      return NextResponse.json({ error: koreanError }, { status: 400 })
     }
 
     if (!authData.user) {
@@ -82,11 +97,10 @@ export async function POST(request: Request) {
       .single()
 
     if (companyError) {
-      console.error('Company creation error:', companyError)
-      // Rollback: Delete auth user
+      console.error('Company creation error:', companyError.message, companyError.details, companyError.hint)
       await supabase.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
-        { error: '회사 정보 생성에 실패했습니다.' },
+        { error: `회사 정보 생성에 실패했습니다. (${companyError.message})` },
         { status: 500 }
       )
     }
@@ -97,7 +111,8 @@ export async function POST(request: Request) {
       company_id: (companyData as any).id,
       email,
       full_name: fullName,
-      role: 'company_owner', // First user becomes company owner
+      role: 'company_owner',
+      ...(phone ? { phone } : {}),
     } as any)
 
     if (userError) {

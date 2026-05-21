@@ -724,9 +724,9 @@ export default function FeatureShowcase() {
                       <span className={`inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-gradient-to-r ${feature.accentColor} text-white font-bold text-sm shadow-lg`}>
                         {feature.number}
                       </span>
-                      <h3 className="text-2xl font-bold text-gray-900">{feature.name}</h3>
+                      <h3 className="text-3xl font-bold text-gray-900">{feature.name}</h3>
                     </div>
-                    <p className="text-3xl font-bold text-gray-900 mb-4 whitespace-pre-line leading-tight">
+                    <p className="text-4xl font-bold text-gray-900 mb-4 whitespace-pre-line leading-tight">
                       {feature.headline}
                     </p>
                     <p className="text-gray-600 leading-relaxed">{feature.description}</p>
@@ -754,8 +754,8 @@ export default function FeatureShowcase() {
                             <sub.icon className="h-4.5 w-4.5 text-white" aria-hidden="true" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-gray-900 mb-0.5">{sub.title}</p>
-                            <p className="text-xs text-gray-500 leading-relaxed">{sub.description}</p>
+                            <p className="text-base font-semibold text-gray-900 mb-0.5">{sub.title}</p>
+                            <p className="text-sm text-gray-500 leading-relaxed">{sub.description}</p>
                           </div>
                         </motion.div>
                       ))}

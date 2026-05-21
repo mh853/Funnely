@@ -71,7 +71,7 @@ const plans: Plan[] = [
     price: 290000,
     highlighted: false,
     badge: '7일 무료체험',
-    cta: '7일 무료체험',
+    cta: '시작하기',
     ctaVariant: 'primary',
     features: featureRows.map((r) => r.values[2]),
   },
@@ -80,7 +80,7 @@ const plans: Plan[] = [
     name: '프리미엄',
     target: '기업 및 팀 조직',
     price: 490000,
-    highlighted: true,
+    highlighted: false,
     badge: '기업 추천',
     cta: '시작하기',
     ctaVariant: 'primary',
@@ -102,17 +102,16 @@ const plans: Plan[] = [
 function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted: boolean }) {
   if (typeof value === 'boolean') {
     return value ? (
-      <CheckIcon className={`h-5 w-5 mx-auto ${highlighted ? 'text-blue-600' : 'text-green-500'}`} />
+      <CheckIcon className="h-5 w-5 mx-auto text-blue-500" />
     ) : (
-      <XMarkIcon className={`h-5 w-5 mx-auto text-gray-300`} />
+      <XMarkIcon className="h-5 w-5 mx-auto text-red-400" />
     )
   }
-  const isHighlight = value === '무제한' || value.endsWith('건')
+  const isUnlimited = value === '무제한'
+  const isCount = value.endsWith('건')
   return (
     <span className={`text-sm font-semibold ${
-      highlighted
-        ? isHighlight ? 'text-blue-700' : 'text-blue-500'
-        : isHighlight ? 'text-blue-600' : 'text-gray-700'
+      isUnlimited ? 'text-blue-600' : isCount ? 'text-emerald-600' : 'text-gray-700'
     }`}>
       {value}
     </span>
@@ -159,11 +158,7 @@ export default function PricingSection() {
                   className="relative"
                 >
                   <div
-                    className={`relative rounded-2xl p-5 h-full flex flex-col ${
-                      plan.highlighted
-                        ? 'bg-gradient-to-br from-blue-600 to-indigo-700 shadow-2xl ring-2 ring-blue-500/30'
-                        : 'bg-white shadow-sm ring-1 ring-gray-200'
-                    }`}
+                    className="relative rounded-2xl p-5 h-full flex flex-col bg-white shadow-sm ring-1 ring-gray-200"
                   >
                     {/* Badge */}
                     {plan.badge && (
@@ -180,10 +175,10 @@ export default function PricingSection() {
                     )}
 
                     {/* Name */}
-                    <h3 className={`text-lg font-bold mb-1 ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                    <h3 className="text-lg font-bold mb-1 text-gray-900">
                       {plan.name}
                     </h3>
-                    <p className={`text-xs mb-4 leading-snug ${plan.highlighted ? 'text-blue-100' : 'text-gray-500'}`}>
+                    <p className="text-xs mb-4 leading-snug text-gray-500">
                       {plan.target}
                     </p>
 
@@ -191,13 +186,13 @@ export default function PricingSection() {
                     <div className="mb-5 flex-1">
                       {plan.price !== null ? (
                         <div className="flex items-baseline gap-1">
-                          <span className={`text-3xl font-bold tracking-tight ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                          <span className="text-3xl font-bold tracking-tight text-gray-900">
                             ₩{plan.price.toLocaleString()}
                           </span>
-                          <span className={`text-sm ${plan.highlighted ? 'text-blue-200' : 'text-gray-500'}`}>/월</span>
+                          <span className="text-sm text-gray-500">/월</span>
                         </div>
                       ) : (
-                        <span className={`text-3xl font-bold ${plan.highlighted ? 'text-white' : 'text-gray-900'}`}>
+                        <span className="text-3xl font-bold text-gray-900">
                           {plan.priceLabel}
                         </span>
                       )}
@@ -216,9 +211,7 @@ export default function PricingSection() {
                       <Link
                         href={`/auth/signup?plan=${plan.id}${plan.id === 'pro' ? '&trial=true' : ''}`}
                         className={`block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all ${
-                          plan.highlighted
-                            ? 'bg-white text-blue-600 hover:bg-blue-50 shadow-lg'
-                            : plan.ctaVariant === 'primary'
+                          plan.ctaVariant === 'primary'
                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md'
                             : 'border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-600'
                         }`}
@@ -247,11 +240,7 @@ export default function PricingSection() {
                   {plans.map((plan) => (
                     <th
                       key={plan.id}
-                      className={`px-4 py-4 text-center text-sm font-bold w-32 ${
-                        plan.highlighted
-                          ? 'bg-gradient-to-br from-blue-600 to-indigo-700 text-white'
-                          : 'text-gray-900'
-                      }`}
+                      className="px-4 py-4 text-center text-sm font-bold w-32 text-gray-900"
                     >
                       {plan.name}
                     </th>
@@ -268,11 +257,7 @@ export default function PricingSection() {
                     {plans.map((plan, planIndex) => (
                       <td
                         key={plan.id}
-                        className={`px-4 py-3.5 text-center ${
-                          plan.highlighted
-                            ? 'bg-blue-600/[0.06]'
-                            : ''
-                        }`}
+                        className="px-4 py-3.5 text-center"
                       >
                         <FeatureCell value={row.values[planIndex]} highlighted={plan.highlighted} />
                       </td>

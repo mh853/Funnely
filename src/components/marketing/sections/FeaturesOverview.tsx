@@ -8,7 +8,6 @@ import {
   DocumentChartBarIcon,
   CalendarDaysIcon,
   SignalIcon,
-  LockClosedIcon,
 } from '@heroicons/react/24/outline'
 
 const features = [
@@ -122,20 +121,9 @@ export default function FeaturesOverview() {
               }}
             >
               <div
-                className={`relative rounded-2xl border ${
-                  feature.isPro
-                    ? 'border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50'
-                    : 'border-gray-200 bg-white'
-                } p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105`}
+                className="relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-xl transition-all duration-300 hover:scale-105"
               >
-                {/* Pro badge */}
-                {feature.isPro && (
-                  <div className="absolute -top-3 -right-3 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 px-3 py-1 shadow-lg">
-                    <LockClosedIcon className="h-3.5 w-3.5 text-white" />
-                    <span className="text-xs font-bold text-white">PRO</span>
-                  </div>
-                )}
-
+  
                 {/* Icon */}
                 <div
                   className={`inline-flex rounded-xl bg-gradient-to-r ${feature.iconColor} p-3 shadow-lg mb-5`}

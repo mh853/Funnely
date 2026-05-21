@@ -103,17 +103,22 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4">
       <div className="max-w-md w-full">
+        {/* Brand logo */}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block">
+            <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Funnely
+            </span>
+          </Link>
+          <p className="mt-1 text-sm text-gray-500">비즈니스 성장을 위한 올인원 플랫폼</p>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-xl p-8">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Funnely
-            </h1>
-            <p className="text-gray-600">
-              회사 광고 통합 관리 플랫폼
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">로그인</h1>
           </div>
 
           {/* Login Form */}
@@ -204,7 +209,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || success}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-full font-semibold shadow-md hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               aria-busy={loading}
             >
               {loading && <LoadingSpinner />}
@@ -241,15 +246,6 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Back to Home */}
-        <div className="mt-4 text-center">
-          <Link
-            href="/"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← 홈으로 돌아가기
-          </Link>
-        </div>
       </div>
     </div>
   )

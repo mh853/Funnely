@@ -72,7 +72,7 @@ export default function HeroSection() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-lg sm:text-xl text-gray-600 max-w-2xl mx-auto mb-10"
+            className="text-xl sm:text-2xl text-gray-600 max-w-2xl mx-auto mb-10"
           >
             랜딩페이지 제작부터 DB 관리, 트래픽 분석까지
             <br className="hidden sm:block" />
@@ -109,7 +109,7 @@ export default function HeroSection() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.5 }}
-            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-sm text-gray-600"
+            className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 text-base text-gray-600"
           >
             <div className="flex items-center gap-2">
               <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
@@ -243,7 +243,7 @@ export default function HeroSection() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.8, duration: 0.6 }}
-          className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6"
+          className="mt-16 grid grid-cols-3 gap-4"
         >
           {heroFeatures.map((feature, index) => (
             <motion.div
@@ -253,11 +253,11 @@ export default function HeroSection() {
               transition={{ delay: 0.9 + index * 0.05 }}
               className="rounded-2xl bg-white/80 backdrop-blur-sm p-4 shadow-md ring-1 ring-gray-200/50 text-center"
             >
-              <div className="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold mb-3">
+              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold mb-3">
                 {feature.number}
               </div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-1">{feature.name}</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">{feature.description}</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-1">{feature.name}</h3>
+              <p className="text-base text-gray-500 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}
         </motion.div>

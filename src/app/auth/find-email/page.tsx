@@ -5,6 +5,7 @@ import Link from 'next/link'
 
 export default function FindEmailPage() {
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [maskedEmails, setMaskedEmails] = useState<string[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -19,7 +20,7 @@ export default function FindEmailPage() {
       const res = await fetch('/api/auth/find-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName }),
+        body: JSON.stringify({ fullName, phone: phone || null }),
       })
       const data = await res.json()
 
@@ -37,13 +38,23 @@ export default function FindEmailPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4">
       <div className="max-w-md w-full">
+        {/* Brand logo */}
+        <div className="text-center mb-6">
+          <Link href="/" className="inline-block">
+            <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Funnely
+            </span>
+          </Link>
+          <p className="mt-1 text-sm text-gray-500">비즈니스 성장을 위한 올인원 플랫폼</p>
+        </div>
+
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 mb-2">아이디(이메일) 찾기</h1>
             <p className="text-gray-600 text-sm">
-              가입 시 입력한 이름으로 이메일 주소를 찾을 수 있습니다.
+              가입 시 입력한 이름과 핸드폰 번호로 이메일 주소를 찾을 수 있습니다.
             </p>
           </div>
 
@@ -62,6 +73,20 @@ export default function FindEmailPage() {
                 placeholder="가입 시 입력한 이름"
               />
             </div>
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
+                핸드폰 번호
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                required
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="010-0000-0000"
+              />
+            </div>
 
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
@@ -72,7 +97,7 @@ export default function FindEmailPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-full font-semibold shadow-md hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '조회 중...' : '이메일 찾기'}
             </button>
@@ -112,16 +137,13 @@ export default function FindEmailPage() {
         </div>
 
         <div className="mt-4 text-center space-y-2">
-          <div>
-            <Link href="/auth/login" className="text-sm text-gray-600 hover:text-gray-900">
-              ← 로그인으로 돌아가기
-            </Link>
-          </div>
-          <div>
-            <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
-              비밀번호 찾기 →
-            </Link>
-          </div>
+          <Link href="/auth/login" className="text-sm text-gray-500 hover:text-gray-700">
+            ← 로그인으로 돌아가기
+          </Link>
+          <span className="text-gray-300 mx-2">|</span>
+          <Link href="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700">
+            비밀번호 찾기 →
+          </Link>
         </div>
       </div>
     </div>

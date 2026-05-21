@@ -4,23 +4,11 @@ type NavItem = { name: string; href: string | null }
 
 const navigation = {
   product: [
-    { name: '랜딩페이지 빌더', href: '#features' },
-    { name: 'DB 관리', href: '#features' },
-    { name: '트래픽 분석', href: '#features' },
-    { name: 'DB 리포트', href: '#features' },
-    { name: '스케줄 관리', href: '#features' },
-    { name: '요금제', href: '#pricing' },
+    { name: '기능 소개', href: '#features' },
   ],
-  company: [
-    { name: '회사 소개', href: null },
-    { name: '블로그', href: null },
-    { name: '고객 사례', href: null },
-    { name: '채용', href: null },
-  ],
+  company: [] as NavItem[],
   support: [
-    { name: '고객 지원', href: null },
     { name: 'FAQ', href: '#faq' },
-    { name: '가이드', href: null },
     { name: '문의하기', href: '/contact' },
   ],
   legal: [
@@ -48,82 +36,57 @@ export default function MarketingFooter() {
               {/* 소셜 미디어 아이콘 - 추후 추가 가능 */}
             </div>
           </div>
-          <div className="mt-16 grid grid-cols-2 gap-8 xl:col-span-2 xl:mt-0">
-            <div className="md:grid md:grid-cols-2 md:gap-8">
-              <div>
-                <h3 className="text-sm font-semibold leading-6 text-white">제품</h3>
-                <ul role="list" className="mt-6 space-y-4">
-                  {navigation.product.map((item) => (
-                    <li key={item.name}>
-                      <a
+          <div className="mt-16 grid grid-cols-3 gap-8 xl:col-span-2 xl:mt-0">
+            <div>
+              <h3 className="text-sm font-semibold leading-6 text-white">제품</h3>
+              <ul role="list" className="mt-6 space-y-4">
+                {navigation.product.map((item) => (
+                  <li key={item.name}>
+                    <a
+                      href={item.href}
+                      className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
+                    >
+                      {item.name}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold leading-6 text-white">지원</h3>
+              <ul role="list" className="mt-6 space-y-4">
+                {navigation.support.map((item: NavItem) => (
+                  <li key={item.name}>
+                    {item.href ? (
+                      <Link
                         href={item.href}
                         className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                       >
                         {item.name}
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-10 md:mt-0">
-                <h3 className="text-sm font-semibold leading-6 text-white">회사</h3>
-                <ul role="list" className="mt-6 space-y-4">
-                  {navigation.company.map((item: NavItem) => (
-                    <li key={item.name}>
-                      {item.href ? (
-                        <a
-                          href={item.href}
-                          className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
-                        >
-                          {item.name}
-                        </a>
-                      ) : (
-                        <span className="text-sm leading-6 text-gray-600 cursor-default">
-                          {item.name}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-            <div className="md:grid md:grid-cols-2 md:gap-8">
-              <div>
-                <h3 className="text-sm font-semibold leading-6 text-white">지원</h3>
-                <ul role="list" className="mt-6 space-y-4">
-                  {navigation.support.map((item: NavItem) => (
-                    <li key={item.name}>
-                      {item.href ? (
-                        <Link
-                          href={item.href}
-                          className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
-                        >
-                          {item.name}
-                        </Link>
-                      ) : (
-                        <span className="text-sm leading-6 text-gray-600 cursor-default">
-                          {item.name}
-                        </span>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-10 md:mt-0">
-                <h3 className="text-sm font-semibold leading-6 text-white">법률</h3>
-                <ul role="list" className="mt-6 space-y-4">
-                  {navigation.legal.map((item: NavItem) => (
-                    <li key={item.name}>
-                      <Link
-                        href={item.href!}
-                        className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
-                      >
-                        {item.name}
                       </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+                    ) : (
+                      <span className="text-sm leading-6 text-gray-600 cursor-default">
+                        {item.name}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold leading-6 text-white">법률</h3>
+              <ul role="list" className="mt-6 space-y-4">
+                {navigation.legal.map((item: NavItem) => (
+                  <li key={item.name}>
+                    <Link
+                      href={item.href!}
+                      className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>

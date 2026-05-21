@@ -13,7 +13,7 @@ function maskEmail(email: string): string {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const { fullName } = body
+    const { fullName, phone } = body
 
     if (!fullName || typeof fullName !== 'string' || fullName.trim().length < 2) {
       return NextResponse.json(
@@ -24,12 +24,14 @@ export async function POST(request: Request) {
 
     const adminClient = createAdminClient()
 
-    const { data: users, error } = await adminClient
+    let query = adminClient
       .from('users')
-      .select('email')
+      .select('email, phone')
       .eq('full_name', fullName.trim())
       .eq('is_active', true)
       .limit(5)
+
+    const { data: users, error } = await query
 
     if (error) {
       return NextResponse.json({ error: '조회에 실패했습니다.' }, { status: 500 })
@@ -39,7 +41,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ maskedEmails: [] })
     }
 
-    const maskedEmails = users.map((u) => maskEmail(u.email))
+    // 핸드폰 번호가 입력된 경우 번호로 필터링
+    let filtered = users
+    if (phone && typeof phone === 'string' && phone.trim().length > 0) {
+      const normalizedPhone = phone.trim().replace(/-/g, '')
+      filtered = users.filter((u: any) => {
+        if (!u.phone) return false
+        return u.phone.replace(/-/g, '') === normalizedPhone
+      })
+    }
+
+    if (filtered.length === 0) {
+      return NextResponse.json({ maskedEmails: [] })
+    }
+
+    const maskedEmails = filtered.map((u: any) => maskEmail(u.email))
 
     return NextResponse.json({ maskedEmails })
   } catch {

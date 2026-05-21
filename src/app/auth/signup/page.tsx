@@ -5,7 +5,7 @@
  * New user registration
  */
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -17,9 +17,38 @@ export default function SignupPage() {
     password: '',
     confirmPassword: '',
     fullName: '',
+    phone: '',
+    companyName: '',
   })
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [companyNameDuplicate, setCompanyNameDuplicate] = useState(false)
+  const companyCheckTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    const name = formData.companyName.trim()
+    setCompanyNameDuplicate(false)
+    if (!name) return
+
+    if (companyCheckTimer.current) clearTimeout(companyCheckTimer.current)
+    companyCheckTimer.current = setTimeout(async () => {
+      try {
+        const res = await fetch('/api/auth/check-company-name', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        })
+        const data = await res.json()
+        setCompanyNameDuplicate(data.exists)
+      } catch {
+        // 네트워크 오류 시 무시 (가입은 계속 진행 가능)
+      }
+    }, 500)
+
+    return () => {
+      if (companyCheckTimer.current) clearTimeout(companyCheckTimer.current)
+    }
+  }, [formData.companyName])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -56,7 +85,8 @@ export default function SignupPage() {
           email: formData.email,
           password: formData.password,
           fullName: formData.fullName,
-          hospitalName: null, // Will default to "{fullName}의 회사"
+          phone: formData.phone || null,
+          companyName: formData.companyName || null,
           businessNumber: null,
         }),
       })
@@ -87,27 +117,29 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4 py-6">
       <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        {/* Brand logo */}
+        <div className="text-center mb-3">
+          <Link href="/" className="inline-block">
+            <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+              Funnely
+            </span>
+          </Link>
+          <p className="mt-0.5 text-xs text-gray-500">비즈니스 성장을 위한 올인원 플랫폼</p>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-xl px-8 py-6">
           {/* Header */}
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              회원가입
-            </h1>
-            <p className="text-gray-600">
-              Funnely 계정을 만들어보세요
-            </p>
+          <div className="text-center mb-5">
+            <h1 className="text-xl font-bold text-gray-900">회원가입</h1>
           </div>
 
           {/* Signup Form */}
-          <form onSubmit={handleSignup} className="space-y-5">
+          <form onSubmit={handleSignup} className="space-y-3">
             {/* Full Name */}
             <div>
-              <label
-                htmlFor="fullName"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
                 이름
               </label>
               <input
@@ -117,17 +149,58 @@ export default function SignupPage() {
                 required
                 value={formData.fullName}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="홍길동"
               />
             </div>
 
+            {/* Company Name */}
+            <div>
+              <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
+                회사명 <span className="text-red-500">*</span>
+              </label>
+              <input
+                id="companyName"
+                name="companyName"
+                type="text"
+                required
+                value={formData.companyName}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="회사 또는 브랜드명"
+              />
+              {companyNameDuplicate && (
+                <p className="mt-1 text-xs text-amber-600 flex items-center gap-1">
+                  <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                  이미 같은 이름의 회사가 등록되어 있습니다. 동일한 이름으로도 가입할 수 있습니다.
+                </p>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div>
+              <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                핸드폰 번호
+              </label>
+              <input
+                id="phone"
+                name="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="010-0000-0000"
+              />
+              <p className="mt-0.5 text-xs text-gray-400">
+                아이디(이메일) 찾기에 사용됩니다.
+              </p>
+            </div>
+
             {/* Email */}
             <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
                 이메일
               </label>
               <input
@@ -137,17 +210,14 @@ export default function SignupPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="your@email.com"
               />
             </div>
 
             {/* Password */}
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                 비밀번호
               </label>
               <input
@@ -157,17 +227,14 @@ export default function SignupPage() {
                 required
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="최소 6자 이상"
               />
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
                 비밀번호 확인
               </label>
               <input
@@ -177,14 +244,14 @@ export default function SignupPage() {
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                 placeholder="비밀번호 재입력"
               />
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 text-red-600 px-4 py-3 rounded-lg text-sm">
+              <div className="bg-red-50 text-red-600 px-4 py-2.5 rounded-lg text-sm">
                 {error}
               </div>
             )}
@@ -193,35 +260,23 @@ export default function SignupPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-2.5 rounded-full font-semibold shadow-md hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? '가입 중...' : '회원가입'}
             </button>
           </form>
 
           {/* Footer Links */}
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-4 text-center text-sm text-gray-600">
             <p>
               이미 계정이 있으신가요?{' '}
-              <Link
-                href="/auth/login"
-                className="text-blue-600 hover:text-blue-700 font-medium"
-              >
+              <Link href="/auth/login" className="text-blue-600 hover:text-blue-700 font-medium">
                 로그인
               </Link>
             </p>
           </div>
         </div>
 
-        {/* Back to Home */}
-        <div className="mt-4 text-center">
-          <Link
-            href="/"
-            className="text-sm text-gray-600 hover:text-gray-900"
-          >
-            ← 홈으로 돌아가기
-          </Link>
-        </div>
       </div>
     </div>
   )
