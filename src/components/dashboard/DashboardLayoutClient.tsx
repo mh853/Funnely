@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Sidebar from './Sidebar'
 import Header from './Header'
+import TrialExpiredModal from './TrialExpiredModal'
 import { XMarkIcon, SparklesIcon } from '@heroicons/react/24/outline'
 
 interface DashboardLayoutClientProps {
@@ -31,6 +32,7 @@ export default function DashboardLayoutClient({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
+  const [trialModalDismissed, setTrialModalDismissed] = useState(false)
 
   useEffect(() => {
     const saved = localStorage.getItem(SIDEBAR_COLLAPSED_KEY)
@@ -45,10 +47,16 @@ export default function DashboardLayoutClient({
     localStorage.setItem(SIDEBAR_COLLAPSED_KEY, String(newState))
   }
 
-  const showBanner = !bannerDismissed && subscriptionBanner?.type != null
+  const showBanner = !bannerDismissed && subscriptionBanner?.type === 'trial'
+
+  const showTrialExpiredModal =
+    !trialModalDismissed && subscriptionBanner?.type === 'trial_ended'
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showTrialExpiredModal && (
+        <TrialExpiredModal onDismiss={() => setTrialModalDismissed(true)} />
+      )}
       <Sidebar
         userProfile={userProfile}
         mobileMenuOpen={mobileMenuOpen}

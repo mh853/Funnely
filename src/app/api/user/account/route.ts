@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import crypto from 'crypto'
 
 export async function DELETE(request: Request) {
   const supabase = await createClient()
@@ -41,7 +40,6 @@ export async function DELETE(request: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminDb = adminClient as any
   const now = new Date().toISOString()
-  const hardDeleteAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
 
   if (profile.role === 'company_owner' || profile.role === 'hospital_owner') {
     // 활성 구독 자동 취소
@@ -60,17 +58,8 @@ export async function DELETE(request: Request) {
       .neq('id', user.id)
 
     if (teamMembers && teamMembers.length > 0) {
-      await adminDb
-        .from('users')
-        .update({ is_active: false, deactivated_at: now })
-        .in(
-          'id',
-          teamMembers.map((m: { id: string }) => m.id)
-        )
-
       for (const member of teamMembers as { id: string }[]) {
-        const randomPw = crypto.randomBytes(32).toString('hex')
-        await adminClient.auth.admin.updateUserById(member.id, { password: randomPw })
+        await adminClient.auth.admin.deleteUser(member.id)
       }
     }
 
@@ -91,18 +80,19 @@ export async function DELETE(request: Request) {
       email: user.email,
       role: profile.role,
       deactivated_at: now,
-      hard_delete_scheduled_at: hardDeleteAt,
+      deleted_at: now,
     },
   })
 
-  // 본인 소프트 삭제 + 로그인 불가 처리
+  // public.users 소프트 삭제 (CASCADE로 auth 삭제 전 기록 보존)
   await adminDb
     .from('users')
     .update({ is_active: false, deactivated_at: now })
     .eq('id', user.id)
 
-  const randomPw = crypto.randomBytes(32).toString('hex')
-  await adminClient.auth.admin.updateUserById(user.id, { password: randomPw })
+  // auth.users 하드 삭제 — 이메일이 재가입에 사용될 수 있도록 완전 제거
+  // public.users는 ON DELETE CASCADE로 함께 삭제됨
+  await adminClient.auth.admin.deleteUser(user.id)
 
   return NextResponse.json({ success: true })
 }

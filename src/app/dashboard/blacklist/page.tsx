@@ -23,16 +23,15 @@ export default async function BlacklistPage() {
   // 사용자 프로필 확인
   const { data: userProfile } = await supabase
     .from('users')
-    .select('id, full_name, is_super_admin')
+    .select('id, full_name, company_id, is_super_admin')
     .eq('id', session.user.id)
     .single()
 
-  // 관리자 권한 확인
-  if (!userProfile?.is_super_admin) {
+  if (!userProfile?.company_id) {
     redirect('/dashboard')
   }
 
-  // 블랙리스트 데이터 가져오기
+  // 블랙리스트 데이터 가져오기 (자사 데이터만, RLS가 추가 보호)
   const { data: blacklist, error } = await supabase
     .from('phone_blacklist')
     .select(

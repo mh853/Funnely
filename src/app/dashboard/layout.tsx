@@ -71,19 +71,18 @@ export default async function DashboardLayout({
       if (subscription.status === 'trial' && subscription.trial_end_date) {
         const trialEnd = new Date(subscription.trial_end_date)
         const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-        subscriptionBanner = {
-          type: 'trial',
-          trialEndDate: subscription.trial_end_date,
-          daysLeft: Math.max(0, daysLeft),
+
+        if (trialEnd < now) {
+          // 체험 기간 만료
+          subscriptionBanner = { type: 'trial_ended' }
+        } else {
+          // 체험 중
+          subscriptionBanner = {
+            type: 'trial',
+            trialEndDate: subscription.trial_end_date,
+            daysLeft: Math.max(0, daysLeft),
+          }
         }
-      } else if (
-        subscription.status === 'active' &&
-        subscription.has_used_trial === true &&
-        !subscription.trial_end_date
-      ) {
-        // 체험 종료 후 Free로 자동 전환된 경우: trial_end_date가 null로 정리된 상태
-        // 세션 내 1회만 표시 (클라이언트에서 dismiss 가능)
-        subscriptionBanner = { type: 'trial_ended' }
       }
     }
   }

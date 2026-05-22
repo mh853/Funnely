@@ -126,31 +126,37 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. Free 플랜 자동 부여
-    const { data: freePlan } = await supabase
+    // 4. 프리미엄 플랜 7일 무료체험 자동 부여
+    const { data: proPlan } = await supabase
       .from('subscription_plans')
       .select('id')
-      .eq('name', 'Free')
+      .eq('name', '프리미엄')
       .eq('is_active', true)
-      .order('sort_order', { ascending: true })
       .limit(1)
       .single()
 
-    if (freePlan) {
+    if (proPlan) {
+      const now = new Date()
+      const trialEnd = new Date(now)
+      trialEnd.setDate(trialEnd.getDate() + 7)
+
       const { error: subError } = await supabase
         .from('company_subscriptions')
         .insert({
           company_id: (companyData as any).id,
-          plan_id: freePlan.id,
-          status: 'active',
+          plan_id: proPlan.id,
+          status: 'trial',
           billing_cycle: 'monthly',
-          has_used_trial: false,
+          trial_start_date: now.toISOString(),
+          trial_end_date: trialEnd.toISOString(),
+          has_used_trial: true,
         } as any)
 
       if (subError) {
-        // 구독 생성 실패는 가입 자체를 막지 않음 (로그만 남김)
-        console.error('Free plan subscription creation error:', subError)
+        console.error('Trial subscription creation error:', subError)
       }
+    } else {
+      console.error('프리미엄 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
     }
 
     // Success

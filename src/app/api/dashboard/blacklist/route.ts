@@ -1,57 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
-// POST: 블랙리스트 추가
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    // 인증 확인
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-
+    const { data: { session } } = await supabase.auth.getSession()
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 관리자 권한 확인
     const { data: user } = await supabase
       .from('users')
-      .select('is_super_admin')
+      .select('company_id, is_super_admin')
       .eq('id', session.user.id)
       .single()
 
-    if (!user?.is_super_admin) {
+    if (!user?.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     const body = await request.json()
-    const { phone_number, reason, blocked_by_user_id } = body
+    const { phone_number, reason } = body
 
     if (!phone_number) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
     }
 
-    // 블랙리스트 추가
     const { data, error } = await supabase
       .from('phone_blacklist')
       .insert({
+        company_id: user.company_id,
         phone_number: phone_number.trim(),
         reason: reason?.trim() || null,
-        blocked_by_user_id,
+        blocked_by_user_id: session.user.id,
       })
-      .select(
-        `
-        *,
-        blocked_by:users!phone_blacklist_blocked_by_user_id_fkey(full_name)
-      `
-      )
+      .select(`*, blocked_by:users!phone_blacklist_blocked_by_user_id_fkey(full_name)`)
       .single()
 
     if (error) {
       if (error.code === '23505') {
-        // Unique constraint violation
         return NextResponse.json({ error: '이미 블랙리스트에 등록된 번호입니다.' }, { status: 409 })
       }
       throw error

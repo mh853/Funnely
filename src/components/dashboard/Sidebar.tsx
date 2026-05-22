@@ -34,15 +34,15 @@ interface SidebarProps {
 
 const navigation = [
   { name: '대시보드', href: '/dashboard', icon: HomeIcon, requiredFeature: 'dashboard' },
-  { name: 'DB 현황', href: '/dashboard/leads', icon: PhoneIcon, requiredFeature: 'db_status' },
+  { name: 'DB 현황', href: '/dashboard/leads', icon: PhoneIcon, requiredFeature: 'dashboard' },
   { name: 'DB 스케줄', href: '/dashboard/calendar', icon: CalendarIcon, requiredFeature: 'db_schedule' },
   { name: '예약 스케줄', href: '/dashboard/reservations', icon: CalendarIcon, requiredFeature: 'reservation_schedule' },
   { name: '랜딩 페이지', href: '/dashboard/landing-pages', icon: GlobeAltIcon, requiredFeature: 'dashboard' },
   // [임시 비활성화] 캠페인, 광고 계정 - 나중에 복원 시 주석 해제
   // { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
-  { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon, requiredFeature: 'analytics' },
-  { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon, requiredFeature: 'reports' },
+  { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon, requiredFeature: 'traffic_analytics' },
+  { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon, requiredFeature: 'db_report' },
   { name: '기술 지원', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon, requiredFeature: 'dashboard' },
   // [설정 페이지로 통합] 구독 관리, 결제 내역, 팀 관리
   // { name: '구독 관리', href: '/dashboard/subscription', icon: CreditCardIcon },
@@ -65,8 +65,8 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
 
   // Feature name mapping
   const featureNameMap: { [key: string]: '트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄' } = {
-    'analytics': '트래픽 분석',
-    'reports': 'DB 리포트',
+    'traffic_analytics': '트래픽 분석',
+    'db_report': 'DB 리포트',
     'db_schedule': 'DB 스케줄',
     'reservation_schedule': '예약 스케줄'
   }
