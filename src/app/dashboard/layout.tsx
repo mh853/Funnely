@@ -26,13 +26,15 @@ export default async function DashboardLayout({
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
 
-    // Step 1: Get active subscription
+    // Step 1: Get active subscription (most recent wins — handles trial→active upgrade)
     const { data: subscription } = await serviceSupabase
       .from('company_subscriptions')
       .select('plan_id')
       .eq('company_id', userProfile.company_id)
       .in('status', ['active', 'trial', 'past_due'])
-      .single()
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
 
     // Step 2: Get plan features if subscription exists
     if (subscription?.plan_id) {
@@ -48,41 +50,25 @@ export default async function DashboardLayout({
     }
   }
 
-  // 구독 배너 데이터 계산
+  // 체험 만료 모달용 배너 계산 (만료된 경우에만 표시)
   let subscriptionBanner: {
-    type: 'trial' | 'trial_ended' | null
-    trialEndDate?: string | null
-    daysLeft?: number
+    type: 'trial_ended' | null
   } = { type: null }
 
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
     const { data: subscription } = await serviceSupabase
       .from('company_subscriptions')
-      .select('status, trial_end_date, has_used_trial')
+      .select('status, trial_end_date')
       .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (subscription) {
-      const now = new Date()
-
-      if (subscription.status === 'trial' && subscription.trial_end_date) {
-        const trialEnd = new Date(subscription.trial_end_date)
-        const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
-
-        if (trialEnd < now) {
-          // 체험 기간 만료
-          subscriptionBanner = { type: 'trial_ended' }
-        } else {
-          // 체험 중
-          subscriptionBanner = {
-            type: 'trial',
-            trialEndDate: subscription.trial_end_date,
-            daysLeft: Math.max(0, daysLeft),
-          }
-        }
+    if (subscription?.status === 'trial' && subscription.trial_end_date) {
+      const trialEnd = new Date(subscription.trial_end_date)
+      if (trialEnd < new Date()) {
+        subscriptionBanner = { type: 'trial_ended' }
       }
     }
   }
