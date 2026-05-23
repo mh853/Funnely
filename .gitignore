@@ -40,3 +40,10 @@ next-env.d.ts
 .supabase
 supabase/.temp/
 supabase/functions/
+
+# dev tooling
+.playwright-mcp/
+claudedocs/
+CLAUDE.md
+**/CLAUDE.md
+.serena/
