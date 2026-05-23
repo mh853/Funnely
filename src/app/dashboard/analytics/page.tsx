@@ -36,7 +36,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   }
 
   // 기능 접근 권한 체크
-  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'analytics')
+  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'traffic_analytics')
   if (!hasAccess) {
     return <UpgradeNotice featureName="트래픽 분석" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }

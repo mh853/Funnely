@@ -38,7 +38,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   }
 
   // 기능 접근 권한 체크
-  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'reports')
+  const hasAccess = await hasFeatureAccess(userProfile.company_id, 'db_report')
   if (!hasAccess) {
     return <UpgradeNotice featureName="DB 리포트" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
