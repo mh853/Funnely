@@ -38,7 +38,13 @@ export default function UsersPage() {
       if (!response.ok) throw new Error('Failed to fetch companies')
 
       const result = await response.json()
-      setCompanies(result.companies)
+      const seen = new Set<string>()
+      const unique = (result.companies ?? []).filter((c: { id: string }) => {
+        if (seen.has(c.id)) return false
+        seen.add(c.id)
+        return true
+      })
+      setCompanies(unique)
     } catch (err) {
       console.error('Companies fetch error:', err)
     }

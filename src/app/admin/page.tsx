@@ -30,12 +30,12 @@ interface DashboardData {
 
 const STAT_CONFIG = [
   { key: 'leads',         label: '유입',    unit: '건', icon: MousePointerClick, color: 'text-violet-500',  bg: 'bg-violet-50' },
-  { key: 'signups',       label: '회원가입', unit: '처', icon: Users,             color: 'text-indigo-500',  bg: 'bg-indigo-50' },
-  { key: 'trials',        label: '무료체험', unit: '처', icon: TrendingUp,        color: 'text-blue-500',    bg: 'bg-blue-50' },
+  { key: 'signups',       label: '회원가입', unit: '건', icon: Users,             color: 'text-indigo-500',  bg: 'bg-indigo-50' },
+  { key: 'trials',        label: '무료체험', unit: '건', icon: TrendingUp,        color: 'text-blue-500',    bg: 'bg-blue-50' },
   { key: 'payments',      label: '결제',    unit: '건', icon: CreditCard,        color: 'text-emerald-500', bg: 'bg-emerald-50' },
   { key: 'revenue',       label: '매출',    unit: '원', icon: DollarSign,        color: 'text-green-500',   bg: 'bg-green-50' },
-  { key: 'withdrawals',   label: '탈퇴',    unit: '처', icon: LogOut,            color: 'text-rose-500',    bg: 'bg-rose-50' },
-  { key: 'cancellations', label: '구독취소', unit: '처', icon: XCircle,           color: 'text-orange-500',  bg: 'bg-orange-50' },
+  { key: 'withdrawals',   label: '탈퇴',    unit: '건', icon: LogOut,            color: 'text-rose-500',    bg: 'bg-rose-50' },
+  { key: 'cancellations', label: '구독취소', unit: '건', icon: XCircle,           color: 'text-orange-500',  bg: 'bg-orange-50' },
   { key: 'tickets',       label: '문의',    unit: '건', icon: MessageSquare,     color: 'text-sky-500',     bg: 'bg-sky-50' },
 ] as const
 

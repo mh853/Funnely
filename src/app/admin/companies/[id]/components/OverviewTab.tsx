@@ -11,44 +11,50 @@ interface OverviewTabProps {
 }
 
 export default function OverviewTab({ company }: OverviewTabProps) {
+  const s = company.stats ?? { total_users: 0, total_leads: 0, landing_pages_count: 0 }
+  const ds = company.detailed_stats ?? {
+    active_users: 0,
+    inactive_users: 0,
+    leads_this_month: 0,
+    leads_last_month: 0,
+    active_landing_pages: 0,
+  }
+
   const stats = [
     {
       title: '총 사용자',
-      value: company.stats.total_users,
+      value: s.total_users,
       icon: Users,
       color: 'text-blue-600',
       bgColor: 'bg-blue-100',
-      detail: `활성: ${company.detailed_stats.active_users}, 비활성: ${company.detailed_stats.inactive_users}`,
+      detail: `활성: ${ds.active_users}, 비활성: ${ds.inactive_users}`,
     },
     {
       title: '총 리드',
-      value: company.stats.total_leads,
+      value: s.total_leads,
       icon: FileText,
       color: 'text-green-600',
       bgColor: 'bg-green-100',
-      detail: `이번달: ${company.detailed_stats.leads_this_month}, 지난달: ${company.detailed_stats.leads_last_month}`,
+      detail: `이번달: ${ds.leads_this_month}, 지난달: ${ds.leads_last_month}`,
     },
     {
       title: '랜딩페이지',
-      value: company.stats.landing_pages_count,
+      value: s.landing_pages_count,
       icon: Activity,
       color: 'text-purple-600',
       bgColor: 'bg-purple-100',
-      detail: `활성: ${company.detailed_stats.active_landing_pages}`,
+      detail: `활성: ${ds.active_landing_pages}`,
     },
     {
       title: '이번달 신규 리드',
-      value: company.detailed_stats.leads_this_month,
+      value: ds.leads_this_month,
       icon: TrendingUp,
       color: 'text-orange-600',
       bgColor: 'bg-orange-100',
       detail:
-        company.detailed_stats.leads_last_month > 0
+        ds.leads_last_month > 0
           ? `전월 대비 ${Math.round(
-              ((company.detailed_stats.leads_this_month -
-                company.detailed_stats.leads_last_month) /
-                company.detailed_stats.leads_last_month) *
-                100
+              ((ds.leads_this_month - ds.leads_last_month) / ds.leads_last_month) * 100
             )}%`
           : '비교 데이터 없음',
     },
@@ -122,9 +128,9 @@ export default function OverviewTab({ company }: OverviewTabProps) {
           <CardTitle>최근 활동</CardTitle>
         </CardHeader>
         <CardContent>
-          {company.recent_activities.length > 0 ? (
+          {(company.recent_activities ?? []).length > 0 ? (
             <div className="space-y-3">
-              {company.recent_activities.map((activity) => (
+              {(company.recent_activities ?? []).map((activity) => (
                 <div
                   key={activity.id}
                   className="flex items-start gap-3 pb-3 border-b border-gray-100 last:border-0"

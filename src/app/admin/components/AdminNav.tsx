@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare } from 'lucide-react'
+import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -15,6 +15,10 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: '대시보드',    href: '/admin' },
   { icon: FileBarChart,    label: '리포트',      href: '/admin/reports' },
   { icon: Building2,       label: '고객사 관리',  href: '/admin/companies' },
+  { icon: Users,           label: '사용자 관리',  href: '/admin/users' },
+  { icon: CreditCard,      label: '구독 관리',    href: '/admin/subscriptions' },
+  { icon: Receipt,         label: '매출/결제',    href: '/admin/billing' },
+  { icon: BarChart3,       label: '분석',         href: '/admin/analytics' },
   { icon: HeadphonesIcon,  label: '문의',         href: '/admin/support' },
   { icon: MessageSquare,   label: '홈페이지 문의', href: '/admin/support/inquiries' },
 ]

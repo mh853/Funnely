@@ -52,9 +52,19 @@ export default function BillingPage() {
     value,
   }))
 
+  const STATUS_LABELS: Record<string, string> = {
+    active: '활성',
+    trial: '체험',
+    expired: '만료',
+    cancelled: '취소',
+    canceled: '취소',
+    past_due: '연체',
+    free: '무료',
+  }
+
   const statusData = Object.entries(metrics.statusDistribution).map(
     ([name, value]) => ({
-      name: name === 'active' ? '활성' : name === 'trial' ? '체험' : name,
+      name: STATUS_LABELS[name] ?? name,
       value,
     })
   )
