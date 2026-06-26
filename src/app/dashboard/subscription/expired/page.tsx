@@ -133,7 +133,7 @@ export default function SubscriptionExpiredPage() {
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">만료일</span>
                   <span className="font-medium text-gray-900">
-                    {format(periodEnd, 'yyyy년 MM월 dd일', { locale: ko })}
+                    {format(periodEnd, 'yyyy-MM-dd', { locale: ko })}
                   </span>
                 </div>
               )}

@@ -288,7 +288,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-semibold text-gray-900 mb-1.5">{ticket.subject}</h1>
             <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>{format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}</span>
+              <span>{format(new Date(ticket.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}</span>
               <span className="text-gray-300">•</span>
               <span>{ticket.created_by.full_name}</span>
             </div>
@@ -432,7 +432,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
                 <Shield className="h-4 w-4 text-blue-600" />
                 <span className="text-xs font-medium text-blue-900">기술 지원팀</span>
                 <span className="text-xs text-blue-600/70">
-                  {format(new Date(reply.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                  {format(new Date(reply.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                 </span>
               </div>
               <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">

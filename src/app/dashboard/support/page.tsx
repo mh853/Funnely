@@ -727,7 +727,7 @@ export default function SupportPage() {
                             <div>
                               {format(
                                 new Date(ticket.created_at),
-                                'yyyy.MM.dd HH:mm',
+                                'yyyy-MM-dd HH:mm',
                                 { locale: ko }
                               )}
                             </div>

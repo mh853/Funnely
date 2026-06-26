@@ -205,8 +205,8 @@ export default function GoalsPage() {
                       </div>
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
-                        {format(new Date(goal.period_start), 'yyyy.MM.dd', { locale: ko })} -{' '}
-                        {format(new Date(goal.period_end), 'yyyy.MM.dd', { locale: ko })}
+                        {format(new Date(goal.period_start), 'yyyy-MM-dd', { locale: ko })} -{' '}
+                        {format(new Date(goal.period_end), 'yyyy-MM-dd', { locale: ko })}
                       </div>
                     </div>
                   </div>

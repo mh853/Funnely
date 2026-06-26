@@ -43,7 +43,7 @@ export default function CompanyHeader({
             <div className="mt-2 space-y-1">
               <p className="text-sm text-gray-500">ID: {company.id}</p>
               <p className="text-sm text-gray-500">
-                가입일: {format(new Date(company.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
+                가입일: {format(new Date(company.created_at), 'yyyy-MM-dd', { locale: ko })}
               </p>
               <p className="text-sm text-gray-500">
                 담당자: {company.admin_user?.full_name || '미지정'}

@@ -277,7 +277,7 @@ export default function AdminInquiriesPage() {
                   </p>
                   <h3 className="text-white font-bold text-base leading-snug">{selectedInquiry.subject}</h3>
                   <p className="text-indigo-200 text-xs mt-1">
-                    {format(new Date(selectedInquiry.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                    {format(new Date(selectedInquiry.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                   </p>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs font-medium flex-shrink-0 ${STATUS_CONFIG[selectedInquiry.status].badge}`}>

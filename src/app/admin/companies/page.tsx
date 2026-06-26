@@ -62,7 +62,7 @@ type SortColumn =
   | 'created_at'
   | 'withdrawn_at'
 
-function fmtDate(d: string | null, f = 'yyyy.MM.dd') {
+function fmtDate(d: string | null, f = 'yyyy-MM-dd') {
   if (!d) return '-'
   try { return format(new Date(d), f, { locale: ko }) } catch { return '-' }
 }
@@ -209,7 +209,7 @@ function CompanyModal({ company, onClose }: { company: Company; onClose: () => v
                             {p.sequence}차
                           </span>
                         </td>
-                        <td className="px-4 py-3 text-gray-600 text-xs">{fmtDate(p.date, 'yyyy.MM.dd')}</td>
+                        <td className="px-4 py-3 text-gray-600 text-xs">{fmtDate(p.date, 'yyyy-MM-dd')}</td>
                         <td className="px-4 py-3 text-gray-700 text-xs font-medium">{p.planName}</td>
                         <td className="px-4 py-3 text-right font-semibold text-gray-900">
                           {p.amount.toLocaleString()}

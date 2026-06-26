@@ -55,7 +55,7 @@ export default function UserHeader({
                 소속: {user.company.name}
               </p>
               <p className="text-sm text-gray-500">
-                가입일: {format(new Date(user.created_at), 'yyyy년 MM월 dd일', { locale: ko })}
+                가입일: {format(new Date(user.created_at), 'yyyy-MM-dd', { locale: ko })}
               </p>
               {user.last_login_at && (
                 <p className="text-sm text-gray-500">

@@ -56,7 +56,7 @@ const TX_STATUS_COLORS: Record<string, string> = {
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '-'
-  try { return format(new Date(d), 'yyyy.MM.dd HH:mm', { locale: ko }) } catch { return '-' }
+  try { return format(new Date(d), 'yyyy-MM-dd HH:mm', { locale: ko }) } catch { return '-' }
 }
 
 export default function BillingPage() {

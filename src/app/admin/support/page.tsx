@@ -328,7 +328,7 @@ export default function AdminSupportPage() {
                           <span className="mx-1.5 text-gray-300">·</span>
                           {ticket.created_by.full_name}
                           <span className="mx-1.5 text-gray-300">·</span>
-                          {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                          {format(new Date(ticket.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                         </p>
                         <p className="text-sm text-gray-600 line-clamp-2">{ticket.description}</p>
                       </div>

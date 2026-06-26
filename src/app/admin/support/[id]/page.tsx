@@ -320,7 +320,7 @@ export default function AdminTicketDetailPage({
             </p>
             <h1 className="text-xl font-bold text-white leading-snug">{ticket.subject}</h1>
             <p className="text-indigo-200 text-sm mt-1">
-              {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+              {format(new Date(ticket.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
               <span className="mx-1.5 opacity-50">·</span>
               {ticket.created_by.full_name}
             </p>
@@ -415,11 +415,11 @@ export default function AdminTicketDetailPage({
                     <Shield className="h-4 w-4 text-indigo-600" />
                     <span className="text-xs font-semibold text-indigo-900">{reply.reply_by.full_name}</span>
                     <span className="text-xs text-indigo-500">
-                      {format(new Date(reply.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                      {format(new Date(reply.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                     </span>
                     {reply.updated_at !== reply.created_at && (
                       <span className="text-[10px] text-indigo-400">
-                        (수정: {format(new Date(reply.updated_at), 'yyyy.MM.dd HH:mm', { locale: ko })})
+                        (수정: {format(new Date(reply.updated_at), 'yyyy-MM-dd HH:mm', { locale: ko })})
                       </span>
                     )}
                   </div>
@@ -596,13 +596,13 @@ export default function AdminTicketDetailPage({
                 <div>
                   <div className="text-xs text-gray-400 mb-0.5">생성일</div>
                   <div className="text-sm font-semibold text-gray-900">
-                    {format(new Date(ticket.created_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                    {format(new Date(ticket.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                   </div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 mb-0.5">최근 수정</div>
                   <div className="text-sm font-semibold text-gray-900">
-                    {format(new Date(ticket.updated_at), 'yyyy.MM.dd HH:mm', { locale: ko })}
+                    {format(new Date(ticket.updated_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                   </div>
                 </div>
               </div>

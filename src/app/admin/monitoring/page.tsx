@@ -154,7 +154,7 @@ export default function MonitoringPage() {
                 <p className="text-sm text-gray-500 mt-1">
                   마지막 확인:{' '}
                   {health?.lastCheck
-                    ? format(new Date(health.lastCheck), 'yyyy.MM.dd HH:mm:ss', {
+                    ? format(new Date(health.lastCheck), 'yyyy-MM-dd HH:mm:ss', {
                         locale: ko,
                       })
                     : '-'}

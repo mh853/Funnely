@@ -17,7 +17,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 
-function fmtDate(d: string | null | undefined, fmt = 'yyyy.MM.dd') {
+function fmtDate(d: string | null | undefined, fmt = 'yyyy-MM-dd') {
   if (!d) return '-'
   try { return format(new Date(d), fmt, { locale: ko }) } catch { return '-' }
 }
@@ -331,14 +331,14 @@ export default function SubscriptionsPage() {
                       {subscription.trial_end && subscription.status === 'trial' && (
                         <div className="mt-2 text-sm text-blue-600">
                           체험 기간 종료:{' '}
-                          {fmtDate(subscription.trial_end, 'yyyy.MM.dd HH:mm')}
+                          {fmtDate(subscription.trial_end, 'yyyy-MM-dd HH:mm')}
                         </div>
                       )}
 
                       {subscription.cancelled_at && (
                         <div className="mt-2 text-sm text-red-600">
                           취소일:{' '}
-                          {fmtDate(subscription.cancelled_at, 'yyyy.MM.dd HH:mm')}
+                          {fmtDate(subscription.cancelled_at, 'yyyy-MM-dd HH:mm')}
                         </div>
                       )}
                     </div>

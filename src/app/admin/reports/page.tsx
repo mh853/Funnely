@@ -192,7 +192,7 @@ export default function ReportsPage() {
                 {[...data.rows].reverse().map((row) => (
                   <tr key={row.date} className="hover:bg-gray-50 transition-colors">
                     <td className="px-5 py-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {format(new Date(row.date), 'yyyy.MM.dd (EEE)', { locale: ko })}
+                      {format(new Date(row.date), 'yyyy-MM-dd (EEE)', { locale: ko })}
                     </td>
                     {COLS.map((c, i) => (
                       <td key={c.key} className={`py-3 text-right text-sm text-gray-700 ${i === COLS.length - 1 ? 'pl-4 pr-6' : 'px-4'}`}>
