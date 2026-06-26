@@ -24,9 +24,7 @@ export async function GET(
         total_amount,
         approved_at,
         status,
-        company_subscriptions(
-          subscription_plans(name)
-        )
+        subscription_id
       `)
       .eq('company_id', params.id)
       .eq('status', 'success')
@@ -40,7 +38,7 @@ export async function GET(
     const rows = (payments || []).map((p: any, i: number) => ({
       sequence: (payments?.length || 0) - i,
       date: p.approved_at,
-      planName: p.company_subscriptions?.subscription_plans?.name || '-',
+      planName: '-',
       amount: p.total_amount || 0,
     }))
 

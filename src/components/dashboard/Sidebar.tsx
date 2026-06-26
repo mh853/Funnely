@@ -30,6 +30,7 @@ interface SidebarProps {
   collapsed?: boolean
   onToggleCollapse?: () => void
   planFeatures?: { [key: string]: boolean } // 플랜별 기능 권한
+  subscriptionStatus?: string | null
 }
 
 const navigation = [
@@ -52,7 +53,7 @@ const navigation = [
   { name: 'DB 블랙리스트', href: '/dashboard/blacklist', icon: ShieldExclamationIcon, requiredFeature: 'dashboard' },
 ]
 
-export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {} }: SidebarProps) {
+export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {}, subscriptionStatus }: SidebarProps) {
   const pathname = usePathname()
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState<'트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄'>('트래픽 분석')
@@ -71,14 +72,30 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
     'reservation_schedule': '예약 스케줄'
   }
 
+  // 구독 만료/취소 여부 판단
+  const isSubscriptionExpired = ['expired', 'cancelled', 'canceled'].includes(subscriptionStatus ?? '')
+
   // 플랜 기능에 따라 메뉴 비활성화 처리 (필터링하지 않고 모두 표시)
-  const processedNavigation = navigation.map(item => ({
-    ...item,
-    disabled: item.requiredFeature ? planFeatures[item.requiredFeature] !== true : false,
-    disabledReason: item.requiredFeature && planFeatures[item.requiredFeature] !== true
-      ? '프로 플랜 이상 필요 (클릭하면 업그레이드)'
-      : undefined
-  }))
+  const processedNavigation = navigation.map(item => {
+    const featureBlocked = item.requiredFeature ? planFeatures[item.requiredFeature] !== true : false
+    let disabledReason: string | undefined
+
+    if (featureBlocked) {
+      if (isSubscriptionExpired) {
+        disabledReason = '구독이 만료되었습니다 (클릭하면 갱신)'
+      } else if (subscriptionStatus === null || subscriptionStatus === undefined) {
+        disabledReason = '구독이 필요합니다'
+      } else {
+        disabledReason = '프로 플랜 이상 필요 (클릭하면 업그레이드)'
+      }
+    }
+
+    return {
+      ...item,
+      disabled: featureBlocked,
+      disabledReason,
+    }
+  })
 
   // 디버깅: processedNavigation 확인
   if (process.env.NODE_ENV === 'development') {

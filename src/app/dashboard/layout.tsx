@@ -22,26 +22,28 @@ export default async function DashboardLayout({
 
   // 플랜 기능 조회 (2단계 쿼리) - Service Role 사용 (RLS 우회)
   let planFeatures: { [key: string]: boolean } = {}
+  let subscriptionStatus: string | null = null
 
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
 
-    // Step 1: Get active subscription (most recent wins — handles trial→active upgrade)
-    const { data: subscription } = await serviceSupabase
+    // Step 1: Get most recent subscription (any status, to know if expired)
+    const { data: latestSub } = await serviceSupabase
       .from('company_subscriptions')
-      .select('plan_id')
+      .select('plan_id, status')
       .eq('company_id', userProfile.company_id)
-      .in('status', ['active', 'trial', 'past_due'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
 
-    // Step 2: Get plan features if subscription exists
-    if (subscription?.plan_id) {
+    subscriptionStatus = latestSub?.status ?? null
+
+    // Step 2: Get plan features only for active subscriptions
+    if (latestSub?.plan_id && ['active', 'trial', 'past_due'].includes(latestSub.status ?? '')) {
       const { data: plan } = await serviceSupabase
         .from('subscription_plans')
         .select('features')
-        .eq('id', subscription.plan_id)
+        .eq('id', latestSub.plan_id)
         .single()
 
       if (plan?.features) {
@@ -81,6 +83,7 @@ export default async function DashboardLayout({
       userProfile={userProfile}
       planFeatures={planFeatures}
       subscriptionBanner={subscriptionBanner}
+      subscriptionStatus={subscriptionStatus}
     >
       {children}
     </DashboardLayoutClient>

@@ -13,6 +13,7 @@ interface DashboardLayoutClientProps {
   subscriptionBanner?: {
     type: 'trial_ended' | null
   }
+  subscriptionStatus?: string | null
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
@@ -23,6 +24,7 @@ export default function DashboardLayoutClient({
   children,
   planFeatures = {},
   subscriptionBanner,
+  subscriptionStatus,
 }: DashboardLayoutClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -56,6 +58,7 @@ export default function DashboardLayoutClient({
         collapsed={sidebarCollapsed}
         onToggleCollapse={toggleSidebar}
         planFeatures={planFeatures}
+        subscriptionStatus={subscriptionStatus}
       />
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-[200px]'}`}>
         <Header

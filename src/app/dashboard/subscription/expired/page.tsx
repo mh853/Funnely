@@ -225,7 +225,7 @@ export default function SubscriptionExpiredPage() {
           <div className="border-t pt-4">
             <p className="text-sm text-gray-600 text-center">
               문제가 계속되시나요?{' '}
-              <a href="mailto:support@medisync.com" className="text-blue-600 hover:underline">
+              <a href="mailto:support@funnely.kr" className="text-blue-600 hover:underline">
                 고객 지원팀에 문의하기
               </a>
             </p>

@@ -275,6 +275,8 @@ export default function SubscriptionClient({
                     ? '활성'
                     : currentSubscription.status === 'trial'
                     ? '체험 중'
+                    : currentSubscription.status === 'past_due'
+                    ? '결제 지연'
                     : '만료'}
                 </span>
               </div>
@@ -318,7 +320,7 @@ export default function SubscriptionClient({
             </div>
 
             <div className="flex flex-col gap-2">
-              {currentSubscription.status !== 'cancelled' && (
+              {currentSubscription.status === 'active' && (
                 <button
                   onClick={() => setShowCancelConfirm(true)}
                   className="px-4 py-2 text-sm font-medium text-red-700 bg-white border border-red-200 rounded-lg hover:bg-red-50 transition-colors"

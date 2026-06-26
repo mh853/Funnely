@@ -20,8 +20,10 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_USERS)
+    // 2. 권한 체크 (is_super_admin이면 스킵)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_USERS)
+    }
 
     // 3. Supabase 쿼리
     const supabase = createClient(
