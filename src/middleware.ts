@@ -226,8 +226,10 @@ export async function middleware(request: NextRequest) {
   const isAdminPath = request.nextUrl.pathname.startsWith('/admin')
 
   // Subscription pages - always allow access (users need to select plans)
+  // Support pages - always allow access (users need support even when expired)
   const isSubscriptionPage =
-    request.nextUrl.pathname.startsWith('/dashboard/subscription')
+    request.nextUrl.pathname.startsWith('/dashboard/subscription') ||
+    request.nextUrl.pathname.startsWith('/dashboard/support')
 
   // Protected routes - require authentication
   const protectedPaths = ['/dashboard', '/admin']

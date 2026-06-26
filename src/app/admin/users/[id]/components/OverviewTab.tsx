@@ -11,6 +11,18 @@ interface OverviewTabProps {
   user: UserDetail
 }
 
+const PERMISSION_LABELS: Record<string, string> = {
+  manage_users: '사용자 관리',
+  manage_leads: '리드 관리',
+  manage_pages: '랜딩 페이지 관리',
+  view_reports: '리포트 조회',
+  manage_billing: '결제 관리',
+  manage_settings: '설정 관리',
+  view_analytics: '분석 조회',
+  manage_support: '기술 지원 관리',
+  super_admin: '슈퍼 어드민',
+}
+
 export default function OverviewTab({ user }: OverviewTabProps) {
   const stats = [
     {
@@ -107,7 +119,7 @@ export default function OverviewTab({ user }: OverviewTabProps) {
             {user.permissions.map((permission) => (
               <div key={permission} className="flex items-center gap-2">
                 <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span className="text-sm text-gray-700">{permission}</span>
+                <span className="text-sm text-gray-700">{PERMISSION_LABELS[permission] ?? permission}</span>
               </div>
             ))}
           </div>
