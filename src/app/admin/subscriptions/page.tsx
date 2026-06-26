@@ -328,7 +328,7 @@ export default function SubscriptionsPage() {
                         </div>
                       </div>
 
-                      {subscription.trial_end && (
+                      {subscription.trial_end && subscription.status === 'trial' && (
                         <div className="mt-2 text-sm text-blue-600">
                           체험 기간 종료:{' '}
                           {fmtDate(subscription.trial_end, 'yyyy.MM.dd HH:mm')}

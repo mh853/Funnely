@@ -31,33 +31,28 @@ export async function GET(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 사용자 기본 정보
+    // 사용자 기본 정보 + 회사 정보 (users 테이블에 full_name, company_id, last_login 포함)
     const { data: user, error: userError } = await supabase
       .from('users')
-      .select('id, email, created_at, last_sign_in_at')
+      .select(`
+        id,
+        email,
+        full_name,
+        avatar_url,
+        role,
+        simple_role,
+        is_active,
+        created_at,
+        last_login,
+        company_id,
+        company:companies(id, name)
+      `)
       .eq('id', params.userId)
       .single()
 
     if (userError || !user) {
+      console.error('[Users API] User fetch error:', userError)
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
-    }
-
-    // 프로필 정보
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, avatar_url, company_id')
-      .eq('user_id', params.userId)
-      .single()
-
-    // 회사 정보
-    let companyInfo = null
-    if (profile?.company_id) {
-      const { data: company } = await supabase
-        .from('companies')
-        .select('id, name')
-        .eq('id', profile.company_id)
-        .single()
-      companyInfo = company
     }
 
     // 관리자 역할
@@ -72,24 +67,6 @@ export async function GET(
     // 권한 목록
     const permissions = await getUserPermissions(params.userId)
 
-    // 활동 통계
-    // 로그인 수 (감사 로그)
-    const { count: loginCount } = await supabase
-      .from('audit_logs')
-      .select('*', { count: 'exact', head: true })
-      .eq('user_id', params.userId)
-      .eq('action', 'admin.login')
-
-    // 마지막 로그인
-    const { data: lastLogin } = await supabase
-      .from('audit_logs')
-      .select('created_at')
-      .eq('user_id', params.userId)
-      .eq('action', 'admin.login')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single()
-
     // 생성한 리드 수
     const { count: leadCount } = await supabase
       .from('leads')
@@ -98,17 +75,23 @@ export async function GET(
 
     // 4. 응답 구성
     const userDetail = {
-      ...user,
+      id: user.id,
+      email: user.email,
+      created_at: user.created_at,
+      last_sign_in_at: user.last_login,
       profile: {
-        full_name: profile?.full_name || null,
-        avatar_url: profile?.avatar_url || null,
+        full_name: user.full_name || null,
+        avatar_url: user.avatar_url || null,
       },
-      company: companyInfo,
+      company: user.company || null,
+      role: user.role,
+      simple_role: user.simple_role,
+      is_active: user.is_active,
       admin_roles: adminRoles,
       permissions,
       activity: {
-        login_count: loginCount || 0,
-        last_login_at: lastLogin?.created_at || null,
+        login_count: 0,
+        last_login_at: user.last_login || null,
         lead_count: leadCount || 0,
       },
     }

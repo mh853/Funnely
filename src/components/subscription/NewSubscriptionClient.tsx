@@ -297,17 +297,25 @@ export default function NewSubscriptionClient({
         }`}>
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold">{currentSubscription.subscription_plans.name} 플랜</h2>
+              <h2 className="text-2xl font-bold">
+                {currentSubscription.subscription_plans.name.endsWith('플랜')
+                  ? currentSubscription.subscription_plans.name
+                  : `${currentSubscription.subscription_plans.name} 플랜`}
+              </h2>
               <p className="mt-1 opacity-90">
                 {currentSubscription.status === 'cancelled'
                   ? '구독 취소됨'
+                  : currentSubscription.status === 'expired'
+                  ? '구독 만료'
                   : isCurrentlyOnTrial
                   ? '무료 체험 중'
                   : isOnFreePlan
                   ? '무료 플랜 이용 중'
                   : currentSubscription.status === 'active'
                   ? '구독 활성'
-                  : '결제 지연'}
+                  : currentSubscription.status === 'past_due'
+                  ? '결제 지연'
+                  : '만료'}
               </p>
               {currentSubscription.status === 'cancelled' && currentSubscription.current_period_end && (
                 <p className="mt-1 text-sm opacity-90">
