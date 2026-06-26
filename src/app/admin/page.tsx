@@ -128,7 +128,7 @@ function RecentList({
                 {item.sub && <p className="text-xs text-indigo-600 font-medium truncate mt-0.5">{item.sub}</p>}
               </div>
               <p className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5">
-                {format(new Date(item.date), 'MM.dd', { locale: ko })}
+                {format(new Date(item.date), 'MM-dd', { locale: ko })}
               </p>
             </div>
           ))}

@@ -145,11 +145,15 @@ export default function MonitoringPage() {
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900">
-                  {health?.overallStatus === 'healthy'
+                  {!health
+                    ? '데이터 없음'
+                    : health.overallStatus === 'healthy'
                     ? '정상'
-                    : health?.overallStatus === 'degraded'
+                    : health.overallStatus === 'degraded'
                     ? '성능 저하'
-                    : '장애'}
+                    : health.overallStatus === 'down'
+                    ? '장애'
+                    : '알 수 없음'}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
                   마지막 확인:{' '}

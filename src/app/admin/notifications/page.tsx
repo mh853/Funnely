@@ -88,6 +88,10 @@ const TYPE_LABELS: Record<string, string> = {
   subscription_in_grace_period: '결제 지연',
   support_reply: '기술지원 답변',
   new_support_ticket: '새 기술지원 문의',
+  new_public_inquiry: '홈페이지 문의',
+  new_signup: '신규 회원가입',
+  new_payment: '신규 결제',
+  subscription_cancelled: '구독 취소',
 }
 
 export default function NotificationsPage() {
@@ -330,7 +334,7 @@ export default function NotificationsPage() {
                     <div className="flex items-center gap-4 text-xs text-gray-500">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        {format(new Date(notification.sent_at), 'PPp', { locale: ko })}
+                        {format(new Date(notification.sent_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
                       </div>
                       <span className="inline-flex px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">
                         {TYPE_LABELS[notification.type] || notification.type}

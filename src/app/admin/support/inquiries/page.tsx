@@ -231,7 +231,7 @@ export default function AdminInquiriesPage() {
                         </p>
                       </div>
                       <time className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">
-                        {format(new Date(inquiry.created_at), 'MM.dd HH:mm', { locale: ko })}
+                        {format(new Date(inquiry.created_at), 'MM-dd HH:mm', { locale: ko })}
                       </time>
                     </div>
                   </button>
