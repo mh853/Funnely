@@ -94,7 +94,7 @@ export default function NotificationsPage() {
   const [data, setData] = useState<NotificationsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [filter, setFilter] = useState<'all' | 'unread'>('unread')
 
   useEffect(() => {
     fetchNotifications()

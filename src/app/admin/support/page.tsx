@@ -100,7 +100,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   general: '일반 문의',
 }
 
-const FILTERS = [
+const STATUS_FILTERS = [
   { key: 'all',         label: '전체' },
   { key: 'open',        label: '대기 중' },
   { key: 'in_progress', label: '처리 중' },
@@ -113,6 +113,8 @@ export default function AdminSupportPage() {
   const [stats, setStats] = useState<Stats | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
+  const [categoryFilter, setCategoryFilter] = useState<string>('all')
+  const [priorityFilter, setPriorityFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
   const [currentPage, setCurrentPage] = useState(1)
@@ -130,7 +132,7 @@ export default function AdminSupportPage() {
 
   useEffect(() => {
     fetchData()
-  }, [filter, debouncedSearch, currentPage, perPage])
+  }, [filter, categoryFilter, priorityFilter, debouncedSearch, currentPage, perPage])
 
   async function fetchData() {
     try {
@@ -140,6 +142,8 @@ export default function AdminSupportPage() {
         perPage: perPage.toString(),
       })
       if (filter !== 'all') params.append('status', filter)
+      if (categoryFilter !== 'all') params.append('category', categoryFilter)
+      if (priorityFilter !== 'all') params.append('priority', priorityFilter)
       if (debouncedSearch) params.append('search', debouncedSearch)
 
       const [ticketsRes, statsRes] = await Promise.all([
@@ -249,7 +253,7 @@ export default function AdminSupportPage() {
           <p className="text-xs text-gray-400">검색 결과: {totalCount}개의 티켓</p>
         )}
         <div className="flex gap-2 flex-wrap">
-          {FILTERS.map(({ key, label }) => (
+          {STATUS_FILTERS.map(({ key, label }) => (
             <button
               key={key}
               onClick={() => { setFilter(key); setCurrentPage(1) }}
@@ -262,6 +266,28 @@ export default function AdminSupportPage() {
               {label}
             </button>
           ))}
+        </div>
+        <div className="flex gap-3 flex-wrap">
+          <select
+            value={categoryFilter}
+            onChange={(e) => { setCategoryFilter(e.target.value); setCurrentPage(1) }}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            <option value="all">카테고리 전체</option>
+            {Object.entries(CATEGORY_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={priorityFilter}
+            onChange={(e) => { setPriorityFilter(e.target.value); setCurrentPage(1) }}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+          >
+            <option value="all">우선순위 전체</option>
+            {Object.entries(PRIORITY_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
         </div>
       </div>
 

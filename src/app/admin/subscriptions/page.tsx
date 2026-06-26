@@ -389,6 +389,20 @@ export default function SubscriptionsPage() {
                         정식 전환
                       </Button>
                     )}
+                    {(subscription.status === 'expired' ||
+                      subscription.status === 'cancelled' ||
+                      subscription.status === 'canceled') && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="text-green-700 border-green-300 hover:bg-green-50"
+                        onClick={() =>
+                          handleUpdateStatus(subscription.id, 'active')
+                        }
+                      >
+                        재활성화
+                      </Button>
+                    )}
                   </div>
                 </div>
               </CardContent>

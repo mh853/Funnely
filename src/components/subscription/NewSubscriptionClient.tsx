@@ -329,13 +329,18 @@ export default function NewSubscriptionClient({
                   체험 종료: {formatDate(currentSubscription.trial_end_date)}
                 </p>
               )}
-              {!isOnFreePlan && !isCurrentlyOnTrial && currentSubscription.current_period_end && currentSubscription.status !== 'cancelled' && (
+              {!isOnFreePlan && !isCurrentlyOnTrial && currentSubscription.current_period_end && currentSubscription.status === 'active' && (
                 <p className="text-sm opacity-90">
                   다음 결제일: {formatDate(currentSubscription.current_period_end)}
                 </p>
               )}
-              {/* 구독 취소 버튼 - Free 플랜이 아니고 이미 취소되지 않은 경우만 표시 */}
-              {!isOnFreePlan && currentSubscription.status !== 'cancelled' && (
+              {currentSubscription.status === 'expired' && currentSubscription.current_period_end && (
+                <p className="text-sm opacity-90">
+                  만료일: {formatDate(currentSubscription.current_period_end)}
+                </p>
+              )}
+              {/* 구독 취소 버튼 - 활성 구독에만 표시 */}
+              {currentSubscription.status === 'active' && (
                 <button
                   onClick={() => setCancelModalOpen(true)}
                   className="mt-1 px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors border border-white/30"

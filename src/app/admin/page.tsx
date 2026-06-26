@@ -6,19 +6,23 @@ import { ko } from 'date-fns/locale'
 import {
   Users, TrendingUp, CreditCard, DollarSign,
   LogOut, XCircle, MessageSquare, MousePointerClick,
+  ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
 
+interface MonthStats {
+  signups: number
+  trials: number
+  payments: number
+  revenue: number
+  withdrawals: number
+  cancellations: number
+  tickets: number
+  leads: number
+}
+
 interface DashboardData {
-  thisMonth: {
-    signups: number
-    trials: number
-    payments: number
-    revenue: number
-    withdrawals: number
-    cancellations: number
-    tickets: number
-    leads: number
-  }
+  thisMonth: MonthStats
+  lastMonth: MonthStats
   recent: {
     signups: Array<{ id: string; name: string; date: string }>
     payments: Array<{ id: string; companyName: string; amount: number; date: string }>
@@ -39,12 +43,45 @@ const STAT_CONFIG = [
   { key: 'tickets',       label: '문의',    unit: '건', icon: MessageSquare,     color: 'text-sky-500',     bg: 'bg-sky-50' },
 ] as const
 
+// 증감률 계산 (소수점 1자리)
+function calcDelta(current: number, prev: number) {
+  if (prev === 0) return current > 0 ? 100 : 0
+  return Math.round(((current - prev) / prev) * 1000) / 10
+}
+
+function DeltaBadge({ current, prev, invert = false }: { current: number; prev: number; invert?: boolean }) {
+  const delta = calcDelta(current, prev)
+  if (delta === 0 && current === 0 && prev === 0) return null
+
+  // invert: 탈퇴/취소는 증가가 나쁜 것
+  const isGood = invert ? delta <= 0 : delta >= 0
+  const isZero = delta === 0
+
+  if (isZero) {
+    return (
+      <span className="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400">
+        <Minus className="w-3 h-3" />
+        전월 동일
+      </span>
+    )
+  }
+
+  return (
+    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isGood ? 'text-emerald-600' : 'text-rose-500'}`}>
+      {delta > 0
+        ? <ArrowUpRight className="w-3 h-3" />
+        : <ArrowDownRight className="w-3 h-3" />}
+      {Math.abs(delta)}%
+    </span>
+  )
+}
+
 function StatBox({
-  label, value, unit, icon: Icon, color, bg,
+  label, value, prevValue, unit, icon: Icon, color, bg, invert = false,
 }: {
-  label: string; value: number; unit: string
+  label: string; value: number; prevValue: number; unit: string
   icon: React.ComponentType<{ className?: string }>
-  color: string; bg: string
+  color: string; bg: string; invert?: boolean
 }) {
   return (
     <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
@@ -54,6 +91,9 @@ function StatBox({
           {value.toLocaleString()}
           <span className="text-xs font-normal text-gray-400 ml-1">{unit}</span>
         </p>
+        <div className="mt-1.5">
+          <DeltaBadge current={value} prev={prevValue} invert={invert} />
+        </div>
       </div>
       <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
         <Icon className={`w-4.5 h-4.5 ${color}`} />
@@ -165,9 +205,11 @@ export default function AdminDashboard() {
               label={cfg.label}
               unit={cfg.unit}
               value={(data.thisMonth as any)[cfg.key]}
+              prevValue={(data.lastMonth as any)?.[cfg.key] ?? 0}
               icon={cfg.icon}
               color={cfg.color}
               bg={cfg.bg}
+              invert={cfg.key === 'withdrawals' || cfg.key === 'cancellations'}
             />
           ))}
         </div>

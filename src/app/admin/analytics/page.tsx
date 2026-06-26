@@ -138,6 +138,8 @@ export default function AnalyticsPage() {
     )
   }
 
+  const hasNoData = conversionData.summary.total === 0 && channelData.summary.totalLeads === 0
+
   return (
     <div className="space-y-6">
       {/* 헤더 */}
@@ -220,12 +222,26 @@ export default function AnalyticsPage() {
         </Card>
       </div>
 
+      {hasNoData && (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-10 text-center">
+          <Target className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">분석할 데이터가 없습니다</p>
+          <p className="text-sm text-gray-400 mt-1">랜딩 페이지를 통해 리드가 유입되면 분석 데이터가 나타납니다.</p>
+        </div>
+      )}
+
       {/* 전환 퍼널 */}
       <Card>
         <CardHeader>
           <CardTitle>전환 퍼널 분석</CardTitle>
         </CardHeader>
         <CardContent>
+          {conversionData.funnel.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-2">
+              <Target className="h-8 w-8" />
+              <p className="text-sm">퍼널 데이터가 없습니다</p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={conversionData.funnel}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -236,6 +252,7 @@ export default function AnalyticsPage() {
               <Bar dataKey="count" fill="#3b82f6" name="리드 수" />
             </BarChart>
           </ResponsiveContainer>
+          )}
           <div className="grid grid-cols-3 gap-4 mt-6">
             <div className="text-center">
               <div className="text-sm text-gray-500">신규 → 연락완료</div>
@@ -265,29 +282,36 @@ export default function AnalyticsPage() {
           <CardTitle>리드 트렌드</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={trendData.trends}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="total"
-                stroke="#3b82f6"
-                name="전체 리드"
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="converted"
-                stroke="#10b981"
-                name="전환완료"
-                strokeWidth={2}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {trendData.trends.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-2">
+              <TrendingUp className="h-8 w-8" />
+              <p className="text-sm">트렌드 데이터가 없습니다</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={trendData.trends}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="total"
+                  stroke="#3b82f6"
+                  name="전체 리드"
+                  strokeWidth={2}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="converted"
+                  stroke="#10b981"
+                  name="전환완료"
+                  strokeWidth={2}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          )}
         </CardContent>
       </Card>
 
@@ -297,52 +321,59 @@ export default function AnalyticsPage() {
           <CardTitle>채널별 성과</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={channelData.topChannels}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ source, total }) => `${source}: ${total}`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="total"
-                >
-                  {channelData.topChannels.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          {channelData.topChannels.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-48 text-gray-400 gap-2">
+              <TrendingDown className="h-8 w-8" />
+              <p className="text-sm">채널 데이터가 없습니다</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={channelData.topChannels}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ source, total }) => `${source}: ${total}`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="total"
+                  >
+                    {channelData.topChannels.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
 
-            <div className="space-y-4">
-              {channelData.topChannels.map((channel, index) => (
-                <div key={channel.source} className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="w-4 h-4 rounded"
-                      style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                    />
-                    <div>
-                      <div className="font-medium">{channel.source}</div>
-                      <div className="text-sm text-gray-500">
-                        {channel.total}개 리드
+              <div className="space-y-4">
+                {channelData.topChannels.map((channel, index) => (
+                  <div key={channel.source} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-4 h-4 rounded"
+                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                      />
+                      <div>
+                        <div className="font-medium">{channel.source}</div>
+                        <div className="text-sm text-gray-500">
+                          {channel.total}개 리드
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-green-600">
-                      {channel.conversionRate.toFixed(1)}%
+                    <div className="text-right">
+                      <div className="font-medium text-green-600">
+                        {channel.conversionRate.toFixed(1)}%
+                      </div>
+                      <div className="text-xs text-gray-500">전환율</div>
                     </div>
-                    <div className="text-xs text-gray-500">전환율</div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>
