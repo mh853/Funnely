@@ -279,13 +279,27 @@ export async function middleware(request: NextRequest) {
       if (profile?.company_id) {
         const now = new Date().toISOString()
 
-        const { data: subscription } = await supabase
+        // 활성/체험 구독 우선 조회 — 만료된 구독보다 최신이어도 활성이 있으면 그것을 사용
+        const { data: activeSubscription } = await supabase
           .from('company_subscriptions')
           .select('id, status, current_period_end, grace_period_end, trial_end_date, plan_id')
           .eq('company_id', profile.company_id)
+          .in('status', ['active', 'trial'])
           .order('created_at', { ascending: false })
           .limit(1)
-          .single()
+          .maybeSingle()
+
+        let subscription = activeSubscription
+        if (!subscription) {
+          const { data: latest } = await supabase
+            .from('company_subscriptions')
+            .select('id, status, current_period_end, grace_period_end, trial_end_date, plan_id')
+            .eq('company_id', profile.company_id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+          subscription = latest
+        }
 
         if (subscription) {
           // 체험 만료 감지 → Free 플랜으로 다운그레이드
