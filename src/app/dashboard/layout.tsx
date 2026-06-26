@@ -27,14 +27,27 @@ export default async function DashboardLayout({
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
 
-    // Step 1: Get most recent subscription (any status, to know if expired)
-    const { data: latestSub } = await serviceSupabase
+    // Step 1: 활성/체험 구독 우선 조회, 없으면 최신 구독
+    const { data: activeSub } = await serviceSupabase
       .from('company_subscriptions')
       .select('plan_id, status')
       .eq('company_id', userProfile.company_id)
+      .in('status', ['active', 'trial'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    let latestSub = activeSub
+    if (!latestSub) {
+      const { data: fallback } = await serviceSupabase
+        .from('company_subscriptions')
+        .select('plan_id, status')
+        .eq('company_id', userProfile.company_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      latestSub = fallback
+    }
 
     subscriptionStatus = latestSub?.status ?? null
 
@@ -59,13 +72,26 @@ export default async function DashboardLayout({
 
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
-    const { data: subscription } = await serviceSupabase
+    const { data: activeTrial } = await serviceSupabase
       .from('company_subscriptions')
       .select('status, trial_end_date')
       .eq('company_id', userProfile.company_id)
+      .in('status', ['active', 'trial'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
+
+    let subscription = activeTrial
+    if (!subscription) {
+      const { data: fallback } = await serviceSupabase
+        .from('company_subscriptions')
+        .select('status, trial_end_date')
+        .eq('company_id', userProfile.company_id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      subscription = fallback
+    }
 
     if (subscription?.status === 'trial' && subscription.trial_end_date) {
       const trialEnd = new Date(subscription.trial_end_date)

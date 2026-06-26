@@ -26,14 +26,27 @@ export default async function SubscriptionPage() {
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
-  // 현재 구독 정보 조회 (상태 무관하게 최신 1건 - Free 플랜 포함)
-  const { data: currentSubscription } = await supabase
+  // 현재 구독 정보 조회 - 활성/체험 우선, 없으면 최신
+  const { data: activeCurrentSub } = await supabase
     .from('company_subscriptions')
     .select('*, subscription_plans(*)')
     .eq('company_id', userProfile.company_id)
+    .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })
     .limit(1)
-    .single()
+    .maybeSingle()
+
+  let currentSubscription = activeCurrentSub
+  if (!currentSubscription) {
+    const { data: fallback } = await supabase
+      .from('company_subscriptions')
+      .select('*, subscription_plans(*)')
+      .eq('company_id', userProfile.company_id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    currentSubscription = fallback
+  }
 
   return (
     <div className="px-4 py-8">
