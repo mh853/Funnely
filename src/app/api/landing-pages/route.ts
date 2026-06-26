@@ -56,12 +56,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 })
     }
 
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile) {
+      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
+    }
+
     const body = await request.json()
-    const { company_id, title, slug, meta_title, meta_description, template_id, created_by } =
-      body
+    const { title, slug, meta_title, meta_description, template_id, created_by } = body
 
     // Validate required fields
-    if (!company_id || !title || !slug) {
+    if (!title || !slug) {
       return NextResponse.json(
         { error: { message: 'Missing required fields' } },
         { status: 400 }
@@ -75,6 +84,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    // 소유권 검증: 요청 company_id 대신 세션에서 가져온 company_id 사용
+    const company_id = userProfile.company_id
 
     // Check plan limits - 플랜 제한사항 체크
     const limitCheck = await canCreateLandingPage(company_id)
@@ -91,10 +103,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if slug already exists
+    // 회사별 slug 중복 체크 (전역이 아닌 회사 내에서만 고유)
     const { data: existing } = await supabase
       .from('landing_pages')
       .select('id')
+      .eq('company_id', company_id)
       .eq('slug', slug)
       .single()
 
@@ -146,6 +159,16 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 })
     }
 
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile) {
+      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
+    }
+
     const body = await request.json()
     const { id, title, meta_title, meta_description, sections, theme, status } = body
 
@@ -153,7 +176,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Missing landing page ID' } }, { status: 400 })
     }
 
-    // Update landing page
+    // Update landing page (company_id 필터로 소유권 검증)
     const { data: landingPage, error } = await supabase
       .from('landing_pages')
       .update({
@@ -166,6 +189,7 @@ export async function PUT(request: NextRequest) {
         published_at: status === 'published' ? new Date().toISOString() : undefined,
       })
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
       .select()
       .single()
 

@@ -1,10 +1,36 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { utcToKstDatetimeLocal, kstDatetimeLocalToUtc } from '@/lib/utils/timezone'
+
+// 한글 → 로마자 변환 (Revised Romanization 간이 구현)
+function generateSlugFromTitle(title: string): string {
+  const CHO = ['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h']
+  const JUNG = ['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i']
+  const JONG = ['','g','kk','gs','n','nj','nh','d','l','lg','lm','lb','ls','lt','lp','lh','m','b','bs','s','ss','ng','j','ch','k','t','p','h']
+
+  let result = ''
+  for (const ch of title) {
+    const code = ch.charCodeAt(0)
+    if (code >= 0xAC00 && code <= 0xD7A3) {
+      const offset = code - 0xAC00
+      result += CHO[Math.floor(offset / (21 * 28))]
+      result += JUNG[Math.floor((offset % (21 * 28)) / 28)]
+      result += JONG[offset % 28]
+    } else if (/[a-zA-Z0-9]/.test(ch)) {
+      result += ch.toLowerCase()
+    } else {
+      result += '-'
+    }
+  }
+  return result
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    || `page-${Date.now().toString(36)}`
+}
 import {
   CheckIcon,
   XMarkIcon,
@@ -111,6 +137,8 @@ export default function LandingPageNewForm({
   // Form state - initialize with existing data if editing
   const [slug, setSlug] = useState(landingPage?.slug || '')
   const [title, setTitle] = useState(landingPage?.title || '')
+  // slug가 사용자에 의해 직접 편집되었는지 추적 (true이면 title 변경 시 자동 생성 안 함)
+  const slugManuallyEdited = useRef(!!landingPage?.slug)
   const [description, setDescription] = useState(landingPage?.description || '')
   const [images, setImages] = useState<string[]>(landingPage?.images || [])
   const [collectData, setCollectData] = useState(landingPage?.collect_data ?? true)
@@ -137,7 +165,7 @@ export default function LandingPageNewForm({
   const [ctaEnabled, setCtaEnabled] = useState(landingPage?.cta_enabled ?? true)
   const [ctaText, setCtaText] = useState(landingPage?.cta_text || '')
   const [ctaColor, setCtaColor] = useState(landingPage?.cta_color || '#6366f1')
-  const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? true)
+  const [timerEnabled, setTimerEnabled] = useState(landingPage?.timer_enabled ?? false)
   // Convert UTC timestamp to KST datetime-local format
   const [timerDeadline, setTimerDeadline] = useState(() => {
     return utcToKstDatetimeLocal(landingPage?.timer_deadline)
@@ -1513,7 +1541,10 @@ export default function LandingPageNewForm({
               <input
                 type="text"
                 value={slug}
-                onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+                onChange={(e) => {
+                  slugManuallyEdited.current = true
+                  setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))
+                }}
                 className="w-full sm:flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 placeholder="페이지-주소"
               />
@@ -1538,7 +1569,13 @@ export default function LandingPageNewForm({
           <input
             type="text"
             value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => {
+              const newTitle = e.target.value
+              setTitle(newTitle)
+              if (!slugManuallyEdited.current) {
+                setSlug(generateSlugFromTitle(newTitle))
+              }
+            }}
             className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
             placeholder="랜딩페이지 제목 입력"
           />

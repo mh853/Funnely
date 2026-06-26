@@ -23,8 +23,8 @@ export default async function SheetSyncPage() {
   }
 
   // admin만 접근 가능
-  const isAdmin = userProfile.simple_role === 'admin'
-  if (!isAdmin) {
+  const { isAdminUser } = await import('@/lib/auth/permissions')
+  if (!isAdminUser(userProfile)) {
     return (
       <div className="text-center py-12">
         <div className="rounded-md bg-yellow-50 p-4 max-w-md mx-auto">

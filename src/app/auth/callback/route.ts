@@ -13,7 +13,11 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    await supabase.auth.exchangeCodeForSession(code)
+    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    if (error) {
+      console.error('Auth callback error:', error.message)
+      return NextResponse.redirect(`${origin}/auth/login?error=auth_failed`)
+    }
   }
 
   const next = requestUrl.searchParams.get('next')

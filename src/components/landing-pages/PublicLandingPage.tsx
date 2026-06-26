@@ -2,7 +2,7 @@
 
 import { LandingPage } from '@/types/landing-page.types'
 import { ClockIcon } from '@heroicons/react/24/outline'
-import { useState, useEffect, useMemo, memo, Suspense, useRef } from 'react'
+import { useState, useEffect, useMemo, memo, Suspense, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/client'
@@ -251,13 +251,19 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.realtime_speed, realtimeLeads.length])
 
   // 완료 페이지 URL 계산
-  // initialRef가 있는 경우: /{companyShortId}/landing/{slug}/completed (직접 경로 접근)
-  // initialRef가 없는 경우: /landing/{slug}/completed (서브도메인/레거시 접근)
-  //   - 서브도메인: 미들웨어가 /landing/* → /{shortId}/landing/*로 자동 rewrite
-  //   - 레거시 /landing/{slug}: 완료 페이지에서 /{shortId}/landing/{slug}/completed로 redirect
+  // 현재 pathname 기반으로 동적 계산하여 서브도메인/직접 접근 모두 올바르게 처리
   const completedUrl = initialRef
     ? `/${initialRef}/landing/${landingPage.slug}/completed`
     : `/landing/${landingPage.slug}/completed`
+
+  // 완료 페이지로 이동 (pathname 기반으로 서브도메인 중복 shortId 방지)
+  const navigateToCompleted = useCallback(() => {
+    const currentPath = window.location.pathname
+    const completedPath = currentPath.endsWith('/')
+      ? `${currentPath}completed`
+      : `${currentPath}/completed`
+    window.location.replace(completedPath)
+  }, [])
 
   useEffect(() => {
     // nameInput 또는 phoneInput이 입력되면 완료 페이지 미리 로딩
@@ -345,15 +351,19 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         }),
       })
 
+      if (response.status === 409) {
+        // 이미 신청한 번호 → 완료 페이지로 이동
+        navigateToCompleted()
+        return
+      }
+
       if (!response.ok) {
         const data = await response.json()
         throw new Error(data.error?.message || '제출에 실패했습니다')
       }
 
-      // 신청 성공: 완료 페이지로 이동 (finally의 setIsSubmitting(false)가 실행되기 전에 이동)
-      // finally 블록의 React 상태 업데이트가 브라우저 네비게이션을 방해하지 않도록
-      // 즉시 반환하여 finally가 실행되지 않게 함
-      window.location.replace(completedUrl)
+      // 신청 성공: 완료 페이지로 이동
+      navigateToCompleted()
       return
     } catch (err: any) {
       setSubmitError(err.message)
@@ -434,7 +444,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     }
 
     // Call Button (both modes - matching preview)
-    if (landingPage.call_button_enabled && landingPage.call_button_sticky_position === position) {
+    if (landingPage.call_button_enabled && landingPage.call_button_phone && landingPage.call_button_sticky_position === position) {
       buttons.push(
         <a
           key="call"
@@ -665,8 +675,8 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           </div>
         )}
 
-        {/* Timer (only if not sticky) */}
-        {isSectionEnabled('timer') && landingPage.timer_enabled && landingPage.timer_sticky_position === 'none' && (
+        {/* Timer (only if not sticky and deadline is set) */}
+        {isSectionEnabled('timer') && landingPage.timer_enabled && landingPage.timer_deadline && landingPage.timer_sticky_position === 'none' && (
           <div
             className="rounded-lg p-3 border-2"
             style={{
@@ -862,8 +872,8 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           </div>
         )}
 
-        {/* Call Button (only if not sticky) */}
-        {!isExpired && isSectionEnabled('call_button') && landingPage.call_button_enabled && landingPage.call_button_sticky_position === 'none' && (
+        {/* Call Button (only if not sticky and phone number is set) */}
+        {!isExpired && isSectionEnabled('call_button') && landingPage.call_button_enabled && landingPage.call_button_phone && landingPage.call_button_sticky_position === 'none' && (
           <div className="flex justify-center">
             <a
               href={`tel:${landingPage.call_button_phone}`}

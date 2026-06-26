@@ -1,12 +1,8 @@
 'use client'
 
-/**
- * Login Page
- * Email/password authentication with Supabase
- */
-
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+// 이메일/비밀번호 로그인 페이지 (Supabase Auth)
+import { Suspense, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -65,11 +61,19 @@ function getErrorMessage(error: any): string {
   return '로그인에 실패했습니다. 잠시 후 다시 시도해주세요.'
 }
 
-export default function LoginPage() {
+const URL_ERRORS: Record<string, string> = {
+  auth_failed: '인증에 실패했습니다. 다시 로그인해 주세요.',
+}
+
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const urlError = searchParams.get('error')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(
+    urlError ? (URL_ERRORS[urlError] ?? '인증에 실패했습니다.') : null
+  )
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -104,6 +108,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 px-4">
+
       <div className="max-w-md w-full">
         {/* Brand logo */}
         <div className="text-center mb-6">
@@ -248,5 +253,15 @@ export default function LoginPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100" />
+    }>
+      <LoginForm />
+    </Suspense>
   )
 }

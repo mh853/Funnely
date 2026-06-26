@@ -51,24 +51,23 @@ export default function TeamMembersList({
     window.location.reload()
   }
 
-  // simple_role 기반 라벨 (새 권한 시스템)
-  const getSimpleRoleLabel = (simpleRole?: string): string => {
-    const labels: Record<string, string> = {
-      admin: '관리자',
-      manager: '매니저',
-      user: '일반 사용자',
+  const OWNER_ROLES = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin']
+
+  // simple_role + role 기반 라벨 (simple_role 없는 기존 company_owner도 올바르게 표시)
+  const getSimpleRoleLabel = (simpleRole?: string, role?: string): string => {
+    if (simpleRole) {
+      const labels: Record<string, string> = { admin: '관리자', manager: '매니저', user: '일반 사용자' }
+      return labels[simpleRole] || simpleRole
     }
-    return simpleRole ? labels[simpleRole] || simpleRole : '일반 사용자'
+    if (role && OWNER_ROLES.includes(role)) return '관리자'
+    return '일반 사용자'
   }
 
-  // simple_role 기반 배지 색상
-  const getSimpleRoleBadgeColor = (simpleRole?: string): string => {
-    const colors: Record<string, string> = {
-      admin: 'bg-purple-100 text-purple-800',
-      manager: 'bg-blue-100 text-blue-800',
-      user: 'bg-gray-100 text-gray-800',
-    }
-    return simpleRole ? colors[simpleRole] || 'bg-gray-100 text-gray-800' : 'bg-gray-100 text-gray-800'
+  // simple_role + role 기반 배지 색상
+  const getSimpleRoleBadgeColor = (simpleRole?: string, role?: string): string => {
+    const isAdmin = simpleRole === 'admin' || simpleRole === 'manager' || (role && OWNER_ROLES.includes(role))
+    if (isAdmin) return simpleRole === 'manager' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+    return 'bg-gray-100 text-gray-800'
   }
 
   return (
@@ -148,10 +147,10 @@ export default function TeamMembersList({
                   <td className="whitespace-nowrap px-6 py-4 text-sm">
                     <span
                       className={`inline-flex rounded-full px-2 text-xs font-semibold leading-5 ${getSimpleRoleBadgeColor(
-                        member.simple_role
+                        member.simple_role, member.role
                       )}`}
                     >
-                      {getSimpleRoleLabel(member.simple_role)}
+                      {getSimpleRoleLabel(member.simple_role, member.role)}
                     </span>
                   </td>
                   <td className="whitespace-nowrap px-6 py-4 pr-8 text-sm text-gray-500">

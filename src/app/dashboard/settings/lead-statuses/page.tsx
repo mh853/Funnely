@@ -32,7 +32,8 @@ export default async function LeadStatusesPage() {
     )
   }
 
-  const canEdit = userProfile.simple_role === 'admin'
+  const { isAdminUser } = await import('@/lib/auth/permissions')
+  const canEdit = isAdminUser(userProfile)
 
   return (
     <div className="px-4 space-y-6">

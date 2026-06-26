@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+// 토스 빌링키 발급 완료 후 리다이렉트되는 결제수단 등록 완료 페이지
+import { Suspense, useEffect, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 
-export default function BillingSuccessPage() {
+function BillingSuccessContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const [processing, setProcessing] = useState(true)
@@ -33,7 +34,6 @@ export default function BillingSuccessPage() {
           throw new Error('로그인이 필요합니다.')
         }
 
-        // Supabase Function 호출하여 빌링키 발급
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/toss-billing-auth`,
           {
@@ -114,8 +114,6 @@ export default function BillingSuccessPage() {
           <h2 className="mt-4 text-2xl font-bold text-gray-900">등록 완료!</h2>
           <p className="mt-2 text-gray-600">
             결제 수단이 성공적으로 등록되었습니다.
-            <br />
-            7일 무료 체험을 시작합니다.
           </p>
           <p className="mt-4 text-sm text-gray-500">
             잠시 후 결제 히스토리 페이지로 이동합니다...
@@ -123,5 +121,19 @@ export default function BillingSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function BillingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600"></div>
+        </div>
+      }
+    >
+      <BillingSuccessContent />
+    </Suspense>
   )
 }
