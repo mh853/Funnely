@@ -46,7 +46,15 @@ export default function SubscriptionExpiredPage() {
 
       if (!profile?.company_id) return
 
-      const { data, error } = await supabase
+      type SubRow = {
+        id: string
+        status: string
+        current_period_end: string | null
+        grace_period_end: string | null
+        subscription_plans: { name: string; plan_type: string } | null
+      }
+
+      const { data: allSubsRaw } = await supabase
         .from('company_subscriptions')
         .select(`
           id,
@@ -58,15 +66,30 @@ export default function SubscriptionExpiredPage() {
             plan_type
           )
         `)
-        .eq('company_id', profile.company_id)
+        .eq('company_id', profile.company_id as string)
         .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
+        .limit(10)
 
-      if (!error && data) {
+      // 차단 원인이 된 구독 표시: active+기간만료 > expired/cancelled > 최신순
+      const now = new Date().toISOString()
+      const subs = (allSubsRaw as SubRow[] | null) ?? []
+      const blockedSub =
+        subs.find(s =>
+          s.status === 'active' &&
+          s.current_period_end !== null &&
+          s.current_period_end < now
+        ) ??
+        subs.find(s => ['expired', 'cancelled', 'suspended'].includes(s.status)) ??
+        subs[0] ??
+        null
+
+      if (blockedSub) {
         setSubscription({
-          ...data,
-          plan: data.subscription_plans as any,
+          id: blockedSub.id,
+          status: blockedSub.status,
+          current_period_end: blockedSub.current_period_end ?? '',
+          grace_period_end: blockedSub.grace_period_end,
+          plan: (blockedSub.subscription_plans ?? { name: '알 수 없음', plan_type: 'individual' }) as any,
         })
       }
     } catch (error) {
