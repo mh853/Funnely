@@ -69,7 +69,7 @@ export async function GET() {
       supabase
         .from('company_subscriptions')
         .select('*', { count: 'exact', head: true })
-        .eq('status', 'canceled')
+        .eq('status', 'cancelled')
         .gte('updated_at', start)
         .lte('updated_at', end),
 
@@ -115,7 +115,7 @@ export async function GET() {
       supabase
         .from('company_subscriptions')
         .select('id, updated_at, company_id, companies(name)')
-        .eq('status', 'canceled')
+        .eq('status', 'cancelled')
         .order('updated_at', { ascending: false })
         .limit(3),
 

@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
     const { count } = await countQuery
 
-    // 데이터 쿼리
+    // 데이터 쿼리 (JOIN으로 N+1 방지)
     let dataQuery = supabase
       .from('company_subscriptions')
       .select(
@@ -48,11 +48,11 @@ export async function GET(request: NextRequest) {
         billing_cycle,
         current_period_start,
         current_period_end,
-        trial_end,
+        trial_end_date,
         cancelled_at,
         created_at,
-        company_id,
-        plan_id
+        company:companies(id, name, business_number, phone),
+        plan:subscription_plans(id, name, plan_type, price_monthly, price_yearly, max_users, max_leads)
       `
       )
       .order('created_at', { ascending: false })
@@ -72,49 +72,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 4. 각 구독의 상세 정보 조회 (회사, 플랜)
-    const subscriptionsWithDetails = await Promise.all(
-      (subscriptions || []).map(async (sub) => {
-        // 회사 정보
-        const { data: company } = await supabase
-          .from('companies')
-          .select('id, name, business_number, phone')
-          .eq('id', sub.company_id)
-          .single()
-
-        // 플랜 정보
-        const { data: plan } = await supabase
-          .from('subscription_plans')
-          .select('id, name, price_monthly, price_yearly, max_users, max_leads')
-          .eq('id', sub.plan_id)
-          .single()
-
-        return {
-          id: sub.id,
-          status: sub.status,
-          billing_cycle: sub.billing_cycle,
-          current_period_start: sub.current_period_start,
-          current_period_end: sub.current_period_end,
-          trial_end: sub.trial_end,
-          cancelled_at: sub.cancelled_at,
-          company: company || {
-            id: sub.company_id,
-            name: '알 수 없음',
-            business_number: '',
-            phone: '',
-          },
-          plan: plan || {
-            id: sub.plan_id,
-            name: '알 수 없음',
-            price_monthly: 0,
-            price_yearly: 0,
-            max_users: null,
-            max_leads: null,
-          },
-          created_at: sub.created_at,
-        }
-      })
-    )
+    // 4. 응답 데이터 정규화
+    const subscriptionsWithDetails = (subscriptions || []).map((sub: any) => ({
+      id: sub.id,
+      status: sub.status,
+      billing_cycle: sub.billing_cycle,
+      current_period_start: sub.current_period_start,
+      current_period_end: sub.current_period_end,
+      trial_end: sub.trial_end_date,
+      cancelled_at: sub.cancelled_at,
+      company: sub.company || { id: '', name: '알 수 없음', business_number: '', phone: '' },
+      plan: sub.plan || { id: '', name: '알 수 없음', plan_type: 'business', price_monthly: 0, price_yearly: 0, max_users: null, max_leads: null },
+      created_at: sub.created_at,
+    }))
 
     // 5. 페이지네이션 정보
     const totalPages = Math.ceil((count || 0) / limit)

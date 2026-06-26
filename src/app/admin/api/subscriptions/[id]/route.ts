@@ -62,7 +62,10 @@ export async function PATCH(
     if (body.currentPeriodStart) updateData.current_period_start = body.currentPeriodStart
     if (body.currentPeriodEnd) updateData.current_period_end = body.currentPeriodEnd
     if (body.trialEnd) updateData.trial_end = body.trialEnd
+    // 취소 상태로 변경 시 취소일 기록
     if (body.status === 'cancelled') updateData.cancelled_at = new Date().toISOString()
+    // trial → active 전환 시 has_used_trial 설정
+    if (body.status === 'trial' || body.status === 'active') updateData.has_used_trial = true
 
     const { data: subscription, error } = await supabase
       .from('company_subscriptions')

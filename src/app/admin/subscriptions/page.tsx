@@ -17,6 +17,11 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
 
+function fmtDate(d: string | null | undefined, fmt = 'yyyy.MM.dd') {
+  if (!d) return '-'
+  try { return format(new Date(d), fmt, { locale: ko }) } catch { return '-' }
+}
+
 interface Subscription {
   id: string
   status: string
@@ -60,7 +65,9 @@ const STATUS_LABELS: Record<string, string> = {
   trial: '체험',
   expired: '만료',
   cancelled: '취소',
+  canceled: '취소',
   suspended: '정지',
+  past_due: '연체',
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -68,7 +75,9 @@ const STATUS_COLORS: Record<string, string> = {
   trial: 'bg-blue-100 text-blue-700',
   expired: 'bg-gray-100 text-gray-700',
   cancelled: 'bg-red-100 text-red-700',
+  canceled: 'bg-red-100 text-red-700',
   suspended: 'bg-yellow-100 text-yellow-700',
+  past_due: 'bg-orange-100 text-orange-700',
 }
 
 const STATUS_ICONS: Record<string, any> = {
@@ -76,7 +85,9 @@ const STATUS_ICONS: Record<string, any> = {
   trial: Clock,
   expired: XCircle,
   cancelled: XCircle,
+  canceled: XCircle,
   suspended: AlertCircle,
+  past_due: AlertCircle,
 }
 
 export default function SubscriptionsPage() {
@@ -310,17 +321,9 @@ export default function SubscriptionsPage() {
                         <div>
                           <div className="text-gray-500">기간</div>
                           <div className="font-medium text-gray-900">
-                            {format(
-                              new Date(subscription.current_period_start),
-                              'yyyy.MM.dd',
-                              { locale: ko }
-                            )}{' '}
+                            {fmtDate(subscription.current_period_start)}{' '}
                             ~{' '}
-                            {format(
-                              new Date(subscription.current_period_end),
-                              'yyyy.MM.dd',
-                              { locale: ko }
-                            )}
+                            {fmtDate(subscription.current_period_end)}
                           </div>
                         </div>
                       </div>
@@ -328,22 +331,14 @@ export default function SubscriptionsPage() {
                       {subscription.trial_end && (
                         <div className="mt-2 text-sm text-blue-600">
                           체험 기간 종료:{' '}
-                          {format(
-                            new Date(subscription.trial_end),
-                            'yyyy.MM.dd HH:mm',
-                            { locale: ko }
-                          )}
+                          {fmtDate(subscription.trial_end, 'yyyy.MM.dd HH:mm')}
                         </div>
                       )}
 
                       {subscription.cancelled_at && (
                         <div className="mt-2 text-sm text-red-600">
                           취소일:{' '}
-                          {format(
-                            new Date(subscription.cancelled_at),
-                            'yyyy.MM.dd HH:mm',
-                            { locale: ko }
-                          )}
+                          {fmtDate(subscription.cancelled_at, 'yyyy.MM.dd HH:mm')}
                         </div>
                       )}
                     </div>

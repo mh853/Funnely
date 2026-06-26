@@ -90,10 +90,14 @@ export default function NewSubscriptionClient({
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
 
-  // 체험 이력 여부: has_used_trial=true이거나 현재 trial 중이면 기존 사용자
+  // 체험 이력 여부: has_used_trial=true이거나 현재/과거 trial 이력이 있으면 기존 사용자
   const hasUsedTrial = currentSubscription?.has_used_trial === true
   const isCurrentlyOnTrial = currentSubscription?.status === 'trial'
-  const isExistingUser = hasUsedTrial || isCurrentlyOnTrial
+  // expired/cancelled/canceled 상태도 기존 사용자 (trial을 사용했었음)
+  const hasPreviousSubscription = ['expired', 'cancelled', 'canceled', 'past_due'].includes(
+    currentSubscription?.status ?? ''
+  )
+  const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription
 
   // 현재 Free 플랜인지
   const isOnFreePlan =
@@ -204,6 +208,7 @@ export default function NewSubscriptionClient({
               current_period_end: null,
               trial_start_date: now.toISOString(),
               trial_end_date: trialEndDate.toISOString(),
+              has_used_trial: true,
             })
             .eq('id', currentSubscription.id)
 
@@ -229,7 +234,7 @@ export default function NewSubscriptionClient({
             current_period_end: null,
             trial_start_date: isFree ? null : now.toISOString(),
             trial_end_date: isFree ? null : trialEndDate.toISOString(),
-            has_used_trial: false,
+            has_used_trial: !isFree,
           })
 
         if (error) throw new Error(error.message)
