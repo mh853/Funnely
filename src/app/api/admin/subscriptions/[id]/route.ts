@@ -45,6 +45,42 @@ export async function PATCH(
       updateData.cancelled_at = new Date().toISOString()
     }
 
+    // active로 재활성화 시 current_period_end가 과거면 오늘부터 연장
+    if (status === 'active') {
+      const { data: current } = await supabase
+        .from('company_subscriptions')
+        .select('status, current_period_end, billing_cycle')
+        .eq('id', subscriptionId)
+        .single()
+
+      const reactivatingFromExpired =
+        current &&
+        ['expired', 'cancelled', 'suspended'].includes(current.status)
+
+      const periodEndInPast =
+        current?.current_period_end &&
+        current.current_period_end < new Date().toISOString()
+
+      if (reactivatingFromExpired || periodEndInPast) {
+        const now = new Date()
+        const cycle = current?.billing_cycle
+        const periodStart = now.toISOString()
+        let periodEnd: Date
+        if (cycle === 'yearly') {
+          periodEnd = new Date(now)
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1)
+        } else {
+          // monthly (기본)
+          periodEnd = new Date(now)
+          periodEnd.setMonth(periodEnd.getMonth() + 1)
+        }
+        updateData.current_period_start = periodStart
+        updateData.current_period_end = periodEnd.toISOString()
+        updateData.grace_period_end = null
+        updateData.cancelled_at = null
+      }
+    }
+
     const { data, error } = await supabase
       .from('company_subscriptions')
       .update(updateData)

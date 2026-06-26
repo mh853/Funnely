@@ -67,6 +67,41 @@ export async function PATCH(
     // trial → active 전환 시 has_used_trial 설정
     if (body.status === 'trial' || body.status === 'active') updateData.has_used_trial = true
 
+    // active 재활성화 시 기간 미지정이면 오늘부터 billing_cycle 기간 연장
+    if (body.status === 'active' && !body.currentPeriodEnd) {
+      const { data: currentRaw } = await supabase
+        .from('company_subscriptions')
+        .select('status, current_period_end, billing_cycle')
+        .eq('id', subscriptionId)
+        .single()
+
+      const current = currentRaw as {
+        status: string
+        current_period_end: string | null
+        billing_cycle: string | null
+      } | null
+
+      const needsExtension =
+        current &&
+        (['expired', 'cancelled', 'suspended'].includes(current.status) ||
+          (current.current_period_end && current.current_period_end < new Date().toISOString()))
+
+      if (needsExtension) {
+        const now = new Date()
+        const cycle = current?.billing_cycle
+        const periodEnd = new Date(now)
+        if (cycle === 'yearly') {
+          periodEnd.setFullYear(periodEnd.getFullYear() + 1)
+        } else {
+          periodEnd.setMonth(periodEnd.getMonth() + 1)
+        }
+        updateData.current_period_start = now.toISOString()
+        updateData.current_period_end = periodEnd.toISOString()
+        updateData.grace_period_end = null
+        updateData.cancelled_at = null
+      }
+    }
+
     const { data: subscription, error } = await supabase
       .from('company_subscriptions')
       .update(updateData)
