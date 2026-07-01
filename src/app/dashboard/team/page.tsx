@@ -19,7 +19,7 @@ export default async function TeamPage() {
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile) {
     return (

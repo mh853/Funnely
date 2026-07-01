@@ -24,7 +24,7 @@ export default async function SettingsPage() {
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (profileError) {
     console.error('Profile fetch error:', profileError)
@@ -60,7 +60,7 @@ export default async function SettingsPage() {
     .from('companies')
     .select('*')
     .eq('id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   if (companyError) {
     console.error('Company fetch error:', companyError)

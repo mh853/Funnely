@@ -19,7 +19,7 @@ export default async function UsersPage() {
     .from('users')
     .select('*, companies(id, name)')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile || !userProfile.companies) {
     return (

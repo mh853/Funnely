@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('company_id', userProfile.company_id)
       .eq('phone_hash', phoneHash)
-      .single()
+      .maybeSingle()
 
     if (existingLead) {
       return NextResponse.json(

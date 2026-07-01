@@ -55,9 +55,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 })
     }
 
+    // 세션에서 company_id 가져오기 (바디의 company_id를 신뢰하지 않음)
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!userProfile) {
+      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
+    }
+
     const body = await request.json()
     const {
-      company_id,
       name,
       description,
       fields,
@@ -70,7 +80,7 @@ export async function POST(request: NextRequest) {
     } = body
 
     // Validate required fields
-    if (!company_id || !name || !fields || !Array.isArray(fields)) {
+    if (!name || !fields || !Array.isArray(fields)) {
       return NextResponse.json(
         { error: { message: 'Missing required fields' } },
         { status: 400 }
@@ -89,7 +99,7 @@ export async function POST(request: NextRequest) {
     const { data: template, error } = await supabase
       .from('form_templates')
       .insert({
-        company_id,
+        company_id: userProfile.company_id,
         name,
         description,
         fields,
@@ -147,6 +157,17 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Missing template ID' } }, { status: 400 })
     }
 
+    // company_id 검증: 세션 사용자의 company_id와 일치하는 템플릿만 수정
+    const { data: putUserProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .single()
+
+    if (!putUserProfile) {
+      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
+    }
+
     // Update form template
     const { data: template, error } = await supabase
       .from('form_templates')
@@ -162,10 +183,18 @@ export async function PUT(request: NextRequest) {
         is_active,
       })
       .eq('id', id)
+      .eq('company_id', putUserProfile.company_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
+
+    if (!template) {
+      return NextResponse.json(
+        { success: false, error: { message: '폼 템플릿을 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({ success: true, data: template })
   } catch (error: any) {

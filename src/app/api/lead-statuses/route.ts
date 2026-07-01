@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       .eq('company_id', userProfile.company_id)
       .order('sort_order', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
     const nextSortOrder = (maxOrderResult?.sort_order || 0) + 1
 

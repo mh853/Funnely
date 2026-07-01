@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       .from('users')
       .select('id')
       .eq('email', email)
-      .single()
+      .maybeSingle()
 
     if (existingUser) {
       return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 400 })

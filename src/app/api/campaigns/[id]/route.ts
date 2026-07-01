@@ -76,6 +76,7 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
 
     if (updateError) {
       console.error('Campaign update error:', updateError)
@@ -148,6 +149,7 @@ export async function DELETE(
       .from('campaigns')
       .delete()
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
 
     if (deleteError) {
       console.error('Campaign deletion error:', deleteError)

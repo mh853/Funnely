@@ -25,7 +25,7 @@ export default async function BlacklistPage() {
     .from('users')
     .select('id, full_name, company_id, is_super_admin')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile?.company_id) {
     redirect('/dashboard')
