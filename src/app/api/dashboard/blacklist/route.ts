@@ -5,15 +5,15 @@ export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: user } = await supabase
       .from('users')
       .select('company_id, is_super_admin')
-      .eq('id', session.user.id)
+      .eq('id', authUser.id)
       .single()
 
     if (!user?.company_id) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
         company_id: user.company_id,
         phone_number: phone_number.trim(),
         reason: reason?.trim() || null,
-        blocked_by_user_id: session.user.id,
+        blocked_by_user_id: authUser.id,
       })
       .select(`*, blocked_by:users!phone_blacklist_blocked_by_user_id_fkey(full_name)`)
       .single()

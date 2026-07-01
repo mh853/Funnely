@@ -48,12 +48,13 @@ export async function POST() {
 
   const now = new Date().toISOString()
 
-  const { error: updateError } = await db
+  const { data: updatedRows, error: updateError } = await db
     .from('company_subscriptions')
     .update({ status: 'cancelled', cancelled_at: now })
     .eq('id', subscription.id)
+    .select('id')
 
-  if (updateError) {
+  if (updateError || !updatedRows || updatedRows.length === 0) {
     return NextResponse.json({ error: '구독 취소에 실패했습니다.' }, { status: 500 })
   }
 

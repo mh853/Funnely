@@ -8,15 +8,15 @@ export async function DELETE(
   try {
     const supabase = await createClient()
 
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session) {
+    const { data: { user: authUser } } = await supabase.auth.getUser()
+    if (!authUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
     const { data: user } = await supabase
       .from('users')
       .select('company_id, is_super_admin')
-      .eq('id', session.user.id)
+      .eq('id', authUser.id)
       .single()
 
     if (!user?.company_id) {
