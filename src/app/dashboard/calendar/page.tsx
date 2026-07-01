@@ -48,7 +48,7 @@ export default async function CalendarPage({
       *,
       users!calendar_events_created_by_fkey (
         id,
-        name
+        full_name
       ),
       leads (
         id,
