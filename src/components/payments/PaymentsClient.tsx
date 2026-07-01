@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
-import { XMarkIcon, DocumentTextIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon, DocumentTextIcon, CheckCircleIcon, ExclamationTriangleIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 import { formatDateTime, formatDate } from '@/lib/utils/date'
+import { loadTossPayments } from '@tosspayments/payment-sdk'
 
 interface Transaction {
   id: string
@@ -27,12 +28,22 @@ interface Transaction {
   created_at: string
 }
 
+interface CardInfo {
+  number?: string
+  cardType?: string
+  ownerType?: string
+  issuerCode?: string
+}
+
 interface Subscription {
   id: string
   status: string
   billing_cycle: string
   trial_end_date: string | null
   current_period_end: string | null
+  billing_key: string | null
+  customer_key: string | null
+  card_info: CardInfo | null
   subscription_plans: {
     name: string
     description: string
@@ -54,6 +65,7 @@ export default function PaymentsClient({
 }: PaymentsClientProps) {
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
+  const [cardChanging, setCardChanging] = useState(false)
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -88,6 +100,29 @@ export default function PaymentsClient({
   const handleRequestTaxInvoice = async (transactionId: string) => {
     // 세금계산서 발행 요청 로직 (추후 구현)
     alert('세금계산서 발행 요청이 접수되었습니다. 영업일 기준 1-2일 내에 이메일로 발송됩니다.')
+  }
+
+  const handleChangeCard = async () => {
+    if (!subscription) return
+    setCardChanging(true)
+    try {
+      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+      await tossPayments.requestBillingAuth('카드', {
+        customerKey: companyId,
+        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${subscription.id}&mode=update`,
+        failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+      })
+    } catch (err) {
+      console.error('Card change error:', err)
+      setCardChanging(false)
+    }
+  }
+
+  const maskCardNumber = (number: string) => {
+    // 가운데 8자리를 마스킹 (예: 1234-****-****-5678)
+    const digits = number.replace(/\D/g, '')
+    if (digits.length < 8) return number
+    return `${digits.slice(0, 4)}-****-****-${digits.slice(-4)}`
   }
 
   return (
@@ -142,6 +177,63 @@ export default function PaymentsClient({
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* 카드 관리 섹션 */}
+      {subscription && subscription.status !== 'trial' && (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <CreditCardIcon className="h-5 w-5 text-gray-600" />
+              <h3 className="text-lg font-semibold text-gray-900">결제 수단</h3>
+            </div>
+          </div>
+
+          {subscription.billing_key && subscription.card_info ? (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-8 bg-gradient-to-r from-gray-700 to-gray-900 rounded-md flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">CARD</span>
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {subscription.card_info.number
+                      ? maskCardNumber(subscription.card_info.number)
+                      : '카드 정보 없음'}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {[subscription.card_info.cardType, subscription.card_info.ownerType]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={handleChangeCard}
+                disabled={cardChanging}
+                className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {cardChanging ? '이동 중...' : '카드 변경'}
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-8 bg-gray-100 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center">
+                  <CreditCardIcon className="h-4 w-4 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500">등록된 카드가 없습니다.</p>
+              </div>
+              <button
+                onClick={handleChangeCard}
+                disabled={cardChanging}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {cardChanging ? '이동 중...' : '카드 등록'}
+              </button>
+            </div>
+          )}
         </div>
       )}
 

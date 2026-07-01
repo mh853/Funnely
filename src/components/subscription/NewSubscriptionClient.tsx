@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils/date'
+import { loadTossPayments } from '@tosspayments/payment-sdk'
 
 interface Plan {
   id: string
@@ -23,10 +24,14 @@ interface CurrentSubscription {
   status: string
   billing_cycle: string
   trial_end_date: string | null
+  current_period_start: string | null
   current_period_end: string | null
   cancelled_at: string | null
   created_at: string
   has_used_trial: boolean
+  billing_key: string | null
+  pending_plan_id: string | null
+  pending_billing_cycle: string | null
   subscription_plans: Plan
 }
 
@@ -87,22 +92,35 @@ export default function NewSubscriptionClient({
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelResult, setCancelResult] = useState<{ accessUntil: string | null } | null>(null)
+  const [upgradeModal, setUpgradeModal] = useState<{
+    plan: Plan
+    proratedNet: number
+    proratedTotal: number
+    remainingDays: number
+    isCycleChange: boolean
+  } | null>(null)
+  const [upgradeLoading, setUpgradeLoading] = useState(false)
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
-
-  // 체험 이력 여부: has_used_trial=true이거나 현재/과거 trial 이력이 있으면 기존 사용자
-  const hasUsedTrial = currentSubscription?.has_used_trial === true
-  const isCurrentlyOnTrial = currentSubscription?.status === 'trial'
-  // expired/cancelled/canceled 상태도 기존 사용자 (trial을 사용했었음)
-  const hasPreviousSubscription = ['expired', 'cancelled', 'canceled', 'past_due'].includes(
-    currentSubscription?.status ?? ''
-  )
-  const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription
 
   // 현재 Free 플랜인지
   const isOnFreePlan =
     currentSubscription?.status === 'active' &&
     currentSubscription?.subscription_plans?.name === 'Free'
+
+  // 현재 유료 플랜 활성 상태인지
+  const isActivePaidUser = currentSubscription?.status === 'active' && !isOnFreePlan
+
+  // 기존 사용자 여부: 체험 이력, trial 중, 만료/취소, 또는 현재 유료 플랜 이용 중
+  const hasUsedTrial = currentSubscription?.has_used_trial === true
+  const isCurrentlyOnTrial = currentSubscription?.status === 'trial'
+  const hasPreviousSubscription = ['expired', 'cancelled', 'canceled', 'past_due'].includes(
+    currentSubscription?.status ?? ''
+  )
+  const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription || isActivePaidUser
+
+  // 빌링키 등록 여부 (카드 등록 완료 = 즉시 결제 가능)
+  const hasBillingKey = !!currentSubscription?.billing_key
 
   // Realtime 구독 상태 변경 감지
   useEffect(() => {
@@ -130,6 +148,87 @@ export default function NewSubscriptionClient({
       supabase.removeChannel(channel)
     }
   }, [companyId, router])
+
+  // 업그레이드 차액 예상 금액 계산 (UI 표시용 — 실제 청구는 서버에서 계산)
+  const estimateUpgradeAmount = (plan: Plan) => {
+    const isCycleChange = billingCycle !== (currentSubscription?.billing_cycle ?? billingCycle)
+    const newPrice = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
+
+    if (
+      !isCycleChange &&
+      currentSubscription?.current_period_start &&
+      currentSubscription?.current_period_end
+    ) {
+      const now = new Date()
+      const periodStart = new Date(currentSubscription.current_period_start)
+      const periodEnd = new Date(currentSubscription.current_period_end)
+      const totalPeriodDays = Math.ceil(
+        (periodEnd.getTime() - periodStart.getTime()) / (1000 * 60 * 60 * 24)
+      )
+      const remainingMs = Math.max(0, periodEnd.getTime() - now.getTime())
+      const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+      const oldPrice =
+        currentSubscription.billing_cycle === 'monthly'
+          ? currentSubscription.subscription_plans.price_monthly
+          : currentSubscription.subscription_plans.price_yearly
+      const proratedNet = Math.max(
+        0,
+        Math.round((newPrice - oldPrice) * (remainingDays / totalPeriodDays))
+      )
+      return {
+        proratedNet,
+        proratedTotal: proratedNet + Math.floor(proratedNet * 0.1),
+        remainingDays,
+        isCycleChange: false,
+      }
+    }
+
+    // 주기 변경 또는 기간 정보 없음: 새 주기 전체 금액
+    return {
+      proratedNet: newPrice,
+      proratedTotal: newPrice + Math.floor(newPrice * 0.1),
+      remainingDays: 0,
+      isCycleChange,
+    }
+  }
+
+  const handleUpgradeConfirm = async () => {
+    if (!upgradeModal || !currentSubscription) return
+    setUpgradeLoading(true)
+    try {
+      const supabase = createClient()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) throw new Error('로그인이 필요합니다.')
+
+      const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+      const res = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          subscriptionId: currentSubscription.id,
+          mode: 'upgrade_prorate',
+          changePlanId: upgradeModal.plan.id,
+          changeBillingCycle: billingCycle,
+        }),
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error || '업그레이드 결제에 실패했습니다.')
+      }
+      setUpgradeModal(null)
+      alert(`${upgradeModal.plan.name} 플랜으로 업그레이드되었습니다.`)
+      router.refresh()
+    } catch (error: any) {
+      alert(`오류가 발생했습니다: ${error.message}`)
+    } finally {
+      setUpgradeLoading(false)
+    }
+  }
 
   const handleSelectPlan = async (plan: Plan) => {
     // 가격 협의 플랜
@@ -165,33 +264,84 @@ export default function NewSubscriptionClient({
 
           alert('Free 플랜으로 변경되었습니다.')
           router.refresh()
-        } else if (isExistingUser) {
-          // 기존 사용자 (체험 이력 있음) → 플랜 변경 후 결제 안내
-          const now = new Date()
-          const newPeriodEnd = new Date()
-          if (billingCycle === 'monthly') {
-            newPeriodEnd.setMonth(newPeriodEnd.getMonth() + 1)
-            newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
-          } else {
-            newPeriodEnd.setFullYear(newPeriodEnd.getFullYear() + 1)
-            newPeriodEnd.setDate(newPeriodEnd.getDate() - 1)
-          }
+        } else if (isActivePaidUser && hasBillingKey) {
+          // 유료 구독 중 + 빌링키 있음: 업그레이드/다운그레이드 분기
+          // 월 단가로 정규화하여 비교 (연간 주기도 올바르게 처리)
+          const currentMonthlyEquiv =
+            currentSubscription.billing_cycle === 'monthly'
+              ? currentSubscription.subscription_plans.price_monthly
+              : Math.round(currentSubscription.subscription_plans.price_yearly / 12)
+          const newMonthlyEquiv =
+            billingCycle === 'monthly'
+              ? plan.price_monthly
+              : Math.round(plan.price_yearly / 12)
 
-          const { error } = await supabase
-            .from('company_subscriptions')
-            .update({
-              plan_id: plan.id,
-              billing_cycle: billingCycle,
-              status: 'active',
-              current_period_start: now.toISOString(),
-              current_period_end: newPeriodEnd.toISOString(),
+          if (newMonthlyEquiv > currentMonthlyEquiv) {
+            // 업그레이드: 차액 즉시 청구 → 모달에서 확인 후 결제
+            const estimate = estimateUpgradeAmount(plan)
+            setUpgradeModal({ plan, ...estimate })
+            return
+          } else if (newMonthlyEquiv < currentMonthlyEquiv) {
+            // 다운그레이드: 다음 결제 주기에 적용
+            const periodEnd = currentSubscription.current_period_end
+            const periodEndLabel = periodEnd ? formatDate(periodEnd) : '다음 결제일'
+            const confirmed = confirm(
+              `다음 결제일(${periodEndLabel})부터 ${plan.name} 플랜으로 변경됩니다.\n그 전까지 현재 플랜의 모든 기능을 이용하실 수 있습니다.\n\n다운그레이드를 예약하시겠습니까?`
+            )
+            if (!confirmed) return
+
+            const {
+              data: { session },
+            } = await supabase.auth.getSession()
+            if (!session) throw new Error('로그인이 필요합니다.')
+
+            const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+            const res = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+              method: 'POST',
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                subscriptionId: currentSubscription.id,
+                mode: 'downgrade_defer',
+                changePlanId: plan.id,
+                changeBillingCycle: billingCycle,
+              }),
             })
+            if (!res.ok) {
+              const err = await res.json()
+              throw new Error(err.error || '플랜 변경 예약에 실패했습니다.')
+            }
+            alert(`${periodEndLabel}부터 ${plan.name} 플랜으로 변경됩니다.`)
+            router.refresh()
+          } else {
+            // 같은 가격 티어 (주기 변경 등): 업그레이드와 동일하게 처리
+            const estimate = estimateUpgradeAmount(plan)
+            setUpgradeModal({ plan, ...estimate })
+            return
+          }
+        } else if (isExistingUser) {
+          // 기존 사용자 (빌링키 없음 또는 trial/만료): 카드 등록 후 즉시 결제
+          // 선택한 플랜/주기를 구독에 미리 저장
+          const { error: updateError } = await supabase
+            .from('company_subscriptions')
+            .update({ plan_id: plan.id, billing_cycle: billingCycle })
             .eq('id', currentSubscription.id)
 
-          if (error) throw new Error(error.message)
+          if (updateError) throw new Error(updateError.message)
 
-          alert(`${plan.name} 플랜 (${billingCycle === 'monthly' ? '월간' : '연간'})으로 변경되었습니다.`)
-          router.refresh()
+          // 빌링키 없음 → 카드 등록 후 즉시 결제
+          const tossPayments = await loadTossPayments(
+            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
+          )
+          await tossPayments.requestBillingAuth('카드', {
+            customerKey: companyId,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+          })
+          // requestBillingAuth는 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음
+          return
         } else {
           // 신규 사용자 (Free → 유료 업그레이드, 첫 체험) → 7일 무료 체험 시작
           const now = new Date()
@@ -278,7 +428,7 @@ export default function NewSubscriptionClient({
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
 
     // 유료 플랜
-    if (isExistingUser) return '결제하기'
+    if (isExistingUser) return hasBillingKey ? '플랜 변경' : '카드 등록 후 결제'
     return '7일 무료 체험'
   }
 
@@ -350,6 +500,12 @@ export default function NewSubscriptionClient({
               )}
             </div>
           </div>
+          {/* 다운그레이드 예약 안내 */}
+          {currentSubscription.pending_plan_id && currentSubscription.current_period_end && (
+            <div className="mt-3 pt-3 border-t border-white/20 text-sm opacity-90">
+              다음 결제일({formatDate(currentSubscription.current_period_end)})에 플랜이 변경될 예정입니다.
+            </div>
+          )}
         </div>
       )}
 
@@ -418,12 +574,68 @@ export default function NewSubscriptionClient({
         </div>
       )}
 
+      {/* 업그레이드 확인 모달 */}
+      {upgradeModal && currentSubscription && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">업그레이드 결제 확인</h3>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2 text-sm text-blue-800">
+                <div className="flex justify-between">
+                  <span>현재 플랜</span>
+                  <span className="font-medium">{currentSubscription.subscription_plans.name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>변경 플랜</span>
+                  <span className="font-medium">{upgradeModal.plan.name}</span>
+                </div>
+                {!upgradeModal.isCycleChange && upgradeModal.remainingDays > 0 && (
+                  <div className="flex justify-between">
+                    <span>남은 기간</span>
+                    <span className="font-medium">{upgradeModal.remainingDays}일</span>
+                  </div>
+                )}
+                <div className="border-t border-blue-200 pt-2 flex justify-between font-semibold">
+                  <span>{upgradeModal.isCycleChange ? '결제 금액' : '차액 결제 (VAT 포함)'}</span>
+                  <span>{upgradeModal.proratedTotal.toLocaleString()}원</span>
+                </div>
+              </div>
+              {!upgradeModal.isCycleChange && (
+                <p className="text-xs text-gray-500">
+                  * 다음 결제일부터는 {(billingCycle === 'monthly' ? upgradeModal.plan.price_monthly : upgradeModal.plan.price_yearly).toLocaleString()}원/{billingCycle === 'monthly' ? '월' : '연'}이 청구됩니다.
+                </p>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setUpgradeModal(null)}
+                  disabled={upgradeLoading}
+                  className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={handleUpgradeConfirm}
+                  disabled={upgradeLoading}
+                  className="flex-1 px-4 py-3 bg-blue-600 text-white text-sm font-semibold rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300"
+                >
+                  {upgradeLoading ? '처리 중...' : '결제하기'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 헤더 */}
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">구독 플랜 선택</h1>
         <p className="mt-2 text-gray-600">
-          {isExistingUser
-            ? '플랜을 선택하면 바로 결제가 진행됩니다'
+          {isActivePaidUser && hasBillingKey
+            ? '플랜을 선택하면 등록된 카드로 즉시 결제가 진행됩니다.'
+            : isExistingUser
+            ? '플랜을 선택하면 카드 등록 후 즉시 결제가 진행됩니다.'
             : '7일 무료 체험 후 마음에 드시면 구독하세요. 카드 등록이 필요하지 않습니다.'}
         </p>
       </div>
@@ -516,7 +728,7 @@ export default function NewSubscriptionClient({
                         연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약
                       </p>
                     )}
-                    {!isExistingUser && (
+                    {!isExistingUser && !isActivePaidUser && (
                       <p className="text-xs text-indigo-600 mt-1 font-medium">7일 무료 체험 가능</p>
                     )}
                   </>

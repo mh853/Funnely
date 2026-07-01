@@ -1,7 +1,7 @@
 'use client'
 
-// 토스 빌링키 발급 완료 후 리다이렉트되는 결제수단 등록 완료 페이지
-import { Suspense, useEffect, useState } from 'react'
+// 토스 빌링키 발급 완료 후 즉시 첫 결제까지 처리하는 페이지
+import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
@@ -11,11 +11,18 @@ function BillingSuccessContent() {
   const router = useRouter()
   const [processing, setProcessing] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  // Strict Mode에서 useEffect가 두 번 실행되면 authKey가 소진되어 실패하므로 방지
+  const hasProcessed = useRef(false)
 
   useEffect(() => {
+    if (hasProcessed.current) return
+    hasProcessed.current = true
+
     const authKey = searchParams.get('authKey')
     const customerKey = searchParams.get('customerKey')
     const subscriptionId = searchParams.get('subscriptionId')
+    // mode=update: 카드 변경만 (결제 없음) / 기본: 카드 등록 + 즉시 결제
+    const mode = searchParams.get('mode') ?? 'payment'
 
     if (!authKey || !customerKey || !subscriptionId) {
       setError('필수 파라미터가 누락되었습니다.')
@@ -23,54 +30,54 @@ function BillingSuccessContent() {
       return
     }
 
-    const issueBillingKey = async () => {
+    const processPayment = async () => {
       try {
         const supabase = createClient()
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error('로그인이 필요합니다.')
 
-        if (!session) {
-          throw new Error('로그인이 필요합니다.')
+        const headers = {
+          'Authorization': `Bearer ${session.access_token}`,
+          'Content-Type': 'application/json',
+        }
+        const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+        // Step 1: 빌링키 발급 + 카드 정보 저장
+        const authRes = await fetch(`${baseUrl}/functions/v1/toss-billing-auth`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ customerKey, authKey, subscriptionId }),
+        })
+        if (!authRes.ok) {
+          const err = await authRes.json()
+          throw new Error(err.error || '카드 등록에 실패했습니다.')
         }
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/toss-billing-auth`,
-          {
+        // Step 2: 즉시 첫 결제 (카드 변경 모드에서는 생략)
+        if (mode !== 'update') {
+          const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
             method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              customerKey,
-              authKey,
-            }),
+            headers,
+            body: JSON.stringify({ subscriptionId }),
+          })
+          if (!payRes.ok) {
+            const err = await payRes.json()
+            throw new Error(err.error || '결제에 실패했습니다.')
           }
-        )
-
-        if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || '빌링키 발급에 실패했습니다.')
         }
-
-        const data = await response.json()
-        console.log('Billing key issued:', data)
 
         setProcessing(false)
 
-        // 3초 후 결제 히스토리 페이지로 이동
-        setTimeout(() => {
-          router.push('/dashboard/payments')
-        }, 3000)
+        const redirectPath = mode === 'update' ? '/dashboard/payments' : '/dashboard/subscription'
+        setTimeout(() => router.push(redirectPath), 3000)
       } catch (err: any) {
-        console.error('Billing auth error:', err)
+        console.error('Payment process error:', err)
         setError(err.message)
         setProcessing(false)
       }
     }
 
-    issueBillingKey()
+    processPayment()
   }, [searchParams, router])
 
   if (processing) {
@@ -78,7 +85,8 @@ function BillingSuccessContent() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-lg text-gray-700">결제 수단을 등록하는 중...</p>
+          <p className="mt-4 text-lg text-gray-700">결제를 처리하는 중...</p>
+          <p className="mt-2 text-sm text-gray-500">잠시만 기다려 주세요.</p>
         </div>
       </div>
     )
@@ -92,7 +100,7 @@ function BillingSuccessContent() {
             <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100">
               <span className="text-red-600 text-3xl">✕</span>
             </div>
-            <h2 className="mt-4 text-2xl font-bold text-gray-900">등록 실패</h2>
+            <h2 className="mt-4 text-2xl font-bold text-gray-900">결제 실패</h2>
             <p className="mt-2 text-gray-600">{error}</p>
             <button
               onClick={() => router.push('/dashboard/subscription')}
@@ -111,12 +119,16 @@ function BillingSuccessContent() {
       <div className="bg-white rounded-lg shadow-lg p-8 max-w-md">
         <div className="text-center">
           <CheckCircleIcon className="mx-auto h-16 w-16 text-green-500" />
-          <h2 className="mt-4 text-2xl font-bold text-gray-900">등록 완료!</h2>
+          <h2 className="mt-4 text-2xl font-bold text-gray-900">
+            {searchParams.get('mode') === 'update' ? '카드 변경 완료!' : '결제 완료!'}
+          </h2>
           <p className="mt-2 text-gray-600">
-            결제 수단이 성공적으로 등록되었습니다.
+            {searchParams.get('mode') === 'update'
+              ? '결제 수단이 성공적으로 변경되었습니다.'
+              : '구독이 성공적으로 활성화되었습니다.'}
           </p>
           <p className="mt-4 text-sm text-gray-500">
-            잠시 후 결제 히스토리 페이지로 이동합니다...
+            잠시 후 이동합니다...
           </p>
         </div>
       </div>
