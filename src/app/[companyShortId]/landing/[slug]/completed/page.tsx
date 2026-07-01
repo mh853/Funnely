@@ -56,12 +56,14 @@ export default async function CompletedPage({ params }: Props) {
     notFound()
   }
 
-  // Fetch landing page
+  // Fetch landing page (비활성/비공개 페이지는 completed도 표시 안 함)
   const { data: landingPage } = await supabase
     .from('landing_pages')
     .select('id, slug, title, success_message, completion_info_message, theme, company_id, completion_bg_image, completion_bg_color')
     .eq('company_id', company.id)
     .eq('slug', slug)
+    .eq('status', 'published')
+    .eq('is_active', true)
     .single()
 
   if (!landingPage) {

@@ -33,8 +33,10 @@ function BillingSuccessContent() {
     const processPayment = async () => {
       try {
         const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('로그인이 필요합니다.')
         const { data: { session } } = await supabase.auth.getSession()
-        if (!session) throw new Error('로그인이 필요합니다.')
+        if (!session) throw new Error('세션이 만료되었습니다. 다시 로그인해주세요.')
 
         const headers = {
           'Authorization': `Bearer ${session.access_token}`,

@@ -19,6 +19,17 @@ export async function POST(
 
     const body = await request.json()
 
+    // 티켓 소유권 검증 (티켓 생성자만 메시지 추가 가능)
+    const { data: ticket } = await supabase
+      .from('support_tickets')
+      .select('created_by_user_id')
+      .eq('id', params.id)
+      .maybeSingle()
+
+    if (!ticket || ticket.created_by_user_id !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
+
     // 메시지 추가
     const { data: message, error: messageError } = await supabase
       .from('support_ticket_messages')

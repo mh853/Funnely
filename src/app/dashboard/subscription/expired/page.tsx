@@ -232,11 +232,9 @@ export default function SubscriptionExpiredPage() {
             <Button
               variant="outline"
               size="lg"
-              onClick={() => {
-                fetchSubscription()
-                setTimeout(() => {
-                  router.push('/dashboard')
-                }, 500)
+              onClick={async () => {
+                await fetchSubscription()
+                router.push('/dashboard')
               }}
             >
               <RefreshCw className="h-5 w-5 mr-2" />
