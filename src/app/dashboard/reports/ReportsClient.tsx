@@ -136,10 +136,11 @@ export default function ReportsClient({
     const params = new URLSearchParams(searchParams.toString())
     params.set('tab', tab)
 
-    // 탭 전환 시 department/search 초기화
+    // 탭 전환 시 department/search/assignedTo 초기화
     if (tab !== 'staff') {
       params.delete('department')
       params.delete('search')
+      params.delete('assignedTo')
     }
 
     router.push(`/dashboard/reports?${params.toString()}`)
@@ -393,13 +394,14 @@ export default function ReportsClient({
 
           <div className="relative">
             <select
-              value={`${selectedYear}-${selectedMonth}`}
+              value={isAllMonths ? 'all-all' : `${selectedYear}-${selectedMonth}`}
               onChange={(e) => {
                 const [year, month] = e.target.value.split('-')
                 updateFilters({ year, month })
               }}
               className="appearance-none bg-gray-100 hover:bg-gray-200 text-gray-900 font-semibold px-3 py-1.5 pr-8 rounded-lg cursor-pointer transition-colors focus:outline-none text-sm"
             >
+              <option value="all-all">전체</option>
               {monthOptions.map((opt) => (
                 <option
                   key={`${opt.year}-${opt.month}`}
@@ -551,7 +553,7 @@ export default function ReportsClient({
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 border-b border-gray-100">
             <h2 className="text-base font-bold text-gray-900">
-              결과별 DB ({selectedMonth}월)
+              결과별 DB ({isAllMonths ? '전체' : `${selectedMonth}월`})
             </h2>
           </div>
 

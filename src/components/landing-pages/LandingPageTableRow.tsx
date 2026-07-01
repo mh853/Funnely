@@ -55,15 +55,17 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
     const newStatus = !isActive
 
     try {
-      const { error } = await (supabase as any)
+      const { error, count } = await (supabase as any)
         .from('landing_pages')
         .update({
           is_active: newStatus,
           status: newStatus ? 'published' : 'draft',
         })
         .eq('id', page.id)
+        .select('id', { count: 'exact', head: true })
 
       if (error) throw error
+      if (count === 0) throw new Error('권한이 없거나 대상을 찾을 수 없습니다.')
 
       setIsActive(newStatus)
 

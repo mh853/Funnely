@@ -107,7 +107,7 @@ export const useFormSubmit = (companyId: string, userId: string, landingPage?: a
         }
 
         if (!updateResult || updateResult.length === 0) {
-          console.error('⚠️ [WARNING] UPDATE affected 0 rows - RLS may be blocking the update')
+          throw new Error('저장 권한이 없습니다. 다시 로그인 후 시도해주세요.')
         }
       } else {
         // Create mode

@@ -349,7 +349,8 @@ export default function ReservationsClient({
   const handleStartEditReservationDate = () => {
     if (leadDetails?.contract_completed_at) {
       const date = new Date(leadDetails.contract_completed_at)
-      setReservationDateValue(date.toISOString().split('T')[0])
+      const localDateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+      setReservationDateValue(localDateStr)
       // 시간 추출 (HH:mm 형식)
       const hours = date.getHours().toString().padStart(2, '0')
       const minutes = date.getMinutes().toString().padStart(2, '0')
@@ -1274,7 +1275,7 @@ export default function ReservationsClient({
                   {weekStartDate.getDate()}일 - {new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6).getDate()}일
                 </span>
                 <button
-                  onClick={goToCurrentWeek}
+                  onClick={goToCurrentMonth}
                   className="ml-2 px-3 py-1 text-xs font-medium text-emerald-600 bg-emerald-50 rounded-full hover:bg-emerald-100 transition"
                 >
                   이번달

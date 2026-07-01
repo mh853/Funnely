@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
@@ -23,6 +23,14 @@ export default function DeleteLandingPageModal({
   const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (isOpen) {
+      setConfirmText('')
+      setIsDeleting(false)
+      setError('')
+    }
+  }, [isOpen])
 
   const handleDelete = async () => {
     if (confirmText !== landingPage.title) {

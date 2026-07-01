@@ -31,6 +31,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // Get user profile with company (cached to avoid duplicate query with layout)
   const userProfile = await getCachedUserProfile(user.id)
 
+  if (!userProfile) {
+    redirect('/auth/login')
+  }
+
   // 현재 날짜
   const now = new Date()
 
@@ -116,14 +120,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   // 현재 월 통계를 위한 별도 쿼리 (선택된 월이 현재 월이 아닐 경우)
   if (!isCurrentMonth) {
-    const thirtyDaysAgo = new Date(today)
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
     const { data: currentMonthLeads } = await supabase
       .from('leads')
       .select('id, created_at')
-      .eq('company_id', userProfile?.company_id)
-      .gte('created_at', thirtyDaysAgo.toISOString())
+      .eq('company_id', userProfile.company_id)
+      .gte('created_at', thisMonthStart.toISOString())
       .order('created_at', { ascending: true })
 
     currentMonthLeads?.forEach(lead => {
@@ -244,13 +245,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // 페이지뷰 총합 (선택된 월의 날짜별 합계)
   const totalPageViews = sortedPageViewStats.reduce((sum, item) => sum + item.count, 0)
 
-  // 최근 7일의 모든 날짜 생성 (현재 날짜 기준)
+  // 최근 7일 날짜 생성: 현재 월이면 오늘 기준 최근 7일, 과거 월이면 해당 월의 마지막 7일
   const last7Days: string[] = []
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(now)
-    date.setDate(date.getDate() - i)
-    const dateStr = date.toISOString().split('T')[0]
-    last7Days.push(dateStr)
+  if (isCurrentMonth) {
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(now)
+      date.setDate(date.getDate() - i)
+      const dateStr = date.toISOString().split('T')[0]
+      last7Days.push(dateStr)
+    }
+  } else {
+    for (let i = 0; i < 7; i++) {
+      const day = daysInMonth - i
+      const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+      last7Days.push(dateStr)
+    }
   }
 
   // 최근 7일 데이터 생성 (데이터가 없는 날짜는 0으로 채움)
@@ -489,7 +498,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 {/* X-axis labels */}
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
                   {sortedDailyStats.map(({ date }, index) => {
-                    const isToday = date === `${now.getMonth() + 1}/${now.getDate()}`
+                    const isToday = isCurrentMonth && date === `${now.getMonth() + 1}/${now.getDate()}`
 
                     return (
                       <div key={`label-${date}`} className="flex-1 min-w-[8px] flex justify-center">

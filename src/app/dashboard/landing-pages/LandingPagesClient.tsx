@@ -45,6 +45,8 @@ export default function LandingPagesClient({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ landing_page_id: pageId }),
+      }).then(res => {
+        if (!res.ok) console.error('[timer-expired] API returned', res.status, 'for page', pageId)
       }).catch(() => {
         // Non-critical: cron job will catch it on next run
       })
