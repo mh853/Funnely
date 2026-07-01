@@ -219,16 +219,24 @@ export async function DELETE(request: Request) {
     }
 
     // Update invitation status to cancelled
-    const { error: updateError } = await supabase
+    const { data: cancelled, error: updateError } = await supabase
       .from('company_invitations')
       .update({ status: 'cancelled', updated_at: new Date().toISOString() })
       .eq('id', invitationId)
       .eq('company_id', currentUserProfile.company_id)
       .eq('status', 'pending')
+      .select('id')
 
     if (updateError) {
       console.error('Cancel invitation error:', updateError)
       return NextResponse.json({ error: '초대 취소에 실패했습니다.' }, { status: 500 })
+    }
+
+    if (!cancelled || cancelled.length === 0) {
+      return NextResponse.json(
+        { error: '취소할 수 있는 초대를 찾을 수 없습니다.' },
+        { status: 404 }
+      )
     }
 
     return NextResponse.json({ message: '초대가 취소되었습니다.' })

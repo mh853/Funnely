@@ -46,11 +46,12 @@ export async function DELETE(
       )
     }
 
-    // Delete landing page
+    // Delete landing page (company_id 필터로 TOCTOU 방지)
     const { error: deleteError } = await supabase
       .from('landing_pages')
       .delete()
       .eq('id', id)
+      .eq('company_id', userData!.company_id)
 
     if (deleteError) {
       console.error('Landing page deletion error:', deleteError)

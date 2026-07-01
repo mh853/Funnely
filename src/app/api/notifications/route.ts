@@ -75,14 +75,21 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Update notification (RLS policy ensures user can only update their own)
-    const { error } = await supabase
+    // Update notification (user_id 필터로 소유권 검증, RLS 보조)
+    const { data: updated, error } = await supabase
       .from('notifications')
       .update({ is_read: true })
       .eq('id', notification_id)
       .eq('user_id', user.id)
+      .select('id')
 
     if (error) throw error
+    if (!updated || updated.length === 0) {
+      return NextResponse.json(
+        { success: false, error: { message: '알림을 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({
       success: true,

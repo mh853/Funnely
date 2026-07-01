@@ -79,11 +79,12 @@ export async function PUT(request: NextRequest) {
     if (location !== undefined) updateData.location = location || null
     if (is_all_day !== undefined) updateData.is_all_day = is_all_day
 
-    // Update event
+    // Update event (company_id 필터로 TOCTOU 방지)
     const { data: updatedEvent, error: updateError } = await supabase
       .from('calendar_events')
       .update(updateData)
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
       .select()
       .single()
 

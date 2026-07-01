@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
 
@@ -37,6 +38,29 @@ export async function POST(request: NextRequest) {
     const validRoles = ['company_admin', 'hospital_admin', 'marketing_manager', 'marketing_staff', 'viewer']
     if (!validRoles.includes(role)) {
       return NextResponse.json({ error: '잘못된 권한입니다.' }, { status: 400 })
+    }
+
+    // Verify caller is authenticated and is admin in the target company
+    const userClient = await createServerClient()
+    const { data: { user: caller } } = await userClient.auth.getUser()
+
+    if (!caller) {
+      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+    }
+
+    const { data: callerProfile } = await userClient
+      .from('users')
+      .select('company_id, role')
+      .eq('id', caller.id)
+      .single()
+
+    if (!callerProfile || callerProfile.company_id !== companyId) {
+      return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+    }
+
+    const isAdmin = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(callerProfile.role)
+    if (!isAdmin) {
+      return NextResponse.json({ error: '팀원을 초대할 권한이 없습니다.' }, { status: 403 })
     }
 
     const supabase = createAdminClient()

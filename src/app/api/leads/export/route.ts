@@ -131,7 +131,7 @@ export async function GET(request: Request) {
       }
 
       if (search) {
-        query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+        query = query.ilike('name', `%${search}%`)
       }
 
       if (assignedTo) {

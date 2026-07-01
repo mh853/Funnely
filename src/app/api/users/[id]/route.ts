@@ -70,7 +70,7 @@ export async function PATCH(
       return NextResponse.json({ error: '회사 관리자의 권한을 변경할 수 없습니다.' }, { status: 403 })
     }
 
-    // Update user profile
+    // Update user profile (company_id 필터로 TOCTOU 방지)
     const { error: updateError } = await supabase
       .from('users')
       .update({
@@ -79,6 +79,7 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('company_id', currentUserProfile.company_id)
 
     if (updateError) {
       console.error('User update error:', updateError)
@@ -153,11 +154,12 @@ export async function DELETE(
       return NextResponse.json({ error: '회사 관리자를 삭제할 수 없습니다.' }, { status: 403 })
     }
 
-    // Delete user profile from public.users
+    // Delete user profile from public.users (company_id 필터로 TOCTOU 방지)
     const { error: deleteUserError } = await supabase
       .from('users')
       .delete()
       .eq('id', id)
+      .eq('company_id', currentUserProfile.company_id)
 
     if (deleteUserError) {
       console.error('User profile deletion error:', deleteUserError)

@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       .select('id')
       .eq('company_id', company_id)
       .eq('slug', slug)
-      .single()
+      .maybeSingle()
 
     if (existing) {
       return NextResponse.json(
@@ -191,9 +191,15 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
+    if (!landingPage) {
+      return NextResponse.json(
+        { success: false, error: { message: '랜딩 페이지를 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({ success: true, data: landingPage })
   } catch (error: any) {
