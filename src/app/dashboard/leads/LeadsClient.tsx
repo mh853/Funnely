@@ -11,6 +11,14 @@ import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 import AddLeadModal from '@/components/shared/AddLeadModal'
 
+// 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 interface TeamMember {
   id: string
   full_name: string
@@ -750,7 +758,7 @@ export default function LeadsClient({
   const openContractModal = (leadId: string) => {
     // 기본값: 현재 날짜/시간
     const now = new Date()
-    const dateStr = now.toISOString().split('T')[0]
+    const dateStr = toLocalDateStr(now)
     const timeStr = now.toTimeString().slice(0, 5)
     setContractDate(dateStr)
     setContractTime(timeStr)
@@ -763,7 +771,7 @@ export default function LeadsClient({
   const setQuickDate = (daysFromNow: number) => {
     const date = new Date()
     date.setDate(date.getDate() + daysFromNow)
-    setContractDate(date.toISOString().split('T')[0])
+    setContractDate(toLocalDateStr(date))
   }
 
   // 계약완료 확정 핸들러
@@ -1996,7 +2004,7 @@ export default function LeadsClient({
                     type="button"
                     onClick={() => setQuickDate(0)}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                      contractDate === new Date().toISOString().split('T')[0]
+                      contractDate === toLocalDateStr(new Date())
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -2010,7 +2018,7 @@ export default function LeadsClient({
                       (() => {
                         const tomorrow = new Date()
                         tomorrow.setDate(tomorrow.getDate() + 1)
-                        return contractDate === tomorrow.toISOString().split('T')[0]
+                        return contractDate === toLocalDateStr(tomorrow)
                       })()
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -2025,7 +2033,7 @@ export default function LeadsClient({
                       (() => {
                         const nextWeek = new Date()
                         nextWeek.setDate(nextWeek.getDate() + 7)
-                        return contractDate === nextWeek.toISOString().split('T')[0]
+                        return contractDate === toLocalDateStr(nextWeek)
                       })()
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'

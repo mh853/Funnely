@@ -5,6 +5,14 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
+
+// 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
 import {
   XMarkIcon,
   ChevronDownIcon,
@@ -2024,9 +2032,9 @@ export default function ReservationsClient({
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => setScheduleInputDate(new Date().toISOString().split('T')[0])}
+                    onClick={() => setScheduleInputDate(toLocalDateStr(new Date()))}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
-                      scheduleInputDate === new Date().toISOString().split('T')[0]
+                      scheduleInputDate === toLocalDateStr(new Date())
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
@@ -2038,13 +2046,13 @@ export default function ReservationsClient({
                     onClick={() => {
                       const tomorrow = new Date()
                       tomorrow.setDate(tomorrow.getDate() + 1)
-                      setScheduleInputDate(tomorrow.toISOString().split('T')[0])
+                      setScheduleInputDate(toLocalDateStr(tomorrow))
                     }}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                       (() => {
                         const tomorrow = new Date()
                         tomorrow.setDate(tomorrow.getDate() + 1)
-                        return scheduleInputDate === tomorrow.toISOString().split('T')[0]
+                        return scheduleInputDate === toLocalDateStr(tomorrow)
                       })()
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -2057,13 +2065,13 @@ export default function ReservationsClient({
                     onClick={() => {
                       const nextWeek = new Date()
                       nextWeek.setDate(nextWeek.getDate() + 7)
-                      setScheduleInputDate(nextWeek.toISOString().split('T')[0])
+                      setScheduleInputDate(toLocalDateStr(nextWeek))
                     }}
                     className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                       (() => {
                         const nextWeek = new Date()
                         nextWeek.setDate(nextWeek.getDate() + 7)
-                        return scheduleInputDate === nextWeek.toISOString().split('T')[0]
+                        return scheduleInputDate === toLocalDateStr(nextWeek)
                       })()
                         ? 'bg-emerald-100 text-emerald-700 ring-2 ring-emerald-500'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
