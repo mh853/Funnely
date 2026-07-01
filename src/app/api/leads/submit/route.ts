@@ -67,9 +67,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Encrypt phone and create hash
+    // Encrypt phone and create hash (정규화 후 해시 — landing-pages submit과 일관성 유지)
     const encryptedPhone = encryptPhone(phone)
-    const phoneHash = hashPhone(phone)
+    const phoneHash = hashPhone(phone.replace(/\D/g, ''))
 
     // Get client IP and user agent
     const ipAddress = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip')
