@@ -73,7 +73,7 @@ export default async function LeadDetailPage({ params }: Props) {
       *,
       users (
         id,
-        name
+        full_name
       )
     `
     )

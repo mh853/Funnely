@@ -157,7 +157,9 @@ export default async function LeadsPage({
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,phone.ilike.%${search}%`)
+      // phone은 암호화 저장되므로 ilike 검색 불가 — name만 검색
+      // search를 .or() 필터 문자열에 직접 삽입하면 PostgREST 인젝션 위험이 있어 .ilike() 사용
+      query = query.ilike('name', `%${search}%`)
     }
 
     if (callAssignedTo) {

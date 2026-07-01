@@ -1,12 +1,14 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import dynamic from 'next/dynamic'
+import dynamicImport from 'next/dynamic'
 import Link from 'next/link'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
 import LandingPageFormSkeleton from '@/components/landing-pages/LandingPageFormSkeleton'
 
+export const dynamic = 'force-dynamic'
+
 // Dynamic import for large form component
-const LandingPageNewForm = dynamic(
+const LandingPageNewForm = dynamicImport(
   () => import('@/components/landing-pages/LandingPageNewForm'),
   {
     loading: () => <LandingPageFormSkeleton />,
@@ -17,8 +19,6 @@ const LandingPageNewForm = dynamic(
 interface Props {
   params: { id: string }
 }
-
-export const dynamic = 'force-dynamic'
 
 export default async function LandingPageEditPage({ params }: Props) {
   const supabase = await createClient()
