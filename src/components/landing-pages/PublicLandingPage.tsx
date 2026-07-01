@@ -539,10 +539,24 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
       {/* Google Ads */}
       {trackingPixels?.is_active && trackingPixels?.google_ads_id && (
-        <Script
-          src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
-          strategy="afterInteractive"
-        />
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
+            strategy="afterInteractive"
+          />
+          <Script
+            id="google-ads"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${trackingPixels.google_ads_id}');
+              `,
+            }}
+          />
+        </>
       )}
 
       {/* Kakao Pixel */}

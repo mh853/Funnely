@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { FormSubmission } from '@/types/landing-page.types'
-import crypto from 'crypto'
+import { hashPhone } from '@/lib/encryption/phone'
 
 // User-Agent를 분석하여 기기 타입 감지
 function detectDeviceType(userAgent: string | undefined): 'pc' | 'mobile' | 'tablet' | 'unknown' {
@@ -69,53 +69,17 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Hash phone number for duplicate detection
-    const phoneHash = crypto
-      .createHash('sha256')
-      .update(phone.replace(/\D/g, ''))
-      .digest('hex')
+    // 전화번호 해시 (중복 체크용 — 라이브러리 공통 구현 사용)
+    const phoneHash = hashPhone(phone.replace(/\D/g, ''))
 
-    // Parallel query execution - 모든 독립적인 쿼리를 동시에 실행
+    // Phase 1: 랜딩페이지 조회 (company_id가 필요한 후속 쿼리를 위해 먼저 실행)
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
 
-    const [
-      { data: landingPage, error: lpError },
-      { data: referrerCompany },
-      { data: existingLead },
-      { data: blacklistedPhone }
-    ] = await Promise.all([
-      // 1. Landing page 조회 (timer 필드 추가)
-      supabase
-        .from('landing_pages')
-        .select('company_id, title, status, collect_fields, timer_enabled, timer_deadline, timer_auto_update')
-        .eq('id', landing_page_id)
-        .single(),
-
-      // 2. Referrer company 조회 (referrer_user_id가 있을 때만)
-      referrer_user_id
-        ? supabase
-            .from('companies')
-            .select('id')
-            .eq('short_id', referrer_user_id)
-            .single()
-        : Promise.resolve({ data: null, error: null }),
-
-      // 3. 중복 체크 (landing_page_id로 임시 조회, 이후 company_id로 재검증)
-      supabase
-        .from('leads')
-        .select('id, company_id')
-        .eq('phone_hash', phoneHash)
-        .gte('created_at', threeHoursAgo)
-        .limit(1)
-        .maybeSingle(),
-
-      // 4. 블랙리스트 체크
-      supabase
-        .from('phone_blacklist')
-        .select('id')
-        .eq('phone_number', phone.replace(/\D/g, ''))
-        .maybeSingle()
-    ])
+    const { data: landingPage, error: lpError } = await supabase
+      .from('landing_pages')
+      .select('company_id, title, status, is_active, collect_fields, timer_enabled, timer_deadline, timer_auto_update, require_privacy_consent')
+      .eq('id', landing_page_id)
+      .single()
 
     // Landing page 검증
     if (lpError || !landingPage) {
@@ -125,10 +89,18 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (landingPage.status !== 'published') {
+    if (landingPage.status !== 'published' || !landingPage.is_active) {
       return NextResponse.json(
         { error: { message: '게시되지 않은 페이지입니다' } },
         { status: 403 }
+      )
+    }
+
+    // 개인정보 동의 서버 검증
+    if (landingPage.require_privacy_consent && !form_data.privacy_consent) {
+      return NextResponse.json(
+        { error: { message: '개인정보 수집 및 이용에 동의해주세요' } },
+        { status: 400 }
       )
     }
 
@@ -144,6 +116,39 @@ export async function POST(request: NextRequest) {
         )
       }
     }
+
+    // Phase 2: 나머지 쿼리를 병렬로 실행 (company_id 확보 후)
+    const [
+      { data: referrerCompany },
+      { data: existingLead },
+      { data: blacklistedPhone }
+    ] = await Promise.all([
+      // 1. Referrer company 조회
+      referrer_user_id
+        ? supabase
+            .from('companies')
+            .select('id')
+            .eq('short_id', referrer_user_id)
+            .single()
+        : Promise.resolve({ data: null, error: null }),
+
+      // 2. 중복 체크 (같은 회사 내에서만)
+      supabase
+        .from('leads')
+        .select('id, company_id')
+        .eq('phone_hash', phoneHash)
+        .gte('created_at', threeHoursAgo)
+        .limit(1)
+        .maybeSingle(),
+
+      // 3. 블랙리스트 체크 (회사별 필터링 — company_id는 Phase 1에서 확보)
+      supabase
+        .from('phone_blacklist')
+        .select('id')
+        .eq('phone_number', phone.replace(/\D/g, ''))
+        .eq('company_id', landingPage.company_id)
+        .maybeSingle()
+    ])
 
     // 블랙리스트 체크 - Silent handling (사용자에게 에러 표시 안 함)
     if (blacklistedPhone) {
@@ -283,7 +288,6 @@ export async function POST(request: NextRequest) {
     })
 
     // Increment submissions count (fire and forget - non-blocking)
-    // Using .then() to convert to Promise before .catch()
     supabase
       .from('landing_pages')
       .select('submissions_count')
@@ -294,7 +298,11 @@ export async function POST(request: NextRequest) {
           .from('landing_pages')
           .update({ submissions_count: (currentPage?.submissions_count || 0) + 1 })
           .eq('id', landing_page_id)
+          .then(({ error }) => {
+            if (error) console.error('[Submit] Failed to increment submissions_count:', error)
+          })
       })
+      .catch((err) => console.error('[Submit] Failed to fetch submissions_count:', err))
 
     // Return immediately without waiting for count update
     return NextResponse.json({

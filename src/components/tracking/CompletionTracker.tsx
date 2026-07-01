@@ -6,8 +6,10 @@ interface CompletionTrackerProps {
   trackingPixels?: {
     facebook_pixel_id?: string
     google_analytics_id?: string
+    google_ads_id?: string
     kakao_pixel_id?: string
     tiktok_pixel_id?: string
+    naver_pixel_id?: string
     karrot_pixel_id?: string
     is_active?: boolean
   }
@@ -75,6 +77,48 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
             }}
           />
         </>
+      )}
+
+      {/* Google Ads Conversion */}
+      {trackingPixels?.is_active && trackingPixels?.google_ads_id && (
+        <>
+          <Script
+            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
+            strategy="afterInteractive"
+          />
+          <Script
+            id="google-ads-completion"
+            strategy="afterInteractive"
+            dangerouslySetInnerHTML={{
+              __html: `
+                window.dataLayer = window.dataLayer || [];
+                function gtag(){dataLayer.push(arguments);}
+                gtag('js', new Date());
+                gtag('config', '${trackingPixels.google_ads_id}');
+                gtag('event', 'conversion', { 'send_to': '${trackingPixels.google_ads_id}' });
+              `,
+            }}
+          />
+        </>
+      )}
+
+      {/* Naver Pixel Conversion */}
+      {trackingPixels?.is_active && trackingPixels?.naver_pixel_id && (
+        <Script
+          id="naver-pixel-completion"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              !function(a,b,c,d,e,f,g){a.NaverPixel=e,a[e]||(a[e]=function(){(a[e].q=a[e].q||[]).push(arguments)}),
+              a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
+              f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
+              "https://wcs.naver.net/wcslog.js","naver_pixel");
+              naver_pixel('init', '${trackingPixels.naver_pixel_id}');
+              naver_pixel('track', 'PageView');
+              naver_pixel('track', 'CompleteRegistration');
+            `,
+          }}
+        />
       )}
 
       {/* Kakao Pixel */}
