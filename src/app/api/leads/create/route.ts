@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // 전화번호 암호화
+    // 전화번호 암호화 (정규화 후 해시 — 모든 submit 라우트와 일관성 유지)
     const encryptedPhone = encryptPhone(phone)
-    const phoneHash = hashPhone(phone)
+    const phoneHash = hashPhone(phone.replace(/\D/g, ''))
 
     // 중복 확인 (같은 회사 내에서 같은 전화번호)
     const { data: existingLead } = await supabase
