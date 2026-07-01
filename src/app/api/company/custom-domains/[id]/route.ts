@@ -103,11 +103,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       .eq('id', id)
       .eq('company_id', (userProfile as any)?.company_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('[Custom Domain] PATCH 오류:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (!updated) {
+      return NextResponse.json({ error: '도메인을 찾을 수 없습니다.' }, { status: 404 })
     }
 
     return NextResponse.json({ domain: updated })

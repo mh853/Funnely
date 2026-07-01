@@ -132,9 +132,16 @@ export async function PUT(request: NextRequest) {
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (updateError) throw updateError
+
+    if (!updatedLead) {
+      return NextResponse.json(
+        { success: false, error: { message: '리드를 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     // 상태가 변경된 경우 로그 기록
     if (status !== undefined && status !== previousStatus) {
