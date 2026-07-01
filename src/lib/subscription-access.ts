@@ -86,7 +86,10 @@ export async function checkSubscriptionAccess(
     }
 
     // 3. 상태별 접근 권한 판단
-    const periodEnd = new Date(subscription.current_period_end)
+    // current_period_end가 null(무제한 Free 플랜)이면 미래 날짜로 처리
+    const periodEnd = subscription.current_period_end
+      ? new Date(subscription.current_period_end)
+      : new Date('9999-12-31')
     const graceEnd = subscription.grace_period_end
       ? new Date(subscription.grace_period_end)
       : null
@@ -212,7 +215,7 @@ export async function canCreateLandingPage(companyId: string): Promise<{
   try {
     const supabase = createServiceClient()
 
-    // 1. 현재 구독 정보 및 플랜 제한사항 조회
+    // 1. 현재 구독 정보 및 플랜 제한사항 조회 (최신 구독 1건)
     const { data: subscription, error: subError } = await supabase
       .from('company_subscriptions')
       .select(`
@@ -224,6 +227,8 @@ export async function canCreateLandingPage(companyId: string): Promise<{
       `)
       .eq('company_id', companyId)
       .in('status', ['active', 'trial', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (subError || !subscription) {
@@ -301,7 +306,7 @@ export async function hasFeatureAccess(
   try {
     const supabase = createServiceClient()
 
-    // 현재 구독 정보 및 플랜 기능 조회
+    // 현재 구독 정보 및 플랜 기능 조회 (최신 구독 1건)
     const { data: subscription, error: subError } = await supabase
       .from('company_subscriptions')
       .select(`
@@ -313,6 +318,8 @@ export async function hasFeatureAccess(
       `)
       .eq('company_id', companyId)
       .in('status', ['active', 'trial', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (subError || !subscription) {
@@ -365,7 +372,7 @@ export async function canInviteUser(companyId: string): Promise<{
   try {
     const supabase = createServiceClient()
 
-    // 1. 현재 구독 정보 및 플랜 제한사항 조회
+    // 1. 현재 구독 정보 및 플랜 제한사항 조회 (최신 구독 1건)
     const { data: subscription, error: subError } = await supabase
       .from('company_subscriptions')
       .select(`
@@ -377,6 +384,8 @@ export async function canInviteUser(companyId: string): Promise<{
       `)
       .eq('company_id', companyId)
       .in('status', ['active', 'trial', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single()
 
     if (subError || !subscription) {
