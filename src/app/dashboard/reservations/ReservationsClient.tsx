@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
@@ -107,7 +107,8 @@ export default function ReservationsClient({
 }: ReservationsClientProps) {
   const router = useRouter()
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
-  const supabase = createClient()
+  const supabaseRef = useRef(createClient())
+  const supabase = supabaseRef.current
 
   // Lead detail modal state
   const [showLeadDetailModal, setShowLeadDetailModal] = useState(false)
@@ -899,7 +900,7 @@ export default function ReservationsClient({
       }
 
       setLeadDetails({ ...leadDetails, ...updatedData })
-      setLeads(leads.map(l =>
+      setLeads(prev => prev.map(l =>
         l.id === selectedLead.id ? { ...l, ...updatedData } : l
       ))
     } catch (error) {
@@ -997,7 +998,7 @@ export default function ReservationsClient({
       console.log('🔌 Cleaning up Realtime subscription')
       supabase.removeChannel(channel)
     }
-  }, [companyId, supabase])
+  }, [companyId])
 
   // 로컬 날짜 문자열 생성 헬퍼 함수
   const getLocalDateString = (date: Date) => {

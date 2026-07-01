@@ -112,6 +112,8 @@ export default function PaymentsClient({
         successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${subscription.id}&mode=update`,
         failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
       })
+      // SDK가 리다이렉트 없이 resolve된 경우 상태 초기화
+      setCardChanging(false)
     } catch (err) {
       console.error('Card change error:', err)
       setCardChanging(false)

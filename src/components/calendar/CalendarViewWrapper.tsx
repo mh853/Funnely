@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   CalendarDaysIcon,
   ListBulletIcon,
@@ -45,6 +45,11 @@ export default function CalendarViewWrapper({
   const filteredLeads = selectedCallAssignee === 'all'
     ? leads
     : leads.filter(lead => lead.call_assigned_to === selectedCallAssignee)
+
+  // 필터 변경 시 즉시 카운트 갱신 (CalendarView가 정확한 값으로 보정함)
+  useEffect(() => {
+    setReservationCount(filteredLeads.length)
+  }, [selectedCallAssignee, filteredLeads.length])
 
   return (
     <div className="px-4 space-y-4">

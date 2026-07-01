@@ -112,7 +112,8 @@ export default function ApiCredentialsPage() {
     } finally {
       updateState({ loading: false })
     }
-  }, [supabase, updateState, state.platforms])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [supabase, updateState])
 
   const saveCredentials = useCallback(async (platform: ApiPlatform) => {
     if (!state.companyId) return

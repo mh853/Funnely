@@ -217,8 +217,12 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     }
   })
 
-  // 결제 데이터 집계
+  // 결제 데이터 집계 (부서 필터 적용 시 해당 리드의 결제만 집계)
+  const filteredLeadIds = params.department
+    ? new Set(filteredLeads.map((l) => l.id))
+    : null
   paymentData?.forEach((payment: any) => {
+    if (filteredLeadIds && !filteredLeadIds.has(payment.lead_id)) return
     const leadCreatedAt = payment.leads?.created_at
     if (leadCreatedAt) {
       const paymentDate = new Date(leadCreatedAt)
