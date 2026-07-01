@@ -65,12 +65,14 @@ export default function CompanySettingsForm({ company, canEdit }: CompanySetting
         updateData.business_number = formData.business_number.trim()
       }
 
-      const { error: updateError } = await supabase
+      const { error: updateError, count } = await supabase
         .from('companies')
         .update(updateData)
         .eq('id', company.id)
+        .select('id', { count: 'exact', head: true })
 
       if (updateError) throw updateError
+      if (count === 0) throw new Error('저장 권한이 없습니다. 관리자에게 문의하세요.')
 
       setSuccess(true)
       router.refresh()

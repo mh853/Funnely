@@ -53,12 +53,16 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
   const fetchStatuses = useCallback(async () => {
     try {
       const res = await fetch('/api/lead-statuses')
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       if (data.success) {
         setStatuses(data.data)
+      } else {
+        setError(data.error?.message || '목록을 불러오지 못했습니다.')
       }
     } catch (err) {
       console.error('Failed to fetch statuses:', err)
+      setError('리드 상태 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -207,13 +211,18 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
 
   const saveOrder = async (orderedStatuses: LeadStatus[]) => {
     try {
-      await fetch('/api/lead-statuses/reorder', {
+      const res = await fetch('/api/lead-statuses/reorder', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderedIds: orderedStatuses.map(s => s.id) }),
       })
+      if (!res.ok) {
+        console.error('Failed to save order:', res.status)
+        setError('순서 저장에 실패했습니다.')
+      }
     } catch (err) {
       console.error('Failed to save order:', err)
+      setError('순서 저장에 실패했습니다.')
     }
   }
 

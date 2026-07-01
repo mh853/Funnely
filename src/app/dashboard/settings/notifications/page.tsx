@@ -49,7 +49,8 @@ export default async function NotificationSettingsPage() {
   }
 
   // Check permissions
-  const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
+  const { isAdminUser } = await import('@/lib/auth/permissions')
+  const canEdit = isAdminUser(userProfile)
 
   return (
     <div className="px-4 space-y-6">

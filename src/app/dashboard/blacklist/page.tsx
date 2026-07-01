@@ -13,18 +13,18 @@ export default async function BlacklistPage() {
 
   // 인증 확인
   const {
-    data: { session },
-  } = await supabase.auth.getSession()
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  if (!session) {
-    redirect('/login')
+  if (!user) {
+    redirect('/auth/login')
   }
 
   // 사용자 프로필 확인
   const { data: userProfile } = await supabase
     .from('users')
     .select('id, full_name, company_id, is_super_admin')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   if (!userProfile?.company_id) {

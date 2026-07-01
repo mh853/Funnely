@@ -25,7 +25,7 @@ export default async function PaymentsPage() {
     .select('*, subscription_plans(*)')
     .eq('company_id', userProfile.company_id)
     .in('status', ['trial', 'active', 'past_due'])
-    .single()
+    .maybeSingle()
 
   // 결제 거래 내역
   const { data: transactions } = await supabase

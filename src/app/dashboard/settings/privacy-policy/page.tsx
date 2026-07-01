@@ -71,45 +71,28 @@ export default function PrivacyPolicyPage() {
   }
 
   const handleSave = async () => {
+    if (!companyId) return
+
     setSaving(true)
     setError('')
     setSaved(false)
 
     try {
-      const { data: existing } = await supabase
+      const { error: upsertError } = await supabase
         .from('privacy_policies')
-        .select('id')
-        .eq('company_id', companyId)
-        .single()
-
-      if (existing) {
-        // Update
-        const { error: updateError } = await supabase
-          .from('privacy_policies')
-          .update({
-            privacy_consent_title: privacyTitle,
-            privacy_consent_content: privacyContent,
-            marketing_consent_title: marketingTitle,
-            marketing_consent_content: marketingContent,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('company_id', companyId)
-
-        if (updateError) throw updateError
-      } else {
-        // Insert
-        const { error: insertError } = await supabase
-          .from('privacy_policies')
-          .insert({
+        .upsert(
+          {
             company_id: companyId,
             privacy_consent_title: privacyTitle,
             privacy_consent_content: privacyContent,
             marketing_consent_title: marketingTitle,
             marketing_consent_content: marketingContent,
-          })
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'company_id' }
+        )
 
-        if (insertError) throw insertError
-      }
+      if (upsertError) throw upsertError
 
       setSaved(true)
       setTimeout(() => setSaved(false), 3000)

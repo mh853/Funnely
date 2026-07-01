@@ -32,13 +32,13 @@ export default function NotificationsClient({
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   const supabase = createClient()
 
-  // Fetch notifications from server (company_id 기반)
+  // Fetch notifications from server (user-specific OR company-wide)
   async function fetchNotifications() {
     try {
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
-        .eq('company_id', companyId)
+        .or(`user_id.eq.${userId},and(user_id.is.null,company_id.eq.${companyId})`)
         .order('created_at', { ascending: false })
 
       if (error) throw error

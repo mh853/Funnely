@@ -17,6 +17,7 @@ export default function TrackingPixelsClient({
   const supabase = createClient()
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [hasRecord, setHasRecord] = useState(!!initialData)
 
   // Form state
   const [facebookPixelId, setFacebookPixelId] = useState(initialData?.facebook_pixel_id || '')
@@ -45,7 +46,7 @@ export default function TrackingPixelsClient({
         is_active: isActive,
       }
 
-      if (initialData) {
+      if (hasRecord) {
         // Update existing record
         const { error } = await supabase
           .from('tracking_pixels')
@@ -60,6 +61,7 @@ export default function TrackingPixelsClient({
           .insert([pixelData])
 
         if (error) throw error
+        setHasRecord(true)
       }
 
       setSuccess(true)

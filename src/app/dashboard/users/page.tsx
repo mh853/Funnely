@@ -41,7 +41,8 @@ export default async function UsersPage() {
   }
 
   // Check if user can manage team members
-  const canManage = ['hospital_owner', 'hospital_admin'].includes(userProfile.role)
+  const { isAdminUser } = await import('@/lib/auth/permissions')
+  const canManage = isAdminUser(userProfile)
 
   return (
     <div className="space-y-6">

@@ -18,8 +18,7 @@ interface Props {
   params: { id: string }
 }
 
-// ISR: Revalidate every 1 minute for edit page
-export const revalidate = 60
+export const dynamic = 'force-dynamic'
 
 export default async function LandingPageEditPage({ params }: Props) {
   const supabase = await createClient()

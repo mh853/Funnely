@@ -1137,7 +1137,7 @@ export default function LeadsClient({
           '결제금액': lead.lead_payments && lead.lead_payments.length > 0
             ? lead.lead_payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toLocaleString() + '원'
             : '-',
-          '비고': lead.memo || '-',
+          '비고': lead.notes || '-',
           '콜 담당자': callAssignedUserName,
           '상담 담당자': counselorAssignedUserName,
           'UTM_Source': lead.utm_source || '-',
@@ -1236,6 +1236,7 @@ export default function LeadsClient({
     } catch (error: any) {
       console.error('Distribution error:', error)
       alert(`리드 분배 실패: ${error.message}`)
+    } finally {
       setIsDistributing(false)
     }
   }
@@ -2124,17 +2125,6 @@ export default function LeadsClient({
         onUpdate={() => router.refresh()}
       />
 
-      {/* 예약완료일정등록 모달 */}
-      <ScheduleRegistrationModal
-        isOpen={contractModalLeadId !== null}
-        onClose={() => {
-          setContractModalLeadId(null)
-          setContractDate('')
-          setContractTime('')
-        }}
-        leadId={contractModalLeadId || ''}
-        onConfirm={confirmContractComplete}
-      />
 
       {/* 리드 추가 모달 */}
       <AddLeadModal

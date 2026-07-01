@@ -151,13 +151,12 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     utmData.term[term] = (utmData.term[term] || 0) + 1
   })
 
-  // Aggregate landing page performance data
+  // Aggregate landing page performance data — no date filter here so pages created in prior
+  // months are included if they had traffic in the selected month
   const { data: landingPages } = await supabase
     .from('landing_pages')
     .select('id, title, slug, created_at, views_count')
     .eq('company_id', userProfile.company_id)
-    .gte('created_at', queryStart)
-    .lt('created_at', queryEnd)
     .order('created_at', { ascending: false })
 
   // Get monthly device breakdown for landing pages from landing_page_analytics
@@ -201,8 +200,10 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     }
   })
 
-  // Build landing page performance rows
-  const landingPageRows = landingPages?.map(lp => {
+  // Build landing page performance rows — only include pages that had traffic or conversions this month
+  const landingPageRows = landingPages?.filter(lp =>
+    deviceBreakdownByLandingPage[lp.id] || conversionByLandingPage[lp.id]
+  ).map(lp => {
     const deviceBreakdown = deviceBreakdownByLandingPage[lp.id] || { pc: 0, mobile: 0, tablet: 0 }
     // Use aggregated device breakdown for total to ensure sum matches
     const trafficTotal = deviceBreakdown.pc + deviceBreakdown.mobile + deviceBreakdown.tablet

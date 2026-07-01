@@ -83,11 +83,11 @@ export default async function LeadDetailPage({ params }: Props) {
   // Get team members for assignment
   const { data: teamMembers } = await supabase
     .from('users')
-    .select('id, name, role')
+    .select('id, full_name, role')
     .eq('company_id', userProfile.company_id)
     .eq('is_active', true)
-    .in('role', ['marketing_staff', 'marketing_manager', 'hospital_admin'])
-    .order('name')
+    .in('role', ['marketing_staff', 'marketing_manager', 'hospital_admin', 'company_owner', 'company_admin'])
+    .order('full_name')
 
   // Decrypt phone number
   const decryptedPhone = decryptPhone(lead.phone)

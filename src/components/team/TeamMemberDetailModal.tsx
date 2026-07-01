@@ -97,12 +97,14 @@ export default function TeamMemberDetailModal({
         updateData.role = roleMap[selectedRole] || 'marketing_staff'
       }
 
-      const { error } = await supabase
+      const { error, count } = await supabase
         .from('users')
         .update(updateData)
         .eq('id', member.id)
+        .select('id', { count: 'exact', head: true })
 
       if (error) throw error
+      if (count === 0) throw new Error('저장 권한이 없거나 대상을 찾을 수 없습니다.')
 
       setMessage({ type: 'success', text: '정보가 저장되었습니다.' })
       setTimeout(() => {
@@ -124,9 +126,14 @@ export default function TeamMemberDetailModal({
 
     try {
       const supabase = createClient()
-      const { error } = await supabase.from('users').delete().eq('id', member.id)
+      const { error, count } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', member.id)
+        .select('id', { count: 'exact', head: true })
 
       if (error) throw error
+      if (count === 0) throw new Error('삭제 권한이 없거나 대상을 찾을 수 없습니다.')
 
       setMessage({ type: 'success', text: '팀원이 삭제되었습니다.' })
       setTimeout(() => {

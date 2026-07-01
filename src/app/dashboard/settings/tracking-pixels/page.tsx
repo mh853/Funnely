@@ -30,7 +30,7 @@ export default async function TrackingPixelsPage() {
     .from('tracking_pixels')
     .select('*')
     .eq('company_id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   return (
     <div className="px-4 space-y-6">
