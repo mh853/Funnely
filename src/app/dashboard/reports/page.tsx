@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import ReportsClient from './ReportsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 export const revalidate = 30
 
@@ -147,7 +148,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     const allDates = new Set<string>()
     filteredLeads.forEach((lead) => {
       const leadDate = new Date(lead.created_at)
-      const dateStr = leadDate.toISOString().split('T')[0]
+      const dateStr = toKSTDateStr(leadDate)
       allDates.add(dateStr)
     })
 
@@ -194,7 +195,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // 2단계: 실제 리드 데이터로 업데이트
   filteredLeads.forEach((lead) => {
     const leadDate = new Date(lead.created_at)
-    const dateStr = leadDate.toISOString().split('T')[0]
+    const dateStr = toKSTDateStr(leadDate)
 
     // 이미 초기화되어 있으므로 존재 체크만
     if (resultsByDate[dateStr]) {
@@ -226,7 +227,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     const leadCreatedAt = payment.leads?.created_at
     if (leadCreatedAt) {
       const paymentDate = new Date(leadCreatedAt)
-      const dateStr = paymentDate.toISOString().split('T')[0]
+      const dateStr = toKSTDateStr(paymentDate)
       if (resultsByDate[dateStr]) {
         resultsByDate[dateStr].paymentAmount += payment.amount || 0
         resultsByDate[dateStr].paymentCount += 1
@@ -430,7 +431,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // 리드 데이터로 부서별 월별 데이터 업데이트
   filteredLeads.forEach((lead) => {
     const leadDate = new Date(lead.created_at)
-    const dateStr = leadDate.toISOString().split('T')[0]
+    const dateStr = toKSTDateStr(leadDate)
     const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
     const deptName = assignedUser?.department || '미배정'
 
@@ -465,7 +466,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       const leadCreatedAt = payment.leads?.created_at
       if (leadCreatedAt) {
         const paymentDate = new Date(leadCreatedAt)
-        const dateStr = paymentDate.toISOString().split('T')[0]
+        const dateStr = toKSTDateStr(paymentDate)
         const assignedUser = teamMembers?.find(m => m.id === lead.call_assigned_to)
         const deptName = assignedUser?.department || '미배정'
 
@@ -590,7 +591,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // 리드 데이터로 담당자별 월별 데이터 업데이트
   filteredLeads.forEach((lead) => {
     const leadDate = new Date(lead.created_at)
-    const dateStr = leadDate.toISOString().split('T')[0]
+    const dateStr = toKSTDateStr(leadDate)
     const staffId = lead.call_assigned_to || 'unassigned'
 
     if (staffMonthlyData[staffId]) {
@@ -624,7 +625,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       const leadCreatedAt = payment.leads?.created_at
       if (leadCreatedAt) {
         const paymentDate = new Date(leadCreatedAt)
-        const dateStr = paymentDate.toISOString().split('T')[0]
+        const dateStr = toKSTDateStr(paymentDate)
         const staffId = lead.call_assigned_to || 'unassigned'
 
         if (staffMonthlyData[staffId]) {

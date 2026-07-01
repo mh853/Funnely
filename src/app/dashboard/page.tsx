@@ -8,6 +8,7 @@ import {
   DocumentTextIcon,
   HomeIcon,
 } from '@heroicons/react/24/outline'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 // ISR: Revalidate every 30 seconds for real-time dashboard updates
 export const revalidate = 30
@@ -167,12 +168,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     // 선택된 월의 총 개수
     selectedMonthCount++
 
-    // Daily chart data
-    const dateKey = `${leadDate.getMonth() + 1}/${leadDate.getDate()}`
+    // Daily chart data (KST 기준 월/일 파싱)
+    const kstDateStr = toKSTDateStr(leadDate)
+    const [, kstMonthStr, kstDayStr] = kstDateStr.split('-')
+    const dateKey = `${parseInt(kstMonthStr)}/${parseInt(kstDayStr)}`
     dailyStats[dateKey] = (dailyStats[dateKey] || 0) + 1
 
     // Results table data
-    const dateStr = leadDate.toISOString().split('T')[0]
+    const dateStr = kstDateStr
     if (!resultsByDate[dateStr]) {
       resultsByDate[dateStr] = {
         date: dateStr,
@@ -218,7 +221,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     const leadCreatedAt = payment.leads?.created_at
     if (leadCreatedAt) {
       const paymentDate = new Date(leadCreatedAt)
-      const dateStr = paymentDate.toISOString().split('T')[0]
+      const dateStr = toKSTDateStr(paymentDate)
       if (resultsByDate[dateStr]) {
         resultsByDate[dateStr].paymentAmount += payment.amount || 0
         resultsByDate[dateStr].paymentCount += 1
@@ -251,7 +254,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     for (let i = 0; i < 7; i++) {
       const date = new Date(now)
       date.setDate(date.getDate() - i)
-      const dateStr = date.toISOString().split('T')[0]
+      const dateStr = toKSTDateStr(date)
       last7Days.push(dateStr)
     }
   } else {
@@ -785,7 +788,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                     for (let i = 0; i < 7; i++) {
                       const date = new Date(now)
                       date.setDate(date.getDate() - i)
-                      const dateStr = date.toISOString().split('T')[0]
+                      const dateStr = toKSTDateStr(date)
                       last7DaysPageView.push(dateStr)
                     }
 

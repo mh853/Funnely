@@ -3,6 +3,14 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 
+// 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 interface TrafficRow {
   date: string
   total: number
@@ -253,7 +261,7 @@ export default function AnalyticsClient({
       const conversionRate = trafficTotal > 0 ? ((conversionTotal / trafficTotal) * 100).toFixed(1) : '0.0'
 
       return [
-        new Date(lp.createdAt).toISOString().split('T')[0],
+        toLocalDateStr(new Date(lp.createdAt)),
         lp.title,
         trafficTotal,
         lp.traffic.pc,
@@ -797,7 +805,7 @@ export default function AnalyticsClient({
                 return (
                   <tr key={lp.id}>
                     <td className="px-3 py-2 text-sm text-center text-gray-900">
-                      {new Date(lp.createdAt).toISOString().split('T')[0]}
+                      {toLocalDateStr(new Date(lp.createdAt))}
                     </td>
                     <td className="px-3 py-2 text-sm text-left max-w-xs">
                       <a

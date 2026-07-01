@@ -4,6 +4,15 @@
  */
 
 /**
+ * UTC 타임스탬프를 KST(UTC+9) 기준 YYYY-MM-DD 문자열로 변환.
+ * 서버 컴포넌트(Vercel = UTC)에서 날짜를 한국 기준으로 집계할 때 사용.
+ */
+export function toKSTDateStr(date: Date): string {
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+  return kst.toISOString().split('T')[0]
+}
+
+/**
  * Format date to standard format: YYYY-MM-DD HH:mm
  * @param date - Date string, Date object, or timestamp
  * @returns Formatted date string or '-' if invalid

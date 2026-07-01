@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 export const revalidate = 30
 
@@ -105,7 +106,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   }
 
   leads?.forEach((lead) => {
-    const dateStr = lead.created_at.split('T')[0]
+    const dateStr = toKSTDateStr(new Date(lead.created_at))
     if (conversionByDate[dateStr]) {
       conversionByDate[dateStr].total++
       const deviceType = (lead.device_type || 'unknown').toLowerCase()
