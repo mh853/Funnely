@@ -47,7 +47,7 @@ export default async function LandingPageEditPage({ params }: Props) {
     .select('*')
     .eq('id', params.id)
     .eq('company_id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   if (error || !landingPage) {
     return (

@@ -20,7 +20,7 @@ export default async function LeadStatusesPage() {
     .from('users')
     .select('company_id, simple_role')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile?.company_id) {
     return (

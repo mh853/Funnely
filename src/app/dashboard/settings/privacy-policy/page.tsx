@@ -36,7 +36,7 @@ export default function PrivacyPolicyPage() {
         .from('users')
         .select('company_id')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile) return
 
@@ -46,7 +46,7 @@ export default function PrivacyPolicyPage() {
         .from('privacy_policies')
         .select('*')
         .eq('company_id', userProfile.company_id)
-        .single()
+        .maybeSingle()
 
       if (policy) {
         setPrivacyTitle(policy.privacy_consent_title)

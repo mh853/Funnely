@@ -313,9 +313,16 @@ export async function PATCH(request: NextRequest) {
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) throw error
+
+    if (!payment) {
+      return NextResponse.json(
+        { success: false, error: { message: '결제 내역을 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     // Create audit log for update
     const changes: string[] = []

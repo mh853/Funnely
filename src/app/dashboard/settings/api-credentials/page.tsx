@@ -80,7 +80,7 @@ export default function ApiCredentialsPage() {
         .from('users')
         .select('company_id, role')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!userProfile) throw new Error('사용자 정보를 찾을 수 없습니다.')
 

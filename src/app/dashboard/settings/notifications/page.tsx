@@ -19,7 +19,7 @@ export default async function NotificationSettingsPage() {
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile) {
     return (
@@ -36,7 +36,7 @@ export default async function NotificationSettingsPage() {
     .from('companies')
     .select('id, name, notification_emails')
     .eq('id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   if (!company) {
     return (

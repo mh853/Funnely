@@ -187,6 +187,7 @@ export async function POST(request: NextRequest) {
         .from('leads')
         .update({ call_assigned_to: userId })
         .eq('id', leadId)
+        .eq('company_id', companyId)
         .is('call_assigned_to', null) // 동시성 제어: 이미 배정된 리드는 스킵 (is() 메서드 사용)
     })
 

@@ -31,7 +31,7 @@ export default async function LandingPagesPage() {
     .from('companies')
     .select('short_id')
     .eq('id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   const companyShortId = companyShortIdData?.short_id || null
 

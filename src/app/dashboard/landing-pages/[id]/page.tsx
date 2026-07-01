@@ -41,7 +41,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
     .from('companies')
     .select('short_id')
     .eq('id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   // Get landing page
   const { data: landingPage, error } = await supabase
@@ -49,7 +49,7 @@ export default async function LandingPageDetailPage({ params }: Props) {
     .select('*')
     .eq('id', params.id)
     .eq('company_id', userProfile.company_id)
-    .single()
+    .maybeSingle()
 
   // Debug: Log timer data
   console.log('Landing page loaded:', {
