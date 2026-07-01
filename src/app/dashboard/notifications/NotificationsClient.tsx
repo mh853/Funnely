@@ -57,12 +57,14 @@ export default function NotificationsClient({
         prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
       )
 
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('notifications')
         .update({ is_read: true })
         .eq('id', notificationId)
+        .select('id')
 
       if (error) throw error
+      if (!updated || updated.length === 0) throw new Error('읽음 처리 권한이 없습니다.')
 
       console.log('✅ [Notifications] Marked as read:', notificationId)
     } catch (error) {

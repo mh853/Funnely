@@ -42,7 +42,7 @@ export default function SubscriptionExpiredPage() {
         .from('users')
         .select('company_id')
         .eq('id', user.id)
-        .single()
+        .maybeSingle()
 
       if (!profile?.company_id) return
 

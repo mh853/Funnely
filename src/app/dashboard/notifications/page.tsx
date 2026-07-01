@@ -18,7 +18,7 @@ export default async function NotificationsPage() {
     .from('users')
     .select('company_id')
     .eq('id', user.id)
-    .single()
+    .maybeSingle()
 
   if (!userProfile) {
     return (
@@ -29,11 +29,15 @@ export default async function NotificationsPage() {
   }
 
   // Get notifications: both user-specific AND company-wide
-  // user_id=current_user OR (user_id IS NULL AND company_id=user_company)
+  // company_id가 null이면 company-wide 조건 제외하여 불필요한 전체 조회 방지
+  const orFilter = userProfile.company_id
+    ? `user_id.eq.${user.id},and(user_id.is.null,company_id.eq.${userProfile.company_id})`
+    : `user_id.eq.${user.id}`
+
   const { data: notifications, error: notificationsError } = await supabase
     .from('notifications')
     .select('*')
-    .or(`user_id.eq.${user.id},and(user_id.is.null,company_id.eq.${userProfile.company_id})`)
+    .or(orFilter)
     .order('created_at', { ascending: false })
 
   // Log error for debugging

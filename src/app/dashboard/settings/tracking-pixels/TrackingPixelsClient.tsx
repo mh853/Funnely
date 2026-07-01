@@ -48,12 +48,14 @@ export default function TrackingPixelsClient({
 
       if (hasRecord) {
         // Update existing record
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('tracking_pixels')
           .update(pixelData)
           .eq('company_id', companyId)
+          .select('company_id')
 
         if (error) throw error
+        if (!updated || updated.length === 0) throw new Error('업데이트 권한이 없습니다.')
       } else {
         // Insert new record
         const { error } = await supabase
