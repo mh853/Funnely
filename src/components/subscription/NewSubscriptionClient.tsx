@@ -820,7 +820,7 @@ export default function NewSubscriptionClient({
                 onClick={() => handleSelectPlan(plan)}
                 disabled={loading || (isCurrentPlan && !isCurrentlyOnTrial)}
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
-                  isCurrentPlan
+                  isCurrentPlan && !isCurrentlyOnTrial
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : isFree
                     ? 'bg-gray-700 text-white hover:bg-gray-800'
