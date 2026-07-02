@@ -104,7 +104,10 @@ export async function PUT(
       .select()
       .single()
 
-    if (error || !workflow) {
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Workflow not found' }, { status: 404 })
+      }
       console.error('[Workflow API] Error updating workflow:', error)
       return NextResponse.json(
         { error: 'Failed to update workflow' },

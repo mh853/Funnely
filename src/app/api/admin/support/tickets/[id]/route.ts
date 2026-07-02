@@ -116,6 +116,9 @@ export async function PATCH(
       .single()
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Ticket not found' }, { status: 404 })
+      }
       console.error('[Support Ticket Update API] Error updating ticket:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
     }

@@ -89,17 +89,13 @@ export async function PATCH(
       .single()
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Subscription not found' }, { status: 404 })
+      }
       console.error('[Subscription Update API] Update error:', error)
       return NextResponse.json(
         { error: 'Failed to update subscription' },
         { status: 500 }
-      )
-    }
-
-    if (!data) {
-      return NextResponse.json(
-        { error: 'Subscription not found' },
-        { status: 404 }
       )
     }
 

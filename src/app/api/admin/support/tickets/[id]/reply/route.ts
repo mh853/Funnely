@@ -175,6 +175,9 @@ export async function PATCH(
       .single()
 
     if (replyError) {
+      if (replyError.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Reply not found' }, { status: 404 })
+      }
       console.error('[Support Reply API] Error updating reply:', replyError)
       return NextResponse.json({ error: replyError.message }, { status: 500 })
     }

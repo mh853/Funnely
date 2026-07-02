@@ -37,7 +37,12 @@ export async function POST(request: NextRequest) {
       .select()
       .single()
 
-    if (error) throw error
+    if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Churn record not found' }, { status: 404 })
+      }
+      throw error
+    }
 
     return NextResponse.json({ success: true, data })
   } catch (error) {

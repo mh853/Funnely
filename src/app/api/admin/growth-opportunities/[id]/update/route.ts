@@ -65,17 +65,13 @@ export async function POST(
       .single()
 
     if (error) {
+      if (error.code === 'PGRST116') {
+        return NextResponse.json({ error: 'Opportunity not found' }, { status: 404 })
+      }
       console.error('Error updating growth opportunity:', error)
       return NextResponse.json(
         { error: 'Failed to update opportunity' },
         { status: 500 }
-      )
-    }
-
-    if (!data) {
-      return NextResponse.json(
-        { error: 'Opportunity not found' },
-        { status: 404 }
       )
     }
 
