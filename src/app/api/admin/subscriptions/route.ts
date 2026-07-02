@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
         cancelled_at,
         created_at,
         company:companies(id, name, business_number, phone),
-        plan:subscription_plans(id, name, plan_type, price_monthly, price_yearly, max_users, max_leads)
+        plan:subscription_plans!plan_id(id, name, plan_type, price_monthly, price_yearly, max_users, max_leads)
       `
       )
       .order('created_at', { ascending: false })

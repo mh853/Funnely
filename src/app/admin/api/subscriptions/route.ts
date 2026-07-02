@@ -21,7 +21,7 @@ export async function GET(request: Request) {
         `
         *,
         company:companies(id, name, business_number, phone),
-        plan:subscription_plans(id, name, price_monthly, price_yearly, max_users, max_leads)
+        plan:subscription_plans!plan_id(id, name, price_monthly, price_yearly, max_users, max_leads)
       `,
         { count: 'exact' }
       )

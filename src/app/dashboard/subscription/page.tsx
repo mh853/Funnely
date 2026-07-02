@@ -29,7 +29,7 @@ export default async function SubscriptionPage() {
   // 현재 구독 정보 조회 - 활성/체험 우선, 없으면 최신
   const { data: activeCurrentSub } = await supabase
     .from('company_subscriptions')
-    .select('*, subscription_plans(*)')
+    .select('*, subscription_plans!plan_id(*)')
     .eq('company_id', userProfile.company_id)
     .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })
@@ -40,7 +40,7 @@ export default async function SubscriptionPage() {
   if (!currentSubscription) {
     const { data: fallback } = await supabase
       .from('company_subscriptions')
-      .select('*, subscription_plans(*)')
+      .select('*, subscription_plans!plan_id(*)')
       .eq('company_id', userProfile.company_id)
       .order('created_at', { ascending: false })
       .limit(1)

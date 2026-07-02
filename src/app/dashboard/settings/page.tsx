@@ -113,7 +113,7 @@ export default async function SettingsPage() {
   // 유료 구독 여부 확인
   const { data: activeSubscription } = await db
     .from('company_subscriptions')
-    .select('id, status, subscription_plans(name, price_monthly)')
+    .select('id, status, subscription_plans!plan_id(name, price_monthly)')
     .eq('company_id', userProfile.company_id)
     .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })

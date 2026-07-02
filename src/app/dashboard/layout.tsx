@@ -109,7 +109,7 @@ export default async function DashboardLayout({
     const serviceSupabase = createServiceClient()
     const { data: subWithPlan } = await serviceSupabase
       .from('company_subscriptions')
-      .select('status, subscription_plans(name)')
+      .select('status, subscription_plans!plan_id(name)')
       .eq('company_id', userProfile.company_id)
       .in('status', ['active', 'trial', 'past_due'])
       .order('created_at', { ascending: false })

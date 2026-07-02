@@ -57,9 +57,9 @@ export async function checkSubscriptionAccess(
         billing_cycle,
         current_period_start,
         current_period_end,
-        trial_end,
+        trial_end_date,
         grace_period_end,
-        subscription_plans (
+        subscription_plans!plan_id (
           id,
           name,
           plan_type,
@@ -106,7 +106,7 @@ export async function checkSubscriptionAccess(
 
     // 3-2. Trial 상태 체크
     if (subscription.status === 'trial') {
-      const trialEnd = subscription.trial_end ? new Date(subscription.trial_end) : null
+      const trialEnd = (subscription as any).trial_end_date ? new Date((subscription as any).trial_end_date) : null
       if (trialEnd && trialEnd < now) {
         // Trial 만료됨
         return {
@@ -221,7 +221,7 @@ export async function canCreateLandingPage(companyId: string): Promise<{
       .select(`
         id,
         status,
-        subscription_plans (
+        subscription_plans!plan_id (
           max_landing_pages
         )
       `)
@@ -312,7 +312,7 @@ export async function hasFeatureAccess(
       .select(`
         id,
         status,
-        subscription_plans (
+        subscription_plans!plan_id (
           features
         )
       `)
@@ -381,7 +381,7 @@ export async function canInviteUser(companyId: string): Promise<{
       .select(`
         id,
         status,
-        subscription_plans (
+        subscription_plans!plan_id (
           max_users
         )
       `)

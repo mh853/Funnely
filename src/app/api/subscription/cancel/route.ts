@@ -26,7 +26,7 @@ export async function POST() {
 
   const { data: subscription } = await db
     .from('company_subscriptions')
-    .select('id, status, current_period_end, subscription_plans(name, price_monthly)')
+    .select('id, status, current_period_end, subscription_plans!plan_id(name, price_monthly)')
     .eq('company_id', profile.company_id)
     .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })

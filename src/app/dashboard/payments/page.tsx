@@ -22,7 +22,7 @@ export default async function PaymentsPage() {
   // 현재 구독 정보
   const { data: subscription } = await supabase
     .from('company_subscriptions')
-    .select('*, subscription_plans(*)')
+    .select('*, subscription_plans!plan_id(*)')
     .eq('company_id', userProfile.company_id)
     .in('status', ['trial', 'active', 'past_due'])
     .maybeSingle()

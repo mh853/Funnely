@@ -86,9 +86,9 @@ export async function GET(request: NextRequest) {
         supabase
           .from('company_subscriptions')
           .select(`
-            id, plan_id, status, billing_cycle, trial_end,
+            id, plan_id, status, billing_cycle, trial_end_date,
             current_period_end, created_at, cancelled_at, company_id,
-            subscription_plans(id, name, price_monthly, price_yearly)
+            subscription_plans!plan_id(id, name, price_monthly, price_yearly)
           `)
           .in('company_id', companyIds)
           .in('status', ['trial', 'active', 'past_due'])
