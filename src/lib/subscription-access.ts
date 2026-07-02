@@ -320,10 +320,13 @@ export async function hasFeatureAccess(
       .in('status', ['active', 'trial', 'past_due'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (subError || !subscription) {
+    if (subError) {
       console.error('[Feature Access] 구독 조회 실패:', subError)
+      return false
+    }
+    if (!subscription) {
       return false
     }
 

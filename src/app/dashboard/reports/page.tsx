@@ -5,7 +5,7 @@ import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
 import { toKSTDateStr } from '@/lib/utils/date'
 
-export const revalidate = 30
+export const dynamic = 'force-dynamic'
 
 interface ReportsPageProps {
   searchParams: Promise<{

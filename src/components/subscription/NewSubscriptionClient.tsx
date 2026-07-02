@@ -342,57 +342,87 @@ export default function NewSubscriptionClient({
           })
           // requestBillingAuth는 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음
           return
-        } else {
-          // 신규 사용자 (Free → 유료 업그레이드, 첫 체험) → 7일 무료 체험 시작
-          const now = new Date()
-          const trialEndDate = new Date()
-          trialEndDate.setDate(trialEndDate.getDate() + 7)
-
-          const { error } = await supabase
-            .from('company_subscriptions')
-            .update({
-              plan_id: plan.id,
-              billing_cycle: billingCycle,
-              status: 'trial',
-              current_period_start: now.toISOString(),
-              current_period_end: null,
-              trial_start_date: now.toISOString(),
-              trial_end_date: trialEndDate.toISOString(),
-              has_used_trial: true,
-            })
-            .eq('id', currentSubscription.id)
-
-          if (error) throw new Error(error.message)
+        } else if (plan.name === '프로') {
+          // 신규 사용자 + 프로 플랜 → 7일 무료 체험 시작
+          const res = await fetch('/api/subscription/start-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscriptionId: currentSubscription.id,
+              planId: plan.id,
+              billingCycle,
+            }),
+          })
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
 
           alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
           router.refresh()
+        } else {
+          // 신규 사용자 + 기타 유료 플랜 → 카드 등록 후 즉시 결제
+          const { error: updateError } = await supabase
+            .from('company_subscriptions')
+            .update({ plan_id: plan.id, billing_cycle: billingCycle })
+            .eq('id', currentSubscription.id)
+
+          if (updateError) throw new Error(updateError.message)
+
+          const tossPayments = await loadTossPayments(
+            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
+          )
+          await tossPayments.requestBillingAuth('카드', {
+            customerKey: companyId,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+          })
         }
       } else {
-        // 구독 자체가 없는 경우 (예외 - 보통 회원가입 시 Free 부여됨)
-        const now = new Date()
-        const trialEndDate = new Date()
-        trialEndDate.setDate(trialEndDate.getDate() + 7)
-
-        const { error } = await supabase
-          .from('company_subscriptions')
-          .insert({
-            company_id: companyId,
-            plan_id: plan.id,
-            status: isFree ? 'active' : 'trial',
-            billing_cycle: billingCycle,
-            current_period_start: isFree ? null : now.toISOString(),
-            current_period_end: null,
-            trial_start_date: isFree ? null : now.toISOString(),
-            trial_end_date: isFree ? null : trialEndDate.toISOString(),
-            has_used_trial: !isFree,
+        // 구독 자체가 없는 경우 (예외 - 보통 회원가입 시 구독이 생성됨)
+        if (isFree) {
+          const { error } = await supabase
+            .from('company_subscriptions')
+            .insert({
+              company_id: companyId,
+              plan_id: plan.id,
+              status: 'active',
+              billing_cycle: 'monthly',
+            })
+          if (error) throw new Error(error.message)
+          router.refresh()
+        } else if (plan.name === '프로') {
+          // 프로 플랜 무료 체험
+          const res = await fetch('/api/subscription/start-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ planId: plan.id, billingCycle, companyId }),
           })
-
-        if (error) throw new Error(error.message)
-
-        if (!isFree) {
+          const data = await res.json()
+          if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
           alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          router.refresh()
+        } else {
+          // 기타 유료 플랜: 구독 생성 후 카드 등록
+          const { data: newSub, error } = await supabase
+            .from('company_subscriptions')
+            .insert({
+              company_id: companyId,
+              plan_id: plan.id,
+              status: 'active',
+              billing_cycle: billingCycle,
+            })
+            .select('id')
+            .single()
+          if (error) throw new Error(error.message)
+
+          const tossPayments = await loadTossPayments(
+            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
+          )
+          await tossPayments.requestBillingAuth('카드', {
+            customerKey: companyId,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${newSub.id}`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+          })
         }
-        router.refresh()
       }
     } catch (error: any) {
       console.error('Subscription error:', error)
@@ -421,7 +451,7 @@ export default function NewSubscriptionClient({
     }
   }
 
-  const getButtonLabel = (plan: Plan, isCurrentPlan: boolean): string | null => {
+  const getButtonLabel = (plan: Plan, isCurrentPlan: boolean): string => {
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
@@ -429,9 +459,9 @@ export default function NewSubscriptionClient({
 
     // 유료 플랜
     if (isExistingUser) return hasBillingKey ? '플랜 변경' : '카드 등록 후 결제'
-    // 신규 사용자: 프로 플랜만 7일 무료 체험, 나머지는 버튼 없음
+    // 신규 사용자: 프로 플랜만 7일 무료 체험, 나머지 유료 플랜은 바로 구독
     if (plan.name === '프로') return '7일 무료 체험'
-    return null
+    return '구독하기'
   }
 
   return (
@@ -638,7 +668,7 @@ export default function NewSubscriptionClient({
             ? '플랜을 선택하면 등록된 카드로 즉시 결제가 진행됩니다.'
             : isExistingUser
             ? '플랜을 선택하면 카드 등록 후 즉시 결제가 진행됩니다.'
-            : '7일 무료 체험 후 마음에 드시면 구독하세요. 카드 등록이 필요하지 않습니다.'}
+            : '프로 플랜은 7일 무료 체험 가능. 나머지 플랜은 카드 등록 후 즉시 결제됩니다.'}
         </p>
       </div>
 
@@ -746,23 +776,21 @@ export default function NewSubscriptionClient({
                 ))}
               </ul>
 
-              {getButtonLabel(plan, isCurrentPlan) !== null && (
-                <button
-                  onClick={() => handleSelectPlan(plan)}
-                  disabled={loading || isCurrentPlan}
-                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
-                    isCurrentPlan
-                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                      : isFree
-                      ? 'bg-gray-700 text-white hover:bg-gray-800'
-                      : isRecommended
-                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
-                      : 'bg-gray-900 text-white hover:bg-gray-800'
-                  }`}
-                >
-                  {getButtonLabel(plan, isCurrentPlan)}
-                </button>
-              )}
+              <button
+                onClick={() => handleSelectPlan(plan)}
+                disabled={loading || isCurrentPlan}
+                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
+                  isCurrentPlan
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                    : isFree
+                    ? 'bg-gray-700 text-white hover:bg-gray-800'
+                    : isRecommended
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
+                    : 'bg-gray-900 text-white hover:bg-gray-800'
+                }`}
+              >
+                {getButtonLabel(plan, isCurrentPlan)}
+              </button>
             </div>
           )
         })}
@@ -771,9 +799,9 @@ export default function NewSubscriptionClient({
       {/* 안내 문구 */}
       <div className="text-center text-sm text-gray-500 space-y-1 mt-8">
         {!isExistingUser && (
-          <p>* 프로 플랜 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 자동으로 종료됩니다.</p>
+          <p>* 프로 플랜 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 자동으로 Free 플랜으로 전환됩니다.</p>
         )}
-        <p>* 모든 가격은 VAT 별도입니다</p>
+        <p>* 모든 가격은 VAT 별도입니다.</p>
       </div>
     </div>
   )

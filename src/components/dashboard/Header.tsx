@@ -11,9 +11,10 @@ interface HeaderProps {
   userProfile: any
   mobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
+  currentPlanName?: string | null
 }
 
-export default function Header({ user, userProfile, mobileMenuOpen, setMobileMenuOpen }: HeaderProps) {
+export default function Header({ user, userProfile, mobileMenuOpen, setMobileMenuOpen, currentPlanName }: HeaderProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -44,6 +45,17 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
         </div>
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
+          {/* 현재 플랜 배지 */}
+          {currentPlanName && (
+            <button
+              onClick={() => router.push('/dashboard/subscription')}
+              className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors border border-indigo-200"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+              {currentPlanName}
+            </button>
+          )}
+
           {/* Notification Bell */}
           {userProfile?.company_id && user?.id && (
             <NotificationBell companyId={userProfile.company_id} userId={user.id} />

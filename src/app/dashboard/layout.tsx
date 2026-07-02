@@ -103,6 +103,25 @@ export default async function DashboardLayout({
 
   // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
 
+  // 헤더 배지용 플랜명 조회
+  let currentPlanName: string | null = null
+  if (userProfile?.company_id) {
+    const serviceSupabase = createServiceClient()
+    const { data: subWithPlan } = await serviceSupabase
+      .from('company_subscriptions')
+      .select('status, subscription_plans(name)')
+      .eq('company_id', userProfile.company_id)
+      .in('status', ['active', 'trial', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (subWithPlan) {
+      const planName = (subWithPlan.subscription_plans as any)?.name
+      currentPlanName = planName ? `${planName}${subWithPlan.status === 'trial' ? ' (체험)' : ''}` : null
+    }
+  }
+
   return (
     <DashboardLayoutClient
       user={user}
@@ -110,6 +129,7 @@ export default async function DashboardLayout({
       planFeatures={planFeatures}
       subscriptionBanner={subscriptionBanner}
       subscriptionStatus={subscriptionStatus}
+      currentPlanName={currentPlanName}
     >
       {children}
     </DashboardLayoutClient>
