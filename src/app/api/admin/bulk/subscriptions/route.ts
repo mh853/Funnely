@@ -1,22 +1,19 @@
 // Phase 4.2: Bulk Operations - Subscriptions API
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { executeBulkOperation } from '@/lib/bulk/bulkProcessor'
 import type { SubscriptionBulkOperation } from '@/types/bulk'
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient()
-
-    // Check authentication
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
+    const adminUser = await getSuperAdminUser()
+    if (!adminUser) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
+    const user = adminUser.user
+
+    const supabase = await createClient()
 
     // Parse request body
     const body = await request.json()

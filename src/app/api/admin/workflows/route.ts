@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%`)
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`)
     }
 
     const { data: workflows, error, count } = await query

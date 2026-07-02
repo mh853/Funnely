@@ -51,8 +51,8 @@ export async function GET(request: NextRequest) {
     if (startDate) query = query.gte('created_at', startDate)
     if (endDate) query = query.lte('created_at', endDate)
     if (search) {
-      // IP 주소 또는 User Agent로 검색
-      query = query.or(`ip_address.ilike.%${search}%,user_agent.ilike.%${search}%`)
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`ip_address.ilike.%${safeSearch}%,user_agent.ilike.%${safeSearch}%`)
     }
 
     // 정렬 및 페이지네이션

@@ -74,7 +74,8 @@ export async function GET(request: Request) {
 
     // 검색 (회사명 또는 담당자 이메일)
     if (search) {
-      query = query.or(`name.ilike.%${search}%,users.email.ilike.%${search}%`)
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`name.ilike.%${safeSearch}%,users.email.ilike.%${safeSearch}%`)
     }
 
     // 정렬

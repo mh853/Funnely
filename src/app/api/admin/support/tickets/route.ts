@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     if (search && search.trim()) {
       // ILIKE 검색: 제목과 내용만 검색
-      const searchTerm = `%${search.trim()}%`
+      const searchTerm = `%${search.trim().replace(/[,()]/g, '')}%`
       let searchQuery = supabase
         .from('support_tickets')
         .select('*', { count: 'exact' })

@@ -44,7 +44,8 @@ export async function GET(request: Request) {
 
     // Search (name or email)
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`)
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
     }
 
     // Filter by company

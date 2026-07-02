@@ -84,9 +84,8 @@ export async function GET(request: Request) {
 
     // 검색 (이름, 이메일)
     if (search) {
-      query = query.or(
-        `full_name.ilike.%${search}%,email.ilike.%${search}%`
-      )
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
     }
 
     // 정렬

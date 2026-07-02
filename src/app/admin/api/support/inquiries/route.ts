@@ -25,7 +25,8 @@ export async function GET(request: Request) {
     if (status) query = query.eq('status', status)
     if (type) query = query.eq('inquiry_type', type)
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%,subject.ilike.%${search}%`)
+      const safeSearch = search.replace(/[,()]/g, '')
+      query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,subject.ilike.%${safeSearch}%`)
     }
 
     const { data, error, count } = await query

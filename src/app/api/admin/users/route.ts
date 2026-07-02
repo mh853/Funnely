@@ -44,8 +44,9 @@ export async function GET(request: NextRequest) {
       .select('id', { count: 'exact', head: true })
 
     if (search) {
+      const safeSearch = search.replace(/[,()]/g, '')
       countQuery = countQuery.or(
-        `email.ilike.%${search}%,profiles.full_name.ilike.%${search}%`
+        `email.ilike.%${safeSearch}%,profiles.full_name.ilike.%${safeSearch}%`
       )
     }
 
