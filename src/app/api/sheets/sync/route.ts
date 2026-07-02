@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { createClient as createUserClient } from '@/lib/supabase/server'
 import crypto from 'crypto'
 import {
   fetchSheetData,
@@ -27,10 +28,26 @@ export async function POST(request: NextRequest) {
       syncKey, // 동기화 인증 키 (cron job용)
     } = body
 
-    // 인증 확인 (cron job 또는 사용자 요청)
+    // 인증 확인: cron job(syncKey) 또는 인증된 사용자 세션 필요
     const cronSecret = process.env.CRON_SECRET
-    if (syncKey && cronSecret && syncKey !== cronSecret) {
-      return NextResponse.json({ error: '인증 실패' }, { status: 401 })
+    const isAuthorizedCron = syncKey && cronSecret && syncKey === cronSecret
+
+    if (!isAuthorizedCron) {
+      // 사용자 세션 기반 인증
+      const supabase = await createUserClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+      }
+      // 요청한 companyId가 세션 사용자의 회사인지 검증
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
+      if (!userProfile || userProfile.company_id !== companyId) {
+        return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+      }
     }
 
     if (!spreadsheetId || !companyId) {
@@ -179,6 +196,21 @@ export async function GET(request: NextRequest) {
 
   if (!companyId) {
     return NextResponse.json({ error: 'companyId 필수' }, { status: 400 })
+  }
+
+  // 인증된 사용자의 회사 로그만 조회 허용
+  const supabase = await createUserClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
+  }
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('company_id')
+    .eq('id', user.id)
+    .single()
+  if (!userProfile || userProfile.company_id !== companyId) {
+    return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
   }
 
   const { data: logs } = await supabaseAdmin
