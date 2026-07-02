@@ -42,6 +42,7 @@ export async function POST(request: NextRequest) {
       .from('notifications')
       .update({ is_read: true })
       .in('id', notificationIds)
+      .eq('user_id', adminUser.user.id)
 
     if (error) {
       console.error('[Mark Read API] Update error:', error)

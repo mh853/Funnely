@@ -11,7 +11,11 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
-    // 권한 확인 (일반 사용자도 자신의 티켓 답변 조회 가능)
+    const adminUser = await getSuperAdminUser()
+    if (!adminUser) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
