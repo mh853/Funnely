@@ -64,24 +64,11 @@ export default function AccountDeletionSection({
   return (
     <>
       <div className="bg-white shadow-lg rounded-xl overflow-hidden border border-red-100">
-        <div className="bg-gradient-to-r from-red-50 to-rose-50 px-6 py-4 border-b border-red-100">
-          <div className="flex items-center gap-3">
-            <div className="bg-red-100 rounded-lg p-2">
-              <svg className="h-5 w-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-              </svg>
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-red-900">위험 구역</h2>
-              <p className="text-sm text-red-600">이 구역의 작업은 되돌릴 수 없습니다.</p>
-            </div>
-          </div>
-        </div>
         <div className="px-6 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
             <h3 className="text-base font-semibold text-gray-900">계정 탈퇴</h3>
             <p className="text-sm text-gray-500 mt-1">
-              탈퇴 후 30일간 데이터가 보존되며, 이후 영구 삭제됩니다.
+              알림: 계정 탈퇴 시 이전 데이터는 모두 삭제되며 되돌릴 수 없습니다.
               {isOwner && teamMemberCount > 0 && (
                 <span className="block mt-1 text-orange-600 font-medium">
                   현재 팀원 {teamMemberCount}명이 함께 비활성화됩니다.

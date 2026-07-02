@@ -373,7 +373,7 @@ export async function canInviteUser(companyId: string): Promise<{
     const supabase = createServiceClient()
 
     // 1. 현재 구독 정보 및 플랜 제한사항 조회 (최신 구독 1건)
-    const { data: subscription, error: subError } = await supabase
+    const { data: subscription } = await supabase
       .from('company_subscriptions')
       .select(`
         id,
@@ -386,18 +386,12 @@ export async function canInviteUser(companyId: string): Promise<{
       .in('status', ['active', 'trial', 'past_due'])
       .order('created_at', { ascending: false })
       .limit(1)
-      .single()
+      .maybeSingle()
 
-    if (subError || !subscription) {
-      return {
-        allowed: false,
-        currentCount: 0,
-        maxAllowed: 0,
-        message: '활성 구독이 없습니다.',
-      }
-    }
-
-    const maxAllowed = (subscription.subscription_plans as any)?.max_users
+    // 활성 구독이 없는 경우 기본 제한(1명) 적용
+    const maxAllowed = subscription
+      ? (subscription.subscription_plans as any)?.max_users
+      : 1
 
     // 무제한인 경우 (NULL)
     if (maxAllowed === null) {

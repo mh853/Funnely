@@ -157,7 +157,7 @@ export default function SignupPage() {
             {/* Company Name */}
             <div>
               <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
-                회사명 <span className="text-red-500">*</span>
+                회사명
               </label>
               <input
                 id="companyName"
@@ -182,12 +182,13 @@ export default function SignupPage() {
             {/* Phone */}
             <div>
               <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
-                핸드폰 번호
+                핸드폰 번호 <span className="text-red-500">*</span>
               </label>
               <input
                 id="phone"
                 name="phone"
                 type="tel"
+                required
                 value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"

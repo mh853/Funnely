@@ -421,7 +421,7 @@ export default function NewSubscriptionClient({
     }
   }
 
-  const getButtonLabel = (plan: Plan, isCurrentPlan: boolean) => {
+  const getButtonLabel = (plan: Plan, isCurrentPlan: boolean): string | null => {
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
@@ -429,7 +429,9 @@ export default function NewSubscriptionClient({
 
     // 유료 플랜
     if (isExistingUser) return hasBillingKey ? '플랜 변경' : '카드 등록 후 결제'
-    return '7일 무료 체험'
+    // 신규 사용자: 프로 플랜만 7일 무료 체험, 나머지는 버튼 없음
+    if (plan.name === '프로') return '7일 무료 체험'
+    return null
   }
 
   return (
@@ -728,7 +730,7 @@ export default function NewSubscriptionClient({
                         연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약
                       </p>
                     )}
-                    {!isExistingUser && !isActivePaidUser && (
+                    {!isExistingUser && !isActivePaidUser && plan.name === '프로' && (
                       <p className="text-xs text-indigo-600 mt-1 font-medium">7일 무료 체험 가능</p>
                     )}
                   </>
@@ -744,21 +746,23 @@ export default function NewSubscriptionClient({
                 ))}
               </ul>
 
-              <button
-                onClick={() => handleSelectPlan(plan)}
-                disabled={loading || isCurrentPlan}
-                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
-                  isCurrentPlan
-                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
-                    : isFree
-                    ? 'bg-gray-700 text-white hover:bg-gray-800'
-                    : isRecommended
-                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
-                    : 'bg-gray-900 text-white hover:bg-gray-800'
-                }`}
-              >
-                {getButtonLabel(plan, isCurrentPlan)}
-              </button>
+              {getButtonLabel(plan, isCurrentPlan) !== null && (
+                <button
+                  onClick={() => handleSelectPlan(plan)}
+                  disabled={loading || isCurrentPlan}
+                  className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
+                    isCurrentPlan
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : isFree
+                      ? 'bg-gray-700 text-white hover:bg-gray-800'
+                      : isRecommended
+                      ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white hover:from-indigo-600 hover:to-purple-700'
+                      : 'bg-gray-900 text-white hover:bg-gray-800'
+                  }`}
+                >
+                  {getButtonLabel(plan, isCurrentPlan)}
+                </button>
+              )}
             </div>
           )
         })}
@@ -767,7 +771,7 @@ export default function NewSubscriptionClient({
       {/* 안내 문구 */}
       <div className="text-center text-sm text-gray-500 space-y-1 mt-8">
         {!isExistingUser && (
-          <p>* 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 Free 플랜으로 자동 전환됩니다.</p>
+          <p>* 프로 플랜 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 자동으로 종료됩니다.</p>
         )}
         <p>* 모든 가격은 VAT 별도입니다</p>
       </div>
