@@ -46,9 +46,21 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Delete event
-    const { error: deleteError } = await supabase.from('calendar_events').delete().eq('id', id)
+    const { data: deleted, error: deleteError } = await supabase
+      .from('calendar_events')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', userProfile.company_id)
+      .select('id')
 
     if (deleteError) throw deleteError
+
+    if (!deleted || deleted.length === 0) {
+      return NextResponse.json(
+        { success: false, error: { message: '일정을 찾을 수 없거나 권한이 없습니다.' } },
+        { status: 404 }
+      )
+    }
 
     return NextResponse.json({
       success: true,

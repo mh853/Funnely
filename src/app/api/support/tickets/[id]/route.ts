@@ -112,7 +112,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 첨부파일 업데이트
+    // 첨부파일 업데이트 (소유자 필터로 TOCTOU 방지)
     const { data: updatedTicket, error } = await supabase
       .from('support_tickets')
       .update({
@@ -120,12 +120,17 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.id)
+      .eq('created_by_user_id', user.id)
       .select()
-      .single()
+      .maybeSingle()
 
     if (error) {
       console.error('Ticket update error:', error)
       return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    if (!updatedTicket) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
     return NextResponse.json({

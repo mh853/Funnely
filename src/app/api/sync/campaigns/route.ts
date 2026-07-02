@@ -79,11 +79,12 @@ export async function POST(request: NextRequest) {
         )
     }
 
-    // Update last sync time
+    // Update last sync time (company_id filter prevents TOCTOU)
     await supabase
       .from('ad_accounts')
       .update({ last_synced_at: new Date().toISOString() })
       .eq('id', adAccountId)
+      .eq('company_id', userProfile.company_id)
 
     return NextResponse.json({
       success: true,

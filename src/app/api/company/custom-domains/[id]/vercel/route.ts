@@ -125,7 +125,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: result.error }, { status: 500 })
     }
 
-    // DB 업데이트
+    // DB 업데이트 (company_id filter prevents TOCTOU)
     const { error: updateError } = await (supabase as any)
       .from('company_custom_domains')
       .update({
@@ -134,6 +134,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
         vercel_config_type: result.dnsConfig?.configType || 'cname',
       })
       .eq('id', id)
+      .eq('company_id', (userProfile as any)?.company_id)
 
     if (updateError) {
       console.error('[Vercel] DB 업데이트 실패:', updateError)

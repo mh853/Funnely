@@ -68,7 +68,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     const isVerified = await verifyDnsTxtRecord(domain.domain, domain.verification_token)
 
     if (isVerified) {
-      // 인증 성공
+      // 인증 성공 (company_id filter prevents TOCTOU)
       const { error: updateError } = await (supabase as any)
         .from('company_custom_domains')
         .update({
@@ -78,6 +78,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
           verification_error: null,
         })
         .eq('id', id)
+        .eq('company_id', (userProfile as any)?.company_id)
 
       if (updateError) {
         console.error('[Domain Verify] 상태 업데이트 실패:', updateError)
@@ -89,7 +90,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
         message: '도메인 소유권이 확인되었습니다.',
       })
     } else {
-      // 인증 실패
+      // 인증 실패 (company_id filter prevents TOCTOU)
       await (supabase as any)
         .from('company_custom_domains')
         .update({
@@ -98,6 +99,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
           verification_error: 'DNS TXT 레코드를 찾을 수 없습니다.',
         })
         .eq('id', id)
+        .eq('company_id', (userProfile as any)?.company_id)
 
       return NextResponse.json({
         verified: false,

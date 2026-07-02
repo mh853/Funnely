@@ -49,11 +49,20 @@ export async function DELETE(
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
-    // Delete report
-    const { error } = await supabase.from('reports').delete().eq('id', id)
+    // Delete report (company_id filter prevents TOCTOU)
+    const { data: deleted, error } = await supabase
+      .from('reports')
+      .delete()
+      .eq('id', id)
+      .eq('company_id', userProfile.company_id)
+      .select('id')
 
     if (error) {
       throw error
+    }
+
+    if (!deleted || deleted.length === 0) {
+      return NextResponse.json({ error: '리포트를 찾을 수 없거나 권한이 없습니다.' }, { status: 404 })
     }
 
     return NextResponse.json({ success: true })

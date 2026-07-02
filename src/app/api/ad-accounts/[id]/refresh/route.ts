@@ -113,6 +113,7 @@ export async function POST(
       .from('ad_accounts')
       .update(updateData)
       .eq('id', id)
+      .eq('company_id', userProfile.company_id)
 
     if (updateError) {
       throw new Error('토큰 업데이트에 실패했습니다.')
