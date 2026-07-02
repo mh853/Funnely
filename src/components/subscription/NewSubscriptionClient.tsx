@@ -245,7 +245,41 @@ export default function NewSubscriptionClient({
       const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
       if (currentSubscription) {
-        if (isFree) {
+        if (isCurrentlyOnTrial && hasBillingKey) {
+          // 체험 중 + 빌링키 있음: 바로 결제하여 구독 전환
+          const planChanged =
+            plan.id !== currentSubscription.subscription_plans.id ||
+            billingCycle !== currentSubscription.billing_cycle
+
+          if (planChanged) {
+            const { error: updateError } = await supabase
+              .from('company_subscriptions')
+              .update({ plan_id: plan.id, billing_cycle: billingCycle })
+              .eq('id', currentSubscription.id)
+            if (updateError) throw new Error(updateError.message)
+          }
+
+          const {
+            data: { session },
+          } = await supabase.auth.getSession()
+          if (!session) throw new Error('로그인이 필요합니다.')
+
+          const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+          const res = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${session.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ subscriptionId: currentSubscription.id }),
+          })
+          if (!res.ok) {
+            const err = await res.json()
+            throw new Error(err.error || '결제에 실패했습니다.')
+          }
+          alert(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
+          router.refresh()
+        } else if (isFree) {
           // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음
           const { error } = await supabase
             .from('company_subscriptions')
@@ -453,6 +487,8 @@ export default function NewSubscriptionClient({
 
   const getButtonLabel = (plan: Plan, isCurrentPlan: boolean): string => {
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
+    // 체험 중 플랜: 결제 전환 허용 (disabled 아님)
+    if (isCurrentPlan && isCurrentlyOnTrial) return hasBillingKey ? '지금 결제하기' : '결제하여 구독 시작'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
@@ -664,7 +700,11 @@ export default function NewSubscriptionClient({
       <div className="text-center">
         <h1 className="text-3xl font-bold text-gray-900">구독 플랜 선택</h1>
         <p className="mt-2 text-gray-600">
-          {isActivePaidUser && hasBillingKey
+          {isCurrentlyOnTrial && hasBillingKey
+            ? '지금 결제하면 체험 기간과 무관하게 즉시 구독이 시작됩니다.'
+            : isCurrentlyOnTrial
+            ? '카드를 등록하면 즉시 결제되어 구독이 시작됩니다. 체험 기간은 그대로 유지됩니다.'
+            : isActivePaidUser && hasBillingKey
             ? '플랜을 선택하면 등록된 카드로 즉시 결제가 진행됩니다.'
             : isExistingUser
             ? '플랜을 선택하면 카드 등록 후 즉시 결제가 진행됩니다.'
@@ -778,7 +818,7 @@ export default function NewSubscriptionClient({
 
               <button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={loading || isCurrentPlan}
+                disabled={loading || (isCurrentPlan && !isCurrentlyOnTrial)}
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
                   isCurrentPlan
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
