@@ -47,3 +47,14 @@ claudedocs/
 CLAUDE.md
 **/CLAUDE.md
 .serena/
+.claude/settings.json
+
+# design-sync build artifacts
+.ds-sync/
+ds-bundle/
+.design-sync/
+
+# test screenshots (playwright/browser verification artifacts)
+*.png
+*.jpeg
+*.jpg
