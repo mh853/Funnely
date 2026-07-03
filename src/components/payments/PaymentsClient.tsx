@@ -183,7 +183,7 @@ export default function PaymentsClient({
       )}
 
       {/* 카드 관리 섹션 */}
-      {subscription && subscription.status !== 'trial' && (
+      {subscription && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
