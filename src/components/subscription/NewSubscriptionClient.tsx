@@ -35,11 +35,18 @@ interface CurrentSubscription {
   subscription_plans: Plan
 }
 
+interface CardInfo {
+  number?: string
+  cardType?: string
+  ownerType?: string
+}
+
 interface NewSubscriptionClientProps {
   plans: Plan[]
   currentSubscription: CurrentSubscription | null
   companyId: string
   companyBillingKeySubscriptionId?: string | null
+  companyCardInfo?: CardInfo | null
 }
 
 function formatFeatures(plan: Plan): string[] {
@@ -86,6 +93,7 @@ export default function NewSubscriptionClient({
   currentSubscription,
   companyId,
   companyBillingKeySubscriptionId,
+  companyCardInfo,
 }: NewSubscriptionClientProps) {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
@@ -102,6 +110,7 @@ export default function NewSubscriptionClient({
     isCycleChange: boolean
   } | null>(null)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
+  const [cardChanging, setCardChanging] = useState(false)
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
 
@@ -453,6 +462,29 @@ export default function NewSubscriptionClient({
     } finally {
       setLoading(false)
       setSelectedPlan(null)
+    }
+  }
+
+  const maskCardNumber = (number: string) => {
+    const digits = number.replace(/\D/g, '')
+    if (digits.length < 8) return number
+    return `${digits.slice(0, 4)}-****-****-${digits.slice(-4)}`
+  }
+
+  const handleChangeCard = async () => {
+    if (!currentSubscription) return
+    setCardChanging(true)
+    try {
+      const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+      await tossPayments.requestBillingAuth('카드', {
+        customerKey: companyId,
+        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}&mode=update`,
+        failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+      })
+      setCardChanging(false)
+    } catch (err) {
+      console.error('Card change error:', err)
+      setCardChanging(false)
     }
   }
 
@@ -824,6 +856,68 @@ export default function NewSubscriptionClient({
           )
         })}
       </div>
+
+      {/* 결제 수단 */}
+      {currentSubscription && (
+        <div className="bg-white rounded-xl border border-gray-200 p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <svg className="h-5 w-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+            </svg>
+            <h3 className="text-base font-semibold text-gray-900">결제 수단</h3>
+          </div>
+
+          {(() => {
+            const cardInfo = currentSubscription.billing_key
+              ? (currentSubscription as any).card_info
+              : companyCardInfo
+            const hasBillingKeyForDisplay = !!(currentSubscription.billing_key || companyCardInfo)
+
+            return hasBillingKeyForDisplay && cardInfo ? (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-8 bg-gradient-to-r from-gray-700 to-gray-900 rounded-md flex items-center justify-center">
+                    <span className="text-white text-xs font-bold">CARD</span>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-900">
+                      {cardInfo.number ? maskCardNumber(cardInfo.number) : '카드 정보 없음'}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {[cardInfo.cardType, cardInfo.ownerType].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleChangeCard}
+                  disabled={cardChanging}
+                  className="px-4 py-2 text-sm font-medium text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {cardChanging ? '이동 중...' : '카드 변경'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-8 bg-gray-100 rounded-md border-2 border-dashed border-gray-300 flex items-center justify-center">
+                    <svg className="h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-gray-500">등록된 카드가 없습니다.</p>
+                </div>
+                <button
+                  onClick={handleChangeCard}
+                  disabled={cardChanging}
+                  className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {cardChanging ? '이동 중...' : '카드 등록'}
+                </button>
+              </div>
+            )
+          })()}
+        </div>
+      )}
 
       {/* 안내 문구 */}
       <div className="text-center text-sm text-gray-500 space-y-1 mt-8">

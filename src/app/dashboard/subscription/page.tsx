@@ -48,14 +48,20 @@ export default async function SubscriptionPage() {
     currentSubscription = fallback
   }
 
-  // 회사 전체 구독에서 빌링키 조회 (만료/취소된 구독 포함)
-  // 현재 구독에 빌링키가 없어도 이전 결제 이력의 빌링키 재사용 가능
+  // 회사 전체 구독에서 빌링키/카드 정보 조회 (만료/취소된 구독 포함)
   let companyBillingKeySubscriptionId: string | null = null
-  if (!((currentSubscription as any)?.billing_key)) {
+  let companyCardInfo: { number?: string; cardType?: string; ownerType?: string } | null = null
+
+  const currentBillingKey = (currentSubscription as any)?.billing_key
+  if (currentBillingKey) {
+    // 현재 구독에 빌링키 있음 → 현재 구독 카드 정보 사용
+    companyCardInfo = (currentSubscription as any)?.card_info ?? null
+  } else {
+    // 현재 구독에 빌링키 없음 → 다른 구독에서 조회
     const svc = createServiceClient() as any
     const { data: subWithKey } = await svc
       .from('company_subscriptions')
-      .select('id, billing_key')
+      .select('id, billing_key, card_info')
       .eq('company_id', userProfile.company_id)
       .not('billing_key', 'is', null)
       .order('updated_at', { ascending: false })
@@ -63,6 +69,7 @@ export default async function SubscriptionPage() {
       .maybeSingle()
     if (subWithKey?.billing_key) {
       companyBillingKeySubscriptionId = subWithKey.id
+      companyCardInfo = subWithKey.card_info ?? null
     }
   }
 
@@ -73,6 +80,7 @@ export default async function SubscriptionPage() {
         currentSubscription={currentSubscription}
         companyId={userProfile.company_id}
         companyBillingKeySubscriptionId={companyBillingKeySubscriptionId}
+        companyCardInfo={companyCardInfo}
       />
     </div>
   )
