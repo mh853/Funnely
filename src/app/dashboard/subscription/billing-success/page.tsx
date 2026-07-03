@@ -45,9 +45,10 @@ function BillingSuccessContent() {
         const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 
         // Step 1: 빌링키 발급 + 카드 정보 저장
-        const authRes = await fetch(`${baseUrl}/functions/v1/toss-billing-auth`, {
+        // 프록시 API를 경유하여 trial 상태 구독도 처리 가능하도록 함
+        const authRes = await fetch('/api/subscription/proxy-billing-auth', {
           method: 'POST',
-          headers,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ customerKey, authKey, subscriptionId }),
         })
         if (!authRes.ok) {

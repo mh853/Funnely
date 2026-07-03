@@ -39,6 +39,7 @@ interface NewSubscriptionClientProps {
   plans: Plan[]
   currentSubscription: CurrentSubscription | null
   companyId: string
+  companyBillingKeySubscriptionId?: string | null
 }
 
 function formatFeatures(plan: Plan): string[] {
@@ -84,6 +85,7 @@ export default function NewSubscriptionClient({
   plans,
   currentSubscription,
   companyId,
+  companyBillingKeySubscriptionId,
 }: NewSubscriptionClientProps) {
   const router = useRouter()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
@@ -119,8 +121,8 @@ export default function NewSubscriptionClient({
   )
   const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription || isActivePaidUser
 
-  // 빌링키 등록 여부 (카드 등록 완료 = 즉시 결제 가능)
-  const hasBillingKey = !!currentSubscription?.billing_key
+  // 빌링키 등록 여부: 현재 구독 또는 회사 다른 구독에 빌링키가 있으면 재사용 가능
+  const hasBillingKey = !!currentSubscription?.billing_key || !!companyBillingKeySubscriptionId
 
   // Realtime 구독 상태 변경 감지
   useEffect(() => {
@@ -246,32 +248,19 @@ export default function NewSubscriptionClient({
 
       if (currentSubscription) {
         if (isCurrentlyOnTrial && hasBillingKey) {
-          // 체험 중 + 빌링키 있음: 바로 결제하여 구독 전환
-          const planChanged =
-            plan.id !== currentSubscription.subscription_plans.id ||
-            billingCycle !== currentSubscription.billing_cycle
-
-          if (planChanged) {
-            const { error: updateError } = await supabase
-              .from('company_subscriptions')
-              .update({ plan_id: plan.id, billing_cycle: billingCycle })
-              .eq('id', currentSubscription.id)
-            if (updateError) throw new Error(updateError.message)
-          }
-
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-          if (!session) throw new Error('로그인이 필요합니다.')
-
-          const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-          const res = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+          // 체험 중 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
+          const res = await fetch('/api/subscription/convert-trial', {
             method: 'POST',
-            headers: {
-              Authorization: `Bearer ${session.access_token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ subscriptionId: currentSubscription.id }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscriptionId: currentSubscription.id,
+              planId: plan.id,
+              billingCycle,
+              // 현재 구독에 빌링키 없으면 다른 구독의 빌링키 사용
+              billingKeySubscriptionId: currentSubscription.billing_key
+                ? undefined
+                : companyBillingKeySubscriptionId,
+            }),
           })
           if (!res.ok) {
             const err = await res.json()

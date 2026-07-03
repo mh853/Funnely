@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewSubscriptionClient from '@/components/subscription/NewSubscriptionClient'
 
@@ -48,12 +48,31 @@ export default async function SubscriptionPage() {
     currentSubscription = fallback
   }
 
+  // 회사 전체 구독에서 빌링키 조회 (만료/취소된 구독 포함)
+  // 현재 구독에 빌링키가 없어도 이전 결제 이력의 빌링키 재사용 가능
+  let companyBillingKeySubscriptionId: string | null = null
+  if (!((currentSubscription as any)?.billing_key)) {
+    const svc = createServiceClient() as any
+    const { data: subWithKey } = await svc
+      .from('company_subscriptions')
+      .select('id, billing_key')
+      .eq('company_id', userProfile.company_id)
+      .not('billing_key', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    if (subWithKey?.billing_key) {
+      companyBillingKeySubscriptionId = subWithKey.id
+    }
+  }
+
   return (
     <div className="px-4 py-8">
       <NewSubscriptionClient
         plans={plans || []}
         currentSubscription={currentSubscription}
         companyId={userProfile.company_id}
+        companyBillingKeySubscriptionId={companyBillingKeySubscriptionId}
       />
     </div>
   )
