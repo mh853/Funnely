@@ -7,8 +7,7 @@ export interface FeatureUsage {
   usage_count: number
   last_used_at: string | null
   first_used_at: string
-  unique_users: number
-  adoption_rate: number
+  unique_users_count: number
   created_at: string
   updated_at: string
 }

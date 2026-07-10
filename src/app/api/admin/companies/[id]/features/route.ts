@@ -78,14 +78,18 @@ export async function GET(
     const features: FeatureAnalysis[] = Object.values(TRACKED_FEATURES).map(
       (featureInfo) => {
         const usage = usageMap.get(featureInfo.key)
+        const uniqueUsers = usage?.unique_users_count || 0
         return {
           feature_name: featureInfo.key,
           display_name: featureInfo.display_name,
           category: featureInfo.category,
           usage_count: usage?.usage_count || 0,
           last_used_at: usage?.last_used_at || null,
-          unique_users: usage?.unique_users || 0,
-          adoption_rate: usage?.adoption_rate || 0,
+          unique_users: uniqueUsers,
+          adoption_rate:
+            companyUserCount > 0
+              ? Math.round((uniqueUsers / companyUserCount) * 1000) / 10
+              : 0,
           is_used: !!usage && usage.usage_count > 0,
         }
       }
