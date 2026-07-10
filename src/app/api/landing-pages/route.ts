@@ -177,6 +177,9 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update landing page (company_id 필터로 소유권 검증)
+    // 공개 렌더링/제출 라우트는 status='published'뿐 아니라 is_active=true도 함께
+    // 요구한다. status만 바꾸고 is_active를 안 건드리면, 이 에디터에서 "발행"을
+    // 눌러도 화면엔 발행된 것처럼 보이지만 실제 공개 페이지는 그대로 막혀있게 된다.
     const { data: landingPage, error } = await supabase
       .from('landing_pages')
       .update({
@@ -186,6 +189,7 @@ export async function PUT(request: NextRequest) {
         sections,
         theme,
         status,
+        is_active: status !== undefined ? status === 'published' : undefined,
         published_at: status === 'published' ? new Date().toISOString() : undefined,
       })
       .eq('id', id)

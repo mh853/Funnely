@@ -1,7 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { FormSubmission } from '@/types/landing-page.types'
-import { hashPhone } from '@/lib/encryption/phone'
+import { hashPhone, encryptPhone } from '@/lib/encryption/phone'
 
 // User-Agent를 분석하여 기기 타입 감지
 function detectDeviceType(userAgent: string | undefined): 'pc' | 'mobile' | 'tablet' | 'unknown' {
@@ -236,7 +236,7 @@ export async function POST(request: NextRequest) {
         company_id: landingPage.company_id,
         landing_page_id,
         name,
-        phone, // Note: In production, this should be encrypted
+        phone: encryptPhone(phone),
         phone_hash: phoneHash,
         email,
         message: form_data.message || form_data.메시지 || undefined,

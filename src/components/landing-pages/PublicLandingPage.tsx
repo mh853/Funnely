@@ -377,15 +377,289 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     [timeLeft]
   )
 
-  // Helper to check if section is enabled (memoized)
-  const isSectionEnabled = useMemo(() => {
-    const enabledSections = new Set(
-      landingPage.sections
-        .filter((s: { enabled?: boolean; type: string }) => s.enabled !== false)
-        .map((s: { type: string }) => s.type)
-    )
-    return (sectionType: string) => enabledSections.has(sectionType as any)
-  }, [landingPage.sections])
+  // Render a single section by type, in the order it appears in landingPage.sections
+  const renderSection = (section: { id: string; type: string; enabled?: boolean }) => {
+    if (section.enabled === false) return null
+
+    switch (section.type) {
+      case 'hero_image':
+        if (!landingPage.images || landingPage.images.length === 0) return null
+        return (
+          <div key={section.id} className="space-y-0">
+            {landingPage.images.map((image: string, idx: number) => (
+              <div key={idx} className="overflow-hidden">
+                <img
+                  src={image}
+                  alt={`Hero ${idx + 1}`}
+                  className="w-full object-contain"
+                  style={{ maxHeight: '600px' }}
+                />
+              </div>
+            ))}
+          </div>
+        )
+
+      case 'description':
+        if (!landingPage.description_enabled || !landingPage.description) return null
+        return (
+          <div key={section.id} className="text-center">
+            <p className="text-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
+              {landingPage.description}
+            </p>
+          </div>
+        )
+
+      case 'realtime_status':
+        if (!landingPage.realtime_enabled || !landingPage.collect_data || realtimeLeads.length === 0) return null
+        return (
+          <div key={section.id} className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 overflow-hidden">
+            <div className="text-base font-semibold text-blue-900 mb-3">실시간 현황</div>
+            <div className="flex items-center gap-3 text-base text-blue-700">
+              <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
+              <div key={currentRealtimeIndex} className="animate-in fade-in duration-500">
+                {(landingPage.realtime_template || '{name}님이 {device}에서 상담을 신청했습니다.')
+                  .replace('{name}', realtimeLeads[currentRealtimeIndex].name)
+                  .replace('{device}', realtimeLeads[currentRealtimeIndex].device)
+                  .replace('{location}', realtimeLeads[currentRealtimeIndex].device)}
+              </div>
+            </div>
+          </div>
+        )
+
+      case 'timer': {
+        // Timer countdown (only if not sticky and deadline is set) + expiry message (independent of sticky state)
+        const showCountdown = landingPage.timer_enabled && landingPage.timer_deadline && landingPage.timer_sticky_position === 'none'
+        const showExpiredMessage = isExpired && landingPage.collect_data
+        if (!showCountdown && !showExpiredMessage) return null
+        return (
+          <div key={section.id} className="space-y-8">
+            {showCountdown && (
+              <div
+                className="rounded-lg p-3 border-2"
+                style={{
+                  borderColor: landingPage.timer_color || '#EF4444',
+                  backgroundColor: `${landingPage.timer_color || '#EF4444'}10`
+                }}
+              >
+                <div className="flex flex-col items-center gap-1">
+                  {landingPage.timer_text && (
+                    <div className="text-xs font-medium" style={{ color: landingPage.timer_color || '#EF4444' }}>
+                      {landingPage.timer_text}
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
+                      {timerCountdown}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {showExpiredMessage && (
+              <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-8 text-center">
+                <div className="text-gray-500 text-lg mb-2">⏰ 마감되었습니다</div>
+                <p className="text-gray-600">
+                  신청 기간이 종료되어 더 이상 접수를 받지 않습니다.
+                </p>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      case 'form':
+        if (isExpired || !landingPage.collect_data || landingPage.collection_mode !== 'inline') return null
+        return (
+          <div key={section.id} className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
+            <div className="p-4 bg-indigo-50 border-b border-indigo-100">
+              <p className="text-sm text-indigo-900">
+                💡 상담을 위해 아래 정보를 입력해주세요
+              </p>
+            </div>
+            <div className="p-6 space-y-4">
+              {/* Name Field */}
+              {landingPage.collect_name !== false && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    이름 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={nameInput}
+                    onChange={(e) => setNameInput(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    placeholder="홍길동"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+              {/* Phone Field */}
+              {landingPage.collect_phone !== false && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    전화번호 <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(formatPhoneNumber(e.target.value))}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                    placeholder="01012345678"
+                    disabled={isSubmitting}
+                  />
+                </div>
+              )}
+              {/* Custom Fields */}
+              {customFields.map((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }, index: number) => {
+                const fieldKey = field.id || field.question || `field_${index}`
+                return (
+                  <div key={fieldKey}>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      {field.question || `${index + 3}. 항목추가`}
+                      {field.required && <span className="text-red-500 ml-1">*</span>}
+                    </label>
+                    {field.type === 'short_answer' ? (
+                      <input
+                        type="text"
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        placeholder="답변을 입력해주세요"
+                        disabled={isSubmitting}
+                      />
+                    ) : (
+                      <select
+                        value={customFieldValues[fieldKey] || ''}
+                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
+                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
+                        disabled={isSubmitting}
+                      >
+                        <option value="">선택해주세요</option>
+                        {field.options?.map((option: string, idx: number) => (
+                          <option key={idx} value={option}>{option}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+
+      case 'privacy_consent':
+        if (isExpired || !landingPage.collect_data || landingPage.collection_mode !== 'inline') return null
+        return (
+          <div key={section.id} className="space-y-3 bg-white rounded-xl p-4 border border-gray-200">
+            {landingPage.require_privacy_consent && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={privacyConsent}
+                  onChange={(e) => setPrivacyConsent(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded border-gray-300"
+                  disabled={isSubmitting}
+                />
+                <span className="text-sm text-gray-600">
+                  개인정보 수집 및 이용 동의 (필수)
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowPrivacyModal(true)
+                    }}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    보기
+                  </button>
+                </span>
+              </label>
+            )}
+            {landingPage.require_marketing_consent && (
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={marketingConsent}
+                  onChange={(e) => setMarketingConsent(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded border-gray-300"
+                  disabled={isSubmitting}
+                />
+                <span className="text-sm text-gray-600">
+                  마케팅 활용 동의 (선택)
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setShowMarketingModal(true)
+                    }}
+                    className="ml-1 text-indigo-600 underline"
+                  >
+                    보기
+                  </button>
+                </span>
+              </label>
+            )}
+          </div>
+        )
+
+      case 'cta_button': {
+        // Submit error message (rendered directly above the CTA button, mirroring prior fixed layout)
+        const showError = !isExpired && submitError && landingPage.collect_data && landingPage.collection_mode === 'inline'
+        const showButton = !isExpired && landingPage.cta_enabled && landingPage.collect_data && landingPage.cta_sticky_position === 'none'
+        if (!showError && !showButton) return null
+        return (
+          <div key={section.id} className="space-y-8">
+            {showError && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+                {submitError}
+              </div>
+            )}
+            {showButton && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => {
+                    if (landingPage.collection_mode === 'external') {
+                      setShowExternalFormModal(true)
+                    } else if (landingPage.collection_mode === 'inline') {
+                      handleFormSubmit()
+                    }
+                  }}
+                  disabled={isSubmitting}
+                  className="w-full max-w-xs py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
+                >
+                  {isSubmitting && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                  )}
+                  {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
+                </button>
+              </div>
+            )}
+          </div>
+        )
+      }
+
+      case 'call_button':
+        if (isExpired || !landingPage.call_button_enabled || !landingPage.call_button_phone || landingPage.call_button_sticky_position !== 'none') return null
+        return (
+          <div key={section.id} className="flex justify-center">
+            <a
+              href={`tel:${landingPage.call_button_phone}`}
+              className="w-full max-w-xs py-4 text-white rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow flex items-center justify-center gap-3"
+              style={{ backgroundColor: landingPage.call_button_color || '#10B981' }}
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+              </svg>
+              전화: {landingPage.call_button_phone}
+            </a>
+          </div>
+        )
+
+      default:
+        return null
+    }
+  }
 
   // Render sticky buttons (matching preview logic)
   const renderStickyButtons = (position: 'top' | 'bottom') => {
@@ -648,258 +922,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
       {/* Scrollable Content */}
       <div className="max-w-[800px] mx-auto px-6 py-8 space-y-8">
-        {/* Hero Images */}
-        {isSectionEnabled('hero_image') && landingPage.images && landingPage.images.length > 0 && (
-          <div className="space-y-0">
-            {landingPage.images.map((image: string, idx: number) => (
-              <div key={idx} className="overflow-hidden">
-                <img
-                  src={image}
-                  alt={`Hero ${idx + 1}`}
-                  className="w-full object-contain"
-                  style={{ maxHeight: '600px' }}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Description */}
-        {isSectionEnabled('description') && landingPage.description_enabled && landingPage.description && (
-          <div className="text-center">
-            <p className="text-lg text-gray-600 leading-relaxed whitespace-pre-wrap">
-              {landingPage.description}
-            </p>
-          </div>
-        )}
-
-        {/* Realtime Status */}
-        {isSectionEnabled('realtime_status') && landingPage.realtime_enabled && landingPage.collect_data && realtimeLeads.length > 0 && (
-          <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-xl p-6 border-2 border-blue-200 overflow-hidden">
-            <div className="text-base font-semibold text-blue-900 mb-3">실시간 현황</div>
-            <div className="flex items-center gap-3 text-base text-blue-700">
-              <span className="inline-block w-3 h-3 bg-green-500 rounded-full animate-pulse flex-shrink-0"></span>
-              <div key={currentRealtimeIndex} className="animate-in fade-in duration-500">
-                {(landingPage.realtime_template || '{name}님이 {device}에서 상담을 신청했습니다.')
-                  .replace('{name}', realtimeLeads[currentRealtimeIndex].name)
-                  .replace('{device}', realtimeLeads[currentRealtimeIndex].device)
-                  .replace('{location}', realtimeLeads[currentRealtimeIndex].device)}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Timer (only if not sticky and deadline is set) */}
-        {isSectionEnabled('timer') && landingPage.timer_enabled && landingPage.timer_deadline && landingPage.timer_sticky_position === 'none' && (
-          <div
-            className="rounded-lg p-3 border-2"
-            style={{
-              borderColor: landingPage.timer_color || '#EF4444',
-              backgroundColor: `${landingPage.timer_color || '#EF4444'}10`
-            }}
-          >
-            <div className="flex flex-col items-center gap-1">
-              {landingPage.timer_text && (
-                <div className="text-xs font-medium" style={{ color: landingPage.timer_color || '#EF4444' }}>
-                  {landingPage.timer_text}
-                </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs font-bold" style={{ color: landingPage.timer_color || '#EF4444' }}>
-                  {timerCountdown}
-                </span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Timer Expired Message */}
-        {isExpired && landingPage.collect_data && (
-          <div className="bg-gray-50 border-2 border-gray-300 rounded-xl p-8 text-center">
-            <div className="text-gray-500 text-lg mb-2">⏰ 마감되었습니다</div>
-            <p className="text-gray-600">
-              신청 기간이 종료되어 더 이상 접수를 받지 않습니다.
-            </p>
-          </div>
-        )}
-
-        {/* Form Section (Inline Mode) - Functional Form */}
-        {!isExpired && isSectionEnabled('form') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
-          <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
-            <div className="p-4 bg-indigo-50 border-b border-indigo-100">
-              <p className="text-sm text-indigo-900">
-                💡 상담을 위해 아래 정보를 입력해주세요
-              </p>
-            </div>
-            <div className="p-6 space-y-4">
-              {/* Name Field */}
-              {landingPage.collect_name !== false && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    이름 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={nameInput}
-                    onChange={(e) => setNameInput(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                    placeholder="홍길동"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              )}
-              {/* Phone Field */}
-              {landingPage.collect_phone !== false && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    전화번호 <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    value={phoneInput}
-                    onChange={(e) => setPhoneInput(formatPhoneNumber(e.target.value))}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                    placeholder="01012345678"
-                    disabled={isSubmitting}
-                  />
-                </div>
-              )}
-              {/* Custom Fields */}
-              {customFields.map((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }, index: number) => {
-                const fieldKey = field.id || field.question || `field_${index}`
-                return (
-                  <div key={fieldKey}>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {field.question || `${index + 3}. 항목추가`}
-                      {field.required && <span className="text-red-500 ml-1">*</span>}
-                    </label>
-                    {field.type === 'short_answer' ? (
-                      <input
-                        type="text"
-                        value={customFieldValues[fieldKey] || ''}
-                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                        placeholder="답변을 입력해주세요"
-                        disabled={isSubmitting}
-                      />
-                    ) : (
-                      <select
-                        value={customFieldValues[fieldKey] || ''}
-                        onChange={(e) => setCustomFieldValues(prev => ({ ...prev, [fieldKey]: e.target.value }))}
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
-                        disabled={isSubmitting}
-                      >
-                        <option value="">선택해주세요</option>
-                        {field.options?.map((option: string, idx: number) => (
-                          <option key={idx} value={option}>{option}</option>
-                        ))}
-                      </select>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Privacy Consent Section (Inline Mode) */}
-        {!isExpired && isSectionEnabled('privacy_consent') && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
-          <div className="space-y-3 bg-white rounded-xl p-4 border border-gray-200">
-            {landingPage.require_privacy_consent && (
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={privacyConsent}
-                  onChange={(e) => setPrivacyConsent(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-gray-300"
-                  disabled={isSubmitting}
-                />
-                <span className="text-sm text-gray-600">
-                  개인정보 수집 및 이용 동의 (필수)
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowPrivacyModal(true)
-                    }}
-                    className="ml-1 text-indigo-600 underline"
-                  >
-                    보기
-                  </button>
-                </span>
-              </label>
-            )}
-            {landingPage.require_marketing_consent && (
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={marketingConsent}
-                  onChange={(e) => setMarketingConsent(e.target.checked)}
-                  className="mt-1 w-5 h-5 rounded border-gray-300"
-                  disabled={isSubmitting}
-                />
-                <span className="text-sm text-gray-600">
-                  마케팅 활용 동의 (선택)
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setShowMarketingModal(true)
-                    }}
-                    className="ml-1 text-indigo-600 underline"
-                  >
-                    보기
-                  </button>
-                </span>
-              </label>
-            )}
-          </div>
-        )}
-
-        {/* 에러 메시지 - CTA 버튼 바로 위 */}
-        {!isExpired && submitError && landingPage.collect_data && landingPage.collection_mode === 'inline' && (
-          <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
-            {submitError}
-          </div>
-        )}
-
-        {/* CTA Button (only if not sticky) */}
-        {!isExpired && isSectionEnabled('cta_button') && landingPage.cta_enabled && landingPage.collect_data && landingPage.cta_sticky_position === 'none' && (
-          <div className="flex justify-center">
-            <button
-              onClick={() => {
-                if (landingPage.collection_mode === 'external') {
-                  setShowExternalFormModal(true)
-                } else if (landingPage.collection_mode === 'inline') {
-                  handleFormSubmit()
-                }
-              }}
-              disabled={isSubmitting}
-              className="w-full max-w-xs py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
-              style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
-            >
-              {isSubmitting && (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-              )}
-              {isSubmitting ? '제출 중...' : (landingPage.cta_text || '상담 신청하기')}
-            </button>
-          </div>
-        )}
-
-        {/* Call Button (only if not sticky and phone number is set) */}
-        {!isExpired && isSectionEnabled('call_button') && landingPage.call_button_enabled && landingPage.call_button_phone && landingPage.call_button_sticky_position === 'none' && (
-          <div className="flex justify-center">
-            <a
-              href={`tel:${landingPage.call_button_phone}`}
-              className="w-full max-w-xs py-4 text-white rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow flex items-center justify-center gap-3"
-              style={{ backgroundColor: landingPage.call_button_color || '#10B981' }}
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-              </svg>
-              전화: {landingPage.call_button_phone}
-            </a>
-          </div>
+        {/* Sections rendered in stored order (drag-to-reorder result from the editor) */}
+        {(landingPage.sections || []).map((section: { id: string; type: string; enabled?: boolean }) =>
+          renderSection(section)
         )}
       </div>
 
