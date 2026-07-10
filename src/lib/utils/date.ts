@@ -13,6 +13,36 @@ export function toKSTDateStr(date: Date): string {
 }
 
 /**
+ * 현재 시각을 KST(UTC+9) 벽시계 기준으로 읽을 수 있는 Date를 반환한다.
+ * 반환된 Date의 getUTC*() 게터들이 그대로 KST 연/월/일/요일을 나타낸다.
+ * 서버(Vercel = UTC)에서 "오늘"/"이번 주"/"이번 달"을 KST 기준으로 판단할 때 사용한다.
+ */
+export function getKSTNow(): Date {
+  return new Date(Date.now() + 9 * 60 * 60 * 1000)
+}
+
+/**
+ * KST 기준 "오늘 + offsetDays"의 자정을, 실제 UTC 인스턴트(Date)로 반환한다.
+ * TIMESTAMPTZ 컬럼과 비교(gte/lt)할 때 이 값을 그대로 사용하면 된다.
+ */
+export function getKSTStartOfDay(offsetDays = 0): Date {
+  const kst = getKSTNow()
+  const y = kst.getUTCFullYear()
+  const m = kst.getUTCMonth()
+  const d = kst.getUTCDate() + offsetDays
+  // KST 자정 = UTC 자정보다 9시간 빠르므로, UTC 기준으로 9시간을 빼줘야 실제 인스턴트가 나온다.
+  return new Date(Date.UTC(y, m, d, 0, 0, 0) - 9 * 60 * 60 * 1000)
+}
+
+/**
+ * KST 기준 특정 연/월의 1일(+dayOffset)의 자정을, 실제 UTC 인스턴트(Date)로 반환한다.
+ * month는 1~12 (JS Date와 달리 0-index가 아님).
+ */
+export function getKSTMonthStart(year: number, month: number, dayOffset = 0): Date {
+  return new Date(Date.UTC(year, month - 1, 1 + dayOffset, 0, 0, 0) - 9 * 60 * 60 * 1000)
+}
+
+/**
  * Format date to standard format: YYYY-MM-DD HH:mm
  * @param date - Date string, Date object, or timestamp
  * @returns Formatted date string or '-' if invalid

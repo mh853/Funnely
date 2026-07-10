@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import AnalyticsClient from './AnalyticsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
-import { toKSTDateStr } from '@/lib/utils/date'
+import { toKSTDateStr, getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,9 +42,9 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     return <UpgradeNotice featureName="트래픽 분석" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
 
-  const now = new Date()
-  const selectedYear = params.year ? parseInt(params.year) : now.getFullYear()
-  const selectedMonth = params.month ? parseInt(params.month) : now.getMonth() + 1
+  const nowKST = getKSTNow()
+  const selectedYear = params.year ? parseInt(params.year) : nowKST.getUTCFullYear()
+  const selectedMonth = params.month ? parseInt(params.month) : nowKST.getUTCMonth() + 1
 
   // 선택된 월의 시작일과 종료일
   const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1)
@@ -57,8 +57,11 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const nextYear = selectedMonth === 12 ? selectedYear + 1 : selectedYear
   const queryEndDate = `${nextYear}-${String(nextMonth).padStart(2, '0')}-01`
 
-  const queryStart = selectedMonthStart.toISOString()
-  const queryEnd = new Date(selectedYear, selectedMonth, 1).toISOString()
+  // leads.created_at은 TIMESTAMPTZ라 KST 기준 월 경계를 써야 한다. 서버(UTC)의
+  // 로컬 월 경계를 그대로 쓰면 매월 1일 KST 00:00~09:00에 생성된 리드가 이번달/
+  // 지난달 어느 쪽 집계에도 잡히지 않고 누락된다.
+  const queryStart = getKSTMonthStart(selectedYear, selectedMonth).toISOString()
+  const queryEnd = getKSTMonthStart(selectedYear, selectedMonth + 1).toISOString()
 
   // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
   const { data: pageViewsData } = await supabase

@@ -150,16 +150,28 @@ export function generateCompletionPageURL(
  * parseSubdomain('www.funnely.co.kr')    // Returns: null
  */
 export function parseSubdomain(hostname: string): string | null {
-  const parts = hostname.split('.')
+  const host = hostname.split(':')[0] // 포트 제거
 
-  // Main domain (funnely.co.kr or www.funnely.co.kr or localhost)
-  if (parts.length === 2 || (parts.length === 3 && parts[0] === 'www') || hostname.includes('localhost')) {
+  if (host.includes('localhost') || host.includes('127.0.0.1')) {
+    const parts = host.split('.')
+    if (parts.length >= 2 && parts[0] !== 'localhost' && parts[0] !== '127') {
+      return parts[0]
+    }
     return null
   }
 
-  // Subdomain exists (q81d1c.funnely.co.kr)
-  if (parts.length === 3 && parts[0] !== 'www') {
-    return parts[0]
+  // 라벨 개수(parts.length)로 판단하면 funnely.co.kr처럼 TLD 자체가 여러 라벨인
+  // 도메인에서 루트/서브도메인이 잘못 분류된다. 실제 설정된 메인 도메인 문자열과
+  // 직접 비교(접미사 매칭)해야 co.kr, com 등 어떤 TLD 구성에서도 정확하다.
+  const baseDomain = getBaseDomain()
+
+  if (host === baseDomain || host === `www.${baseDomain}`) {
+    return null
+  }
+
+  const suffix = `.${baseDomain}`
+  if (host.endsWith(suffix)) {
+    return host.slice(0, -suffix.length)
   }
 
   return null

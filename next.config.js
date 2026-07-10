@@ -10,9 +10,11 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
 
-  // 서브도메인(q81d1c.localhost:3000)에서 _next/static 에셋을 항상 메인 도메인에서 로드
-  // 없으면 서브도메인 첫 접속 시 webpack 청크 로딩 실패
-  assetPrefix: process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : undefined,
+  // 서브도메인(q81d1c.localhost:PORT)에서 _next/static 에셋을 항상 메인 도메인에서 로드
+  // 없으면 서브도메인 첫 접속 시 webpack 청크 로딩 실패.
+  // 포트를 3000으로 고정하면, 다른 프로젝트가 3000번을 이미 쓰고 있어 Next가 자동으로
+  // 다른 포트를 선택한 경우 전체 페이지가 깨진다 — 실제 PORT 값을 반영한다.
+  assetPrefix: process.env.NODE_ENV === 'development' ? `http://localhost:${process.env.PORT || 3000}` : undefined,
 
   // 컴파일러 최적화
   compiler: {

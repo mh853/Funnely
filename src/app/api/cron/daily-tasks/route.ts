@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 import { calculateMRR, calculateARR } from '@/lib/revenue/calculations'
-import { calculateHealthScore } from '@/lib/health/calculateHealthScore'
+import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
 import {
   fetchSheetData,
   parseSheetToLeads,
@@ -297,10 +297,11 @@ async function calculateRevenue(supabase: any) {
  */
 async function calculateHealthScores(supabase: any) {
   // Get all active companies
+  // companies has no 'status' column — it's tracked via the 'is_active' boolean.
   const { data: companies, error: companiesError } = await supabase
     .from('companies')
     .select('id, name')
-    .eq('status', 'active')
+    .eq('is_active', true)
 
   if (companiesError) {
     throw new Error(`Failed to fetch companies: ${companiesError.message}`)
@@ -312,15 +313,17 @@ async function calculateHealthScores(supabase: any) {
   for (const company of companies || []) {
     try {
       const healthScore = await calculateHealthScore(company.id, supabase)
+      const row = toCustomerHealthScoreRow(company.id, healthScore)
 
       // Check if today's score exists
+      // Real table name is 'customer_health_scores', not 'health_scores'.
       const today = new Date()
       today.setHours(0, 0, 0, 0)
       const tomorrow = new Date(today)
       tomorrow.setDate(tomorrow.getDate() + 1)
 
       const { data: existingScore } = await supabase
-        .from('health_scores')
+        .from('customer_health_scores')
         .select('id')
         .eq('company_id', company.id)
         .gte('calculated_at', today.toISOString())
@@ -330,18 +333,8 @@ async function calculateHealthScores(supabase: any) {
       if (existingScore) {
         // Update existing score
         await supabase
-          .from('health_scores')
-          .update({
-            overall_score: healthScore.overall_score,
-            engagement_score: healthScore.engagement_score,
-            product_usage_score: healthScore.product_usage_score,
-            support_score: healthScore.support_score,
-            payment_score: healthScore.payment_score,
-            health_status: healthScore.health_status,
-            risk_factors: healthScore.risk_factors,
-            recommendations: healthScore.recommendations,
-            calculated_at: new Date().toISOString(),
-          })
+          .from('customer_health_scores')
+          .update(row)
           .eq('id', existingScore.id)
 
         results.push({
@@ -351,18 +344,7 @@ async function calculateHealthScores(supabase: any) {
         })
       } else {
         // Insert new score
-        await supabase.from('health_scores').insert({
-          company_id: company.id,
-          overall_score: healthScore.overall_score,
-          engagement_score: healthScore.engagement_score,
-          product_usage_score: healthScore.product_usage_score,
-          support_score: healthScore.support_score,
-          payment_score: healthScore.payment_score,
-          health_status: healthScore.health_status,
-          risk_factors: healthScore.risk_factors,
-          recommendations: healthScore.recommendations,
-          calculated_at: new Date().toISOString(),
-        })
+        await supabase.from('customer_health_scores').insert(row)
 
         results.push({
           companyId: company.id,
@@ -440,10 +422,14 @@ async function syncGoogleSheets(supabase: any) {
       const columnMapping = config.column_mapping as ColumnMapping
       const sheetLeads = parseSheetToLeads(rows, columnMapping)
 
-      const { data: existingLeads } = await supabase
+      const { data: existingLeads, error: existingLeadsError } = await supabase
         .from('leads')
         .select('phone_hash')
         .eq('company_id', config.company_id)
+
+      if (existingLeadsError) {
+        throw new Error(`Failed to check existing leads: ${existingLeadsError.message}`)
+      }
 
       const existingHashes = new Set(
         existingLeads?.map((l: any) => l.phone_hash) || []
@@ -478,10 +464,14 @@ async function syncGoogleSheets(supabase: any) {
             : new Date().toISOString(),
         }))
 
-        const { data: inserted } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('leads')
           .insert(leadsToInsert)
           .select('id')
+
+        if (insertError) {
+          throw new Error(`Failed to insert leads: ${insertError.message}`)
+        }
 
         importedCount = inserted?.length || 0
       }
@@ -541,26 +531,58 @@ async function checkSubscriptionExpiry(supabase: any) {
 
   console.log(`[Subscription] 구독 체크 시작: ${now.toISOString()}`)
 
-  // 1. 만료 7일 전 구독 찾기 (active 또는 trial 상태)
-  const { data: expiringSoon, error: expiringError } = await supabase
-    .from('company_subscriptions')
-    .select(`
-      id,
-      company_id,
-      status,
-      current_period_end,
-      companies (
+  // 1. 만료 7일 전 구독 찾기
+  // active 구독은 current_period_end 기준, trial 구독은 trial_end_date 기준으로
+  // 만료를 판단해야 한다 (trial 구독은 current_period_end가 채워지지 않으므로
+  // 하나의 쿼리·조건으로 합쳐서 찾을 수 없다). trial 결과는 아래 공용 처리 로직이
+  // 그대로 재사용할 수 있도록 current_period_end 필드에 trial_end_date 값을 채워 반환한다.
+  const [activeExpiringSoonRes, trialExpiringSoonRes] = await Promise.all([
+    supabase
+      .from('company_subscriptions')
+      .select(`
         id,
-        name
-      )
-    `)
-    .in('status', ['active', 'trial'])
-    .gte('current_period_end', now.toISOString())
-    .lte('current_period_end', sevenDaysLater.toISOString())
+        company_id,
+        status,
+        current_period_end,
+        companies (
+          id,
+          name
+        )
+      `)
+      .eq('status', 'active')
+      .gte('current_period_end', now.toISOString())
+      .lte('current_period_end', sevenDaysLater.toISOString()),
+    supabase
+      .from('company_subscriptions')
+      .select(`
+        id,
+        company_id,
+        status,
+        trial_end_date,
+        companies (
+          id,
+          name
+        )
+      `)
+      .eq('status', 'trial')
+      .gte('trial_end_date', now.toISOString())
+      .lte('trial_end_date', sevenDaysLater.toISOString()),
+  ])
 
-  if (expiringError) {
-    throw new Error(`만료 예정 구독 조회 실패: ${expiringError.message}`)
+  if (activeExpiringSoonRes.error) {
+    throw new Error(`만료 예정 구독 조회 실패: ${activeExpiringSoonRes.error.message}`)
   }
+  if (trialExpiringSoonRes.error) {
+    throw new Error(`만료 예정 체험 구독 조회 실패: ${trialExpiringSoonRes.error.message}`)
+  }
+
+  const expiringSoon = [
+    ...(activeExpiringSoonRes.data || []),
+    ...(trialExpiringSoonRes.data || []).map((s: any) => ({
+      ...s,
+      current_period_end: s.trial_end_date,
+    })),
+  ]
 
   console.log(`[Subscription] 만료 예정 구독 발견: ${expiringSoon?.length || 0}개`)
 
@@ -608,26 +630,56 @@ async function checkSubscriptionExpiry(supabase: any) {
     }
   }
 
-  // 3. 만료된 구독 찾기
-  const { data: expiredSubs, error: expiredError } = await supabase
-    .from('company_subscriptions')
-    .select(`
-      id,
-      company_id,
-      status,
-      current_period_end,
-      grace_period_end,
-      companies (
+  // 3. 만료된 구독 찾기 (active/past_due는 current_period_end, trial은 trial_end_date 기준)
+  const [activeExpiredRes, trialExpiredRes] = await Promise.all([
+    supabase
+      .from('company_subscriptions')
+      .select(`
         id,
-        name
-      )
-    `)
-    .in('status', ['active', 'trial', 'past_due'])
-    .lt('current_period_end', now.toISOString())
+        company_id,
+        status,
+        current_period_end,
+        grace_period_end,
+        companies (
+          id,
+          name
+        )
+      `)
+      .in('status', ['active', 'past_due'])
+      .lt('current_period_end', now.toISOString()),
+    supabase
+      .from('company_subscriptions')
+      .select(`
+        id,
+        company_id,
+        status,
+        trial_end_date,
+        companies (
+          id,
+          name
+        )
+      `)
+      .eq('status', 'trial')
+      .lt('trial_end_date', now.toISOString()),
+  ])
 
-  if (expiredError) {
-    throw new Error(`만료된 구독 조회 실패: ${expiredError.message}`)
+  if (activeExpiredRes.error) {
+    throw new Error(`만료된 구독 조회 실패: ${activeExpiredRes.error.message}`)
   }
+  if (trialExpiredRes.error) {
+    throw new Error(`만료된 체험 구독 조회 실패: ${trialExpiredRes.error.message}`)
+  }
+
+  // trial은 유예 기간 개념이 없으므로 grace_period_end는 항상 null로 채워
+  // 아래 공용 처리 로직이 바로 'expired'로 전환하도록 한다.
+  const expiredSubs = [
+    ...(activeExpiredRes.data || []),
+    ...(trialExpiredRes.data || []).map((s: any) => ({
+      ...s,
+      current_period_end: s.trial_end_date,
+      grace_period_end: null,
+    })),
+  ]
 
   console.log(`[Subscription] 만료된 구독 발견: ${expiredSubs?.length || 0}개`)
 

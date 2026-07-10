@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import ReportsClient from './ReportsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
-import { toKSTDateStr } from '@/lib/utils/date'
+import { toKSTDateStr, getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,15 +44,15 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     return <UpgradeNotice featureName="DB 리포트" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
 
-  const now = new Date()
+  const nowKST = getKSTNow()
 
   // "전체" 필터는 명시적으로 year='all' 또는 month='all'로 표시
   const isAllMonths = params.year === 'all' || params.month === 'all'
 
-  // 파라미터가 없으면 현재 월로 리다이렉트
+  // 파라미터가 없으면 현재 월로 리다이렉트 (KST 기준)
   if (!params.year && !params.month) {
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() + 1
+    const currentYear = nowKST.getUTCFullYear()
+    const currentMonth = nowKST.getUTCMonth() + 1
     const queryParams = new URLSearchParams()
     queryParams.set('year', currentYear.toString())
     queryParams.set('month', currentMonth.toString())
@@ -61,16 +61,18 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     redirect(`/dashboard/reports?${queryParams.toString()}`)
   }
 
-  const selectedYear = isAllMonths ? now.getFullYear() : parseInt(params.year!)
-  const selectedMonth = isAllMonths ? now.getMonth() + 1 : parseInt(params.month!)
+  const selectedYear = isAllMonths ? nowKST.getUTCFullYear() : parseInt(params.year!)
+  const selectedMonth = isAllMonths ? nowKST.getUTCMonth() + 1 : parseInt(params.month!)
 
-  // 선택된 월의 시작일과 종료일
-  const selectedMonthStart = new Date(selectedYear, selectedMonth - 1, 1)
+  // 선택된 월의 시작일과 종료일 (표시용 daysInMonth만 로컬 계산 — 쿼리는 KST 경계 사용)
   const selectedMonthEnd = new Date(selectedYear, selectedMonth, 0)
   const daysInMonth = selectedMonthEnd.getDate()
 
-  const queryStart = isAllMonths ? undefined : selectedMonthStart.toISOString()
-  const queryEnd = isAllMonths ? undefined : new Date(selectedYear, selectedMonth, 1).toISOString()
+  // leads.created_at은 TIMESTAMPTZ라 KST 기준 월 경계를 써야 한다. 서버(UTC)의
+  // 로컬 월 경계를 그대로 쓰면 매월 1일 KST 00:00~09:00에 생성된 리드가 이번달/
+  // 지난달 어느 쪽 집계에도 잡히지 않고 누락된다.
+  const queryStart = isAllMonths ? undefined : getKSTMonthStart(selectedYear, selectedMonth).toISOString()
+  const queryEnd = isAllMonths ? undefined : getKSTMonthStart(selectedYear, selectedMonth + 1).toISOString()
 
   // 팀원 목록 조회 (부서 정보 포함)
   const { data: teamMembers } = await supabase
