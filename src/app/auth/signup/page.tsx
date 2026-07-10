@@ -10,6 +10,29 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+// 가입 직후 자동 로그인 실패 시 표시할 한글 메시지 (login/page.tsx의 매핑과 동일한 기준)
+function getSignInErrorMessage(error: any): string {
+  const errorCode = error?.code || error?.message || ''
+
+  if (errorCode.includes('invalid_credentials') || errorCode.includes('Invalid login credentials')) {
+    return '이메일 또는 비밀번호가 올바르지 않습니다.'
+  }
+  if (errorCode.includes('email_not_confirmed') || errorCode.includes('Email not confirmed')) {
+    return '이메일 인증이 필요합니다. 이메일을 확인해주세요.'
+  }
+  if (errorCode.includes('network') || errorCode.includes('fetch')) {
+    return '네트워크 연결을 확인해주세요.'
+  }
+  if (errorCode.includes('timeout')) {
+    return '요청 시간이 초과되었습니다. 다시 시도해주세요.'
+  }
+  if (errorCode.includes('rate_limit')) {
+    return '너무 많은 시도가 있었습니다. 잠시 후 다시 시도해주세요.'
+  }
+
+  return '회원가입은 완료되었지만 자동 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.'
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
@@ -67,8 +90,8 @@ export default function SignupPage() {
       return
     }
 
-    if (formData.password.length < 6) {
-      setError('비밀번호는 최소 6자 이상이어야 합니다.')
+    if (formData.password.length < 8) {
+      setError('비밀번호는 최소 8자 이상이어야 합니다.')
       return
     }
 
@@ -104,7 +127,10 @@ export default function SignupPage() {
         password: formData.password,
       })
 
-      if (signInError) throw signInError
+      if (signInError) {
+        setError(getSignInErrorMessage(signInError))
+        return
+      }
 
       // Redirect to dashboard
       router.push('/dashboard')
@@ -136,7 +162,10 @@ export default function SignupPage() {
           </div>
 
           {/* Signup Form */}
-          <form onSubmit={handleSignup} className="space-y-3">
+          {/* method="post": JS가 아직 하이드레이션되기 전에 폼이 네이티브 제출되는 경우를
+              대비한 안전장치. 없으면 기본 GET으로 제출되어 비밀번호가 URL 쿼리 파라미터에
+              그대로 노출된다 (브라우저 기록/서버 로그/Referrer에 남을 수 있음). */}
+          <form onSubmit={handleSignup} method="post" className="space-y-3">
             {/* Full Name */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
@@ -229,7 +258,7 @@ export default function SignupPage() {
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
-                placeholder="최소 6자 이상"
+                placeholder="최소 8자 이상"
               />
             </div>
 

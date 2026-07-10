@@ -58,7 +58,8 @@ export default function FindEmailPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          {/* method="post": 하이드레이션 전 네이티브 제출 시 이름/전화번호가 URL에 노출되는 것을 방지 */}
+          <form onSubmit={handleSubmit} method="post" className="space-y-5">
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
                 이름

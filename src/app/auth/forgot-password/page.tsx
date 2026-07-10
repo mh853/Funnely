@@ -73,7 +73,7 @@ export default function ForgotPasswordPage() {
               </Link>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} method="post" className="space-y-5">
               <div>
                 <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                   이메일 주소

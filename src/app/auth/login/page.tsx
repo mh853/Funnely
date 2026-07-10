@@ -63,12 +63,24 @@ function getErrorMessage(error: any): string {
 
 const URL_ERRORS: Record<string, string> = {
   auth_failed: '인증에 실패했습니다. 다시 로그인해 주세요.',
+  link_wrong_device: '이 링크는 요청하신 브라우저에서만 열 수 있습니다. 비밀번호를 재설정한 기기/브라우저에서 다시 시도해주세요.',
+  account_deactivated: '비활성화된 계정입니다. 관리자에게 문의해주세요.',
+}
+
+// 미들웨어가 붙여주는 redirectTo는 반드시 사이트 내부 경로일 때만 사용한다
+// (오픈 리다이렉트 방지: '/'로 시작하되 '//'로 시작하지 않는 경로만 허용)
+function getSafeRedirectTo(value: string | null): string {
+  if (value && value.startsWith('/') && !value.startsWith('//')) {
+    return value
+  }
+  return '/dashboard'
 }
 
 function LoginForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const urlError = searchParams.get('error')
+  const redirectTo = getSafeRedirectTo(searchParams.get('redirectTo'))
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(
@@ -97,7 +109,7 @@ function LoginForm() {
 
       // Redirect after 1.5 seconds
       setTimeout(() => {
-        router.push('/dashboard')
+        router.push(redirectTo)
         router.refresh()
       }, 1500)
     } catch (err: any) {
@@ -127,7 +139,8 @@ function LoginForm() {
           </div>
 
           {/* Login Form */}
-          <form onSubmit={handleLogin} className="space-y-6">
+          {/* method="post": 하이드레이션 전 네이티브 제출 시 비밀번호가 URL에 노출되는 것을 방지 */}
+          <form onSubmit={handleLogin} method="post" className="space-y-6">
             {/* Email */}
             <div>
               <label

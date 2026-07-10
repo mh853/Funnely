@@ -6,6 +6,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
+import { normalizePhone } from '@/lib/encryption/phone'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -43,9 +44,9 @@ export async function POST(request: Request) {
       )
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: '비밀번호는 최소 6자 이상이어야 합니다.' },
+        { error: '비밀번호는 최소 8자 이상이어야 합니다.' },
         { status: 400 }
       )
     }
@@ -56,7 +57,10 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: process.env.AUTO_CONFIRM_EMAIL === 'true',
+      // admin.createUser()는 확인 메일을 보내지 않으므로, 이메일 인증을 요구하면
+      // 사용자가 가입 직후 로그인할 방법이 없어진다. 다른 사용자 생성 경로
+      // (관리자 초대, 팀 초대 등)와 동일하게 항상 즉시 확인 처리한다.
+      email_confirm: true,
       user_metadata: {
         full_name: fullName,
       },
@@ -113,7 +117,7 @@ export async function POST(request: Request) {
       full_name: fullName,
       role: 'company_owner',
       simple_role: 'admin',
-      ...(phone ? { phone } : {}),
+      ...(phone ? { phone: normalizePhone(phone) } : {}),
     } as any)
 
     if (userError) {
@@ -127,11 +131,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. 프리미엄 플랜 7일 무료체험 자동 부여
+    // 4. 프로 플랜 7일 무료체험 자동 부여 (체험 대상 플랜은 '프로'로 통일 — start-trial API 및
+    // 요금제 페이지의 "7일 무료체험" 배지와 일치시킴. 다른 플랜을 바꾸면 절대 안 된다.)
     const { data: proPlan } = await supabase
       .from('subscription_plans')
       .select('id')
-      .eq('name', '프리미엄')
+      .eq('name', '프로')
       .eq('is_active', true)
       .limit(1)
       .single()
@@ -157,7 +162,7 @@ export async function POST(request: Request) {
         console.error('Trial subscription creation error:', subError)
       }
     } else {
-      console.error('프리미엄 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
+      console.error('프로 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
     }
 
     // Success

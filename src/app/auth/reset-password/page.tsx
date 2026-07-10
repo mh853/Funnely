@@ -105,7 +105,7 @@ export default function ResetPasswordPage() {
               <p className="text-sm text-gray-600">새 비밀번호로 로그인해주세요. 잠시 후 이동합니다...</p>
             </div>
           ) : (
-            <form onSubmit={handleSubmit} className="space-y-5">
+            <form onSubmit={handleSubmit} method="post" className="space-y-5">
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
                   새 비밀번호

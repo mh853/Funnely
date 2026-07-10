@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { normalizePhone } from '@/lib/encryption/phone'
 
 function maskEmail(email: string): string {
   const atIndex = email.indexOf('@')
@@ -44,10 +45,10 @@ export async function POST(request: Request) {
     // 핸드폰 번호가 입력된 경우 번호로 필터링
     let filtered = users
     if (phone && typeof phone === 'string' && phone.trim().length > 0) {
-      const normalizedPhone = phone.trim().replace(/-/g, '')
+      const normalizedPhone = normalizePhone(phone.trim())
       filtered = users.filter((u: any) => {
         if (!u.phone) return false
-        return u.phone.replace(/-/g, '') === normalizedPhone
+        return normalizePhone(u.phone) === normalizedPhone
       })
     }
 
