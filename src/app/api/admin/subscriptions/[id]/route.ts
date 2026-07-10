@@ -45,6 +45,25 @@ export async function PATCH(
       updateData.cancelled_at = new Date().toISOString()
     }
 
+    // trial로 전환 시 trial_end_date가 없으면 만료 체크가 절대 걸리지 않아 무기한
+    // 무료 이용이 가능해진다 (expired 페이지/헬스스코어 모두 trial_end_date 기준으로
+    // 판단함). trial_end_date가 이미 있으면 그대로 두고, 없을 때만 7일 체험으로 새로 설정한다.
+    if (status === 'trial') {
+      const { data: current } = await supabase
+        .from('company_subscriptions')
+        .select('trial_end_date')
+        .eq('id', subscriptionId)
+        .single()
+
+      if (!current?.trial_end_date) {
+        const now = new Date()
+        const trialEnd = new Date(now)
+        trialEnd.setDate(trialEnd.getDate() + 7)
+        updateData.trial_start_date = now.toISOString()
+        updateData.trial_end_date = trialEnd.toISOString()
+      }
+    }
+
     // active로 재활성화 시 current_period_end가 과거면 오늘부터 연장
     if (status === 'active') {
       const { data: current } = await supabase
@@ -61,7 +80,13 @@ export async function PATCH(
         current?.current_period_end &&
         current.current_period_end < new Date().toISOString()
 
-      if (reactivatingFromExpired || periodEndInPast) {
+      // trial(또는 그 외 결제 기간이 아예 없던 상태)에서 active로 전환하는 경우도
+      // 포함해야 한다. 그렇지 않으면 "정식 전환"이 current_period_end를 null로 남겨
+      // 미들웨어의 만료 체크(current_period_end !== null 조건)를 절대 통과하지 못하는
+      // 상태가 되어, 결제 기록도 카드도 없이 영구 무료 이용이 가능해진다.
+      const neverHadPeriod = current && !current.current_period_end
+
+      if (reactivatingFromExpired || periodEndInPast || neverHadPeriod) {
         const now = new Date()
         const cycle = current?.billing_cycle
         const periodStart = now.toISOString()

@@ -391,7 +391,8 @@ export default function SubscriptionsPage() {
                     )}
                     {(subscription.status === 'expired' ||
                       subscription.status === 'cancelled' ||
-                      subscription.status === 'canceled') && (
+                      subscription.status === 'canceled' ||
+                      subscription.status === 'past_due') && (
                       <Button
                         variant="outline"
                         size="sm"

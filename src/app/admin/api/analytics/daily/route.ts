@@ -94,8 +94,10 @@ export async function GET(request: NextRequest) {
 
       supabase
         .from('company_subscriptions')
+        // company_subscriptions.status 값은 'canceled'가 아니라 'cancelled'(더블 L)이다.
+        // 철자가 틀려 이 쿼리는 항상 0건을 반환했고, 일별 취소 추이가 계속 0으로만 표시됐다.
         .select('updated_at')
-        .eq('status', 'canceled')
+        .eq('status', 'cancelled')
         .gte('updated_at', rangeStart)
         .lte('updated_at', rangeEnd),
 

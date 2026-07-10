@@ -256,8 +256,8 @@ export default function NewSubscriptionClient({
       const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
       if (currentSubscription) {
-        if (isCurrentlyOnTrial && hasBillingKey) {
-          // 체험 중 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
+        if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription)) {
+          // 체험 중 또는 만료/취소/결제지연 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
           const res = await fetch('/api/subscription/convert-trial', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -725,7 +725,7 @@ export default function NewSubscriptionClient({
             ? '지금 결제하면 체험 기간과 무관하게 즉시 구독이 시작됩니다.'
             : isCurrentlyOnTrial
             ? '카드를 등록하면 즉시 결제되어 구독이 시작됩니다. 체험 기간은 그대로 유지됩니다.'
-            : isActivePaidUser && hasBillingKey
+            : (isActivePaidUser || hasPreviousSubscription) && hasBillingKey
             ? '플랜을 선택하면 등록된 카드로 즉시 결제가 진행됩니다.'
             : isExistingUser
             ? '플랜을 선택하면 카드 등록 후 즉시 결제가 진행됩니다.'

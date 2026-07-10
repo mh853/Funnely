@@ -51,6 +51,7 @@ export default function SubscriptionExpiredPage() {
         status: string
         current_period_end: string | null
         grace_period_end: string | null
+        trial_end_date: string | null
         subscription_plans: { name: string; plan_type: string } | null
       }
 
@@ -61,7 +62,8 @@ export default function SubscriptionExpiredPage() {
           status,
           current_period_end,
           grace_period_end,
-          subscription_plans (
+          trial_end_date,
+          subscription_plans!plan_id (
             name,
             plan_type
           )
@@ -70,7 +72,7 @@ export default function SubscriptionExpiredPage() {
         .order('created_at', { ascending: false })
         .limit(10)
 
-      // 차단 원인이 된 구독 표시: active+기간만료 > expired/cancelled > 최신순
+      // 차단 원인이 된 구독 표시: active+기간만료 > 체험 만료 > expired/cancelled > 최신순
       const now = new Date().toISOString()
       const subs = (allSubsRaw as SubRow[] | null) ?? []
       const blockedSub =
@@ -79,15 +81,22 @@ export default function SubscriptionExpiredPage() {
           s.current_period_end !== null &&
           s.current_period_end < now
         ) ??
+        subs.find(s =>
+          s.status === 'trial' &&
+          s.trial_end_date !== null &&
+          s.trial_end_date < now
+        ) ??
         subs.find(s => ['expired', 'cancelled', 'suspended'].includes(s.status)) ??
         subs[0] ??
         null
 
       if (blockedSub) {
+        // trial 구독은 current_period_end가 아니라 trial_end_date에 만료일이 들어있다.
+        const displayPeriodEnd = blockedSub.current_period_end ?? blockedSub.trial_end_date
         setSubscription({
           id: blockedSub.id,
           status: blockedSub.status,
-          current_period_end: blockedSub.current_period_end ?? '',
+          current_period_end: displayPeriodEnd ?? '',
           grace_period_end: blockedSub.grace_period_end,
           plan: (blockedSub.subscription_plans ?? { name: '알 수 없음', plan_type: 'individual' }) as any,
         })

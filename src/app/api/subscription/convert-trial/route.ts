@@ -32,6 +32,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '구독 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
+  // 결제 실패 시 되돌릴 원래 상태. trial 사용자뿐 아니라 past_due/cancelled/expired
+  // 사용자도 기존 빌링키로 이 API를 타므로, 무조건 'trial'로 롤백하면 해지된 사용자가
+  // 실패한 결제 시도만으로 다시 체험 상태(=무료 이용 가능)가 되어버린다.
+  const rollbackStatus = currentSub.status
+
   // 사용자 권한 확인
   const { data: profile } = await svc
     .from('users')
@@ -79,28 +84,49 @@ export async function POST(request: Request) {
 
   // toss-billing-payment 에지 함수 호출
   const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access_token}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ subscriptionId }),
-  })
+  try {
+    const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ subscriptionId }),
+    })
 
-  if (!payRes.ok) {
-    // 결제 실패 시 trial 상태로 롤백
-    await svc
-      .from('company_subscriptions')
-      .update({ status: 'trial' })
-      .eq('id', subscriptionId)
+    if (!payRes.ok) {
+      // 결제 실패 시 원래 상태로 롤백
+      await svc
+        .from('company_subscriptions')
+        .update({ status: rollbackStatus })
+        .eq('id', subscriptionId)
 
-    const err = await payRes.json()
+      // 에지 함수가 JSON이 아닌 응답(게이트웨이 502/504 등)을 줄 수도 있으므로
+      // 파싱 실패가 아래 catch로 새어나가 중복 롤백을 유발하지 않도록 막는다.
+      let errorMessage = '결제에 실패했습니다.'
+      try {
+        const err = await payRes.json()
+        if (err?.error) errorMessage = err.error
+      } catch {
+        // 응답 본문을 읽지 못해도 기본 메시지로 진행
+      }
+      return NextResponse.json({ error: errorMessage }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (fetchError) {
+    // fetch 자체가 실패한 경우(네트워크 오류, 타임아웃 등): best-effort로 원래 상태 롤백
+    try {
+      await svc
+        .from('company_subscriptions')
+        .update({ status: rollbackStatus })
+        .eq('id', subscriptionId)
+    } catch (rollbackError) {
+      // 롤백 실패가 원래 오류를 가리지 않도록 무시
+    }
     return NextResponse.json(
-      { error: err.error || '결제에 실패했습니다.' },
+      { error: '결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.' },
       { status: 500 }
     )
   }
-
-  return NextResponse.json({ success: true })
 }

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 
 export async function GET(request: Request) {
@@ -12,17 +12,24 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    const supabase = await createClient()
+    // requireSuperAdmin()은 애플리케이션 레벨 체크일 뿐 DB 세션의 RLS를 우회하지
+    // 않는다. payment_transactions의 RLS는 "본인 소속 회사"로만 SELECT를 허용하고
+    // 관리자 우회 정책이 없어서, 세션 기반 클라이언트를 쓰면 관리자 자신의 회사
+    // 결제 내역만 보이고 다른 회사들의 결제 내역은 전부 누락됐다.
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     let query = supabase
-      .from('payments')
+      .from('payment_transactions')
       .select(
         `
         *,
-        company:companies!payments_company_id_fkey(id, name, email),
-        subscription:company_subscriptions!payments_subscription_id_fkey(
+        company:companies!payment_transactions_company_id_fkey(id, name, email),
+        subscription:company_subscriptions!payment_transactions_subscription_id_fkey(
           id,
-          plan:subscription_plans!company_subscriptions_plan_id_fkey(name)
+          plan:subscription_plans!plan_id(name)
         )
       `,
         { count: 'exact' }

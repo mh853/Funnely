@@ -22,6 +22,36 @@ export async function POST(request: Request) {
 
     const serviceSupabase = createServiceClient()
 
+    // 소유권 확인: 서비스 롤로 RLS를 우회하므로, subscriptionId/companyId가 호출자
+    // 소속 회사의 것인지 애플리케이션 레벨에서 직접 검증해야 한다. 이 검증이 없으면
+    // 로그인만 되어 있으면 body에 임의의 다른 회사 id를 넣어 그 회사의 구독을
+    // trial로 조작할 수 있다.
+    const { data: profile } = await serviceSupabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!profile) {
+      return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+    }
+
+    if (subscriptionId) {
+      const { data: currentSub } = await serviceSupabase
+        .from('company_subscriptions')
+        .select('company_id')
+        .eq('id', subscriptionId)
+        .maybeSingle()
+
+      if (!currentSub || currentSub.company_id !== profile.company_id) {
+        return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+      }
+    } else if (companyId) {
+      if (companyId !== profile.company_id) {
+        return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+      }
+    }
+
     // 서비스 롤로 플랜 확인
     const { data: plan } = await serviceSupabase
       .from('subscription_plans')

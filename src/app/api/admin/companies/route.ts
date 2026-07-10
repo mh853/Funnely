@@ -83,6 +83,9 @@ export async function GET(request: NextRequest) {
           .in('company_id', companyIds),
 
         // Subscriptions for all companies
+        // status 필터를 걸면 expired/cancelled/suspended만 있는 회사는 subscriptionMap에서
+        // 아예 빠져 목록에 "구독 없음"으로 잘못 표시된다. 모든 상태를 가져와 회사별로
+        // 가장 최근 레코드(생성일 desc + 최초 발견분 채택)만 사용한다.
         supabase
           .from('company_subscriptions')
           .select(`
@@ -91,7 +94,6 @@ export async function GET(request: NextRequest) {
             subscription_plans!plan_id(id, name, price_monthly, price_yearly)
           `)
           .in('company_id', companyIds)
-          .in('status', ['trial', 'active', 'past_due'])
           .order('created_at', { ascending: false }),
 
         // Payment transactions for all companies
@@ -160,7 +162,7 @@ export async function GET(request: NextRequest) {
               yearly_price: plan?.price_yearly || 0,
               billing_cycle: sub.billing_cycle,
               status: sub.status,
-              trial_end_date: sub.trial_end,
+              trial_end_date: sub.trial_end_date,
               current_period_end: sub.current_period_end,
               subscribed_at: sub.created_at,
               canceled_at: sub.cancelled_at,

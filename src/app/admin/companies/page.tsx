@@ -97,7 +97,9 @@ function CompanyModal({ company, onClose }: { company: Company; onClose: () => v
     sub?.status === 'active' ? '활성'
     : sub?.status === 'trial' ? '체험중'
     : sub?.status === 'past_due' ? '결제지연'
-    : sub?.status === 'canceled' ? '취소됨'
+    : sub?.status === 'cancelled' ? '취소됨'
+    : sub?.status === 'expired' ? '만료됨'
+    : sub?.status === 'suspended' ? '정지됨'
     : '-'
 
   return (
@@ -505,7 +507,9 @@ export default function CompaniesPage() {
                             {company.subscription.status === 'active' ? '활성' :
                              company.subscription.status === 'trial' ? '체험중' :
                              company.subscription.status === 'past_due' ? '결제지연' :
-                             company.subscription.status === 'canceled' ? '취소됨' : company.subscription.status}
+                             company.subscription.status === 'cancelled' ? '취소됨' :
+                             company.subscription.status === 'expired' ? '만료됨' :
+                             company.subscription.status === 'suspended' ? '정지됨' : company.subscription.status}
                           </Badge>
                         ) : <span className="text-gray-400">-</span>}
                       </td>
