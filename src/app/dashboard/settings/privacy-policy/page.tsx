@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeftIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 export default function PrivacyPolicyPage() {
   const router = useRouter()
@@ -19,6 +20,7 @@ export default function PrivacyPolicyPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [companyId, setCompanyId] = useState('')
+  const [canEdit, setCanEdit] = useState(false)
 
   useEffect(() => {
     loadPrivacyPolicy()
@@ -34,13 +36,14 @@ export default function PrivacyPolicyPage() {
 
       const { data: userProfile } = await supabase
         .from('users')
-        .select('company_id')
+        .select('company_id, role, simple_role')
         .eq('id', user.id)
         .maybeSingle()
 
       if (!userProfile) return
 
       setCompanyId(userProfile.company_id)
+      setCanEdit(isAdminUser(userProfile))
 
       const { data: policy } = await supabase
         .from('privacy_policies')
@@ -71,7 +74,7 @@ export default function PrivacyPolicyPage() {
   }
 
   const handleSave = async () => {
-    if (!companyId) return
+    if (!companyId || !canEdit) return
 
     setSaving(true)
     setError('')
@@ -121,6 +124,15 @@ export default function PrivacyPolicyPage() {
           </p>
         </div>
 
+        {/* Permission Warning */}
+        {!canEdit && (
+          <div className="rounded-md bg-yellow-50 p-4">
+            <p className="text-sm text-yellow-700">
+              내용을 수정하려면 관리자 권한이 필요합니다.
+            </p>
+          </div>
+        )}
+
         {/* Privacy Consent */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
@@ -137,6 +149,7 @@ export default function PrivacyPolicyPage() {
                 type="text"
                 value={privacyTitle}
                 onChange={(e) => setPrivacyTitle(e.target.value)}
+                readOnly={!canEdit}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 placeholder="개인정보 수집·이용 동의"
               />
@@ -149,6 +162,7 @@ export default function PrivacyPolicyPage() {
               <textarea
                 value={privacyContent}
                 onChange={(e) => setPrivacyContent(e.target.value)}
+                readOnly={!canEdit}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none font-mono text-sm"
                 rows={10}
                 placeholder="개인정보 수집·이용 동의 내용을 입력하세요"
@@ -173,6 +187,7 @@ export default function PrivacyPolicyPage() {
                 type="text"
                 value={marketingTitle}
                 onChange={(e) => setMarketingTitle(e.target.value)}
+                readOnly={!canEdit}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all"
                 placeholder="마케팅 활용 동의 (선택)"
               />
@@ -185,6 +200,7 @@ export default function PrivacyPolicyPage() {
               <textarea
                 value={marketingContent}
                 onChange={(e) => setMarketingContent(e.target.value)}
+                readOnly={!canEdit}
                 className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all resize-none font-mono text-sm"
                 rows={10}
                 placeholder="마케팅 활용 동의 내용을 입력하세요"
@@ -210,7 +226,7 @@ export default function PrivacyPolicyPage() {
           )}
           <button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || !canEdit}
             className="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? '저장 중...' : '저장하기'}

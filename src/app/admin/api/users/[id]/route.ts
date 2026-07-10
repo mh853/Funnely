@@ -21,7 +21,9 @@ export async function GET(
         id,
         full_name,
         email,
+        phone,
         role,
+        simple_role,
         is_active,
         created_at,
         last_login,
@@ -91,21 +93,25 @@ export async function GET(
       .order('created_at', { ascending: false })
       .limit(5)
 
-    // 권한 정보 (role 기반)
+    // 권한 정보 — PATCH가 실제로 쓰는 simple_role을 우선 기준으로 삼는다.
+    // GET이 계속 레거시 role만 봤다면, 관리자가 역할을 바꿔도 상세 화면에는
+    // 항상 예전 값이 표시되어 "변경이 실패한 것처럼" 보인다 (실제 저장은 성공함).
+    const effectiveRole = (user as any).simple_role || user.role
     const permissions: string[] = []
-    switch (user.role) {
+    switch (effectiveRole) {
       case 'company_owner':
+      case 'admin': // simple_role
         permissions.push('manage_users', 'manage_leads', 'manage_pages', 'view_reports', 'manage_billing')
         break
       case 'company_admin':
-      case 'admin': // Legacy
         permissions.push('manage_users', 'manage_leads', 'manage_pages', 'view_reports')
         break
       case 'marketing_manager':
-      case 'manager': // Legacy
+      case 'manager': // simple_role
         permissions.push('manage_leads', 'manage_pages', 'view_reports')
         break
       case 'marketing_staff':
+      case 'user': // simple_role
       case 'staff': // Legacy
         permissions.push('manage_leads', 'view_pages')
         break
@@ -119,8 +125,8 @@ export async function GET(
         id: user.id,
         full_name: user.full_name,
         email: user.email,
-        phone: null, // phone 컬럼이 users 테이블에 없음
-        role: user.role,
+        phone: user.phone,
+        role: effectiveRole,
         is_active: user.is_active,
         last_login_at: user.last_login, // 실제 컬럼명은 last_login
         created_at: user.created_at,
@@ -171,8 +177,13 @@ export async function PATCH(
     const { role, is_active } = body
 
     // 업데이트할 데이터 준비
+    // 이 화면(SettingsTab, ROLE_OPTIONS)이 보내는 값은 'admin'|'manager'|'user' 3단계
+    // 권한 체계로, users.role(레거시 enum user_role: hospital_owner 등)이 아니라
+    // simple_role(enum simple_user_role) 컬럼에 저장해야 하는 값이다. role 컬럼에 쓰면
+    // Postgres가 잘못된 enum 값이라며 거부해 매번 500이 나고, 설사 성공하더라도
+    // 대시보드 팀 관리 권한 체크(simple_role === 'admin')는 전혀 영향을 받지 않는다.
     const updateData: any = {}
-    if (role !== undefined) updateData.role = role
+    if (role !== undefined) updateData.simple_role = role
     if (is_active !== undefined) updateData.is_active = is_active
 
     if (Object.keys(updateData).length === 0) {

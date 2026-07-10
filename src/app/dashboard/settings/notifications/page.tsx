@@ -49,8 +49,9 @@ export default async function NotificationSettingsPage() {
   }
 
   // Check permissions
-  const { isAdminUser } = await import('@/lib/auth/permissions')
-  const canEdit = isAdminUser(userProfile)
+  // 백엔드(/api/settings/notification-emails, /api/notifications/test-lead-email)는
+  // role이 company_owner/company_admin인 경우만 허용하므로 동일한 기준으로 맞춘다.
+  const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
 
   return (
     <div className="px-4 space-y-6">

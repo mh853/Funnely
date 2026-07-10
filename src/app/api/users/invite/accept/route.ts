@@ -133,8 +133,12 @@ export async function POST(request: Request) {
       )
     }
 
-    // Update invitation status to accepted
-    const { error: updateError } = await supabase
+    // Update invitation status to accepted — .eq('status', 'pending')로 원자적으로
+    // "claim"한다. 동시에 같은 초대 코드로 두 요청이 들어오면(중복 클릭, 재시도 등)
+    // 앞서 있던 단순 SELECT 체크만으로는 둘 다 통과할 수 있어 같은 초대로 계정이
+    // 두 번 생성될 수 있었다. 이 UPDATE가 실제로 행에 영향을 주지 못했다면(0건),
+    // 이미 다른 요청이 먼저 처리한 것이므로 방금 만든 계정을 롤백해야 한다.
+    const { data: claimedInvitation, error: updateError } = await supabase
       .from('company_invitations')
       .update({
         status: 'accepted',
@@ -143,10 +147,21 @@ export async function POST(request: Request) {
         updated_at: new Date().toISOString(),
       })
       .eq('id', invitation.id)
+      .eq('status', 'pending')
+      .select('id')
+      .maybeSingle()
 
-    if (updateError) {
-      console.error('Update invitation status error:', updateError)
-      // Non-critical error, don't fail the request
+    if (updateError || !claimedInvitation) {
+      console.error('Update invitation status error or lost race:', updateError)
+
+      // 롤백: 방금 생성한 사용자 프로필과 auth 계정을 제거한다.
+      await supabase.from('users').delete().eq('id', authData.user.id)
+      await supabase.auth.admin.deleteUser(authData.user.id)
+
+      return NextResponse.json(
+        { error: '이미 처리된 초대입니다. 다시 시도해주세요.' },
+        { status: 409 }
+      )
     }
 
     // companies 관계는 단일 객체로 반환되지만 타입 추론 이슈가 있어 캐스팅 필요

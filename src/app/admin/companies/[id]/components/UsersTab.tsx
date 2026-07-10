@@ -96,9 +96,9 @@ export default function UsersTab({ companyId }: UsersTabProps) {
               관리자
             </button>
             <button
-              onClick={() => setRoleFilter('member')}
+              onClick={() => setRoleFilter('user')}
               className={`px-3 py-1 text-sm rounded-md ${
-                roleFilter === 'member'
+                roleFilter === 'user'
                   ? 'bg-blue-100 text-blue-700'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
               }`}

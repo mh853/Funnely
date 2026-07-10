@@ -72,13 +72,13 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // (선택) 관리자 권한 체크 - 필요시 주석 해제
-    // if (userProfile.simple_role !== 'admin') {
-    //   return NextResponse.json(
-    //     { error: { message: '관리자만 리드 분배가 가능합니다.' } },
-    //     { status: 403 }
-    //   )
-    // }
+    // 관리자 권한 체크
+    if (userProfile.simple_role !== 'admin') {
+      return NextResponse.json(
+        { error: { message: '관리자만 리드 분배가 가능합니다.' } },
+        { status: 403 }
+      )
+    }
 
     // ========================================================================
     // 3. 미배정 리드 조회 (call_assigned_to가 NULL)

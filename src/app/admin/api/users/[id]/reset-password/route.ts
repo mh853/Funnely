@@ -24,10 +24,16 @@ export async function POST(
     }
 
     // Supabase Auth를 통해 비밀번호 재설정 이메일 발송
+    // NEXT_PUBLIC_SITE_URL은 이 프로젝트에 존재하지 않는 환경변수였다(항상 undefined ->
+    // "undefined/reset-password"라는 404 링크가 발송됨). 실제 쓰이는 NEXT_PUBLIC_DOMAIN을
+    // 쓰고, 고객용 forgot-password 플로우(src/app/auth/forgot-password/page.tsx)와 동일하게
+    // /auth/callback을 거쳐야 PKCE 세션 교환이 이뤄져 /auth/reset-password에서 실제로
+    // 비밀번호를 바꿀 수 있다.
+    const siteUrl = (process.env.NEXT_PUBLIC_DOMAIN || '').replace(/\/$/, '')
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       user.email,
       {
-        redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/reset-password`,
+        redirectTo: `${siteUrl}/auth/callback?next=/auth/reset-password`,
       }
     )
 

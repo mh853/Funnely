@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { createClient as createServerClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
+import { canInviteUser } from '@/lib/subscription-access'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -27,9 +28,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: '모든 필드를 입력해주세요.' }, { status: 400 })
     }
 
-    if (password.length < 6) {
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: '비밀번호는 최소 6자 이상이어야 합니다.' },
+        { error: '비밀번호는 최소 8자 이상이어야 합니다.' },
         { status: 400 }
       )
     }
@@ -61,6 +62,19 @@ export async function POST(request: NextRequest) {
     const isAdmin = ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(callerProfile.role)
     if (!isAdmin) {
       return NextResponse.json({ error: '팀원을 초대할 권한이 없습니다.' }, { status: 403 })
+    }
+
+    // Check plan limits - 플랜 제한사항 체크
+    const limitCheck = await canInviteUser(companyId)
+    if (!limitCheck.allowed) {
+      return NextResponse.json(
+        {
+          error: limitCheck.message || '관리자 초대 한도를 초과했습니다.',
+          currentCount: limitCheck.currentCount,
+          maxAllowed: limitCheck.maxAllowed
+        },
+        { status: 403 }
+      )
     }
 
     const supabase = createAdminClient()

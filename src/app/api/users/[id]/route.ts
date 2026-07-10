@@ -65,9 +65,37 @@ export async function PATCH(
       return NextResponse.json({ error: '유효하지 않은 권한입니다.' }, { status: 400 })
     }
 
-    // Prevent company_admin from changing company_owner role
-    if (['company_owner', 'hospital_owner'].includes(targetUser.role) && !['company_owner', 'hospital_owner'].includes(currentUserProfile.role)) {
+    // 회사 관리자(owner) 권한은 기존에 이미 owner인 사람만 부여/변경할 수 있다.
+    // 대상의 "현재" 역할만 검사하면, company_admin이 role 파라미터에 company_owner를
+    // 넣어 자기 자신(또는 동료)을 owner로 승격시키는 권한 상승이 가능해진다.
+    // "바뀌는 새 역할"과 "대상의 현재 역할" 둘 다 검사해야 한다.
+    const isOwnerRole = (r: string) => ['company_owner', 'hospital_owner'].includes(r)
+    if (
+      (isOwnerRole(targetUser.role) || isOwnerRole(role)) &&
+      !isOwnerRole(currentUserProfile.role)
+    ) {
       return NextResponse.json({ error: '회사 관리자의 권한을 변경할 수 없습니다.' }, { status: 403 })
+    }
+
+    // 마지막 관리자 보호: owner급 역할에서 벗어나는 변경이면, 같은 회사에
+    // 다른 owner급 사용자가 남아있는지 확인한다. 대상이 유일한 owner라면 강등을 막는다.
+    if (isOwnerRole(targetUser.role) && !isOwnerRole(role)) {
+      const { count: otherOwnerCount, error: ownerCountError } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', currentUserProfile.company_id)
+        .eq('is_active', true)
+        .in('role', ['company_owner', 'hospital_owner'])
+        .neq('id', id)
+
+      if (ownerCountError) {
+        console.error('Owner count check error:', ownerCountError)
+        return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+      }
+
+      if (!otherOwnerCount) {
+        return NextResponse.json({ error: '마지막 관리자는 강등할 수 없습니다.' }, { status: 400 })
+      }
     }
 
     // Update user profile (company_id 필터로 TOCTOU 방지)
