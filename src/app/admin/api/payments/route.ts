@@ -26,11 +26,7 @@ export async function GET(request: Request) {
       .select(
         `
         *,
-        company:companies!payment_transactions_company_id_fkey(id, name, email),
-        subscription:company_subscriptions!payment_transactions_subscription_id_fkey(
-          id,
-          plan:subscription_plans!plan_id(name)
-        )
+        company:companies!payment_transactions_company_id_fkey(id, name)
       `,
         { count: 'exact' }
       )
