@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { decryptCredentials } from '@/lib/encryption/credentials'
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
@@ -73,7 +74,7 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const credentials = credentialData.credentials as { app_id: string; app_secret: string }
+    const credentials = decryptCredentials(credentialData.credentials) as { app_id: string; app_secret: string }
 
     // Build redirect URI (must match the one used in connect)
     const baseUrl = new URL(request.url).origin

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials } from '@/types/database.types'
+import { decryptCredentials } from '@/lib/encryption/credentials'
 
 export async function GET(
   request: NextRequest,
@@ -70,16 +71,17 @@ export async function GET(
 
     // Generate OAuth URL based on platform
     let authUrl: string
+    const decryptedCredentials = decryptCredentials(credentialData.credentials)
 
     switch (platform) {
       case 'meta':
-        authUrl = generateMetaAuthUrl(request, credentialData.credentials as any)
+        authUrl = generateMetaAuthUrl(request, decryptedCredentials as any)
         break
       case 'kakao':
-        authUrl = generateKakaoAuthUrl(request, credentialData.credentials as any)
+        authUrl = generateKakaoAuthUrl(request, decryptedCredentials as any)
         break
       case 'google':
-        authUrl = generateGoogleAuthUrl(request, credentialData.credentials as any)
+        authUrl = generateGoogleAuthUrl(request, decryptedCredentials as any)
         break
       default:
         return NextResponse.json({ error: '지원하지 않는 플랫폼입니다.' }, { status: 400 })

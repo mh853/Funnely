@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { decryptCredentials } from '@/lib/encryption/credentials'
 
 export async function POST(
   request: NextRequest,
@@ -69,12 +70,13 @@ export async function POST(
     let newAccessToken: string
     let expiresIn: number
     let accountStatus: boolean | null = null
+    const decryptedCredentials = decryptCredentials(credentialData.credentials)
 
     switch (adAccount.platform) {
       case 'meta':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshMetaToken(
           adAccount.access_token,
-          credentialData.credentials as { app_id: string; app_secret: string }
+          decryptedCredentials as { app_id: string; app_secret: string }
         ))
         // Meta: 토큰 갱신 후 계정 상태도 조회
         accountStatus = await getMetaAccountStatus(newAccessToken, adAccount.account_id)
@@ -82,13 +84,13 @@ export async function POST(
       case 'kakao':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshKakaoToken(
           adAccount.refresh_token,
-          credentialData.credentials as { rest_api_key: string }
+          decryptedCredentials as { rest_api_key: string }
         ))
         break
       case 'google':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshGoogleToken(
           adAccount.refresh_token,
-          credentialData.credentials as { client_id: string; client_secret: string }
+          decryptedCredentials as { client_id: string; client_secret: string }
         ))
         break
       default:

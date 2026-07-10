@@ -72,25 +72,26 @@ export default function ApiCredentialsPage() {
     try {
       updateState({ loading: true })
 
-      // Get user profile
+      // Get user profile (companyId만 필요 — 자격증명 자체는 서버 라우트에서
+      // 복호화해 내려준다. 암호화 키는 서버 환경변수로만 존재하므로 클라이언트에서
+      // 직접 복호화할 수 없다.)
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('인증이 필요합니다.')
 
       const { data: userProfile } = await supabase
         .from('users')
-        .select('company_id, role')
+        .select('company_id')
         .eq('id', user.id)
         .maybeSingle()
 
       if (!userProfile) throw new Error('사용자 정보를 찾을 수 없습니다.')
 
-      // Load credentials
-      const { data: credentials, error } = await supabase
-        .from('api_credentials')
-        .select('*')
-        .eq('company_id', userProfile.company_id)
-
-      if (error) throw error
+      const response = await fetch('/api/settings/api-credentials')
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || '인증 정보를 불러오는데 실패했습니다.')
+      }
+      const { credentials } = await response.json()
 
       // Update state with loaded credentials
       const updates: Partial<AppState> = { companyId: userProfile.company_id }
@@ -101,7 +102,7 @@ export default function ApiCredentialsPage() {
 
         updates.platforms[platform] = {
           credentials: cred.credentials,
-          status: { exists: true, validated: !!cred.last_validated_at }
+          status: { exists: cred.exists, validated: cred.validated }
         }
       })
 
@@ -123,18 +124,16 @@ export default function ApiCredentialsPage() {
 
       const credentials = state.platforms[platform].credentials
 
-      const { error } = await supabase
-        .from('api_credentials')
-        .upsert({
-          company_id: state.companyId,
-          platform,
-          credentials,
-          is_active: true,
-        } as any, {
-          onConflict: 'company_id,platform'
-        })
+      const response = await fetch('/api/settings/api-credentials', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform, credentials }),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || '저장에 실패했습니다.')
+      }
 
       setState(prev => ({
         ...prev,
@@ -469,7 +468,7 @@ const KakaoForm = React.memo(({ credentials, onChange, onSave, saving, guideLink
           REST API Key <span className="text-red-500">*</span>
         </label>
         <input
-          type="text"
+          type="password"
           value={credentials.rest_api_key}
           onChange={(e) => onChange({ ...credentials, rest_api_key: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
@@ -481,7 +480,7 @@ const KakaoForm = React.memo(({ credentials, onChange, onSave, saving, guideLink
           JavaScript Key <span className="text-red-500">*</span>
         </label>
         <input
-          type="text"
+          type="password"
           value={credentials.javascript_key}
           onChange={(e) => onChange({ ...credentials, javascript_key: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-yellow-500"
