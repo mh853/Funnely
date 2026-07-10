@@ -2,13 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
+import { createClient } from '@/lib/supabase/client'
 
 export default function MarketingHeader() {
+  const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [isInquiryOpen, setIsInquiryOpen] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
   useEffect(() => {
     const handleScroll = () => {
@@ -18,7 +22,19 @@ export default function MarketingHeader() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  useEffect(() => {
+    createClient()
+      .auth.getUser()
+      .then(({ data: { user } }) => {
+        if (user) setIsLoggedIn(true)
+      })
+  }, [])
+
   const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    // 홈페이지가 아니면 해당 id가 존재하지 않으므로 스크롤을 가로채지 않고
+    // href="/#section" 그대로 홈페이지로 이동시킨다 (도착 후 브라우저가 앵커로 스크롤).
+    if (pathname !== '/') return
+
     e.preventDefault()
     const targetId = href.replace('#', '')
     const element = document.getElementById(targetId)
@@ -69,21 +85,21 @@ export default function MarketingHeader() {
             {/* Desktop navigation */}
             <div className="hidden lg:flex lg:gap-x-12">
               <a
-                href="#features"
+                href="/#features"
                 onClick={(e) => handleSmoothScroll(e, '#features')}
                 className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 기능
               </a>
               <a
-                href="#pricing"
+                href="/#pricing"
                 onClick={(e) => handleSmoothScroll(e, '#pricing')}
                 className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
                 요금제
               </a>
               <a
-                href="#faq"
+                href="/#faq"
                 onClick={(e) => handleSmoothScroll(e, '#faq')}
                 className="text-base font-semibold leading-6 text-gray-900 hover:text-blue-600 transition-colors cursor-pointer"
               >
@@ -93,12 +109,21 @@ export default function MarketingHeader() {
 
             {/* CTA buttons */}
             <div className="hidden lg:flex lg:flex-1 lg:justify-end lg:gap-x-4 lg:items-center">
-              <Link
-                href="/auth/login"
-                className="text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center"
-              >
-                로그인
-              </Link>
+              {isLoggedIn ? (
+                <Link
+                  href="/dashboard"
+                  className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
+                >
+                  대시보드로 이동
+                </Link>
+              ) : (
+                <Link
+                  href="/auth/login"
+                  className="text-base font-semibold text-gray-900 hover:text-blue-600 transition-colors inline-flex items-center"
+                >
+                  로그인
+                </Link>
+              )}
               <button
                 type="button"
                 onClick={() => setIsInquiryOpen(true)}
@@ -106,12 +131,14 @@ export default function MarketingHeader() {
               >
                 고객센터
               </button>
-              <Link
-                href="/auth/signup?plan=pro&trial=true"
-                className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
-              >
-                7일 무료체험
-              </Link>
+              {!isLoggedIn && (
+                <Link
+                  href="/auth/signup?plan=pro&trial=true"
+                  className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
+                >
+                  7일 무료체험
+                </Link>
+              )}
             </div>
           </div>
         </nav>
@@ -140,21 +167,21 @@ export default function MarketingHeader() {
                 <div className="-my-6 divide-y divide-gray-500/10">
                   <div className="space-y-2 py-6">
                     <a
-                      href="#features"
+                      href="/#features"
                       onClick={(e) => handleSmoothScroll(e, '#features')}
                       className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                     >
                       기능
                     </a>
                     <a
-                      href="#pricing"
+                      href="/#pricing"
                       onClick={(e) => handleSmoothScroll(e, '#pricing')}
                       className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                     >
                       요금제
                     </a>
                     <a
-                      href="#faq"
+                      href="/#faq"
                       onClick={(e) => handleSmoothScroll(e, '#faq')}
                       className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
                     >
@@ -162,12 +189,21 @@ export default function MarketingHeader() {
                     </a>
                   </div>
                   <div className="py-6 space-y-4">
-                    <Link
-                      href="/auth/login"
-                      className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    >
-                      로그인
-                    </Link>
+                    {isLoggedIn ? (
+                      <Link
+                        href="/dashboard"
+                        className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
+                      >
+                        대시보드로 이동
+                      </Link>
+                    ) : (
+                      <Link
+                        href="/auth/login"
+                        className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                      >
+                        로그인
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => { setMobileMenuOpen(false); setIsInquiryOpen(true) }}
@@ -175,12 +211,14 @@ export default function MarketingHeader() {
                     >
                       고객센터
                     </button>
-                    <Link
-                      href="/auth/signup?plan=pro&trial=true"
-                      className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
-                    >
-                      7일 무료체험
-                    </Link>
+                    {!isLoggedIn && (
+                      <Link
+                        href="/auth/signup?plan=pro&trial=true"
+                        className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
+                      >
+                        7일 무료체험
+                      </Link>
+                    )}
                   </div>
                 </div>
               </div>

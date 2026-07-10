@@ -260,7 +260,7 @@ export default function ComparisonCards({ plans }: ComparisonCardsProps) {
                         : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg hover:shadow-xl hover:scale-105'
                     }`}
                   >
-                    {isEnterprise ? '문의하기' : isPro ? '14일 무료 체험' : '시작하기'}
+                    {isEnterprise ? '문의하기' : isPro ? '7일 무료 체험' : '시작하기'}
                   </Link>
 
                   {isPro && (
@@ -273,36 +273,6 @@ export default function ComparisonCards({ plans }: ComparisonCardsProps) {
             )
           })}
         </div>
-
-        {/* Additional Info */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ delay: 0.3 }}
-          className="mt-16 text-center"
-        >
-          <p className="text-gray-600 mb-4">모든 기능 비교가 필요하신가요?</p>
-          <Link
-            href="#comparison-table"
-            className="inline-flex items-center text-sm font-semibold text-blue-600 hover:text-blue-700"
-          >
-            전체 기능 비교표 보기
-            <svg
-              className="ml-2 h-4 w-4"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M19 9l-7 7-7-7"
-              />
-            </svg>
-          </Link>
-        </motion.div>
       </div>
     </section>
   )

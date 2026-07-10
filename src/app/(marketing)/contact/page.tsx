@@ -2,6 +2,8 @@
 
 import ContactHero from '@/components/marketing/contact/ContactHero'
 import ContactForm from '@/components/marketing/contact/ContactForm'
+import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
+import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 import Link from 'next/link'
 import { QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 
@@ -35,7 +37,9 @@ export default function ContactPage() {
   }
 
   return (
-    <main className="bg-gray-50">
+    <>
+      <MarketingHeader />
+      <main className="bg-gray-50">
       {/* Hero Section */}
       <ContactHero />
 
@@ -114,6 +118,8 @@ export default function ContactPage() {
           </div>
         </div>
       </section>
-    </main>
+      </main>
+      <MarketingFooter />
+    </>
   )
 }

@@ -4,11 +4,11 @@ type NavItem = { name: string; href: string | null }
 
 const navigation = {
   product: [
-    { name: '기능 소개', href: '#features' },
+    { name: '기능 소개', href: '/#features' },
   ],
   company: [] as NavItem[],
   support: [
-    { name: 'FAQ', href: '#faq' },
+    { name: 'FAQ', href: '/#faq' },
     { name: '문의하기', href: '/contact' },
   ],
   legal: [

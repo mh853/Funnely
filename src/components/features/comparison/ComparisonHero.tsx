@@ -33,7 +33,7 @@ export default function ComparisonHero() {
             transition={{ delay: 0.3 }}
             className="text-lg leading-8 text-gray-600 mb-8"
           >
-            무료부터 프로까지, 모든 기능을 한눈에 비교하세요.
+            스타터부터 프리미엄까지, 모든 기능을 한눈에 비교하세요.
             <br />
             비즈니스 성장에 맞는 최적의 플랜을 선택하세요.
           </motion.p>
@@ -61,7 +61,7 @@ export default function ComparisonHero() {
               <svg className="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
-              <span>14일 무료 체험</span>
+              <span>7일 무료 체험</span>
             </div>
           </motion.div>
         </div>
