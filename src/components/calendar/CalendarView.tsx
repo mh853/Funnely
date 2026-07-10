@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ChevronLeftIcon,
@@ -90,8 +90,8 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
   notes: { bg: 'bg-gray-100', text: 'text-gray-800', label: '비고 변경' },
 }
 
-// 상태 변경 가능 목록
-const STATUS_OPTIONS = [
+// 상태 변경 가능 목록 (회사별 커스텀 상태를 불러오지 못했을 때의 기본값)
+const DEFAULT_STATUS_OPTIONS = [
   { value: 'new', label: '상담 전' },
   { value: 'rejected', label: '상담 거절' },
   { value: 'contacting', label: '상담 진행중' },
@@ -181,6 +181,38 @@ export default function CalendarView({
   const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
   const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
   const [isDragging, setIsDragging] = useState(false)
+
+  // 회사별 커스텀 리드 상태 목록
+  const [leadStatuses, setLeadStatuses] = useState<
+    { id: string; code: string; label: string; color: string; sort_order: number }[]
+  >([])
+
+  // 상태 변경 드롭다운에 사용할 옵션 목록 (커스텀 상태 우선, 없으면 기본값)
+  const statusOptions = useMemo(() => {
+    if (leadStatuses.length === 0) return DEFAULT_STATUS_OPTIONS
+    return leadStatuses.map(s => ({ value: s.code, label: s.label }))
+  }, [leadStatuses])
+
+  useEffect(() => {
+    const fetchLeadStatuses = async () => {
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', currentUserId)
+        .single()
+
+      if (!userProfile?.company_id) return
+
+      const { data } = await supabase
+        .from('lead_statuses')
+        .select('id, code, label, color, sort_order')
+        .eq('company_id', userProfile.company_id)
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true })
+      setLeadStatuses(data || [])
+    }
+    fetchLeadStatuses()
+  }, [currentUserId])
 
   // 로컬 날짜 문자열 생성 헬퍼 함수
   const getLocalDateString = (date: Date) => {
@@ -1008,7 +1040,7 @@ export default function CalendarView({
         }}
         lead={selectedLead as any}
         teamMembers={teamMembers}
-        statusOptions={STATUS_OPTIONS}
+        statusOptions={statusOptions}
         statusStyles={STATUS_STYLES}
         onUpdate={() => router.refresh()}
       />

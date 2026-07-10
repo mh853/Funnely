@@ -48,7 +48,7 @@ interface LeadsData {
     total: number
     new: number
     contacted: number
-    qualified: number
+    contract_completed: number
     converted: number
   }
 }
@@ -56,17 +56,21 @@ interface LeadsData {
 const STATUS_LABELS: Record<string, string> = {
   new: '신규',
   contacted: '연락완료',
-  qualified: '적격',
   converted: '전환완료',
-  lost: '실패',
+  contract_completed: '예약확정',
+  needs_followup: '추가상담 필요',
+  rejected: '거절',
+  other: '기타',
 }
 
 const STATUS_COLORS: Record<string, string> = {
   new: 'bg-blue-100 text-blue-700',
   contacted: 'bg-yellow-100 text-yellow-700',
-  qualified: 'bg-purple-100 text-purple-700',
   converted: 'bg-green-100 text-green-700',
-  lost: 'bg-gray-100 text-gray-700',
+  contract_completed: 'bg-emerald-100 text-emerald-700',
+  needs_followup: 'bg-purple-100 text-purple-700',
+  rejected: 'bg-red-100 text-red-700',
+  other: 'bg-gray-100 text-gray-700',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {
@@ -168,9 +172,9 @@ export default function LeadsPage() {
           subtitle="연락 완료"
         />
         <SimpleStatsCard
-          title="적격"
-          value={data.summary.qualified}
-          subtitle="적격 리드"
+          title="예약확정"
+          value={data.summary.contract_completed}
+          subtitle="예약 확정"
         />
         <SimpleStatsCard
           title="전환완료"
@@ -202,9 +206,9 @@ export default function LeadsPage() {
                 <SelectItem value="all">전체 상태</SelectItem>
                 <SelectItem value="new">신규</SelectItem>
                 <SelectItem value="contacted">연락완료</SelectItem>
-                <SelectItem value="qualified">적격</SelectItem>
                 <SelectItem value="converted">전환완료</SelectItem>
-                <SelectItem value="lost">실패</SelectItem>
+                <SelectItem value="contract_completed">예약확정</SelectItem>
+                <SelectItem value="rejected">거절</SelectItem>
               </SelectContent>
             </Select>
             <Button type="submit">

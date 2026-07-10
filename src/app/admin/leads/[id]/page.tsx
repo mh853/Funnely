@@ -28,12 +28,10 @@ interface LeadDetail {
   company: {
     id: string
     name: string
-    slug: string
   }
   landing_page: {
     id: string
     title: string
-    slug: string
   } | null
   assigned_to: {
     id: string
@@ -77,9 +75,11 @@ interface Note {
 const STATUS_LABELS: Record<string, string> = {
   new: '신규',
   contacted: '연락완료',
-  qualified: '적격',
   converted: '전환완료',
-  lost: '실패',
+  contract_completed: '예약확정',
+  needs_followup: '추가상담 필요',
+  rejected: '거절',
+  other: '기타',
 }
 
 const PRIORITY_LABELS: Record<string, string> = {

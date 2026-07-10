@@ -32,8 +32,9 @@ export default async function LeadStatusesPage() {
     )
   }
 
-  const { isAdminUser } = await import('@/lib/auth/permissions')
-  const canEdit = isAdminUser(userProfile)
+  // 백엔드(/api/lead-statuses, /api/lead-statuses/reorder)는 simple_role === 'admin'만 허용하므로
+  // isAdminUser()(manager도 통과)가 아닌 동일한 기준으로 노출 여부를 판단한다.
+  const canEdit = userProfile.simple_role === 'admin'
 
   return (
     <div className="px-4 space-y-6">

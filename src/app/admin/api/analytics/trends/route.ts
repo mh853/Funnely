@@ -48,14 +48,20 @@ export async function GET(request: Request) {
     }
 
     // 시계열 데이터 집계
+    // 리드 상태는 회사별 커스텀 lead_statuses 기반이며, 시스템 기본값
+    // (20250220000000_create_lead_statuses.sql)은
+    // new/rejected/contacted/converted/contract_completed/needs_followup/other이다.
+    // 이전에는 실제로 존재하지 않는 'qualified'/'lost' 코드를 집계해 항상 0으로
+    // 표시됐고, 실제 존재하는 상태의 리드는 total에는 잡히지만 어느 세부 버킷에도
+    // 들어가지 않았다.
     const timeSeriesData = new Map<string, {
       date: string
       total: number
       new: number
       contacted: number
-      qualified: number
       converted: number
-      lost: number
+      rejected: number
+      other: number
     }>()
 
     leads?.forEach((lead) => {
@@ -67,18 +73,20 @@ export async function GET(request: Request) {
           total: 0,
           new: 0,
           contacted: 0,
-          qualified: 0,
           converted: 0,
-          lost: 0,
+          rejected: 0,
+          other: 0,
         })
       }
 
       const data = timeSeriesData.get(dateKey)!
       data.total++
 
-      const status = lead.status as 'new' | 'contacted' | 'qualified' | 'converted' | 'lost'
-      if (status in data) {
+      const status = lead.status as 'new' | 'contacted' | 'converted' | 'rejected'
+      if (status === 'new' || status === 'contacted' || status === 'converted' || status === 'rejected') {
         data[status]++
+      } else {
+        data.other++
       }
     })
 

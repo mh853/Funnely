@@ -43,8 +43,8 @@ interface ConversionData {
   }
   stageConversionRates: {
     new_to_contacted: number
-    contacted_to_qualified: number
-    qualified_to_converted: number
+    contacted_to_converted: number
+    converted_to_contract: number
   }
 }
 
@@ -261,15 +261,15 @@ export default function AnalyticsPage() {
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-500">연락완료 → 적격</div>
+              <div className="text-sm text-gray-500">연락완료 → 전환완료</div>
               <div className="text-2xl font-bold text-purple-600 mt-1">
-                {conversionData.stageConversionRates.contacted_to_qualified.toFixed(1)}%
+                {conversionData.stageConversionRates.contacted_to_converted.toFixed(1)}%
               </div>
             </div>
             <div className="text-center">
-              <div className="text-sm text-gray-500">적격 → 전환완료</div>
+              <div className="text-sm text-gray-500">전환완료 → 예약확정</div>
               <div className="text-2xl font-bold text-green-600 mt-1">
-                {conversionData.stageConversionRates.qualified_to_converted.toFixed(1)}%
+                {conversionData.stageConversionRates.converted_to_contract.toFixed(1)}%
               </div>
             </div>
           </div>

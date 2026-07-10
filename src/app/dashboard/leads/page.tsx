@@ -150,7 +150,9 @@ export default async function LeadsPage({
       if (status === 'new') {
         query = query.in('status', ['new', 'pending'])
       } else if (status === 'contacted') {
-        query = query.in('status', ['contacted', 'qualified'])
+        // 'qualified'는 실제로 존재하지 않는 상태 코드였다 (leads.status 실제
+        // 값에 없음) — 제거.
+        query = query.eq('status', 'contacted')
       } else {
         query = query.eq('status', status)
       }

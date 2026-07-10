@@ -31,18 +31,28 @@ export async function GET(request: Request) {
     }
 
     // 상태별 집계
+    // 리드 상태는 회사별로 커스터마이징 가능한 lead_statuses 테이블 기반이며,
+    // 시스템 기본값(20250220000000_create_lead_statuses.sql)은
+    // new/rejected/contacted/converted/contract_completed/needs_followup/other이다.
+    // 이전 코드는 실제로 존재하지 않는 'qualified'/'lost' 코드를 집계하고 있어
+    // 항상 0으로 표시됐고, 실제 존재하는 rejected/contract_completed/needs_followup/other
+    // 상태의 리드는 어느 버킷에도 잡히지 않아 total 대비 퍼센트가 실제보다 낮게 나왔다.
     const statusCounts = {
       new: 0,
       contacted: 0,
-      qualified: 0,
       converted: 0,
-      lost: 0,
+      rejected: 0,
+      contract_completed: 0,
+      needs_followup: 0,
+      other: 0,
     }
 
     leads?.forEach((lead) => {
       const status = lead.status as keyof typeof statusCounts
       if (status in statusCounts) {
         statusCounts[status]++
+      } else {
+        statusCounts.other++
       }
     })
 
@@ -63,16 +73,16 @@ export async function GET(request: Request) {
         percentage: total > 0 ? (statusCounts.contacted / total) * 100 : 0,
       },
       {
-        stage: 'qualified',
-        label: '적격 리드',
-        count: statusCounts.qualified,
-        percentage: total > 0 ? (statusCounts.qualified / total) * 100 : 0,
-      },
-      {
         stage: 'converted',
         label: '전환 완료',
         count: statusCounts.converted,
         percentage: total > 0 ? (statusCounts.converted / total) * 100 : 0,
+      },
+      {
+        stage: 'contract_completed',
+        label: '예약 확정',
+        count: statusCounts.contract_completed,
+        percentage: total > 0 ? (statusCounts.contract_completed / total) * 100 : 0,
       },
     ]
 
@@ -86,11 +96,11 @@ export async function GET(request: Request) {
       new_to_contacted: statusCounts.new > 0
         ? (statusCounts.contacted / statusCounts.new) * 100
         : 0,
-      contacted_to_qualified: statusCounts.contacted > 0
-        ? (statusCounts.qualified / statusCounts.contacted) * 100
+      contacted_to_converted: statusCounts.contacted > 0
+        ? (statusCounts.converted / statusCounts.contacted) * 100
         : 0,
-      qualified_to_converted: statusCounts.qualified > 0
-        ? (statusCounts.converted / statusCounts.qualified) * 100
+      converted_to_contract: statusCounts.converted > 0
+        ? (statusCounts.contract_completed / statusCounts.converted) * 100
         : 0,
     }
 
@@ -99,13 +109,13 @@ export async function GET(request: Request) {
       summary: {
         total,
         converted: statusCounts.converted,
-        lost: statusCounts.lost,
+        lost: statusCounts.rejected,
         conversionRate: parseFloat(conversionRate.toFixed(2)),
       },
       stageConversionRates: {
         new_to_contacted: parseFloat(stageConversionRates.new_to_contacted.toFixed(2)),
-        contacted_to_qualified: parseFloat(stageConversionRates.contacted_to_qualified.toFixed(2)),
-        qualified_to_converted: parseFloat(stageConversionRates.qualified_to_converted.toFixed(2)),
+        contacted_to_converted: parseFloat(stageConversionRates.contacted_to_converted.toFixed(2)),
+        converted_to_contract: parseFloat(stageConversionRates.converted_to_contract.toFixed(2)),
       },
       period: {
         start: startDate,
