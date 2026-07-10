@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { calculateHealthScore } from '@/lib/health/calculateHealthScore'
+import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
 
 /**
  * GET /api/cron/calculate-health-scores
@@ -26,10 +26,11 @@ export async function GET(request: NextRequest) {
     )
 
     // 3. Get all active companies
+    // companies has no 'status' column — it's tracked via the 'is_active' boolean.
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
       .select('id, name')
-      .eq('status', 'active')
+      .eq('is_active', true)
 
     if (companiesError) {
       console.error('[Cron] Failed to fetch companies:', companiesError)
@@ -49,15 +50,17 @@ export async function GET(request: NextRequest) {
       try {
         // Calculate score
         const healthScore = await calculateHealthScore(company.id, supabase)
+        const row = toCustomerHealthScoreRow(company.id, healthScore)
 
         // Check if today's score already exists
+        // Real table name is 'customer_health_scores', not 'health_scores'.
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
 
         const { data: existingScore } = await supabase
-          .from('health_scores')
+          .from('customer_health_scores')
           .select('id')
           .eq('company_id', company.id)
           .gte('calculated_at', today.toISOString())
@@ -67,18 +70,8 @@ export async function GET(request: NextRequest) {
         if (existingScore) {
           // Update existing score
           const { error: updateError } = await supabase
-            .from('health_scores')
-            .update({
-              overall_score: healthScore.overall_score,
-              engagement_score: healthScore.engagement_score,
-              product_usage_score: healthScore.product_usage_score,
-              support_score: healthScore.support_score,
-              payment_score: healthScore.payment_score,
-              health_status: healthScore.health_status,
-              risk_factors: healthScore.risk_factors,
-              recommendations: healthScore.recommendations,
-              calculated_at: new Date().toISOString(),
-            })
+            .from('customer_health_scores')
+            .update(row)
             .eq('id', existingScore.id)
 
           if (updateError) {
@@ -95,19 +88,8 @@ export async function GET(request: NextRequest) {
         } else {
           // Insert new score
           const { error: insertError } = await supabase
-            .from('health_scores')
-            .insert({
-              company_id: company.id,
-              overall_score: healthScore.overall_score,
-              engagement_score: healthScore.engagement_score,
-              product_usage_score: healthScore.product_usage_score,
-              support_score: healthScore.support_score,
-              payment_score: healthScore.payment_score,
-              health_status: healthScore.health_status,
-              risk_factors: healthScore.risk_factors,
-              recommendations: healthScore.recommendations,
-              calculated_at: new Date().toISOString(),
-            })
+            .from('customer_health_scores')
+            .insert(row)
 
           if (insertError) {
             throw insertError

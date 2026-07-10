@@ -361,8 +361,11 @@ export async function calculatePaymentScore(
   const recommendations: Recommendation[] = []
 
   // Get subscription
+  // 이 앱의 실제 테이블은 'subscriptions'가 아니라 'company_subscriptions'다.
+  // 존재하지 않는 테이블을 조회하면 매번 에러와 함께 빈 결과가 돌아와, 아래
+  // "구독 없음" 분기가 실제 결제 상태와 무관하게 모든 회사에 대해 항상 실행됐다.
   const { data: subscription } = await supabase
-    .from('subscriptions')
+    .from('company_subscriptions')
     .select('*')
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
@@ -384,11 +387,14 @@ export async function calculatePaymentScore(
   }
 
   // Score based on subscription status
+  // company_subscriptions.status의 실제 값: active/trial/expired/cancelled/suspended/past_due
+  // (Stripe식 'trialing'/'canceled'/'incomplete'가 아님 — 실제로는 절대 매치되지 않아
+  // 모든 상태가 default: score = 50으로 빠지던 버그)
   switch ((subscription as any).status) {
     case 'active':
       score = 100
       break
-    case 'trialing':
+    case 'trial':
       score = 90
       break
     case 'past_due':
@@ -406,7 +412,7 @@ export async function calculatePaymentScore(
         expected_impact: 'Resolve payment and retain customer',
       })
       break
-    case 'canceled':
+    case 'cancelled':
       score = 0
       riskFactors.push({
         type: 'subscription_canceled',
@@ -415,12 +421,21 @@ export async function calculatePaymentScore(
         impact: 'Customer churned',
       })
       break
-    case 'incomplete':
+    case 'expired':
+      score = 10
+      riskFactors.push({
+        type: 'subscription_expired',
+        severity: 'critical',
+        description: 'Subscription has expired',
+        impact: 'Customer lost access',
+      })
+      break
+    case 'suspended':
       score = 30
       riskFactors.push({
-        type: 'incomplete_subscription',
+        type: 'subscription_suspended',
         severity: 'high',
-        description: 'Subscription setup incomplete',
+        description: 'Subscription is suspended',
         impact: 'Onboarding not completed',
       })
       break
@@ -429,9 +444,11 @@ export async function calculatePaymentScore(
   }
 
   // Check if subscription is expiring soon
-  if ((subscription as any).current_period_end) {
+  // trial 상태는 current_period_end가 아니라 trial_end_date를 사용하므로 함께 확인한다.
+  const periodEnd = (subscription as any).current_period_end ?? (subscription as any).trial_end_date
+  if (periodEnd) {
     const daysUntilExpiry = Math.floor(
-      (new Date((subscription as any).current_period_end).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+      (new Date(periodEnd).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
     )
 
     if (daysUntilExpiry <= 7 && daysUntilExpiry > 0) {
@@ -517,5 +534,44 @@ export async function calculateHealthScore(
     health_status: healthStatus,
     risk_factors: riskFactors,
     recommendations: recommendations,
+  }
+}
+
+/**
+ * DB에 실제로 존재하는 테이블은 'health_scores'가 아니라 'customer_health_scores'이며,
+ * 컬럼 구조도 다르다 (overall_score 등 개별 점수 컬럼이 아니라 단일 score + risk_level +
+ * metrics(JSONB)). 이 함수는 HealthScoreResult를 실제 테이블 행 형태로 변환한다.
+ */
+export function toCustomerHealthScoreRow(
+  companyId: string,
+  result: HealthScoreResult
+): {
+  company_id: string
+  score: number
+  risk_level: 'low' | 'medium' | 'high' | 'critical'
+  metrics: Record<string, any>
+  calculated_at: string
+} {
+  const riskLevel: 'low' | 'medium' | 'high' | 'critical' =
+    result.health_status === 'critical'
+      ? 'critical'
+      : result.health_status === 'at_risk'
+        ? 'medium'
+        : 'low'
+
+  return {
+    company_id: companyId,
+    score: result.overall_score,
+    risk_level: riskLevel,
+    metrics: {
+      engagement_score: result.engagement_score,
+      product_usage_score: result.product_usage_score,
+      support_score: result.support_score,
+      payment_score: result.payment_score,
+      health_status: result.health_status,
+      risk_factors: result.risk_factors,
+      recommendations: result.recommendations,
+    },
+    calculated_at: new Date().toISOString(),
   }
 }

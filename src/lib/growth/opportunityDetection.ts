@@ -222,17 +222,19 @@ async function detectSignalsForCompany(
   }
 
   // Get current and previous health scores
+  // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이고,
+  // 점수 컬럼명은 'overall_score'가 아니라 'score'이다.
   const { data: currentHealth } = await supabase
-    .from('health_scores')
-    .select('overall_score')
+    .from('customer_health_scores')
+    .select('score')
     .eq('company_id', companyId)
     .order('calculated_at', { ascending: false })
     .limit(1)
     .single()
 
   const { data: previousHealth } = await supabase
-    .from('health_scores')
-    .select('overall_score')
+    .from('customer_health_scores')
+    .select('score')
     .eq('company_id', companyId)
     .order('calculated_at', { ascending: false })
     .limit(2)
@@ -240,11 +242,11 @@ async function detectSignalsForCompany(
   if (currentHealth) {
     const prevScore =
       previousHealth && previousHealth.length > 1
-        ? previousHealth[1].overall_score
+        ? previousHealth[1].score
         : null
 
     const healthDeclineSignal = detectHealthScoreDeclineSignal(
-      currentHealth.overall_score,
+      currentHealth.score,
       prevScore
     )
 

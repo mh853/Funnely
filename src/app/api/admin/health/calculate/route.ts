@@ -4,7 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/admin/audit-middleware'
-import { calculateHealthScore } from '@/lib/health/calculateHealthScore'
+import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
 
 /**
  * POST /api/admin/health/calculate
@@ -61,10 +61,12 @@ export async function POST(request: NextRequest) {
       }
     } else {
       // 모든 활성 회사 계산
+      // companies 테이블에는 'status' 컬럼이 없다 (is_active boolean으로 관리됨).
+      // 그대로 두면 존재하지 않는 컬럼 에러로 매번 실패했다.
       const { data: companies, error: companiesError } = await supabase
         .from('companies')
         .select('id, name')
-        .eq('status', 'active')
+        .eq('is_active', true)
 
       if (companiesError) {
         console.error('[Health Calculate] Companies query error:', companiesError)
@@ -161,15 +163,17 @@ async function calculateAndSaveHealthScore(
 
   // 건강도 점수 계산
   const healthScore = await calculateHealthScore(companyId, supabase)
+  const row = toCustomerHealthScoreRow(companyId, healthScore)
 
   // 오늘 날짜의 기존 점수 확인
+  // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이다.
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
 
   const { data: existingScore } = await supabase
-    .from('health_scores')
+    .from('customer_health_scores')
     .select('id')
     .eq('company_id', companyId)
     .gte('calculated_at', today.toISOString())
@@ -179,18 +183,8 @@ async function calculateAndSaveHealthScore(
   if (existingScore) {
     // 기존 점수 업데이트
     const { data: updatedScore, error: updateError } = await supabase
-      .from('health_scores')
-      .update({
-        overall_score: healthScore.overall_score,
-        engagement_score: healthScore.engagement_score,
-        product_usage_score: healthScore.product_usage_score,
-        support_score: healthScore.support_score,
-        payment_score: healthScore.payment_score,
-        health_status: healthScore.health_status,
-        risk_factors: healthScore.risk_factors,
-        recommendations: healthScore.recommendations,
-        calculated_at: new Date().toISOString(),
-      })
+      .from('customer_health_scores')
+      .update(row)
       .eq('id', existingScore.id)
       .select()
       .single()
@@ -225,19 +219,8 @@ async function calculateAndSaveHealthScore(
   } else {
     // 새 점수 생성
     const { data: newScore, error: insertError } = await supabase
-      .from('health_scores')
-      .insert({
-        company_id: companyId,
-        overall_score: healthScore.overall_score,
-        engagement_score: healthScore.engagement_score,
-        product_usage_score: healthScore.product_usage_score,
-        support_score: healthScore.support_score,
-        payment_score: healthScore.payment_score,
-        health_status: healthScore.health_status,
-        risk_factors: healthScore.risk_factors,
-        recommendations: healthScore.recommendations,
-        calculated_at: new Date().toISOString(),
-      })
+      .from('customer_health_scores')
+      .insert(row)
       .select()
       .single()
 

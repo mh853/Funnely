@@ -33,9 +33,10 @@ export async function GET(
     )
 
     // 회사 존재 확인
+    // companies 테이블에는 slug/status 컬럼이 없다 (is_active boolean으로 관리됨).
     const { data: company, error: companyError } = await supabase
       .from('companies')
-      .select('id, name, slug, status')
+      .select('id, name, is_active')
       .eq('id', params.companyId)
       .single()
 
@@ -44,8 +45,9 @@ export async function GET(
     }
 
     // 건강도 점수 조회
+    // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이다.
     let scoreQuery = supabase
-      .from('health_scores')
+      .from('customer_health_scores')
       .select('*')
       .eq('company_id', params.companyId)
 
@@ -86,37 +88,39 @@ export async function GET(
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
     const { data: history } = await supabase
-      .from('health_scores')
-      .select('calculated_at, overall_score, health_status')
+      .from('customer_health_scores')
+      .select('calculated_at, score, risk_level, metrics')
       .eq('company_id', params.companyId)
       .gte('calculated_at', thirtyDaysAgo.toISOString())
       .order('calculated_at', { ascending: true })
       .limit(30)
 
     // 5. 응답 구성
+    // metrics(JSONB)에 engagement_score 등 세부 점수와 risk_factors/recommendations가 담겨 있다.
+    const metrics = (healthScore.metrics || {}) as Record<string, any>
     const response = {
       company: {
         id: company.id,
         name: company.name,
-        slug: company.slug,
-        status: company.status,
+        is_active: company.is_active,
       },
       current_score: {
         id: healthScore.id,
-        overall_score: healthScore.overall_score,
-        engagement_score: healthScore.engagement_score,
-        product_usage_score: healthScore.product_usage_score,
-        support_score: healthScore.support_score,
-        payment_score: healthScore.payment_score,
-        health_status: healthScore.health_status,
-        risk_factors: healthScore.risk_factors || [],
-        recommendations: healthScore.recommendations || [],
+        overall_score: healthScore.score,
+        engagement_score: metrics.engagement_score,
+        product_usage_score: metrics.product_usage_score,
+        support_score: metrics.support_score,
+        payment_score: metrics.payment_score,
+        health_status: metrics.health_status,
+        risk_level: healthScore.risk_level,
+        risk_factors: metrics.risk_factors || [],
+        recommendations: metrics.recommendations || [],
         calculated_at: healthScore.calculated_at,
       },
       history: (history || []).map((h) => ({
         calculated_at: h.calculated_at,
-        overall_score: h.overall_score,
-        health_status: h.health_status,
+        overall_score: h.score,
+        health_status: (h.metrics as Record<string, any>)?.health_status || h.risk_level,
       })),
     }
 

@@ -7,7 +7,7 @@ import type {
   BulkOperationResponse,
   BulkOperationLog,
 } from '@/types/bulk'
-import { calculateHealthScore } from '@/lib/health/calculateHealthScore'
+import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
 
 export class BulkProcessor {
   private static readonly BATCH_SIZE = 100 // Process 100 entities at a time
@@ -126,14 +126,16 @@ export class BulkProcessor {
     parameters: Record<string, any>
   ): Promise<void> {
     switch (operation) {
-      case 'change_status':
-        await this.supabase
+      case 'change_status': {
+        const { error } = await this.supabase
           .from('leads')
           .update({ status: parameters.status })
           .eq('id', leadId)
+        if (error) throw error
         break
+      }
 
-      case 'add_tags':
+      case 'add_tags': {
         const { data: lead } = await this.supabase
           .from('leads')
           .select('tags')
@@ -145,13 +147,15 @@ export class BulkProcessor {
           new Set([...currentTags, ...parameters.tags])
         )
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('leads')
           .update({ tags: newTags })
           .eq('id', leadId)
+        if (error) throw error
         break
+      }
 
-      case 'remove_tags':
+      case 'remove_tags': {
         const { data: leadData } = await this.supabase
           .from('leads')
           .select('tags')
@@ -162,28 +166,34 @@ export class BulkProcessor {
           (tag) => !parameters.tags.includes(tag)
         )
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('leads')
           .update({ tags: filteredTags })
           .eq('id', leadId)
+        if (error) throw error
         break
+      }
 
-      case 'assign':
-        await this.supabase
+      case 'assign': {
+        const { error } = await this.supabase
           .from('leads')
           .update({ assigned_to: parameters.assignee_id })
           .eq('id', leadId)
+        if (error) throw error
         break
+      }
 
-      case 'delete':
+      case 'delete': {
         if (!parameters.confirm) {
           throw new Error('Delete operation requires confirmation')
         }
 
-        await this.supabase.from('leads').delete().eq('id', leadId)
+        const { error } = await this.supabase.from('leads').delete().eq('id', leadId)
+        if (error) throw error
         break
+      }
 
-      case 'add_note':
+      case 'add_note': {
         // Add note to lead metadata or separate notes table if exists
         const { data: leadForNote } = await this.supabase
           .from('leads')
@@ -200,7 +210,7 @@ export class BulkProcessor {
           created_at: new Date().toISOString(),
         })
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('leads')
           .update({
             metadata: {
@@ -209,7 +219,9 @@ export class BulkProcessor {
             },
           })
           .eq('id', leadId)
+        if (error) throw error
         break
+      }
 
       default:
         throw new Error(`Unknown lead operation: ${operation}`)
@@ -224,14 +236,18 @@ export class BulkProcessor {
     parameters: Record<string, any>
   ): Promise<void> {
     switch (operation) {
-      case 'change_status':
-        await this.supabase
+      case 'change_status': {
+        // companies 테이블에는 'status' 컬럼이 없다 (is_active boolean + withdrawn_at으로 관리됨).
+        // 존재하지 않는 컬럼에 update를 시도하면 매번 에러가 나며, 에러 체크가 없어 무시되어 왔다.
+        const { error } = await this.supabase
           .from('companies')
-          .update({ status: parameters.status })
+          .update({ is_active: parameters.status === 'active' })
           .eq('id', companyId)
+        if (error) throw error
         break
+      }
 
-      case 'add_tags':
+      case 'add_tags': {
         const { data: company } = await this.supabase
           .from('companies')
           .select('tags')
@@ -243,13 +259,15 @@ export class BulkProcessor {
           new Set([...currentTags, ...parameters.tags])
         )
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('companies')
           .update({ tags: newTags })
           .eq('id', companyId)
+        if (error) throw error
         break
+      }
 
-      case 'remove_tags':
+      case 'remove_tags': {
         const { data: companyData } = await this.supabase
           .from('companies')
           .select('tags')
@@ -260,24 +278,28 @@ export class BulkProcessor {
           (tag) => !parameters.tags.includes(tag)
         )
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('companies')
           .update({ tags: filteredTags })
           .eq('id', companyId)
+        if (error) throw error
         break
+      }
 
-      case 'recalculate_health':
+      case 'recalculate_health': {
         // Calculate health score
         const healthScore = await calculateHealthScore(companyId, this.supabase)
+        const row = toCustomerHealthScoreRow(companyId, healthScore)
 
         // Check if today's score exists
+        // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이다.
         const today = new Date()
         today.setHours(0, 0, 0, 0)
         const tomorrow = new Date(today)
         tomorrow.setDate(tomorrow.getDate() + 1)
 
         const { data: existingScore } = await this.supabase
-          .from('health_scores')
+          .from('customer_health_scores')
           .select('id')
           .eq('company_id', companyId)
           .gte('calculated_at', today.toISOString())
@@ -286,45 +308,29 @@ export class BulkProcessor {
 
         if (existingScore) {
           // Update existing score
-          await this.supabase
-            .from('health_scores')
-            .update({
-              overall_score: healthScore.overall_score,
-              engagement_score: healthScore.engagement_score,
-              product_usage_score: healthScore.product_usage_score,
-              support_score: healthScore.support_score,
-              payment_score: healthScore.payment_score,
-              health_status: healthScore.health_status,
-              risk_factors: healthScore.risk_factors,
-              recommendations: healthScore.recommendations,
-              calculated_at: new Date().toISOString(),
-            })
+          const { error } = await this.supabase
+            .from('customer_health_scores')
+            .update(row)
             .eq('id', existingScore.id)
+          if (error) throw error
         } else {
           // Insert new score
-          await this.supabase.from('health_scores').insert({
-            company_id: companyId,
-            overall_score: healthScore.overall_score,
-            engagement_score: healthScore.engagement_score,
-            product_usage_score: healthScore.product_usage_score,
-            support_score: healthScore.support_score,
-            payment_score: healthScore.payment_score,
-            health_status: healthScore.health_status,
-            risk_factors: healthScore.risk_factors,
-            recommendations: healthScore.recommendations,
-            calculated_at: new Date().toISOString(),
-          })
+          const { error } = await this.supabase.from('customer_health_scores').insert(row)
+          if (error) throw error
         }
         break
+      }
 
-      case 'assign_cs_manager':
-        await this.supabase
+      case 'assign_cs_manager': {
+        const { error } = await this.supabase
           .from('companies')
           .update({ cs_manager_id: parameters.cs_manager_id })
           .eq('id', companyId)
+        if (error) throw error
         break
+      }
 
-      case 'add_note':
+      case 'add_note': {
         // Add note to company metadata
         const { data: companyForNote } = await this.supabase
           .from('companies')
@@ -341,7 +347,7 @@ export class BulkProcessor {
           created_at: new Date().toISOString(),
         })
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('companies')
           .update({
             metadata: {
@@ -350,7 +356,9 @@ export class BulkProcessor {
             },
           })
           .eq('id', companyId)
+        if (error) throw error
         break
+      }
 
       default:
         throw new Error(`Unknown company operation: ${operation}`)
@@ -365,49 +373,115 @@ export class BulkProcessor {
     parameters: Record<string, any>
   ): Promise<void> {
     switch (operation) {
-      case 'change_plan':
-        await this.supabase
+      case 'change_plan': {
+        const { error } = await this.supabase
           .from('company_subscriptions')
           .update({
             plan_id: parameters.plan_id,
             // TODO: Handle effective_date and proration
           })
           .eq('id', subscriptionId)
+        if (error) throw error
         break
+      }
 
-      case 'change_billing_cycle':
-        await this.supabase
+      case 'change_billing_cycle': {
+        const { error } = await this.supabase
           .from('company_subscriptions')
           .update({ billing_cycle: parameters.billing_cycle })
           .eq('id', subscriptionId)
+        if (error) throw error
         break
+      }
 
-      case 'change_status':
-        await this.supabase
+      case 'change_status': {
+        // 단건 관리자 API(/api/admin/subscriptions/[id])와 동일한 부작용을 적용한다.
+        // status만 바꾸고 끝내면: cancelled 전환 시 cancelled_at이 비어있고,
+        // expired/trial 등에서 active로 재활성화할 때 current_period_end가 과거이거나
+        // 아예 null로 남아 미들웨어의 만료 체크를 통과하지 못하거나(access 차단) 반대로
+        // 무기한 무료 이용이 가능해지는 등 실제 접근 제어가 깨진다.
+        const updateData: Record<string, any> = { status: parameters.status }
+
+        if (parameters.status === 'cancelled') {
+          updateData.cancelled_at = new Date().toISOString()
+        }
+
+        if (parameters.status === 'trial') {
+          const { data: current } = await this.supabase
+            .from('company_subscriptions')
+            .select('trial_end_date')
+            .eq('id', subscriptionId)
+            .single()
+
+          if (!current?.trial_end_date) {
+            const now = new Date()
+            const trialEnd = new Date(now)
+            trialEnd.setDate(trialEnd.getDate() + 7)
+            updateData.trial_start_date = now.toISOString()
+            updateData.trial_end_date = trialEnd.toISOString()
+          }
+        }
+
+        if (parameters.status === 'active') {
+          const { data: current } = await this.supabase
+            .from('company_subscriptions')
+            .select('status, current_period_end, billing_cycle')
+            .eq('id', subscriptionId)
+            .single()
+
+          const reactivatingFromExpired =
+            current && ['expired', 'cancelled', 'suspended'].includes(current.status)
+          const periodEndInPast =
+            current?.current_period_end && current.current_period_end < new Date().toISOString()
+          const neverHadPeriod = current && !current.current_period_end
+
+          if (reactivatingFromExpired || periodEndInPast || neverHadPeriod) {
+            const now = new Date()
+            const periodEnd = new Date(now)
+            if (current?.billing_cycle === 'yearly') {
+              periodEnd.setFullYear(periodEnd.getFullYear() + 1)
+            } else {
+              periodEnd.setMonth(periodEnd.getMonth() + 1)
+            }
+            updateData.current_period_start = now.toISOString()
+            updateData.current_period_end = periodEnd.toISOString()
+            updateData.grace_period_end = null
+            updateData.cancelled_at = null
+          }
+        }
+
+        const { error } = await this.supabase
           .from('company_subscriptions')
-          .update({ status: parameters.status })
+          .update(updateData)
           .eq('id', subscriptionId)
+        if (error) throw error
         break
+      }
 
-      case 'extend_next_billing':
+      case 'extend_next_billing': {
+        // company_subscriptions에는 'next_billing_date' 컬럼이 없다. 다음 결제일에
+        // 해당하는 실제 컬럼은 current_period_end이다 (존재하지 않는 컬럼을 select하면
+        // 항상 undefined가 반환되어 이 작업은 매번 "no next billing date" 에러로 실패했다).
         const { data: subscription } = await this.supabase
           .from('company_subscriptions')
-          .select('next_billing_date')
+          .select('current_period_end')
           .eq('id', subscriptionId)
           .single()
 
-        if (!subscription?.next_billing_date) {
-          throw new Error('Subscription has no next billing date')
+        if (!subscription?.current_period_end) {
+          throw new Error('Subscription has no current billing period end')
         }
 
-        const currentDate = new Date(subscription.next_billing_date)
+        const currentDate = new Date(subscription.current_period_end)
         currentDate.setDate(currentDate.getDate() + parameters.days)
 
-        await this.supabase
+        const { error } = await this.supabase
           .from('company_subscriptions')
-          .update({ next_billing_date: currentDate.toISOString() })
+          .update({ current_period_end: currentDate.toISOString() })
           .eq('id', subscriptionId)
+        if (error) throw error
         break
+      }
 
       default:
         throw new Error(`Unknown subscription operation: ${operation}`)
