@@ -1,5 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
+
+// public_inquiries.inquiry_type CHECK 제약은 general/sales/technical/billing만 허용한다.
+// 컨택폼의 문의 유형(feature_request/bug)은 이 중 하나로 매핑한다.
+const CATEGORY_TO_INQUIRY_TYPE: Record<string, string> = {
+  technical: 'technical',
+  billing: 'billing',
+  feature_request: 'general',
+  bug: 'technical',
+  general: 'general',
+}
 
 // Rate limiting simple implementation (in production, use Redis or similar)
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
@@ -65,84 +75,29 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = await createClient()
+    // /contact 폼은 원래 companies에 존재하지 않는 컬럼(industry/employee_count/status)에
+    // insert를 시도하며 "게스트 회사 + support_ticket"을 만들고 있었는데, 이는 어드민이
+    // 실제로 보는 "홈페이지 문의" 화면(public_inquiries 테이블)과 완전히 다른 경로였다.
+    // 사이트 다른 곳(헤더/요금제/FAQ)의 문의 모달이 쓰는 것과 동일하게 public_inquiries에
+    // 저장해 어드민 "홈페이지 문의" 화면에 실제로 노출되도록 한다.
+    const supabase = createAdminClient()
 
-    // Find or create a guest company for public inquiries
-    // We'll use a special pattern for guest companies
-    const guestCompanyName = `[문의] ${companyName}`
-
-    let companyId: string
-
-    // Check if this guest company already exists
-    const { data: existingCompany } = await supabase
-      .from('companies')
-      .select('id')
-      .eq('name', guestCompanyName)
-      .single()
-
-    if (existingCompany) {
-      companyId = existingCompany.id
-    } else {
-      // Create a new guest company
-      const { data: newCompany, error: companyError } = await supabase
-        .from('companies')
-        .insert({
-          name: guestCompanyName,
-          business_number: `GUEST-${Date.now()}`, // Unique identifier for guest
-          industry: 'inquiry',
-          employee_count: '1-10',
-          status: 'active',
-        })
-        .select('id')
-        .single()
-
-      if (companyError || !newCompany) {
-        console.error('Error creating guest company:', companyError)
-        return NextResponse.json(
-          { error: '문의 처리 중 오류가 발생했습니다. 다시 시도해주세요.' },
-          { status: 500 }
-        )
-      }
-
-      companyId = newCompany.id
-    }
-
-    // Create support ticket with contact information embedded
-    const contactInfo = {
-      fullName,
-      email,
-      phone: phone || null,
-      companyName,
-    }
-
-    const fullDescription = `
-[문의자 정보]
-- 이름: ${fullName}
-- 이메일: ${email}
-- 전화번호: ${phone || '미입력'}
-- 회사명: ${companyName}
-
-[문의 내용]
-${description}
-    `.trim()
-
-    const { data: ticket, error: ticketError } = await supabase
-      .from('support_tickets')
+    const { data: inquiry, error: inquiryError } = await supabase
+      .from('public_inquiries')
       .insert({
-        company_id: companyId,
-        created_by_user_id: null, // NULL for public inquiries
+        inquiry_type: CATEGORY_TO_INQUIRY_TYPE[category] || 'general',
+        name: fullName,
+        email,
+        phone: phone || null,
+        company: companyName,
         subject,
-        description: fullDescription,
-        status: 'open',
-        priority: 'medium',
-        category: category || 'general',
-        tags: ['public_inquiry', 'website_contact'],
+        message: description,
       })
       .select('id')
       .single()
 
-    if (ticketError || !ticket) {
-      console.error('Error creating support ticket:', ticketError)
+    if (inquiryError || !inquiry) {
+      console.error('Error creating public inquiry:', inquiryError)
       return NextResponse.json(
         { error: '문의 등록 중 오류가 발생했습니다. 다시 시도해주세요.' },
         { status: 500 }
@@ -155,7 +110,7 @@ ${description}
     return NextResponse.json(
       {
         success: true,
-        ticketId: ticket.id,
+        inquiryId: inquiry.id,
         message: '문의가 성공적으로 접수되었습니다. 영업일 기준 24시간 내에 답변드리겠습니다.',
       },
       { status: 201 }

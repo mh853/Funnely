@@ -18,7 +18,10 @@ export async function POST(
     }
 
     const body = await request.json()
-    const { message, is_internal } = body
+    // 관리자 UI가 보내는 필드명은 isInternalNote(camelCase)이다. 이전에는 여기서
+    // is_internal(snake_case)을 읽어 항상 undefined → false로 저장되어, 관리자가
+    // "내부 메모"로 남긴 글이 실제로는 고객에게 그대로 노출되고 있었다.
+    const { message, isInternalNote } = body
 
     if (!message || !message.trim()) {
       return NextResponse.json(
@@ -39,7 +42,7 @@ export async function POST(
         ticket_id: params.id,
         user_id: adminUser.user.id,
         message: message.trim(),
-        is_internal_note: is_internal || false,
+        is_internal_note: isInternalNote || false,
       })
       .select(
         `

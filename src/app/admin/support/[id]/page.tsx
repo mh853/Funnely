@@ -301,6 +301,34 @@ export default function AdminTicketDetailPage({
   }
 
   const StatusIcon = STATUS_ICONS[ticket.status]
+  const customerMessages = messages.filter((message) => !message.is_internal_note)
+  const internalMessages = messages.filter((message) => message.is_internal_note)
+
+  const renderMessage = (message: Message) => {
+    const isAdmin = message.user.is_super_admin
+    const isInternal = message.is_internal_note
+    return (
+      <div key={message.id} className={`flex gap-2.5 ${isInternal ? 'bg-violet-50/60 p-3 rounded-lg border border-violet-100' : ''}`}>
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isInternal ? 'bg-violet-200' : isAdmin ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+          {isAdmin ? <Shield className="h-4 w-4 text-indigo-600" /> : <User className="h-4 w-4 text-gray-600" />}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-1">
+            <span className="text-xs font-semibold text-gray-900">{message.user.full_name}</span>
+            {isInternal && (
+              <span className="text-[10px] text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">내부</span>
+            )}
+            <span className="text-[10px] text-gray-400">
+              {format(new Date(message.created_at), 'MM/dd HH:mm', { locale: ko })}
+            </span>
+          </div>
+          <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
+            {message.message}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -322,7 +350,7 @@ export default function AdminTicketDetailPage({
             <p className="text-indigo-200 text-sm mt-1">
               {format(new Date(ticket.created_at), 'yyyy-MM-dd HH:mm', { locale: ko })}
               <span className="mx-1.5 opacity-50">·</span>
-              {ticket.created_by.full_name}
+              {ticket.created_by?.full_name ?? '비회원'}
             </p>
           </div>
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full flex-shrink-0 ${STATUS_BADGE[ticket.status]}`}>
@@ -464,37 +492,20 @@ export default function AdminTicketDetailPage({
             )}
           </SectionCard>
 
+          {/* 고객 메시지 */}
+          {customerMessages.length > 0 && (
+            <SectionCard title="고객 메시지">
+              <div className="space-y-3">{customerMessages.map(renderMessage)}</div>
+            </SectionCard>
+          )}
+
           {/* 내부 노트 목록 */}
           <SectionCard title="내부 노트">
             <div className="space-y-3">
-              {messages.length === 0 ? (
+              {internalMessages.length === 0 ? (
                 <div className="text-center text-gray-400 py-8 text-sm">아직 내부 노트가 없습니다</div>
               ) : (
-                messages.map((message) => {
-                  const isAdmin = message.user.is_super_admin
-                  const isInternal = message.is_internal_note
-                  return (
-                    <div key={message.id} className={`flex gap-2.5 ${isInternal ? 'bg-violet-50/60 p-3 rounded-lg border border-violet-100' : ''}`}>
-                      <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isInternal ? 'bg-violet-200' : isAdmin ? 'bg-indigo-100' : 'bg-gray-100'}`}>
-                        {isAdmin ? <Shield className="h-4 w-4 text-indigo-600" /> : <User className="h-4 w-4 text-gray-600" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <span className="text-xs font-semibold text-gray-900">{message.user.full_name}</span>
-                          {isInternal && (
-                            <span className="text-[10px] text-violet-600 bg-violet-100 px-1.5 py-0.5 rounded">내부</span>
-                          )}
-                          <span className="text-[10px] text-gray-400">
-                            {format(new Date(message.created_at), 'MM/dd HH:mm', { locale: ko })}
-                          </span>
-                        </div>
-                        <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">
-                          {message.message}
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })
+                internalMessages.map(renderMessage)
               )}
             </div>
           </SectionCard>
@@ -540,13 +551,13 @@ export default function AdminTicketDetailPage({
                 <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                   <User className="h-3.5 w-3.5" /> 문의자
                 </div>
-                <div className="text-sm font-semibold text-gray-900">{ticket.created_by.full_name}</div>
+                <div className="text-sm font-semibold text-gray-900">{ticket.created_by?.full_name ?? '비회원'}</div>
               </div>
               <div>
                 <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-1">
                   <Mail className="h-3.5 w-3.5" /> 이메일
                 </div>
-                <div className="text-sm font-semibold text-gray-900 break-words">{ticket.created_by.email}</div>
+                <div className="text-sm font-semibold text-gray-900 break-words">{ticket.created_by?.email ?? '-'}</div>
               </div>
               {ticket.company.phone && (
                 <div>

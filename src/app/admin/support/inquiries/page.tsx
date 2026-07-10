@@ -37,8 +37,10 @@ const STATUS_CONFIG = {
 }
 
 const TYPE_CONFIG = {
-  general: { label: '일반 문의', color: 'bg-indigo-50 text-indigo-700' },
-  sales:   { label: '영업 상담', color: 'bg-purple-50 text-purple-700' },
+  general:   { label: '일반 문의', color: 'bg-indigo-50 text-indigo-700' },
+  sales:     { label: '영업 상담', color: 'bg-purple-50 text-purple-700' },
+  technical: { label: '기술 문의', color: 'bg-sky-50 text-sky-700' },
+  billing:   { label: '결제 문의', color: 'bg-amber-50 text-amber-700' },
 }
 
 export default function AdminInquiriesPage() {
@@ -82,15 +84,19 @@ export default function AdminInquiriesPage() {
   const updateStatus = async (id: string, status: string) => {
     setIsUpdating(true)
     try {
-      await fetch('/admin/api/support/inquiries', {
+      const res = await fetch('/admin/api/support/inquiries', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status }),
       })
+      if (!res.ok) throw new Error('Failed to update status')
       fetchInquiries()
       if (selectedInquiry?.id === id) {
         setSelectedInquiry((prev) => prev ? { ...prev, status: status as Inquiry['status'] } : null)
       }
+    } catch (err) {
+      console.error(err)
+      alert('상태 변경에 실패했습니다')
     } finally {
       setIsUpdating(false)
     }

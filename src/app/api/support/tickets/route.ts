@@ -44,6 +44,7 @@ export async function GET(request: Request) {
         { count: 'exact' }
       )
       .eq('company_id', userData.company_id)
+      .eq('messages.is_internal_note', false)
       .order('created_at', { ascending: false })
 
     if (status) {
