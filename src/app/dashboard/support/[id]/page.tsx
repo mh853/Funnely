@@ -128,8 +128,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
 
   // Generate signed URL for private storage file
   async function getSignedUrl(filePathOrUrl: string): Promise<string> {
-    console.log('getSignedUrl called with:', filePathOrUrl)
-
     // Extract file path from URL if it's a full URL
     let filePath = filePathOrUrl
     if (filePathOrUrl.includes('http')) {
@@ -137,7 +135,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       const match = filePathOrUrl.match(/support-attachments\/(.+)$/)
       if (match) {
         filePath = match[1]
-        console.log('Extracted file path from URL:', filePath)
       } else {
         console.error('Could not extract file path from URL:', filePathOrUrl)
         return ''
@@ -150,7 +147,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
 
     if (error) {
       console.error('Supabase error creating signed URL:', error)
-      console.error('Error details:', JSON.stringify(error, null, 2))
       return ''
     }
 
@@ -159,7 +155,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       return ''
     }
 
-    console.log('Successfully created signed URL:', data.signedUrl)
+    // data.signedUrl은 1시간짜리 임시 접근 토큰을 포함하므로 로그에 남기지 않는다.
     return data.signedUrl
   }
 
@@ -179,8 +175,6 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       }
 
       const result = await response.json()
-      console.log('Ticket data received:', result.ticket)
-      console.log('Attachments:', result.ticket.attachments)
       setTicket(result.ticket)
       setMessages(result.messages || [])
 

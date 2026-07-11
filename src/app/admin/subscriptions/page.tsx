@@ -112,10 +112,9 @@ export default function SubscriptionsPage() {
           table: 'company_subscriptions',
         },
         (payload) => {
-          console.log('🔔 Realtime subscription change:', payload)
-          console.log('  - Event type:', payload.eventType)
-          console.log('  - Company:', (payload.new as any)?.company_id || (payload.old as any)?.company_id)
-          console.log('  - Status:', (payload.new as any)?.status || (payload.old as any)?.status)
+          // payload에는 billing_key/card_info 등 결제 자격증명이 포함되어 있어
+          // 그대로 콘솔에 출력하지 않는다.
+          console.log('🔔 Realtime subscription change:', payload.eventType)
 
           // 구독 변경 시 즉시 목록 새로고침
           // 50ms 지연으로 DB 복제 지연 고려

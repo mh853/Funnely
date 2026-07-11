@@ -115,9 +115,9 @@ export default function SubscriptionClient({
           filter: `company_id=eq.${companyId}`, // 현재 회사만
         },
         (payload) => {
-          console.log('🔔 My subscription changed:', payload)
-          console.log('  - Event type:', payload.eventType)
-          console.log('  - New status:', (payload.new as any)?.status)
+          // payload에는 billing_key/card_info 등 결제 자격증명이 포함되어 있어
+          // 그대로 콘솔에 출력하지 않는다.
+          console.log('🔔 My subscription changed:', payload.eventType)
 
           // Server Component 데이터 재조회
           router.refresh()
