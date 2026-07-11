@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 
 export async function GET() {
   try {
     await requireSuperAdmin()
 
-    const supabase = await createClient()
+    // requireSuperAdmin()은 애플리케이션 레벨 체크일 뿐 세션 클라이언트의 RLS를
+    // 우회하지 않는다. users RLS가 같은 회사로 스코핑되어 있어 세션 클라이언트로는
+    // 관리자 자신의 회사 데이터만 집계되고 있었다.
+    const supabase = createAdminClient()
     const now = new Date()
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 
 export async function GET(request: Request) {
@@ -12,7 +12,7 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     let query = supabase
       .from('error_logs')
@@ -88,7 +88,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json()
-    const supabase = await createClient()
+    const supabase = createAdminClient()
 
     const { data: errorLog, error } = await supabase
       .from('error_logs')

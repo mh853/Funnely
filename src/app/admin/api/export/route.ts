@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 
 export async function GET(request: Request) {
@@ -10,7 +10,7 @@ export async function GET(request: Request) {
     const type = searchParams.get('type') || 'companies'
     const format = searchParams.get('format') || 'csv'
 
-    const supabase = await createClient()
+    const supabase = createAdminClient()
     let csvData = ''
 
     switch (type) {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 
 export async function POST(
@@ -7,9 +7,12 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    await requireSuperAdmin()
+    const adminUser = await requireSuperAdmin()
 
-    const supabase = await createClient()
+    // requireSuperAdmin()은 애플리케이션 레벨 체크일 뿐 세션 클라이언트의 RLS를
+    // 우회하지 않는다. users RLS가 같은 회사로 스코핑되어 있어, 세션 클라이언트로는
+    // 관리자가 다른 회사 소속 사용자를 조회하면 항상 404가 났다.
+    const supabase = createAdminClient()
     const userId = params.id
 
     // 사용자 정보 조회
@@ -45,16 +48,20 @@ export async function POST(
       )
     }
 
-    // 활동 로그 기록
-    const { data: adminUser } = await supabase.auth.getUser()
-    if (adminUser.user) {
-      await supabase.from('company_activity_logs').insert({
-        company_id: user.company_id,
-        user_id: adminUser.user.id,
-        action: 'password_reset_sent',
-        description: `사용자 ${user.email}에게 비밀번호 재설정 이메일 발송`,
-        metadata: { target_user_id: userId },
-      })
+    // 활동 로그 기록 (서비스 롤 클라이언트에는 세션이 없어 auth.getUser()를 다시
+    // 호출할 수 없으므로, requireSuperAdmin()이 반환한 관리자 정보를 사용한다.
+    // company_activity_logs의 실제 컬럼명은 action/description이 아니라
+    // activity_type/activity_description이다.)
+    const { error: activityLogError } = await supabase.from('company_activity_logs').insert({
+      company_id: user.company_id,
+      user_id: adminUser.id,
+      activity_type: 'password_reset_sent',
+      activity_description: `사용자 ${user.email}에게 비밀번호 재설정 이메일 발송`,
+      metadata: { target_user_id: userId },
+    })
+
+    if (activityLogError) {
+      console.error('Activity log insert error:', activityLogError)
     }
 
     return NextResponse.json({
