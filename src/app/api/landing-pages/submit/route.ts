@@ -42,8 +42,41 @@ function getServiceRoleClient() {
   )
 }
 
+// 이 엔드포인트는 인증 없이 완전히 공개되어 있고 요청 제한이 전혀 없어,
+// 스크립트로 특정 회사의 leads 테이블을 무한정 채워 넣을 수 있었다
+// (/api/contact와 동일한 방식의 인메모리 IP 제한 — 여러 사무실이 같은 공인
+// IP를 공유할 수 있어 contact보다 넉넉하게 잡는다).
+const requestCounts = new Map<string, { count: number; resetTime: number }>()
+const RATE_LIMIT = 10
+const RATE_WINDOW = 60 * 60 * 1000 // 1시간
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const record = requestCounts.get(ip)
+
+  if (!record || now > record.resetTime) {
+    requestCounts.set(ip, { count: 1, resetTime: now + RATE_WINDOW })
+    return true
+  }
+
+  if (record.count >= RATE_LIMIT) {
+    return false
+  }
+
+  record.count++
+  return true
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
+    if (!checkRateLimit(ip)) {
+      return NextResponse.json(
+        { error: { message: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' } },
+        { status: 429 }
+      )
+    }
+
     const supabase = getServiceRoleClient()
     const body: FormSubmission = await request.json()
 
@@ -69,8 +102,31 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 클라이언트 검증은 프론트에만 있고 이 API는 직접 호출도 가능해, 값이
+    // 비어있지 않기만 하면 전부 통과시키고 있었다("123" 같은 값도 그대로
+    // 리드로 저장됨). 자릿수와 길이를 서버에서도 검증한다.
+    const phoneDigitsOnly = phone.replace(/\D/g, '')
+    if (phoneDigitsOnly.length < 9 || phoneDigitsOnly.length > 11) {
+      return NextResponse.json(
+        { error: { message: '올바른 전화번호를 입력해주세요' } },
+        { status: 400 }
+      )
+    }
+    if (name.length > 100) {
+      return NextResponse.json(
+        { error: { message: '이름이 너무 깁니다' } },
+        { status: 400 }
+      )
+    }
+    if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      return NextResponse.json(
+        { error: { message: '올바른 이메일 주소를 입력해주세요' } },
+        { status: 400 }
+      )
+    }
+
     // 전화번호 해시 (중복 체크용 — 라이브러리 공통 구현 사용)
-    const phoneHash = hashPhone(phone.replace(/\D/g, ''))
+    const phoneHash = hashPhone(phoneDigitsOnly)
 
     // Phase 1: 랜딩페이지 조회 (company_id가 필요한 후속 쿼리를 위해 먼저 실행)
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
@@ -217,14 +273,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Also capture any non-reserved fields that might be custom
+    // (개수·길이 제한이 없어 form_data에 임의의 키를 수백 개, 각각 수백KB 문자열로
+    // 채워 보내면 그대로 저장되고 있었다 — 리드 목록/내보내기 성능 저하 위험)
+    const MAX_CUSTOM_FIELDS = 50
+    const MAX_FIELD_VALUE_LENGTH = 2000
     Object.entries(form_data).forEach(([key, value]) => {
+      if (customFields.length >= MAX_CUSTOM_FIELDS) return
       if (!reservedKeys.includes(key) &&
           typeof value === 'string' &&
           value.trim() !== '' &&
           !customFields.some(cf => cf.label === key)) {
         customFields.push({
-          label: key,
-          value: value
+          label: key.slice(0, 200),
+          value: value.slice(0, MAX_FIELD_VALUE_LENGTH)
         })
       }
     })
@@ -239,7 +300,7 @@ export async function POST(request: NextRequest) {
         phone: encryptPhone(phone),
         phone_hash: phoneHash,
         email,
-        message: form_data.message || form_data.메시지 || undefined,
+        message: (form_data.message || form_data.메시지 || undefined)?.toString().slice(0, 5000),
         consultation_items: form_data.consultation_items || undefined,
         preferred_date: form_data.preferred_date || undefined,
         preferred_time: form_data.preferred_time || undefined,

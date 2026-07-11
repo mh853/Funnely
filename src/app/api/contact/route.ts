@@ -75,6 +75,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 길이 제한이 없어 임의로 매우 긴 문자열을 그대로 저장할 수 있었다.
+    if (companyName.length > 200 || fullName.length > 100 || subject.length > 200 || description.length > 5000) {
+      return NextResponse.json(
+        { error: '입력 내용이 너무 깁니다.' },
+        { status: 400 }
+      )
+    }
+
     // /contact 폼은 원래 companies에 존재하지 않는 컬럼(industry/employee_count/status)에
     // insert를 시도하며 "게스트 회사 + support_ticket"을 만들고 있었는데, 이는 어드민이
     // 실제로 보는 "홈페이지 문의" 화면(public_inquiries 테이블)과 완전히 다른 경로였다.

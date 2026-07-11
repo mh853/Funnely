@@ -281,9 +281,18 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       setSubmitError('이름을 입력해주세요')
       return
     }
-    if (landingPage.collect_phone !== false && !phoneInput.trim()) {
-      setSubmitError('전화번호를 입력해주세요')
-      return
+    if (landingPage.collect_phone !== false) {
+      const phoneDigits = phoneInput.replace(/[^0-9]/g, '')
+      if (!phoneDigits) {
+        setSubmitError('전화번호를 입력해주세요')
+        return
+      }
+      // 값이 비어있지 않기만 하면 통과하던 검증이라 "123" 같은 값도 그대로
+      // 리드로 저장되고 있었다. 국내 전화번호(휴대폰/유선) 자릿수만 확인한다.
+      if (phoneDigits.length < 9 || phoneDigits.length > 11) {
+        setSubmitError('올바른 전화번호를 입력해주세요')
+        return
+      }
     }
     // 커스텀 필드 필수 검증
     for (const field of customFields) {
