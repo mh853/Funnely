@@ -44,12 +44,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
     }
 
-    // Verify event belongs to user's hospital
+    // Verify event belongs to user's hospital (calendar_events의 실제 회사 참조
+    // 컬럼명은 company_id가 아니라 hospital_id이다)
     const { data: event } = await supabase
       .from('calendar_events')
-      .select('id, company_id')
+      .select('id, hospital_id')
       .eq('id', id)
-      .eq('company_id', userProfile.company_id)
+      .eq('hospital_id', userProfile.company_id)
       .single()
 
     if (!event) {
@@ -77,14 +78,14 @@ export async function PUT(request: NextRequest) {
     if (assigned_to !== undefined) updateData.assigned_to = assigned_to
     if (lead_id !== undefined) updateData.lead_id = lead_id || null
     if (location !== undefined) updateData.location = location || null
-    if (is_all_day !== undefined) updateData.is_all_day = is_all_day
+    if (is_all_day !== undefined) updateData.all_day = is_all_day
 
-    // Update event (company_id 필터로 TOCTOU 방지)
+    // Update event (hospital_id 필터로 TOCTOU 방지)
     const { data: updatedEvent, error: updateError } = await supabase
       .from('calendar_events')
       .update(updateData)
       .eq('id', id)
-      .eq('company_id', userProfile.company_id)
+      .eq('hospital_id', userProfile.company_id)
       .select()
       .maybeSingle()
 

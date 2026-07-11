@@ -40,8 +40,10 @@ export default async function CalendarPage({
     return <UpgradeNotice featureName="DB 스케줄" requiredPlan="개인 사용자 + 스케줄 관리 기능" />
   }
 
-  // Get events for this hospital
-  const { data: events } = await supabase
+  // Get events for this hospital (calendar_events의 실제 회사 참조 컬럼명은
+  // company_id가 아니라 hospital_id이다 — 이 필터가 항상 매칭에 실패해 캘린더에
+  // 등록된 이벤트가 하나도 표시되지 않고 있었다)
+  const { data: rawEvents } = await supabase
     .from('calendar_events')
     .select(
       `
@@ -57,8 +59,14 @@ export default async function CalendarPage({
       )
     `
     )
-    .eq('company_id', userProfile.company_id)
+    .eq('hospital_id', userProfile.company_id)
     .order('start_time', { ascending: true })
+
+  // 프론트(EventModal 등)는 여전히 is_all_day 필드명을 사용하므로 응답 형태를 유지한다
+  const events = (rawEvents || []).map(({ all_day, ...rest }: any) => ({
+    ...rest,
+    is_all_day: all_day,
+  }))
 
   // Get leads for this hospital to display on calendar
   let leadsQuery = supabase

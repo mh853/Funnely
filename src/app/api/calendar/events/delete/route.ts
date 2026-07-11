@@ -33,12 +33,13 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
     }
 
-    // Verify event belongs to user's hospital
+    // Verify event belongs to user's hospital (calendar_events의 실제 회사 참조
+    // 컬럼명은 company_id가 아니라 hospital_id이다)
     const { data: event } = await supabase
       .from('calendar_events')
-      .select('id, company_id')
+      .select('id, hospital_id')
       .eq('id', id)
-      .eq('company_id', userProfile.company_id)
+      .eq('hospital_id', userProfile.company_id)
       .single()
 
     if (!event) {
@@ -50,7 +51,7 @@ export async function DELETE(request: NextRequest) {
       .from('calendar_events')
       .delete()
       .eq('id', id)
-      .eq('company_id', userProfile.company_id)
+      .eq('hospital_id', userProfile.company_id)
       .select('id')
 
     if (deleteError) throw deleteError

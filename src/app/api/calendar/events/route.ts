@@ -54,11 +54,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create event
+    // Create event (calendar_events의 실제 회사 참조 컬럼명은 company_id가 아니라
+    // hospital_id이며, 종일 여부 컬럼명은 is_all_day가 아니라 all_day이다)
     const { data: event, error: eventError } = await supabase
       .from('calendar_events')
       .insert({
-        company_id: userProfile.company_id,
+        hospital_id: userProfile.company_id,
         title,
         description: description || null,
         event_type,
@@ -67,7 +68,7 @@ export async function POST(request: NextRequest) {
         assigned_to: assigned_to || user.id,
         lead_id: lead_id || null,
         location: location || null,
-        is_all_day: is_all_day || false,
+        all_day: is_all_day || false,
         created_by: user.id,
       })
       .select()
