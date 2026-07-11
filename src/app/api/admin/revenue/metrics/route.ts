@@ -116,19 +116,20 @@ export async function GET(request: NextRequest) {
     lastMonth.setMonth(lastMonth.getMonth() - 1)
     const lastMonthStr = lastMonth.toISOString().split('T')[0]
 
+    // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
     const { data: previousMetrics } = await supabase
       .from('revenue_metrics')
       .select('mrr, arr')
-      .gte('calculated_at', lastMonthStr)
+      .gte('period_start', lastMonthStr)
       .lt(
-        'calculated_at',
+        'period_start',
         new Date(
           lastMonth.getFullYear(),
           lastMonth.getMonth() + 1,
           1
-        ).toISOString()
+        ).toISOString().split('T')[0]
       )
-      .order('calculated_at', { ascending: false })
+      .order('period_start', { ascending: false })
       .limit(1)
       .single()
 
@@ -202,15 +203,16 @@ export async function GET(request: NextRequest) {
     const sixMonthsAgo = new Date()
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
+    // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
     const { data: trends } = await supabase
       .from('revenue_metrics')
-      .select('calculated_at, mrr, arr')
-      .gte('calculated_at', sixMonthsAgo.toISOString())
-      .order('calculated_at', { ascending: true })
+      .select('period_start, mrr, arr')
+      .gte('period_start', sixMonthsAgo.toISOString().split('T')[0])
+      .order('period_start', { ascending: true })
 
     const last_6_months: RevenueTrend[] = (trends || []).map(
       (trend: any) => ({
-        month: trend.calculated_at.split('T')[0].substring(0, 7), // YYYY-MM
+        month: trend.period_start.substring(0, 7), // YYYY-MM
         mrr: trend.mrr,
         arr: trend.arr,
       })

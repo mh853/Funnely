@@ -229,7 +229,7 @@ async function calculateRevenue(supabase: any) {
 
   // Calculate MRR/ARR for each company
   const revenueMetrics = []
-  const today = new Date().toISOString()
+  const todayDate = new Date().toISOString().split('T')[0]
 
   for (const [companyId, companySubs] of Array.from(
     companySubscriptionsMap.entries()
@@ -262,15 +262,20 @@ async function calculateRevenue(supabase: any) {
     const arr = calculateARR(mrr)
     const firstSub = subscriptions[0]
 
+    // revenue_metrics의 실제 컬럼은 calculated_at 단일 시점이 아니라
+    // period_start/period_end(일별 스냅샷이므로 둘 다 오늘 날짜)이며,
+    // mrr_growth_rate/arr_growth_rate/plan_type/billing_cycle 컬럼은 없다.
     revenueMetrics.push({
       company_id: companyId,
+      period_start: todayDate,
+      period_end: todayDate,
       mrr,
       arr,
-      mrr_growth_rate: null,
-      arr_growth_rate: null,
-      plan_type: firstSub.plan_type,
-      billing_cycle: firstSub.billing_cycle,
-      calculated_at: today,
+      total_revenue: mrr,
+      metrics: {
+        plan_type: firstSub.plan_type,
+        billing_cycle: firstSub.billing_cycle,
+      },
     })
   }
 
