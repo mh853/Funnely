@@ -83,6 +83,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 400 })
     }
 
+    // 좌석 한도 재확인. 초대 발송 시점의 체크만으로는, 초대들이 발송된 뒤 플랜이
+    // 다운그레이드되는 경우를 막지 못한다 — 그 사이에 수락되는 초대는 새(더 낮은)
+    // 한도를 기준으로 다시 막아야 한다.
+    const { data: subscription } = await supabase
+      .from('company_subscriptions')
+      .select('subscription_plans!plan_id(max_users)')
+      .eq('company_id', invitation.company_id)
+      .in('status', ['active', 'trial', 'past_due'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    const maxUsers = subscription ? (subscription.subscription_plans as any)?.max_users : 1
+
+    if (maxUsers !== null && maxUsers !== undefined) {
+      const { count: activeUserCount } = await supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', invitation.company_id)
+
+      if ((activeUserCount || 0) >= maxUsers) {
+        return NextResponse.json(
+          { error: '회사의 팀원 좌석 한도에 도달해 초대를 수락할 수 없습니다. 관리자에게 문의해주세요.' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Map simple_role to role
     const roleMap: Record<string, string> = {
       admin: 'company_admin',

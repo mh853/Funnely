@@ -407,14 +407,25 @@ export async function canInviteUser(companyId: string): Promise<{
       }
     }
 
-    // 2. 현재 관리자 수 조회
-    const { count, error: countError } = await supabase
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('company_id', companyId)
+    // 2. 현재 관리자 수 + 아직 수락되지 않은 초대 수 조회
+    // 초대 발송 시점에는 users에 아무 변화가 없어(수락 시에만 행이 생김), 초대만
+    // 계속 늘려서 이 체크를 매번 통과시킨 뒤 한꺼번에 수락하면 좌석 한도를 넘겨
+    // 팀원을 추가할 수 있었다. 만료되지 않은 pending 초대도 함께 카운트한다.
+    const [{ count, error: countError }, { count: pendingCount, error: pendingError }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId),
+      supabase
+        .from('company_invitations')
+        .select('id', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('status', 'pending')
+        .gt('expires_at', new Date().toISOString()),
+    ])
 
-    if (countError) {
-      console.error('[Limit Check] 사용자 수 조회 실패:', countError)
+    if (countError || pendingError) {
+      console.error('[Limit Check] 사용자 수 조회 실패:', countError || pendingError)
       return {
         allowed: false,
         currentCount: 0,
@@ -423,7 +434,7 @@ export async function canInviteUser(companyId: string): Promise<{
       }
     }
 
-    const currentCount = count || 0
+    const currentCount = (count || 0) + (pendingCount || 0)
 
     // 3. 제한사항 체크
     if (currentCount >= maxAllowed) {
