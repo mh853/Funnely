@@ -251,12 +251,14 @@ export async function canCreateLandingPage(companyId: string): Promise<{
       }
     }
 
-    // 2. 현재 랜딩페이지 개수 조회
+    // 2. 현재 랜딩페이지 개수 조회 (landing_pages는 is_deleted 컬럼이 없고
+    // 삭제 시 하드 삭제되므로, company_id로만 세면 곧 현재 개수다. 존재하지
+    // 않는 컬럼으로 필터링해 매번 카운트 조회 자체가 실패 → 랜딩페이지
+    // 개수 제한이 있는 모든 플랜에서 새 페이지 생성이 항상 거부되고 있었다.)
     const { count, error: countError } = await supabase
       .from('landing_pages')
       .select('id', { count: 'exact', head: true })
       .eq('company_id', companyId)
-      .eq('is_deleted', false)
 
     if (countError) {
       console.error('[Limit Check] 랜딩페이지 개수 조회 실패:', countError)
