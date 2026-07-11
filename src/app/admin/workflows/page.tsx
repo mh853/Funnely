@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Link from 'next/link'
 import type { AutomationWorkflow } from '@/types/automation'
 
 interface WorkflowsResponse {
@@ -147,20 +146,6 @@ export default function WorkflowsPage() {
             트리거 조건 기반 자동 실행 워크플로우 관리
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link
-            href="/admin/workflows/executions"
-            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-          >
-            실행 로그
-          </Link>
-          <Link
-            href="/admin/workflows/new"
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            + 새 워크플로우
-          </Link>
-        </div>
       </div>
 
       {/* Summary */}
@@ -186,13 +171,7 @@ export default function WorkflowsPage() {
       {/* Workflows Grid */}
       {data.workflows.length === 0 ? (
         <div className="bg-white rounded-lg shadow p-12 text-center">
-          <p className="text-gray-500 mb-4">워크플로우가 없습니다.</p>
-          <Link
-            href="/admin/workflows/new"
-            className="inline-block px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            첫 워크플로우 만들기
-          </Link>
+          <p className="text-gray-500">워크플로우가 없습니다.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

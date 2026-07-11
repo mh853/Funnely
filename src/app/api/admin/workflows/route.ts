@@ -110,7 +110,8 @@ export async function POST(request: NextRequest) {
         name: payload.name,
         description: payload.description || null,
         trigger_type: payload.trigger_type,
-        trigger_conditions: payload.trigger_conditions,
+        // automation_workflows의 실제 컬럼명은 trigger_conditions가 아니라 trigger_config다
+        trigger_config: payload.trigger_conditions,
         actions: payload.actions,
         is_active: payload.is_active ?? true,
       })
