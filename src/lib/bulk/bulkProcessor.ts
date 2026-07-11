@@ -194,31 +194,13 @@ export class BulkProcessor {
       }
 
       case 'add_note': {
-        // Add note to lead metadata or separate notes table if exists
-        const { data: leadForNote } = await this.supabase
-          .from('leads')
-          .select('metadata')
-          .eq('id', leadId)
-          .single()
-
-        const metadata = (leadForNote?.metadata as Record<string, any>) || {}
-        const notes = (metadata.notes as Array<{ note: string; created_by: string; created_at: string }>) || []
-
-        notes.push({
-          note: parameters.note,
-          created_by: parameters.created_by || 'system',
-          created_at: new Date().toISOString(),
+        // leads에는 metadata 컬럼이 없다. 리드 메모는 전용 lead_notes 테이블에
+        // 저장한다(개별 리드 상세 화면의 메모 기능과 동일한 테이블).
+        const { error } = await this.supabase.from('lead_notes').insert({
+          lead_id: leadId,
+          user_id: parameters.created_by || null,
+          content: parameters.note,
         })
-
-        const { error } = await this.supabase
-          .from('leads')
-          .update({
-            metadata: {
-              ...metadata,
-              notes,
-            },
-          })
-          .eq('id', leadId)
         if (error) throw error
         break
       }
@@ -248,20 +230,22 @@ export class BulkProcessor {
       }
 
       case 'add_tags': {
+        // companies에는 tags 컬럼이 없다(실제: settings jsonb). settings.tags에 저장한다.
         const { data: company } = await this.supabase
           .from('companies')
-          .select('tags')
+          .select('settings')
           .eq('id', companyId)
           .single()
 
-        const currentTags = (company?.tags as string[]) || []
+        const settings = (company?.settings as Record<string, any>) || {}
+        const currentTags = (settings.tags as string[]) || []
         const newTags = Array.from(
           new Set([...currentTags, ...parameters.tags])
         )
 
         const { error } = await this.supabase
           .from('companies')
-          .update({ tags: newTags })
+          .update({ settings: { ...settings, tags: newTags } })
           .eq('id', companyId)
         if (error) throw error
         break
@@ -270,17 +254,18 @@ export class BulkProcessor {
       case 'remove_tags': {
         const { data: companyData } = await this.supabase
           .from('companies')
-          .select('tags')
+          .select('settings')
           .eq('id', companyId)
           .single()
 
-        const filteredTags = ((companyData?.tags as string[]) || []).filter(
+        const settings = (companyData?.settings as Record<string, any>) || {}
+        const filteredTags = ((settings.tags as string[]) || []).filter(
           (tag) => !parameters.tags.includes(tag)
         )
 
         const { error } = await this.supabase
           .from('companies')
-          .update({ tags: filteredTags })
+          .update({ settings: { ...settings, tags: filteredTags } })
           .eq('id', companyId)
         if (error) throw error
         break
@@ -322,24 +307,34 @@ export class BulkProcessor {
       }
 
       case 'assign_cs_manager': {
+        // companies에는 cs_manager_id 컬럼이 없다(실제 FK 컬럼이 존재하지 않아
+        // 담당자 배정을 관계형으로 저장할 방법이 없다 — settings jsonb에 보관한다).
+        const { data: companyForCsManager } = await this.supabase
+          .from('companies')
+          .select('settings')
+          .eq('id', companyId)
+          .single()
+
+        const csManagerSettings = (companyForCsManager?.settings as Record<string, any>) || {}
+
         const { error } = await this.supabase
           .from('companies')
-          .update({ cs_manager_id: parameters.cs_manager_id })
+          .update({ settings: { ...csManagerSettings, cs_manager_id: parameters.cs_manager_id } })
           .eq('id', companyId)
         if (error) throw error
         break
       }
 
       case 'add_note': {
-        // Add note to company metadata
+        // companies에는 metadata 컬럼이 없다(실제: settings jsonb). settings.notes에 저장한다.
         const { data: companyForNote } = await this.supabase
           .from('companies')
-          .select('metadata')
+          .select('settings')
           .eq('id', companyId)
           .single()
 
-        const metadata = (companyForNote?.metadata as Record<string, any>) || {}
-        const notes = (metadata.notes as any[]) || []
+        const settings = (companyForNote?.settings as Record<string, any>) || {}
+        const notes = (settings.notes as any[]) || []
 
         notes.push({
           note: parameters.note,
@@ -349,12 +344,7 @@ export class BulkProcessor {
 
         const { error } = await this.supabase
           .from('companies')
-          .update({
-            metadata: {
-              ...metadata,
-              notes,
-            },
-          })
+          .update({ settings: { ...settings, notes } })
           .eq('id', companyId)
         if (error) throw error
         break
