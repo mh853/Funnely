@@ -142,6 +142,24 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
+    // landing_pages.custom_domain_id는 ON DELETE SET NULL이라 도메인을 삭제해도
+    // 에러 없이 조용히 성공하지만, 그 도메인으로 접속하던 방문자는 이후 랜딩페이지에
+    // 도달할 방법이 없어진다(광고/명함 등에 이미 배포된 URL이 아무 경고 없이
+    // 끊긴다). 사용 중인 랜딩페이지가 있으면 삭제를 막고 개수를 안내한다.
+    const { count: pagesUsingDomain } = await supabase
+      .from('landing_pages')
+      .select('id', { count: 'exact', head: true })
+      .eq('custom_domain_id', id)
+
+    if ((pagesUsingDomain || 0) > 0) {
+      return NextResponse.json(
+        {
+          error: `이 도메인을 사용 중인 랜딩페이지가 ${pagesUsingDomain}개 있어 삭제할 수 없습니다. 먼저 다른 도메인으로 변경해주세요.`,
+        },
+        { status: 409 }
+      )
+    }
+
     // 도메인 소유 확인 후 삭제
     const { error } = await supabase
       .from('company_custom_domains' as any)

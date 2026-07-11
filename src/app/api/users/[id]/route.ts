@@ -191,6 +191,15 @@ export async function DELETE(
 
     if (deleteUserError) {
       console.error('User profile deletion error:', deleteUserError)
+      // leads.assigned_to 등은 ON DELETE 제약이 없어(NO ACTION), 담당 리드가 남아있는
+      // 상태로 삭제를 시도하면 DB가 FK 위반(23503)으로 막는다. 이 경우 원본 Postgres
+      // 에러 문구 대신 사용자가 이해할 수 있는 안내를 준다.
+      if (deleteUserError.code === '23503') {
+        return NextResponse.json(
+          { error: '이 팀원에게 배정된 리드가 남아있어 삭제할 수 없습니다. 먼저 담당 리드를 다른 팀원에게 재배정해주세요.' },
+          { status: 409 }
+        )
+      }
       return NextResponse.json({ error: '사용자 삭제에 실패했습니다: ' + deleteUserError.message }, { status: 500 })
     }
 
