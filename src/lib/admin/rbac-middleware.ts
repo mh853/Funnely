@@ -382,23 +382,17 @@ export async function getUserWithRoles(userId: string): Promise<{
     process.env.SUPABASE_SERVICE_ROLE_KEY!
   )
 
-  // 사용자 정보 가져오기
+  // 사용자 정보 가져오기 (profiles 테이블은 존재하지 않으며, full_name도
+  // users 테이블에 이미 있어 별도 조회가 필요 없다)
   const { data: user } = await supabase
     .from('users')
-    .select('id, email')
+    .select('id, email, full_name')
     .eq('id', userId)
     .single()
 
   if (!user) {
     return null
   }
-
-  // 프로필 정보
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('full_name')
-    .eq('id', userId)
-    .single()
 
   // 역할 정보
   const roleAssignments = await getUserRoles(userId)
@@ -412,7 +406,7 @@ export async function getUserWithRoles(userId: string): Promise<{
   return {
     id: user.id,
     email: user.email,
-    full_name: profile?.full_name || null,
+    full_name: user.full_name || null,
     roles,
     permissions,
   }

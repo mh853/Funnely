@@ -73,10 +73,14 @@ export async function calculateEngagementScore(
   const riskFactors: RiskFactor[] = []
   const recommendations: Recommendation[] = []
 
-  // Get total users
-  const { count: totalUsers } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
+  // profiles 테이블은 존재하지 않으며 실제 사용자 테이블은 users다. 로그인
+  // 이력도 audit_logs가 아니라 users.last_login(on_auth_signin 트리거로 자동
+  // 갱신됨)로 판단해야 한다 — audit_logs에는 company_id 컬럼 자체가 없어 매번
+  // 조회가 실패했고, 그마저도 이 프로젝트에서 쓰는 admin 감사로그 용도라
+  // 일반 사용자 로그인과는 무관하다.
+  const { data: companyUsers, count: totalUsers } = await supabase
+    .from('users')
+    .select('id, last_login', { count: 'exact' })
     .eq('company_id', companyId)
 
   if (!totalUsers || totalUsers === 0) {
@@ -89,36 +93,27 @@ export async function calculateEngagementScore(
     return { score: 0, riskFactors, recommendations }
   }
 
-  // Get active users (logged in last 30 days)
-  const { count: activeUsers } = await supabase
-    .from('audit_logs')
-    .select('user_id', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-    .eq('action', 'admin.login')
-    .gte('created_at', thirtyDaysAgo.toISOString())
+  const lastLogins = (companyUsers || [])
+    .map((u: any) => u.last_login)
+    .filter(Boolean)
+    .map((d: string) => new Date(d))
 
-  // Get recent logins (last 7 days)
-  const { count: recentLogins } = await supabase
-    .from('audit_logs')
-    .select('*', { count: 'exact', head: true })
-    .eq('company_id', companyId)
-    .eq('action', 'admin.login')
-    .gte('created_at', sevenDaysAgo.toISOString())
+  // Active users (logged in last 30 days)
+  const activeUsers = lastLogins.filter((d) => d >= thirtyDaysAgo).length
 
-  // Get last activity
-  const { data: lastActivity } = await supabase
-    .from('audit_logs')
-    .select('created_at')
-    .eq('company_id', companyId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+  // Recent logins (last 7 days) — 로그인 "횟수"가 아닌 "최근 7일 내 로그인한
+  // 사용자 수"로 근사한다 (last_login은 사용자당 최근 1회만 저장됨)
+  const recentLogins = lastLogins.filter((d) => d >= sevenDaysAgo).length
+
+  const lastActivityDate = lastLogins.length > 0
+    ? new Date(Math.max(...lastLogins.map((d) => d.getTime())))
+    : null
 
   // Calculate metrics
-  const activeUserPercentage = totalUsers > 0 ? (activeUsers || 0) / totalUsers : 0
-  const loginFrequency = recentLogins || 0
-  const daysSinceLastActivity = lastActivity
-    ? Math.floor((now.getTime() - new Date((lastActivity as any).created_at).getTime()) / (1000 * 60 * 60 * 24))
+  const activeUserPercentage = totalUsers > 0 ? activeUsers / totalUsers : 0
+  const loginFrequency = recentLogins
+  const daysSinceLastActivity = lastActivityDate
+    ? Math.floor((now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24))
     : 999
 
   // Scoring components (0-100)
@@ -222,9 +217,9 @@ export async function calculateProductUsageScore(
     .eq('company_id', companyId)
     .gte('created_at', thirtyDaysAgo.toISOString())
 
-  // Get feature usage
+  // Get feature usage (실제 테이블명은 feature_usage가 아니라 feature_usage_tracking)
   const { count: featuresUsed } = await supabase
-    .from('feature_usage')
+    .from('feature_usage_tracking')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', companyId)
     .gt('usage_count', 0)

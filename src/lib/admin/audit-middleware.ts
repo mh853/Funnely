@@ -33,13 +33,15 @@ export async function createAuditLog(
     // User Agent 추출
     const userAgent = request.headers.get('user-agent') || 'unknown'
 
+    // audit_logs에는 company_id 컬럼이 없고, entity_type/entity_id가 아니라
+    // resource_type/resource_id, metadata가 아니라 new_values다. company_id는
+    // 컬럼이 없으므로 new_values 안에 함께 기록해 정보 손실 없이 남긴다.
     const { error } = await supabase.from('audit_logs').insert({
       user_id: context.userId || null,
-      company_id: context.companyId || null,
       action: context.action,
-      entity_type: context.entityType || null,
-      entity_id: context.entityId || null,
-      metadata: context.metadata || {},
+      resource_type: context.entityType || null,
+      resource_id: context.entityId || null,
+      new_values: { ...(context.metadata || {}), companyId: context.companyId || null },
       ip_address: ipAddress,
       user_agent: userAgent,
     })
