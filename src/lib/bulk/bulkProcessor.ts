@@ -136,40 +136,23 @@ export class BulkProcessor {
       }
 
       case 'add_tags': {
-        const { data: lead } = await this.supabase
-          .from('leads')
-          .select('tags')
-          .eq('id', leadId)
-          .single()
-
-        const currentTags = (lead?.tags as string[]) || []
-        const newTags = Array.from(
-          new Set([...currentTags, ...parameters.tags])
-        )
-
-        const { error } = await this.supabase
-          .from('leads')
-          .update({ tags: newTags })
-          .eq('id', leadId)
+        // SELECT 후 별도 UPDATE로 합집합을 계산하면, 같은 리드에 동시에 두 벌크
+        // 작업이 실행될 때 나중에 커밋되는 쪽이 stale 스냅샷으로 덮어써 앞선
+        // 변경을 잃을 수 있다(lost update). SET 절에서 컬럼을 직접 참조하는
+        // 단일 원자적 UPDATE(RPC)로 처리해 행 단위 잠금으로 직렬화한다.
+        const { error } = await this.supabase.rpc('bulk_add_lead_tags', {
+          p_lead_id: leadId,
+          p_tags: parameters.tags,
+        })
         if (error) throw error
         break
       }
 
       case 'remove_tags': {
-        const { data: leadData } = await this.supabase
-          .from('leads')
-          .select('tags')
-          .eq('id', leadId)
-          .single()
-
-        const filteredTags = ((leadData?.tags as string[]) || []).filter(
-          (tag) => !parameters.tags.includes(tag)
-        )
-
-        const { error } = await this.supabase
-          .from('leads')
-          .update({ tags: filteredTags })
-          .eq('id', leadId)
+        const { error } = await this.supabase.rpc('bulk_remove_lead_tags', {
+          p_lead_id: leadId,
+          p_tags: parameters.tags,
+        })
         if (error) throw error
         break
       }
@@ -231,42 +214,21 @@ export class BulkProcessor {
 
       case 'add_tags': {
         // companies에는 tags 컬럼이 없다(실제: settings jsonb). settings.tags에 저장한다.
-        const { data: company } = await this.supabase
-          .from('companies')
-          .select('settings')
-          .eq('id', companyId)
-          .single()
-
-        const settings = (company?.settings as Record<string, any>) || {}
-        const currentTags = (settings.tags as string[]) || []
-        const newTags = Array.from(
-          new Set([...currentTags, ...parameters.tags])
-        )
-
-        const { error } = await this.supabase
-          .from('companies')
-          .update({ settings: { ...settings, tags: newTags } })
-          .eq('id', companyId)
+        // SELECT 후 별도 UPDATE로 합치면 lost-update 레이스가 있어, jsonb_set을
+        // 사용한 단일 원자적 UPDATE(RPC)로 처리한다.
+        const { error } = await this.supabase.rpc('bulk_add_company_tags', {
+          p_company_id: companyId,
+          p_tags: parameters.tags,
+        })
         if (error) throw error
         break
       }
 
       case 'remove_tags': {
-        const { data: companyData } = await this.supabase
-          .from('companies')
-          .select('settings')
-          .eq('id', companyId)
-          .single()
-
-        const settings = (companyData?.settings as Record<string, any>) || {}
-        const filteredTags = ((settings.tags as string[]) || []).filter(
-          (tag) => !parameters.tags.includes(tag)
-        )
-
-        const { error } = await this.supabase
-          .from('companies')
-          .update({ settings: { ...settings, tags: filteredTags } })
-          .eq('id', companyId)
+        const { error } = await this.supabase.rpc('bulk_remove_company_tags', {
+          p_company_id: companyId,
+          p_tags: parameters.tags,
+        })
         if (error) throw error
         break
       }
