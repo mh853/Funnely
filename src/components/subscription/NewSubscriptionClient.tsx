@@ -278,7 +278,39 @@ export default function NewSubscriptionClient({
           alert(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
           router.refresh()
         } else if (isFree) {
-          // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음
+          // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음.
+          // 유료 플랜 간 다운그레이드는 다음 결제일까지 유예되지만, Free 전환은
+          // 즉시 적용되면서도 한도 초과 여부를 전혀 알려주지 않았다. 기존 데이터를
+          // 지우지는 않지만(생성만 막힘), 적용 전에 초과 현황을 알려준다.
+          const [{ count: landingPageCount }, { count: userCount }] = await Promise.all([
+            supabase
+              .from('landing_pages')
+              .select('id', { count: 'exact', head: true })
+              .eq('company_id', companyId),
+            supabase
+              .from('users')
+              .select('id', { count: 'exact', head: true })
+              .eq('company_id', companyId),
+          ])
+
+          const overLimitMessages: string[] = []
+          if (plan.max_landing_pages !== null && (landingPageCount || 0) > plan.max_landing_pages) {
+            overLimitMessages.push(
+              `랜딩페이지 ${landingPageCount}개 보유 중 (Free 플랜은 ${plan.max_landing_pages}개까지)`
+            )
+          }
+          if (plan.max_users !== null && (userCount || 0) > plan.max_users) {
+            overLimitMessages.push(`팀원 ${userCount}명 보유 중 (Free 플랜은 ${plan.max_users}명까지)`)
+          }
+
+          if (overLimitMessages.length > 0) {
+            const confirmed = confirm(
+              `현재 사용량이 Free 플랜 한도를 초과합니다.\n- ${overLimitMessages.join('\n- ')}\n\n` +
+                `기존 데이터는 삭제되지 않지만, 한도 아래로 줄이기 전까지 새 항목을 추가할 수 없습니다.\n\n계속하시겠습니까?`
+            )
+            if (!confirmed) return
+          }
+
           const { error } = await supabase
             .from('company_subscriptions')
             .update({
