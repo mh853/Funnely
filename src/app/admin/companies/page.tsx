@@ -77,7 +77,10 @@ function CompanyModal({ company, onClose }: { company: Company; onClose: () => v
 
   useEffect(() => {
     fetch(`/api/admin/companies/${company.id}/payments`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        if (!r.ok) throw new Error('Failed to fetch payments')
+        return r.json()
+      })
       .then((d) => setPayments(d.payments || []))
       .catch(console.error)
       .finally(() => setLoadingPayments(false))

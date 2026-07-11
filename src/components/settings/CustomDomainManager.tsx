@@ -65,9 +65,16 @@ export default function CustomDomainManager() {
       }
 
       // Vercel에 등록
-      await fetch(`/api/company/custom-domains/${data.domain.id}/vercel`, {
+      const vercelRes = await fetch(`/api/company/custom-domains/${data.domain.id}/vercel`, {
         method: 'POST',
       })
+
+      if (!vercelRes.ok) {
+        const vercelData = await vercelRes.json().catch(() => ({}))
+        setError(vercelData.error || 'Vercel 도메인 등록에 실패했습니다. 다시 시도해주세요.')
+        await fetchDomains()
+        return
+      }
 
       setDnsGuide({
         domainId: data.domain.id,

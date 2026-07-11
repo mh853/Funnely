@@ -114,10 +114,12 @@ export async function GET(request: NextRequest) {
               : new Date().toISOString(),
           }))
 
-          const { data: inserted } = await supabaseAdmin
+          const { data: inserted, error: insertError } = await supabaseAdmin
             .from('leads')
             .insert(leadsToInsert)
             .select('id')
+
+          if (insertError) throw insertError
 
           importedCount = inserted?.length || 0
         }

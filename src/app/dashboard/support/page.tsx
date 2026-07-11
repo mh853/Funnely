@@ -266,11 +266,12 @@ export default function SupportPage() {
 
       // Upload files if any
       let attachmentUrls: string[] = []
+      let attachmentSaveFailed = false
       if (attachedFiles.length > 0) {
         attachmentUrls = await uploadFiles(ticket.id)
 
         // Update ticket with attachments
-        await fetch(`/api/support/tickets/${ticket.id}`, {
+        const attachRes = await fetch(`/api/support/tickets/${ticket.id}`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',
@@ -279,6 +280,7 @@ export default function SupportPage() {
             attachments: attachmentUrls,
           }),
         })
+        attachmentSaveFailed = !attachRes.ok
       }
 
       // Reset form
@@ -291,7 +293,11 @@ export default function SupportPage() {
       })
       setAttachedFiles([])
       fetchTickets()
-      alert('문의가 접수되었습니다')
+      alert(
+        attachmentSaveFailed
+          ? '문의가 접수되었지만 첨부파일 저장에는 실패했습니다. 문의 상세에서 다시 첨부해주세요.'
+          : '문의가 접수되었습니다'
+      )
     } catch (error: any) {
       console.error('Error creating ticket:', error)
       setError(error.message || '문의 접수에 실패했습니다')
