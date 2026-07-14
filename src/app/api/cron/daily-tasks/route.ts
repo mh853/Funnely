@@ -19,6 +19,7 @@ import { Resend } from 'resend'
  * Vercel Cron: 0 23 * * * (UTC 23:00 = KST 08:00 - Free Plan limitation: 1 cron only)
  *
  * All tasks run sequentially at 23:00 UTC (08:00 KST):
+ * - Process subscription renewal charges (before expiry check)
  * - Check subscription expiry and send notifications
  * - Calculate revenue (MRR/ARR)
  * - Calculate customer health scores
@@ -51,6 +52,24 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
+
+    // Task -1: Process Subscription Renewals (만료 처리보다 먼저 실행)
+    console.log('[Cron] Running subscription renewal charges')
+    try {
+      const renewalResult = await processSubscriptionRenewals(supabase)
+      results.tasksExecuted.push({
+        task: 'subscription_renewal',
+        status: 'success',
+        ...renewalResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Subscription renewal error:', error)
+      results.tasksExecuted.push({
+        task: 'subscription_renewal',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
 
     // Task 0: Check Subscription Expiry (PRIORITY)
     console.log('[Cron] Running subscription expiry check')
@@ -524,6 +543,63 @@ async function syncGoogleSheets(supabase: any) {
     synced: results.filter((r) => r.status === 'success').length,
     results,
   }
+}
+
+/**
+ * 정기 결제 갱신 처리 - 기간이 끝난 active 구독에 대해 실제 결제를 시도한다.
+ *
+ * 원래 supabase/functions/subscription-cron 엣지 함수가 이 역할을 하도록 작성돼
+ * 있었지만, 어디에도(pg_cron, Vercel cron, 다른 코드) 스케줄링되어 있지 않아 단 한
+ * 번도 자동 실행된 적이 없었다 — 그 결과 구독 기간이 끝나도 아무도 자동으로
+ * 청구되지 않고, 다음날 checkSubscriptionExpiry가 결제 시도 없이 곧바로 expired로
+ * 처리해버렸다. 유일하게 실제로 매일 실행되는 이 크론에 합쳐서 확실히 동작하게 한다.
+ * checkSubscriptionExpiry보다 먼저 실행해야, 갱신에 성공한 구독이 새 기간으로
+ * 늘어난 뒤에 곧바로 만료 처리되지 않는다.
+ */
+async function processSubscriptionRenewals(supabase: any) {
+  const now = new Date().toISOString()
+
+  const { data: dueSubs, error } = await supabase
+    .from('company_subscriptions')
+    .select('id')
+    .eq('status', 'active')
+    .not('billing_key', 'is', null)
+    .lte('current_period_end', now)
+
+  if (error) {
+    console.error('[Renewal] 갱신 대상 구독 조회 실패:', error)
+    return { attempted: 0, succeeded: 0, failed: 0 }
+  }
+
+  let succeeded = 0
+  let failed = 0
+  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+
+  for (const sub of dueSubs || []) {
+    try {
+      const response = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ subscriptionId: sub.id }),
+      })
+
+      if (response.ok) {
+        succeeded++
+        console.log(`[Renewal] 갱신 결제 성공: ${sub.id}`)
+      } else {
+        failed++
+        console.error(`[Renewal] 갱신 결제 실패: ${sub.id} (${response.status})`)
+      }
+    } catch (err) {
+      failed++
+      console.error(`[Renewal] 갱신 결제 처리 중 오류 (${sub.id}):`, err)
+    }
+  }
+
+  return { attempted: (dueSubs || []).length, succeeded, failed }
 }
 
 /**

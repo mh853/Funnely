@@ -102,6 +102,7 @@ export default function NewSubscriptionClient({
   const [cancelModalOpen, setCancelModalOpen] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [cancelResult, setCancelResult] = useState<{ accessUntil: string | null } | null>(null)
+  const [cancelPendingLoading, setCancelPendingLoading] = useState(false)
   const [upgradeModal, setUpgradeModal] = useState<{
     plan: Plan
     proratedNet: number
@@ -113,6 +114,11 @@ export default function NewSubscriptionClient({
   const [cardChanging, setCardChanging] = useState(false)
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
+
+  // 다운그레이드 예약 안내에 표시할 변경 예정 플랜명
+  const pendingPlanName = currentSubscription?.pending_plan_id
+    ? plans.find((p) => p.id === currentSubscription.pending_plan_id)?.name
+    : null
 
   // 현재 Free 플랜인지
   const isOnFreePlan =
@@ -129,6 +135,13 @@ export default function NewSubscriptionClient({
     currentSubscription?.status ?? ''
   )
   const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription || isActivePaidUser
+
+  // 취소했지만 이미 결제한 기간이 아직 남아있는 상태 - 새로 결제하지 않고 취소만
+  // 되돌리는 "재구독"이 가능하다 (다른 플랜으로 바꾸는 것과는 다른 흐름)
+  const isCancelledWithValidAccess =
+    currentSubscription?.status === 'cancelled' &&
+    currentSubscription?.current_period_end !== null &&
+    currentSubscription.current_period_end > new Date().toISOString()
 
   // 빌링키 등록 여부: 현재 구독 또는 회사 다른 구독에 빌링키가 있으면 재사용 가능
   const hasBillingKey = !!currentSubscription?.billing_key || !!companyBillingKeySubscriptionId
@@ -256,7 +269,20 @@ export default function NewSubscriptionClient({
       const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
       if (currentSubscription) {
-        if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription)) {
+        const isSamePlanAndCycle =
+          currentSubscription.subscription_plans.id === plan.id &&
+          currentSubscription.billing_cycle === billingCycle
+
+        if (currentSubscription.status === 'cancelled' && isCancelledWithValidAccess && isSamePlanAndCycle) {
+          // 재구독: 이미 결제한 기간이 남아있으므로 새로 결제하지 않고 취소만 되돌린다
+          const res = await fetch('/api/subscription/reactivate', { method: 'POST' })
+          if (!res.ok) {
+            const err = await res.json()
+            throw new Error(err.error || '재구독에 실패했습니다.')
+          }
+          alert('구독이 재개되었습니다.')
+          router.refresh()
+        } else if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription)) {
           // 체험 중 또는 만료/취소/결제지연 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
           const res = await fetch('/api/subscription/convert-trial', {
             method: 'POST',
@@ -520,6 +546,27 @@ export default function NewSubscriptionClient({
     }
   }
 
+  const handleCancelPendingChange = async () => {
+    const confirmed = confirm('예약된 플랜 변경을 취소하시겠습니까?\n취소하면 현재 플랜이 계속 유지됩니다.')
+    if (!confirmed) return
+
+    setCancelPendingLoading(true)
+    try {
+      const res = await fetch('/api/subscription/cancel-pending-change', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        alert(data.error || '예약 취소에 실패했습니다.')
+        return
+      }
+      alert('예약된 플랜 변경이 취소되었습니다.')
+      router.refresh()
+    } catch {
+      alert('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+    } finally {
+      setCancelPendingLoading(false)
+    }
+  }
+
   const handleCancelSubscription = async () => {
     setCancelLoading(true)
     try {
@@ -542,6 +589,8 @@ export default function NewSubscriptionClient({
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
     // 체험 중 플랜: 결제 전환 허용 (disabled 아님)
     if (isCurrentPlan && isCurrentlyOnTrial) return hasBillingKey ? '지금 결제하기' : '결제하여 구독 시작'
+    // 취소했지만 기간이 남은 플랜: 재구독 허용 (disabled 아님)
+    if (isCurrentPlan && isCancelledWithValidAccess) return '재구독하기'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
@@ -623,8 +672,18 @@ export default function NewSubscriptionClient({
           </div>
           {/* 다운그레이드 예약 안내 */}
           {currentSubscription.pending_plan_id && currentSubscription.current_period_end && (
-            <div className="mt-3 pt-3 border-t border-white/20 text-sm opacity-90">
-              다음 결제일({formatDate(currentSubscription.current_period_end)})에 플랜이 변경될 예정입니다.
+            <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between gap-3 flex-wrap">
+              <p className="text-sm opacity-90">
+                다음 결제일({formatDate(currentSubscription.current_period_end)})에
+                {pendingPlanName ? ` ${pendingPlanName} 플랜으로` : ' 플랜이'} 변경될 예정입니다.
+              </p>
+              <button
+                onClick={handleCancelPendingChange}
+                disabled={cancelPendingLoading}
+                className="px-3 py-1.5 bg-white/20 hover:bg-white/30 text-white text-xs font-medium rounded-lg transition-colors border border-white/30 disabled:opacity-50"
+              >
+                {cancelPendingLoading ? '취소 중...' : '예약 취소'}
+              </button>
             </div>
           )}
         </div>
@@ -799,7 +858,10 @@ export default function NewSubscriptionClient({
             currentSubscription?.subscription_plans.id === plan.id &&
             (currentSubscription?.billing_cycle === billingCycle ||
               plan.name === 'Free')
-          const isRecommended = plan.sort_order === 3
+          // 이미 선택(가입)한 플랜이 있으면 "추천" 강조는 의미가 없으므로, 현재 플랜
+          // 강조만 남기고 추천 배지는 신규 사용자(구독이 아예 없는 경우)에게만 보여준다.
+          const isRecommended = !currentSubscription && plan.sort_order === 3
+          const canReactivate = isCurrentPlan && isCancelledWithValidAccess
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
           const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
@@ -871,9 +933,9 @@ export default function NewSubscriptionClient({
 
               <button
                 onClick={() => handleSelectPlan(plan)}
-                disabled={loading || (isCurrentPlan && !isCurrentlyOnTrial)}
+                disabled={loading || (isCurrentPlan && !isCurrentlyOnTrial && !canReactivate)}
                 className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
-                  isCurrentPlan && !isCurrentlyOnTrial
+                  isCurrentPlan && !isCurrentlyOnTrial && !canReactivate
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : isFree
                     ? 'bg-gray-700 text-white hover:bg-gray-800'
