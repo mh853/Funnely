@@ -229,7 +229,7 @@ export default async function SettingsPage() {
               <TagIcon className="h-5 w-5 text-emerald-600" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-sm font-medium text-gray-900 truncate">리드 상태 관리</h3>
+              <h3 className="text-sm font-medium text-gray-900 truncate">DB 상태 관리</h3>
               <p className="text-xs text-gray-500 truncate">DB현황 결과 상태 설정</p>
             </div>
             <svg className="h-4 w-4 text-gray-400 group-hover:text-emerald-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -62,7 +62,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
       }
     } catch (err) {
       console.error('Failed to fetch statuses:', err)
-      setError('리드 상태 목록을 불러오지 못했습니다.')
+      setError('DB 상태 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
@@ -245,7 +245,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-medium text-gray-900">리드 상태 관리</h3>
+          <h3 className="text-lg font-medium text-gray-900">DB 상태 관리</h3>
           <p className="text-sm text-gray-500 mt-1">
             DB현황 페이지의 결과 컬럼에 표시되는 상태 항목을 관리합니다.
           </p>

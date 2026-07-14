@@ -53,7 +53,7 @@ export default async function LeadStatusesPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">리드 상태 관리</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">DB 상태 관리</h1>
             <p className="text-xs text-gray-500 mt-0.5">DB현황 페이지의 결과 컬럼에 표시되는 상태 항목을 관리합니다</p>
           </div>
         </div>
@@ -90,8 +90,8 @@ export default async function LeadStatusesPage() {
         <ul className="text-sm text-gray-600 space-y-1 list-disc list-inside">
           <li>상태를 추가하면 DB현황 페이지의 결과 드롭다운에 표시됩니다.</li>
           <li>코드는 영문으로 입력하며, 시스템 내부에서 사용됩니다.</li>
-          <li>기본값으로 설정된 상태는 새 리드 생성 시 자동으로 적용됩니다.</li>
-          <li>리드가 사용 중인 상태는 삭제되지 않고 비활성화됩니다.</li>
+          <li>기본값으로 설정된 상태는 새 DB 생성 시 자동으로 적용됩니다.</li>
+          <li>DB가 사용 중인 상태는 삭제되지 않고 비활성화됩니다.</li>
           <li>순서 변경 버튼으로 표시 순서를 조정할 수 있습니다.</li>
         </ul>
       </div>
