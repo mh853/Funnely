@@ -1,6 +1,7 @@
 import { createClient, createServiceClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
+import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 
 export default async function DashboardLayout({
   children,
@@ -27,32 +28,21 @@ export default async function DashboardLayout({
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
 
-    // Step 1: 활성/체험 구독 우선 조회, 없으면 최신 구독
-    const { data: activeSub } = await serviceSupabase
+    // 현재 구독 조회 (우선순위는 pickCurrentSubscription 참고)
+    const { data: subsForFeatures } = await serviceSupabase
       .from('company_subscriptions')
-      .select('plan_id, status')
+      .select('plan_id, status, current_period_end, trial_end_date, cancelled_at')
       .eq('company_id', userProfile.company_id)
-      .in('status', ['active', 'trial'])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .limit(10)
 
-    let latestSub = activeSub
-    if (!latestSub) {
-      const { data: fallback } = await serviceSupabase
-        .from('company_subscriptions')
-        .select('plan_id, status')
-        .eq('company_id', userProfile.company_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      latestSub = fallback
-    }
+    const latestSub = pickCurrentSubscription(subsForFeatures ?? [])
 
     subscriptionStatus = latestSub?.status ?? null
 
-    // Step 2: Get plan features only for active subscriptions
-    if (latestSub?.plan_id && ['active', 'trial', 'past_due'].includes(latestSub.status ?? '')) {
+    // Step 2: 구독이 지금 접근 권한을 부여하는 동안만 플랜 기능 적용
+    // (cancelled라도 결제한 기간이 남아있으면 계속 사용 가능해야 한다)
+    if (latestSub?.plan_id && hasValidPlanAccess(latestSub)) {
       const { data: plan } = await serviceSupabase
         .from('subscription_plans')
         .select('features')
@@ -72,26 +62,14 @@ export default async function DashboardLayout({
 
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
-    const { data: activeTrial } = await serviceSupabase
+    const { data: subsForBanner } = await serviceSupabase
       .from('company_subscriptions')
-      .select('status, trial_end_date')
+      .select('status, trial_end_date, current_period_end, cancelled_at')
       .eq('company_id', userProfile.company_id)
-      .in('status', ['active', 'trial'])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .limit(10)
 
-    let subscription = activeTrial
-    if (!subscription) {
-      const { data: fallback } = await serviceSupabase
-        .from('company_subscriptions')
-        .select('status, trial_end_date')
-        .eq('company_id', userProfile.company_id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle()
-      subscription = fallback
-    }
+    const subscription = pickCurrentSubscription(subsForBanner ?? [])
 
     if (subscription?.status === 'trial' && subscription.trial_end_date) {
       const trialEnd = new Date(subscription.trial_end_date)
@@ -107,14 +85,14 @@ export default async function DashboardLayout({
   let currentPlanName: string | null = null
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
-    const { data: subWithPlan } = await serviceSupabase
+    const { data: subsWithPlan } = await serviceSupabase
       .from('company_subscriptions')
-      .select('status, subscription_plans!plan_id(name)')
+      .select('status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(name)')
       .eq('company_id', userProfile.company_id)
-      .in('status', ['active', 'trial', 'past_due'])
       .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
+      .limit(10)
+
+    const subWithPlan = pickCurrentSubscription(subsWithPlan ?? [])
 
     if (subWithPlan) {
       const planName = (subWithPlan.subscription_plans as any)?.name

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 export async function POST() {
   const supabase = await createClient()
@@ -24,14 +25,16 @@ export async function POST() {
     return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  const { data: subscription } = await db
+  const { data: candidateSubs } = await db
     .from('company_subscriptions')
-    .select('id, status, current_period_end, subscription_plans!plan_id(name, price_monthly)')
+    .select('id, status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(name, price_monthly)')
     .eq('company_id', profile.company_id)
     .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+    .limit(10)
+
+  const candidates: any[] = candidateSubs ?? []
+  const subscription = pickCurrentSubscription(candidates)
 
   if (!subscription) {
     return NextResponse.json({ error: '활성 구독이 없습니다.' }, { status: 404 })

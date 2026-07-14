@@ -7,6 +7,7 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getBaseDomain } from '@/lib/utils/landing-page-url'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 /**
  * 커스텀 도메인으로 회사 정보 조회
@@ -294,12 +295,15 @@ export async function middleware(request: NextRequest) {
     (currentPathname === '/auth/login' || currentPathname === '/auth/signup')
   ) {
     // /auth/login?redirectTo=...로 왔다면(예: 다른 탭에서 로그인을 마친 뒤 같은 링크를
-    // 다시 열었을 때) 원래 가려던 곳으로 보낸다. 없으면 대시보드로.
+    // 다시 열었을 때) 원래 가려던 곳으로 보낸다.
+    // 없으면: /auth/signup은 홈페이지 플랜 선택 CTA가 향하는 곳이므로 구독 관리 페이지로,
+    // /auth/login은 기존대로 대시보드로 보낸다.
     const requestedRedirect = request.nextUrl.searchParams.get('redirectTo')
+    const defaultRedirect = currentPathname === '/auth/signup' ? '/dashboard/subscription' : '/dashboard'
     const safeRedirect =
       requestedRedirect && requestedRedirect.startsWith('/') && !requestedRedirect.startsWith('//')
         ? requestedRedirect
-        : '/dashboard'
+        : defaultRedirect
 
     const redirectUrl = request.nextUrl.clone()
     redirectUrl.pathname = safeRedirect
@@ -380,25 +384,15 @@ export async function middleware(request: NextRequest) {
       if (userProfile?.company_id) {
         const now = new Date().toISOString()
 
-        // 회사의 구독 목록 조회 후 가장 유효한 구독 선택
-        // 우선순위: 기간 유효한 active > trial > active(기간만료) > 나머지
+        // 회사의 구독 목록 조회 후 가장 유효한 구독 선택 (우선순위는 pickCurrentSubscription 참고)
         const { data: allSubs } = await supabase
           .from('company_subscriptions')
-          .select('id, status, current_period_end, grace_period_end, trial_end_date, plan_id')
+          .select('id, status, current_period_end, grace_period_end, trial_end_date, cancelled_at, plan_id')
           .eq('company_id', userProfile.company_id)
           .order('created_at', { ascending: false })
           .limit(10)
 
-        const subs = allSubs ?? []
-
-        // 1순위: active + 기간 유효 (period_end가 null이거나 미래)
-        const validActive = subs.find(
-          s => s.status === 'active' && (s.current_period_end === null || s.current_period_end > now)
-        )
-        // 2순위: trial
-        const trialSub = subs.find(s => s.status === 'trial')
-        // 최종 fallback: 가장 최근 구독
-        const subscription = validActive ?? trialSub ?? subs[0] ?? null
+        const subscription = pickCurrentSubscription(allSubs ?? [])
 
         if (subscription) {
           const isTrialExpired =
@@ -412,14 +406,24 @@ export async function middleware(request: NextRequest) {
           // 체험이 끝난 계정이 영구적으로 무료 이용 가능한 상태로 남는 버그가 있었다.
           // 다른 만료 상태와 동일하게 /dashboard/subscription/expired로 보내
           // 사용자가 직접 플랜을 선택하게 한다.)
+          // cancelled는 "다음 결제를 하지 않겠다"는 의미일 뿐, 이미 결제한 기간의 이용
+          // 권리를 즉시 뺏는 게 아니다 — 취소 확인 모달에서도 기간까지 이용 가능하다고
+          // 안내한다. period_end를 모르는 cancelled는 안전하게 차단 상태로 취급한다.
+          const isCancelledAndExpired =
+            subscription.status === 'cancelled' &&
+            (subscription.current_period_end === null || subscription.current_period_end < now)
+
+          const isActiveAndExpired =
+            subscription.status === 'active' &&
+            subscription.current_period_end !== null &&
+            subscription.current_period_end < now &&
+            (!subscription.grace_period_end || subscription.grace_period_end < now)
+
           const isBlocked =
             isTrialExpired ||
-            ['expired', 'cancelled', 'suspended'].includes(subscription.status) ||
-            (subscription.status === 'active' &&
-              subscription.current_period_end !== null &&
-              subscription.current_period_end < now &&
-              (!subscription.grace_period_end ||
-                subscription.grace_period_end < now))
+            ['expired', 'suspended'].includes(subscription.status) ||
+            isCancelledAndExpired ||
+            isActiveAndExpired
 
           if (isBlocked) {
             const redirectUrl = request.nextUrl.clone()

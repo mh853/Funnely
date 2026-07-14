@@ -1,6 +1,7 @@
 import { createClient, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewSubscriptionClient from '@/components/subscription/NewSubscriptionClient'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 export default async function SubscriptionPage() {
   const supabase = await createClient()
@@ -26,27 +27,15 @@ export default async function SubscriptionPage() {
     .eq('is_active', true)
     .order('sort_order', { ascending: true })
 
-  // 현재 구독 정보 조회 - 활성/체험 우선, 없으면 최신
-  const { data: activeCurrentSub } = await supabase
+  // 현재 구독 정보 조회 (우선순위는 pickCurrentSubscription 참고)
+  const { data: allSubs } = await supabase
     .from('company_subscriptions')
     .select('*, subscription_plans!plan_id(*)')
     .eq('company_id', userProfile.company_id)
-    .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(10)
 
-  let currentSubscription = activeCurrentSub
-  if (!currentSubscription) {
-    const { data: fallback } = await supabase
-      .from('company_subscriptions')
-      .select('*, subscription_plans!plan_id(*)')
-      .eq('company_id', userProfile.company_id)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    currentSubscription = fallback
-  }
+  const currentSubscription = pickCurrentSubscription(allSubs ?? [])
 
   // 회사 전체 구독에서 빌링키/카드 정보 조회 (만료/취소된 구독 포함)
   let companyBillingKeySubscriptionId: string | null = null

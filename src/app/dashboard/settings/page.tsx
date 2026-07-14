@@ -6,6 +6,7 @@ import CustomDomainManager from '@/components/settings/CustomDomainManager'
 import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon, GlobeAltIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 import { canUseCustomDomain } from '@/lib/subscription-access'
+import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import AccountDeletionSection from '@/components/settings/AccountDeletionSection'
 
 export default async function SettingsPage() {
@@ -110,22 +111,25 @@ export default async function SettingsPage() {
     .eq('is_active', true)
     .neq('id', user.id)
 
-  // 유료 구독 여부 확인
-  const { data: activeSubscription } = await db
+  // 유료 구독 여부 확인 (cancelled라도 결제한 기간이 남아있으면 유료로 취급)
+  const { data: subsForSettings } = await db
     .from('company_subscriptions')
-    .select('id, status, subscription_plans!plan_id(name, price_monthly)')
+    .select('id, status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(name, price_monthly)')
     .eq('company_id', userProfile.company_id)
-    .in('status', ['active', 'trial'])
     .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+    .limit(10)
+
+  const settingsSubs: any[] = subsForSettings ?? []
+  const activeSubscription = pickCurrentSubscription(settingsSubs)
 
   const activePlan = activeSubscription?.subscription_plans as
     | { name: string; price_monthly: number }
     | null
     | undefined
   const hasPaidSubscription =
-    !!activePlan && !(activePlan.name === 'Free' && activePlan.price_monthly === 0)
+    hasValidPlanAccess(activeSubscription) &&
+    !!activePlan &&
+    !(activePlan.name === 'Free' && activePlan.price_monthly === 0)
 
   return (
     <div className="px-4 space-y-6">

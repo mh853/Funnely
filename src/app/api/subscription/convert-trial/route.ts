@@ -24,7 +24,7 @@ export async function POST(request: Request) {
   // 현재 구독 확인
   const { data: currentSub } = await svc
     .from('company_subscriptions')
-    .select('id, status, billing_key, company_id')
+    .select('id, status, billing_key, customer_key, card_info, company_id')
     .eq('id', subscriptionId)
     .maybeSingle()
 
@@ -49,15 +49,21 @@ export async function POST(request: Request) {
   }
 
   // 빌링키 확인 — 다른 구독에서 복사 필요한 경우
+  // billing_key만 복사하고 customer_key/card_info를 빠뜨리면 결제는 되지만(빌링키는 있음)
+  // 카드 정보 UI에는 "등록된 카드 없음"으로 보이는 불일치가 생기므로 세 값을 함께 복사한다.
   let billingKey: string | null = currentSub.billing_key
+  let customerKey: string | null = currentSub.customer_key
+  let cardInfo: unknown = currentSub.card_info
   if (!billingKey && billingKeySubscriptionId) {
     const { data: sourceSubData } = await svc
       .from('company_subscriptions')
-      .select('billing_key')
+      .select('billing_key, customer_key, card_info')
       .eq('id', billingKeySubscriptionId)
       .eq('company_id', currentSub.company_id)
       .maybeSingle()
     billingKey = sourceSubData?.billing_key ?? null
+    customerKey = sourceSubData?.customer_key ?? null
+    cardInfo = sourceSubData?.card_info ?? null
   }
 
   if (!billingKey) {
@@ -68,6 +74,8 @@ export async function POST(request: Request) {
   // toss-billing-payment 에지 함수가 trial 상태를 찾지 못하는 문제 해결
   const updateData: Record<string, unknown> = {
     billing_key: billingKey,
+    customer_key: customerKey,
+    card_info: cardInfo,
     status: 'active',
   }
   if (planId) updateData.plan_id = planId
