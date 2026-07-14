@@ -163,17 +163,11 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
 
-  // Get monthly device breakdown for landing pages from landing_page_analytics
-  const { data: monthlyAnalytics } = await supabase
-    .from('landing_page_analytics')
-    .select('landing_page_id, desktop_views, mobile_views, tablet_views, landing_pages!inner(company_id)')
-    .eq('landing_pages.company_id', userProfile.company_id)
-    .gte('date', queryStartDate)
-    .lt('date', queryEndDate)
-
   // Aggregate monthly device breakdown by landing page
+  // (pageViewsData는 위에서 이미 동일 조건(company_id, queryStartDate~queryEndDate)으로
+  // landing_page_id/desktop_views/mobile_views/tablet_views를 포함해 조회했으므로 재사용한다)
   const deviceBreakdownByLandingPage: Record<string, { pc: number; mobile: number; tablet: number }> = {}
-  monthlyAnalytics?.forEach(analytics => {
+  pageViewsData?.forEach(analytics => {
     const lpId = analytics.landing_page_id
     if (!deviceBreakdownByLandingPage[lpId]) {
       deviceBreakdownByLandingPage[lpId] = { pc: 0, mobile: 0, tablet: 0 }

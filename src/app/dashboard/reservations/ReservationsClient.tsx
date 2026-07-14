@@ -26,7 +26,6 @@ import {
   UserIcon,
   CalendarIcon,
 } from '@heroicons/react/24/outline'
-import * as XLSX from 'xlsx'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 
@@ -781,6 +780,9 @@ export default function ReservationsClient({
     }
 
     try {
+      // 엑셀 다운로드를 실제로 누른 사람만 다운로드하도록 지연 로딩
+      const XLSX = await import('xlsx')
+
       // 데이터 가공
       const excelData = await Promise.all(
         leads.map(async (lead) => {

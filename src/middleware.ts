@@ -446,7 +446,12 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
+     * - api (API 라우트는 자체적으로 auth.getUser()로 인증하므로 미들웨어의
+     *   페이지 전용 인증/구독 게이트를 거칠 필요가 없다 — 페이지 이동뿐 아니라
+     *   클라이언트가 날리는 모든 API 호출마다 auth+DB 조회 3단계가 반복 실행되던
+     *   불필요한 지연을 없앤다. /admin/api/*, /dashboard 하위 페이지는
+     *   '/api'로 시작하지 않으므로 영향 없음)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }

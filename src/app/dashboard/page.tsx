@@ -78,16 +78,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .gte('leads.created_at', queryStart)
     .lt('leads.created_at', queryEnd)
 
-  // 랜딩페이지 전체 페이지뷰 조회 (views_count 합계)
-  const { data: landingPagesData } = await supabase
-    .from('landing_pages')
-    .select('id, title, slug, views_count, submissions_count')
-    .eq('company_id', userProfile?.company_id)
-    .order('views_count', { ascending: false })
-
-  // landingPagesData는 현재 사용하지 않음 (추후 랜딩페이지별 통계에 활용 가능)
-  void landingPagesData
-
   // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
   const { data: pageViewsData } = await supabase
     .from('landing_page_analytics')

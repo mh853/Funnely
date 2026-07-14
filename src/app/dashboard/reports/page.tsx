@@ -74,23 +74,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const queryStart = isAllMonths ? undefined : getKSTMonthStart(selectedYear, selectedMonth).toISOString()
   const queryEnd = isAllMonths ? undefined : getKSTMonthStart(selectedYear, selectedMonth + 1).toISOString()
 
-  // 팀원 목록 조회 (부서 정보 포함)
-  const { data: teamMembers } = await supabase
-    .from('users')
-    .select('id, full_name, department')
-    .eq('company_id', userProfile.company_id)
-    .eq('is_active', true)
-    .order('full_name')
-
-  // 부서 목록 추출
-  const departments = Array.from(
-    new Set(
-      (teamMembers || [])
-        .map((m) => m.department)
-        .filter((d): d is string => Boolean(d))
-    )
-  ).sort()
-
   // 리드 데이터 조회 (담당자 정보 포함)
   let leadsQuery = supabase
     .from('leads')
@@ -115,19 +98,6 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     leadsQuery = leadsQuery.eq('call_assigned_to', params.assignedTo)
   }
 
-  const { data: allLeads } = await leadsQuery
-
-  // 부서 필터가 있는 경우 해당 부서 사용자 ID 목록으로 필터링
-  let filteredLeads = allLeads || []
-  if (params.department && teamMembers) {
-    const departmentUserIds = teamMembers
-      .filter((m) => m.department === params.department)
-      .map((m) => m.id)
-    filteredLeads = filteredLeads.filter(
-      (lead) => lead.call_assigned_to && departmentUserIds.includes(lead.call_assigned_to)
-    )
-  }
-
   // 결제 데이터 조회
   let paymentQuery = supabase
     .from('lead_payments')
@@ -139,7 +109,37 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     paymentQuery = paymentQuery.gte('leads.created_at', queryStart).lt('leads.created_at', queryEnd)
   }
 
-  const { data: paymentData } = await paymentQuery
+  // 팀원/리드/결제 조회는 서로 무관하므로 병렬로 실행
+  const [{ data: teamMembers }, { data: allLeads }, { data: paymentData }] = await Promise.all([
+    supabase
+      .from('users')
+      .select('id, full_name, department')
+      .eq('company_id', userProfile.company_id)
+      .eq('is_active', true)
+      .order('full_name'),
+    leadsQuery,
+    paymentQuery,
+  ])
+
+  // 부서 목록 추출
+  const departments = Array.from(
+    new Set(
+      (teamMembers || [])
+        .map((m) => m.department)
+        .filter((d): d is string => Boolean(d))
+    )
+  ).sort()
+
+  // 부서 필터가 있는 경우 해당 부서 사용자 ID 목록으로 필터링
+  let filteredLeads = allLeads || []
+  if (params.department && teamMembers) {
+    const departmentUserIds = teamMembers
+      .filter((m) => m.department === params.department)
+      .map((m) => m.id)
+    filteredLeads = filteredLeads.filter(
+      (lead) => lead.call_assigned_to && departmentUserIds.includes(lead.call_assigned_to)
+    )
+  }
 
   // 날짜별 결과 집계
   const resultsByDate: Record<string, any> = {}

@@ -36,8 +36,6 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('status', status)
     }
 
-    const { count } = await countQuery
-
     // 데이터 쿼리 (JOIN으로 N+1 방지)
     let dataQuery = supabase
       .from('company_subscriptions')
@@ -62,7 +60,8 @@ export async function GET(request: NextRequest) {
       dataQuery = dataQuery.eq('status', status)
     }
 
-    const { data: subscriptions, error } = await dataQuery
+    // count/data 쿼리는 서로 무관하므로 병렬로 실행
+    const [{ count }, { data: subscriptions, error }] = await Promise.all([countQuery, dataQuery])
 
     if (error) {
       console.error('[Subscriptions API] Query error:', error)

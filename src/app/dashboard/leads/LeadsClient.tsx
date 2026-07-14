@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon, CircleStackIcon } from '@heroicons/react/24/outline'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { formatDateTime } from '@/lib/utils/date'
-import * as XLSX from 'xlsx'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 import AddLeadModal from '@/components/shared/AddLeadModal'
@@ -1079,6 +1078,10 @@ export default function LeadsClient({
     }
 
     try {
+      // 엑셀 내보내기를 실제로 누른 사람만 다운로드하도록 지연 로딩
+      // (정적 import면 xlsx 전체가 /dashboard/leads 방문자 모두의 초기 번들에 포함됨)
+      const XLSX = await import('xlsx')
+
       // 현재 필터 조건으로 전체 데이터 가져오기
       const params = new URLSearchParams(searchParams.toString())
       const response = await fetch(`/api/leads/export?${params.toString()}`)

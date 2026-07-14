@@ -26,21 +26,21 @@ export default async function LandingPagesPage() {
     )
   }
 
-  // Get company short_id for ref parameter
-  const { data: companyShortIdData } = await supabase
-    .from('companies')
-    .select('short_id')
-    .eq('id', userProfile.company_id)
-    .maybeSingle()
+  // company short_id와 랜딩페이지 목록은 서로 무관하므로 병렬로 조회
+  const [{ data: companyShortIdData }, { data: landingPages }] = await Promise.all([
+    supabase
+      .from('companies')
+      .select('short_id')
+      .eq('id', userProfile.company_id)
+      .maybeSingle(),
+    supabase
+      .from('landing_pages')
+      .select('id, title, slug, is_active, created_at, views_count, company_id, timer_enabled, timer_deadline, timer_auto_update')
+      .eq('company_id', userProfile.company_id)
+      .order('created_at', { ascending: false }),
+  ])
 
   const companyShortId = companyShortIdData?.short_id || null
-
-  // Get all landing pages (no date filtering)
-  const { data: landingPages } = await supabase
-    .from('landing_pages')
-    .select('id, title, slug, is_active, created_at, views_count, company_id, timer_enabled, timer_deadline, timer_auto_update')
-    .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
 
   // Get all leads statistics in a single query (prevents N+1 problem)
   const { data: leadsStats } = await supabase

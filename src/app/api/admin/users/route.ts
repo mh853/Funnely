@@ -86,18 +86,18 @@ export async function GET(request: NextRequest) {
     }
 
     // 카운트 쿼리
-    const { count } = await applyFilters(
+    const countQuery = applyFilters(
       supabase.from('users').select('id', { count: 'exact', head: true }) as any
     )
 
     // 활성/비활성 사용자 수는 현재 페이지가 아니라 현재 필터 조건 전체 기준으로
     // 별도 집계해야 한다. 페이지 슬라이스만으로 계산하면 페이지 크기(20~100)를
     // 넘는 순간부터 통계 카드가 실제 값과 어긋난다.
-    const { count: activeCount } = await applyFilters(
+    const activeCountQuery = applyFilters(
       supabase.from('users').select('id', { count: 'exact', head: true }) as any,
       false
     ).eq('is_active', true)
-    const { count: inactiveCount } = await applyFilters(
+    const inactiveCountQuery = applyFilters(
       supabase.from('users').select('id', { count: 'exact', head: true }) as any,
       false
     ).eq('is_active', false)
@@ -129,7 +129,9 @@ export async function GET(request: NextRequest) {
     const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at'
     dataQuery = dataQuery.order(sortColumn, { ascending: sortOrder === 'asc' })
 
-    const { data: usersData, error } = await dataQuery
+    // 4개 쿼리 모두 서로 무관하므로 병렬로 실행
+    const [{ count }, { count: activeCount }, { count: inactiveCount }, { data: usersData, error }] =
+      await Promise.all([countQuery, activeCountQuery, inactiveCountQuery, dataQuery])
 
     if (error) {
       console.error('[Users API] Query error:', error)

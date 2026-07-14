@@ -54,8 +54,6 @@ export async function GET(request: NextRequest) {
         .lt('calculated_at', nextDate.toISOString())
     }
 
-    const { count } = await countQuery
-
     // 데이터 쿼리
     let dataQuery = supabase
       .from('customer_health_scores')
@@ -95,7 +93,8 @@ export async function GET(request: NextRequest) {
       : 'calculated_at'
     dataQuery = dataQuery.order(sortColumn, { ascending: sortOrder === 'asc' })
 
-    const { data: healthScores, error } = await dataQuery
+    // count/data 쿼리는 서로 무관하므로 병렬로 실행
+    const [{ count }, { data: healthScores, error }] = await Promise.all([countQuery, dataQuery])
 
     if (error) {
       console.error('[Health API] Query error:', error)

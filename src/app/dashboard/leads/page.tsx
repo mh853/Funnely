@@ -184,27 +184,25 @@ export default async function LeadsPage({
     phone: lead.phone ? decryptPhone(lead.phone) : lead.phone
   }))
 
-  // Get landing pages for filter
-  const { data: landingPages } = await supabase
-    .from('landing_pages')
-    .select('id, title')
-    .eq('company_id', userProfile.company_id)
-    .order('title')
-
-  // Get team members for assignee filter
-  const { data: teamMembers } = await supabase
-    .from('users')
-    .select('id, full_name')
-    .eq('company_id', userProfile.company_id)
-    .order('full_name')
-
-  // Get lead statuses for filter and status display
-  const { data: leadStatuses } = await supabase
-    .from('lead_statuses')
-    .select('id, code, label, color, sort_order, is_default')
-    .eq('company_id', userProfile.company_id)
-    .eq('is_active', true)
-    .order('sort_order')
+  // 서로 무관한 조회이므로 병렬로 실행 (필터용 랜딩페이지/팀원/상태 목록)
+  const [{ data: landingPages }, { data: teamMembers }, { data: leadStatuses }] = await Promise.all([
+    supabase
+      .from('landing_pages')
+      .select('id, title')
+      .eq('company_id', userProfile.company_id)
+      .order('title'),
+    supabase
+      .from('users')
+      .select('id, full_name')
+      .eq('company_id', userProfile.company_id)
+      .order('full_name'),
+    supabase
+      .from('lead_statuses')
+      .select('id, code, label, color, sort_order, is_default')
+      .eq('company_id', userProfile.company_id)
+      .eq('is_active', true)
+      .order('sort_order'),
+  ])
 
   return (
     <div className="px-4 space-y-6">
