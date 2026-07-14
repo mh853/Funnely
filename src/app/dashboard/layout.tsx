@@ -81,8 +81,9 @@ export default async function DashboardLayout({
 
   // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
 
-  // 헤더 배지용 플랜명 조회
+  // 헤더 배지용 플랜명 및 체험 디데이 조회
   let currentPlanName: string | null = null
+  let trialDDay: string | null = null
   if (userProfile?.company_id) {
     const serviceSupabase = createServiceClient()
     const { data: subsWithPlan } = await serviceSupabase
@@ -97,6 +98,13 @@ export default async function DashboardLayout({
     if (subWithPlan) {
       const planName = (subWithPlan.subscription_plans as any)?.name
       currentPlanName = planName ? `${planName}${subWithPlan.status === 'trial' ? ' (체험)' : ''}` : null
+
+      if (subWithPlan.status === 'trial' && subWithPlan.trial_end_date) {
+        const daysRemaining = Math.ceil(
+          (new Date(subWithPlan.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        )
+        trialDDay = daysRemaining <= 0 ? 'D-DAY' : `D-${daysRemaining}`
+      }
     }
   }
 
@@ -108,6 +116,7 @@ export default async function DashboardLayout({
       subscriptionBanner={subscriptionBanner}
       subscriptionStatus={subscriptionStatus}
       currentPlanName={currentPlanName}
+      trialDDay={trialDDay}
     >
       {children}
     </DashboardLayoutClient>

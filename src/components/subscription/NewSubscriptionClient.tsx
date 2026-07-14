@@ -596,7 +596,7 @@ export default function NewSubscriptionClient({
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
 
     // 유료 플랜
-    if (isExistingUser) return hasBillingKey ? '플랜 변경' : '카드 등록 후 결제'
+    if (isExistingUser) return hasBillingKey ? '플랜 변경' : '구독하기'
     // 신규 사용자: 프로 플랜만 7일 무료 체험, 나머지 유료 플랜은 바로 구독
     if (plan.name === '프로') return '7일 무료 체험'
     return '구독하기'
@@ -871,7 +871,7 @@ export default function NewSubscriptionClient({
           return (
             <div
               key={plan.id}
-              className={`relative rounded-xl border-2 p-6 ${
+              className={`relative rounded-xl border-2 p-6 h-full flex flex-col ${
                 isCurrentPlan
                   ? 'border-blue-500 bg-blue-50'
                   : isRecommended
@@ -934,7 +934,7 @@ export default function NewSubscriptionClient({
               <button
                 onClick={() => handleSelectPlan(plan)}
                 disabled={loading || (isCurrentPlan && !isCurrentlyOnTrial && !canReactivate)}
-                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all ${
+                className={`w-full py-3 rounded-lg font-semibold text-sm transition-all mt-auto ${
                   isCurrentPlan && !isCurrentlyOnTrial && !canReactivate
                     ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
                     : isFree

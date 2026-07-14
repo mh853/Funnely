@@ -15,6 +15,7 @@ interface DashboardLayoutClientProps {
   }
   subscriptionStatus?: string | null
   currentPlanName?: string | null
+  trialDDay?: string | null
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
@@ -27,6 +28,7 @@ export default function DashboardLayoutClient({
   subscriptionBanner,
   subscriptionStatus,
   currentPlanName,
+  trialDDay,
 }: DashboardLayoutClientProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -69,6 +71,7 @@ export default function DashboardLayoutClient({
           mobileMenuOpen={mobileMenuOpen}
           setMobileMenuOpen={setMobileMenuOpen}
           currentPlanName={currentPlanName}
+          trialDDay={trialDDay}
         />
         <main className="py-6">
           <div className="mx-auto max-w-full">

@@ -12,9 +12,10 @@ interface HeaderProps {
   mobileMenuOpen: boolean
   setMobileMenuOpen: (open: boolean) => void
   currentPlanName?: string | null
+  trialDDay?: string | null
 }
 
-export default function Header({ user, userProfile, mobileMenuOpen, setMobileMenuOpen, currentPlanName }: HeaderProps) {
+export default function Header({ user, userProfile, mobileMenuOpen, setMobileMenuOpen, currentPlanName, trialDDay }: HeaderProps) {
   const router = useRouter()
 
   const handleLogout = async () => {
@@ -45,7 +46,7 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
         </div>
 
         <div className="flex items-center gap-x-4 lg:gap-x-6">
-          {/* 현재 플랜 배지 */}
+          {/* 현재 플랜 배지 (체험 중이면 디데이 함께 표시) */}
           {currentPlanName && (
             <button
               onClick={() => router.push('/dashboard/subscription')}
@@ -53,6 +54,7 @@ export default function Header({ user, userProfile, mobileMenuOpen, setMobileMen
             >
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
               {currentPlanName}
+              {trialDDay && <span className="font-bold text-amber-600">{trialDDay}</span>}
             </button>
           )}
 
