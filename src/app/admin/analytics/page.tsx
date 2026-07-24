@@ -143,13 +143,16 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">고급 분석</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            비즈니스 성과 및 트렌드 분석
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100">
+        <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Analytics</p>
+        <h2 className="text-2xl font-bold text-white">고급 분석</h2>
+        <p className="text-indigo-200 text-sm mt-1">
+          비즈니스 성과 및 트렌드 분석
+        </p>
+      </div>
+
+      {/* 기간 선택 */}
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
         <div className="flex gap-2">
           <Select value={dateRange} onValueChange={setDateRange}>
             <SelectTrigger className="w-40">

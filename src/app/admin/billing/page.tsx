@@ -139,9 +139,10 @@ export default function BillingPage() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">매출 및 결제 관리</h2>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100">
+        <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Billing</p>
+        <h2 className="text-2xl font-bold text-white">매출 및 결제 관리</h2>
+        <p className="text-indigo-200 text-sm mt-1">
           구독 매출, MRR/ARR 및 결제 현황을 관리합니다
         </p>
       </div>

@@ -196,13 +196,12 @@ export default function SubscriptionsPage() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">구독 관리</h2>
-          <p className="text-sm text-gray-500 mt-1">
-            회사별 구독 상태 및 플랜을 관리합니다
-          </p>
-        </div>
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100">
+        <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Subscriptions</p>
+        <h2 className="text-2xl font-bold text-white">구독 관리</h2>
+        <p className="text-indigo-200 text-sm mt-1">
+          회사별 구독 상태 및 플랜을 관리합니다
+        </p>
       </div>
 
       {/* 필터 */}

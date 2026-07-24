@@ -1,8 +1,10 @@
 'use client'
 
+import { Fragment } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt } from 'lucide-react'
+import { Dialog, Transition } from '@headlessui/react'
+import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -25,13 +27,15 @@ const navItems: NavItem[] = [
 
 interface AdminNavProps {
   user: { name: string; email: string }
+  mobileMenuOpen: boolean
+  setMobileMenuOpen: (open: boolean) => void
 }
 
-export default function AdminNav({ user }: AdminNavProps) {
+function AdminNavContent({ user, onNavigate }: { user: { name: string; email: string }; onNavigate?: () => void }) {
   const pathname = usePathname()
 
   return (
-    <aside className="w-[200px] bg-white border-r border-gray-100 flex flex-col shadow-sm sticky top-0 h-screen">
+    <div className="w-[200px] bg-white border-r border-gray-100 flex flex-col shadow-sm h-full">
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
@@ -60,6 +64,7 @@ export default function AdminNav({ user }: AdminNavProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onNavigate}
               className={cn(
                 'flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-150',
                 isActive
@@ -89,6 +94,70 @@ export default function AdminNav({ user }: AdminNavProps) {
           </div>
         </div>
       </div>
-    </aside>
+    </div>
+  )
+}
+
+export default function AdminNav({ user, mobileMenuOpen, setMobileMenuOpen }: AdminNavProps) {
+  return (
+    <>
+      {/* Mobile drawer */}
+      <Transition.Root show={mobileMenuOpen} as={Fragment}>
+        <Dialog as="div" className="relative z-50 lg:hidden" onClose={setMobileMenuOpen}>
+          <Transition.Child
+            as={Fragment}
+            enter="transition-opacity ease-linear duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="transition-opacity ease-linear duration-300"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-900/80" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 flex">
+            <Transition.Child
+              as={Fragment}
+              enter="transition ease-in-out duration-300 transform"
+              enterFrom="-translate-x-full"
+              enterTo="translate-x-0"
+              leave="transition ease-in-out duration-300 transform"
+              leaveFrom="translate-x-0"
+              leaveTo="-translate-x-full"
+            >
+              <Dialog.Panel className="relative mr-16 flex w-full max-w-xs flex-1">
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-in-out duration-300"
+                  enterFrom="opacity-0"
+                  enterTo="opacity-100"
+                  leave="ease-in-out duration-300"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                >
+                  <div className="absolute left-full top-0 flex w-16 justify-center pt-5">
+                    <button
+                      type="button"
+                      className="-m-2.5 p-2.5"
+                      onClick={() => setMobileMenuOpen(false)}
+                    >
+                      <span className="sr-only">사이드바 닫기</span>
+                      <X className="h-6 w-6 text-white" aria-hidden="true" />
+                    </button>
+                  </div>
+                </Transition.Child>
+                <AdminNavContent user={user} onNavigate={() => setMobileMenuOpen(false)} />
+              </Dialog.Panel>
+            </Transition.Child>
+          </div>
+        </Dialog>
+      </Transition.Root>
+
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:flex lg:sticky lg:top-0 lg:h-screen">
+        <AdminNavContent user={user} />
+      </aside>
+    </>
   )
 }

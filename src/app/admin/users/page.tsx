@@ -110,9 +110,10 @@ export default function UsersPage() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900">사용자 관리</h2>
-        <p className="text-sm text-gray-500 mt-1">
+      <div className="bg-gradient-to-r from-indigo-600 to-blue-500 rounded-2xl px-7 py-6 shadow-lg shadow-indigo-100">
+        <p className="text-indigo-200 text-xs font-semibold uppercase tracking-widest mb-1">Users</p>
+        <h2 className="text-2xl font-bold text-white">사용자 관리</h2>
+        <p className="text-indigo-200 text-sm mt-1">
           전체 사용자 목록을 관리하고 상세 정보를 확인할 수 있습니다
         </p>
       </div>
