@@ -1,4 +1,4 @@
-import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getCachedCompanySubscriptions } from '@/lib/supabase/server'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 
 export interface SubscriptionAccessResult {
@@ -217,26 +217,11 @@ export async function canCreateLandingPage(companyId: string): Promise<{
     const supabase = createServiceClient()
 
     // 1. 현재 구독 정보 및 플랜 제한사항 조회
-    const { data: subsData, error: subError } = await supabase
-      .from('company_subscriptions')
-      .select(`
-        id,
-        status,
-        current_period_end,
-        trial_end_date,
-        cancelled_at,
-        subscription_plans!plan_id (
-          max_landing_pages
-        )
-      `)
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    const subscription = pickCurrentSubscription(subsData ?? [])
+    const subsData = await getCachedCompanySubscriptions(companyId)
+    const subscription = pickCurrentSubscription(subsData)
 
     // cancelled라도 결제한 기간이 남아있으면 계속 생성 가능해야 한다
-    if (subError || !subscription || !hasValidPlanAccess(subscription)) {
+    if (!subscription || !hasValidPlanAccess(subscription)) {
       return {
         allowed: false,
         currentCount: 0,
@@ -311,31 +296,9 @@ export async function hasFeatureAccess(
   featureName: string
 ): Promise<boolean> {
   try {
-    const supabase = createServiceClient()
-
     // 현재 구독 정보 및 플랜 기능 조회
-    const { data: subsData, error: subError } = await supabase
-      .from('company_subscriptions')
-      .select(`
-        id,
-        status,
-        current_period_end,
-        trial_end_date,
-        cancelled_at,
-        subscription_plans!plan_id (
-          features
-        )
-      `)
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    if (subError) {
-      console.error('[Feature Access] 구독 조회 실패:', subError)
-      return false
-    }
-
-    const subscription = pickCurrentSubscription(subsData ?? [])
+    const subsData = await getCachedCompanySubscriptions(companyId)
+    const subscription = pickCurrentSubscription(subsData)
 
     // cancelled라도 결제한 기간이 남아있으면 계속 사용 가능해야 한다
     if (!subscription || !hasValidPlanAccess(subscription)) {
@@ -388,23 +351,8 @@ export async function canInviteUser(companyId: string): Promise<{
     const supabase = createServiceClient()
 
     // 1. 현재 구독 정보 및 플랜 제한사항 조회
-    const { data: subsData } = await supabase
-      .from('company_subscriptions')
-      .select(`
-        id,
-        status,
-        current_period_end,
-        trial_end_date,
-        cancelled_at,
-        subscription_plans!plan_id (
-          max_users
-        )
-      `)
-      .eq('company_id', companyId)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    const subscription = pickCurrentSubscription(subsData ?? [])
+    const subsData = await getCachedCompanySubscriptions(companyId)
+    const subscription = pickCurrentSubscription(subsData)
     // 유효한 구독이 없는 경우 기본 제한(1명) 적용 (cancelled라도 기간이 남아있으면 인정)
     const hasAccess = hasValidPlanAccess(subscription)
     const maxAllowed = hasAccess

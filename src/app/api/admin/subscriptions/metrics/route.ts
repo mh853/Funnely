@@ -29,29 +29,47 @@ export async function GET(request: NextRequest) {
     // subscription_plans!plan_id: company_subscriptions는 plan_id/pending_plan_id 두 개의
     // FK가 subscription_plans를 가리키므로, 모호성 해소를 위해 컬럼명을 명시해야 한다
     // (그냥 subscription_plans!inner로 쓰면 PGRST201/HTTP 300 에러가 발생한다).
-    const { data: subscriptions, error: subsError } = await supabase
-      .from('company_subscriptions')
-      .select(`
-        id,
-        company_id,
-        status,
-        billing_cycle,
-        current_period_start,
-        current_period_end,
-        trial_end_date,
-        created_at,
-        subscription_plans!plan_id (
+    // 8번(이번 달 결제 내역)은 이 쿼리 결과와 무관하므로 병렬로 함께 실행한다.
+    const [
+      { data: subscriptions, error: subsError },
+      { data: payments, error: paymentsError },
+    ] = await Promise.all([
+      supabase
+        .from('company_subscriptions')
+        .select(`
           id,
-          name,
-          price_monthly,
-          price_yearly
+          company_id,
+          status,
+          billing_cycle,
+          current_period_start,
+          current_period_end,
+          trial_end_date,
+          created_at,
+          subscription_plans!plan_id (
+            id,
+            name,
+            price_monthly,
+            price_yearly
+          )
+        `)
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('payment_transactions')
+        .select('total_amount, approved_at, status')
+        .eq('status', 'success')
+        .gte(
+          'approved_at',
+          new Date(currentYear, currentMonth - 1, 1).toISOString()
         )
-      `)
-      .order('created_at', { ascending: false })
+        .lt('approved_at', new Date(currentYear, currentMonth, 1).toISOString()),
+    ])
 
     if (subsError) {
       console.error('[Billing Metrics] Error fetching subscriptions:', subsError)
       throw subsError
+    }
+    if (paymentsError) {
+      console.error('[Billing Metrics] Error fetching payments:', paymentsError)
     }
 
     // company_subscriptions는 회사가 플랜을 바꾸거나 재구독할 때마다 새 행이 쌓이는
@@ -86,23 +104,9 @@ export async function GET(request: NextRequest) {
     // 7. ARR 계산 (Annual Recurring Revenue)
     const arr = mrr * 12
 
-    // 8. 이번 달 실제 매출 (성공한 결제 내역 기준)
+    // 8. 이번 달 실제 매출 (성공한 결제 내역 기준, 위 Promise.all에서 함께 조회함)
     // 'payment_history'는 존재하지 않는 테이블이며, 실제 결제 내역은 payment_transactions에
     // 저장된다. 날짜 컬럼도 'payment_date'가 아니라 'approved_at'이다.
-    const { data: payments, error: paymentsError } = await supabase
-      .from('payment_transactions')
-      .select('total_amount, approved_at, status')
-      .eq('status', 'success')
-      .gte(
-        'approved_at',
-        new Date(currentYear, currentMonth - 1, 1).toISOString()
-      )
-      .lt('approved_at', new Date(currentYear, currentMonth, 1).toISOString())
-
-    if (paymentsError) {
-      console.error('[Billing Metrics] Error fetching payments:', paymentsError)
-    }
-
     const monthlyRevenue = (payments || []).reduce(
       (sum, payment) => sum + (payment.total_amount || 0),
       0

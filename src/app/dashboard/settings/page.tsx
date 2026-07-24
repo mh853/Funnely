@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile, getCachedCompanySubscriptions } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
@@ -14,22 +14,15 @@ export default async function SettingsPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')
   }
 
-  // Get user profile
-  const { data: userProfile, error: profileError } = await supabase
-    .from('users')
-    .select('*')
-    .eq('id', user.id)
-    .maybeSingle()
-
-  if (profileError) {
-    console.error('Profile fetch error:', profileError)
-  }
+  // 회사 정보(id/name/business_number/address/phone)까지 함께 캐시되므로
+  // users/companies를 따로 재조회하지 않고 layout.tsx와 동일한 결과를 재사용한다
+  const userProfile = await getCachedUserProfile(user.id)
 
   if (!userProfile) {
     return (
@@ -45,9 +38,6 @@ export default async function SettingsPage() {
               <h3 className="text-sm font-medium text-red-800">사용자 정보를 불러올 수 없습니다</h3>
               <div className="mt-2 text-sm text-red-700">
                 <p>사용자 프로필이 생성되지 않았습니다.</p>
-                {profileError && (
-                  <p className="mt-1 text-xs">오류: {profileError.message}</p>
-                )}
               </div>
             </div>
           </div>
@@ -56,16 +46,7 @@ export default async function SettingsPage() {
     )
   }
 
-  // Get company info
-  const { data: company, error: companyError } = await supabase
-    .from('companies')
-    .select('*')
-    .eq('id', userProfile.company_id)
-    .maybeSingle()
-
-  if (companyError) {
-    console.error('Company fetch error:', companyError)
-  }
+  const company = userProfile.companies
 
   if (!company) {
     return (
@@ -81,9 +62,6 @@ export default async function SettingsPage() {
               <h3 className="text-sm font-medium text-yellow-800">회사 정보를 찾을 수 없습니다</h3>
               <div className="mt-2 text-sm text-yellow-700">
                 <p>회사 정보가 설정되지 않았습니다.</p>
-                {companyError && (
-                  <p className="mt-1 text-xs">오류: {companyError.message}</p>
-                )}
                 <p className="mt-2">관리자에게 문의하거나 다시 로그인해보세요.</p>
               </div>
             </div>
@@ -112,15 +90,9 @@ export default async function SettingsPage() {
     .neq('id', user.id)
 
   // 유료 구독 여부 확인 (cancelled라도 결제한 기간이 남아있으면 유료로 취급)
-  const { data: subsForSettings } = await db
-    .from('company_subscriptions')
-    .select('id, status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(name, price_monthly)')
-    .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
-    .limit(10)
-
-  const settingsSubs: any[] = subsForSettings ?? []
-  const activeSubscription = pickCurrentSubscription(settingsSubs)
+  // layout.tsx/canUseCustomDomain과 동일한 캐시된 조회를 재사용한다
+  const subsForSettings = await getCachedCompanySubscriptions(userProfile.company_id)
+  const activeSubscription = pickCurrentSubscription(subsForSettings)
 
   const activePlan = activeSubscription?.subscription_plans as
     | { name: string; price_monthly: number }

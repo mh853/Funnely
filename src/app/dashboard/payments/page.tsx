@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import PaymentsClient from '@/components/payments/PaymentsClient'
 
@@ -7,7 +7,7 @@ export default async function PaymentsPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

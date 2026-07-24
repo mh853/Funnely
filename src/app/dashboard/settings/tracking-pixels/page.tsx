@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TrackingPixelsClient from './TrackingPixelsClient'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
@@ -8,7 +8,7 @@ export default async function TrackingPixelsPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

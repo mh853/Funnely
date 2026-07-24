@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TeamMembersList from '@/components/team/TeamMembersList'
 import InviteUserButton from '@/components/users/InviteUserButton'
@@ -8,7 +8,7 @@ export default async function TeamPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

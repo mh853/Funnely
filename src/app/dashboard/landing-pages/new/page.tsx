@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
@@ -22,7 +22,7 @@ export default async function NewLandingPagePage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

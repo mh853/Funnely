@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReservationsClient from './ReservationsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
@@ -9,7 +9,7 @@ export default async function ReservationsPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

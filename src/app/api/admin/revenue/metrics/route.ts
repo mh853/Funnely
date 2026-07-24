@@ -34,13 +34,32 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    // 7/11번에서 쓰는 날짜 계산은 activeSubscriptions 결과와 무관하므로 먼저 계산해두고,
+    // 세 쿼리를 병렬로 실행한다 (기존엔 순차 실행이었음)
+    const lastMonth = new Date()
+    lastMonth.setMonth(lastMonth.getMonth() - 1)
+    const lastMonthStr = lastMonth.toISOString().split('T')[0]
+    const lastMonthEndStr = new Date(
+      lastMonth.getFullYear(),
+      lastMonth.getMonth() + 1,
+      1
+    ).toISOString().split('T')[0]
+
+    const sixMonthsAgo = new Date()
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+
     // 4. 현재 활성 구독 조회 (company_subscriptions + subscription_plans)
     // 새로운 플랜 구조: 개인(Personal)/기업(Business) × Free/Basic/Pro
     // 기존 플랜과 호환성 유지: plan_type 컬럼도 조회
-    const { data: activeSubscriptions, error: subsError } = await supabase
-      .from('company_subscriptions')
-      .select(
-        `
+    const [
+      { data: activeSubscriptions, error: subsError },
+      { data: previousMetrics },
+      { data: trends },
+    ] = await Promise.all([
+      supabase
+        .from('company_subscriptions')
+        .select(
+          `
         id,
         company_id,
         status,
@@ -55,8 +74,26 @@ export async function GET(request: NextRequest) {
           price_yearly
         )
       `
-      )
-      .eq('status', 'active')
+        )
+        .eq('status', 'active'),
+      // 7. 이전 달 MRR/ARR 조회 (revenue_metrics 테이블에서)
+      // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
+      supabase
+        .from('revenue_metrics')
+        .select('mrr, arr')
+        .gte('period_start', lastMonthStr)
+        .lt('period_start', lastMonthEndStr)
+        .order('period_start', { ascending: false })
+        .limit(1)
+        .single(),
+      // 11. 지난 6개월 추이 조회
+      // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
+      supabase
+        .from('revenue_metrics')
+        .select('period_start, mrr, arr')
+        .gte('period_start', sixMonthsAgo.toISOString().split('T')[0])
+        .order('period_start', { ascending: true }),
+    ])
 
     if (subsError) {
       console.error('Error fetching subscriptions:', subsError)
@@ -111,29 +148,7 @@ export async function GET(request: NextRequest) {
     )
     const currentARR = calculateARR(currentMRR)
 
-    // 7. 이전 달 MRR/ARR 조회 (revenue_metrics 테이블에서)
-    const lastMonth = new Date()
-    lastMonth.setMonth(lastMonth.getMonth() - 1)
-    const lastMonthStr = lastMonth.toISOString().split('T')[0]
-
-    // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
-    const { data: previousMetrics } = await supabase
-      .from('revenue_metrics')
-      .select('mrr, arr')
-      .gte('period_start', lastMonthStr)
-      .lt(
-        'period_start',
-        new Date(
-          lastMonth.getFullYear(),
-          lastMonth.getMonth() + 1,
-          1
-        ).toISOString().split('T')[0]
-      )
-      .order('period_start', { ascending: false })
-      .limit(1)
-      .single()
-
-    // 8. 성장률 계산
+    // 8. 성장률 계산 (previousMetrics는 위 Promise.all에서 함께 조회함)
     const previousMRR = previousMetrics?.mrr || 0
     const previousARR = previousMetrics?.arr || 0
 
@@ -199,17 +214,7 @@ export async function GET(request: NextRequest) {
       percentage: (data.mrr / currentMRR) * 100,
     }))
 
-    // 11. 지난 6개월 추이 조회
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
-
-    // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
-    const { data: trends } = await supabase
-      .from('revenue_metrics')
-      .select('period_start, mrr, arr')
-      .gte('period_start', sixMonthsAgo.toISOString().split('T')[0])
-      .order('period_start', { ascending: true })
-
+    // 11. 지난 6개월 추이 (trends는 위 Promise.all에서 함께 조회함)
     const last_6_months: RevenueTrend[] = (trends || []).map(
       (trend: any) => ({
         month: trend.period_start.substring(0, 7), // YYYY-MM

@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import NewSubscriptionClient from '@/components/subscription/NewSubscriptionClient'
 import { pickCurrentSubscription } from '@/lib/subscription-current'
@@ -8,7 +8,7 @@ export default async function SubscriptionPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

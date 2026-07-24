@@ -1,6 +1,3 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import {
@@ -8,6 +5,7 @@ import {
   LogOut, XCircle, MessageSquare, MousePointerClick,
   ArrowUpRight, ArrowDownRight, Minus,
 } from 'lucide-react'
+import { getAdminDashboardStats } from '@/lib/admin/dashboard-stats'
 
 interface MonthStats {
   signups: number
@@ -146,35 +144,9 @@ const RECENT_ACCENTS = [
   'bg-sky-400',
 ]
 
-export default function AdminDashboard() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/admin/api/stats')
-      .then((r) => r.json())
-      .then(setData)
-      .catch(console.error)
-      .finally(() => setLoading(false))
-  }, [])
-
+export default async function AdminDashboard() {
+  const data: DashboardData = await getAdminDashboardStats()
   const now = new Date()
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-indigo-100 border-t-indigo-600" />
-      </div>
-    )
-  }
-
-  if (!data) {
-    return (
-      <div className="flex items-center justify-center h-96 text-gray-400 text-sm">
-        데이터를 불러올 수 없습니다
-      </div>
-    )
-  }
 
   const recentColumns = [
     { title: '회원가입', items: data.recent.signups.map((s) => ({ label: s.name, date: s.date })) },

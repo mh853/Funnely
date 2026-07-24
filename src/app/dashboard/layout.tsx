@@ -1,4 +1,4 @@
-import { createClient, createServiceClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile, getCachedCompanySubscriptions } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
@@ -12,7 +12,7 @@ export default async function DashboardLayout({
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')
@@ -21,92 +21,52 @@ export default async function DashboardLayout({
   // Get user profile with hospital info (cached)
   const userProfile = await getCachedUserProfile(user.id)
 
-  // 플랜 기능 조회 (2단계 쿼리) - Service Role 사용 (RLS 우회)
+  // 플랜 기능/배너/헤더 배지가 전부 같은 구독 조회 결과에서 파생되므로 한 번만 조회한다
+  // (우선순위는 pickCurrentSubscription 참고)
   let planFeatures: { [key: string]: boolean } = {}
   let subscriptionStatus: string | null = null
+  let subscriptionBanner: { type: 'trial_ended' | null } = { type: null }
+  let currentPlanName: string | null = null
+  let trialDDay: string | null = null
 
   if (userProfile?.company_id) {
-    const serviceSupabase = createServiceClient()
+    const allSubs = await getCachedCompanySubscriptions(userProfile.company_id)
+    const currentSub = pickCurrentSubscription(allSubs)
 
-    // 현재 구독 조회 (우선순위는 pickCurrentSubscription 참고)
-    const { data: subsForFeatures } = await serviceSupabase
-      .from('company_subscriptions')
-      .select('plan_id, status, current_period_end, trial_end_date, cancelled_at')
-      .eq('company_id', userProfile.company_id)
-      .order('created_at', { ascending: false })
-      .limit(10)
+    subscriptionStatus = currentSub?.status ?? null
 
-    const latestSub = pickCurrentSubscription(subsForFeatures ?? [])
-
-    subscriptionStatus = latestSub?.status ?? null
-
-    // Step 2: 구독이 지금 접근 권한을 부여하는 동안만 플랜 기능 적용
+    // 구독이 지금 접근 권한을 부여하는 동안만 플랜 기능 적용
     // (cancelled라도 결제한 기간이 남아있으면 계속 사용 가능해야 한다)
-    if (latestSub?.plan_id && hasValidPlanAccess(latestSub)) {
-      const { data: plan } = await serviceSupabase
-        .from('subscription_plans')
-        .select('features')
-        .eq('id', latestSub.plan_id)
-        .single()
-
-      if (plan?.features) {
-        planFeatures = plan.features
+    if (currentSub && hasValidPlanAccess(currentSub)) {
+      const features = (currentSub.subscription_plans as any)?.features
+      if (features) {
+        planFeatures = features
       }
     }
-  }
 
-  // 체험 만료 모달용 배너 계산 (만료된 경우에만 표시)
-  let subscriptionBanner: {
-    type: 'trial_ended' | null
-  } = { type: null }
-
-  if (userProfile?.company_id) {
-    const serviceSupabase = createServiceClient()
-    const { data: subsForBanner } = await serviceSupabase
-      .from('company_subscriptions')
-      .select('status, trial_end_date, current_period_end, cancelled_at')
-      .eq('company_id', userProfile.company_id)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    const subscription = pickCurrentSubscription(subsForBanner ?? [])
-
-    if (subscription?.status === 'trial' && subscription.trial_end_date) {
-      const trialEnd = new Date(subscription.trial_end_date)
+    // 체험 만료 모달용 배너 (만료된 경우에만 표시)
+    if (currentSub?.status === 'trial' && currentSub.trial_end_date) {
+      const trialEnd = new Date(currentSub.trial_end_date)
       if (trialEnd < new Date()) {
         subscriptionBanner = { type: 'trial_ended' }
       }
     }
-  }
 
-  // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
+    // 헤더 배지용 플랜명 및 체험 디데이
+    if (currentSub) {
+      const planName = (currentSub.subscription_plans as any)?.name
+      currentPlanName = planName ? `${planName}${currentSub.status === 'trial' ? ' (체험)' : ''}` : null
 
-  // 헤더 배지용 플랜명 및 체험 디데이 조회
-  let currentPlanName: string | null = null
-  let trialDDay: string | null = null
-  if (userProfile?.company_id) {
-    const serviceSupabase = createServiceClient()
-    const { data: subsWithPlan } = await serviceSupabase
-      .from('company_subscriptions')
-      .select('status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(name)')
-      .eq('company_id', userProfile.company_id)
-      .order('created_at', { ascending: false })
-      .limit(10)
-
-    const subWithPlan = pickCurrentSubscription(subsWithPlan ?? [])
-
-    if (subWithPlan) {
-      const planName = (subWithPlan.subscription_plans as any)?.name
-      currentPlanName = planName ? `${planName}${subWithPlan.status === 'trial' ? ' (체험)' : ''}` : null
-
-      if (subWithPlan.status === 'trial' && subWithPlan.trial_end_date) {
+      if (currentSub.status === 'trial' && currentSub.trial_end_date) {
         const daysRemaining = Math.ceil(
-          (new Date(subWithPlan.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+          (new Date(currentSub.trial_end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
         )
         trialDDay = daysRemaining <= 0 ? 'D-DAY' : `D-${daysRemaining}`
       }
     }
   }
+
+  // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
 
   return (
     <DashboardLayoutClient

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BellIcon } from '@heroicons/react/24/outline'
 import NotificationEmailSettings from '@/components/settings/NotificationEmailSettings'
@@ -8,7 +8,7 @@ export default async function NotificationSettingsPage() {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

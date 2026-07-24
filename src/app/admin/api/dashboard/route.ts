@@ -14,17 +14,13 @@ export async function GET() {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
     const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
 
-    // 시간별 추이 데이터 (최근 90일)
-    const trendsData = await getTrendsData(supabase, ninetyDaysAgo)
-
-    // 요약 통계
-    const summary = await getSummaryStats(supabase, thirtyDaysAgo)
-
-    // 회사별 성과 (상위 10개)
-    const topCompanies = await getTopCompanies(supabase, thirtyDaysAgo)
-
-    // 최근 활동
-    const recentActivities = await getRecentActivities(supabase)
+    // 4개 모두 서로 무관하므로 병렬로 실행
+    const [trendsData, summary, topCompanies, recentActivities] = await Promise.all([
+      getTrendsData(supabase, ninetyDaysAgo), // 시간별 추이 데이터 (최근 90일)
+      getSummaryStats(supabase, thirtyDaysAgo), // 요약 통계
+      getTopCompanies(supabase, thirtyDaysAgo), // 회사별 성과 (상위 10개)
+      getRecentActivities(supabase), // 최근 활동
+    ])
 
     return NextResponse.json({
       trends: trendsData,
@@ -162,47 +158,59 @@ async function getTopCompanies(supabase: any, thirtyDaysAgo: Date) {
 
   if (!companies) return []
 
-  const companiesWithStats = await Promise.all(
-    companies.map(async (company: any) => {
-      const [
-        { count: totalUsers },
-        { count: totalLeads },
-        { count: leadsLast30d },
-        { count: totalPages },
-      ] = await Promise.all([
-        supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id),
-        supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id),
-        supabase
-          .from('leads')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id)
-          .gte('created_at', thirtyDaysAgo.toISOString()),
-        supabase
-          .from('landing_pages')
-          .select('*', { count: 'exact', head: true })
-          .eq('company_id', company.id),
-      ])
+  // 회사마다 쿼리 4개씩(N+1) 대신, admin/companies/route.ts와 동일한 패턴으로
+  // company_id IN 배치 조회 4개 + JS 집계로 대체한다
+  const companyIds = companies.map((c: any) => c.id)
 
-      return {
-        id: company.id,
-        name: company.name,
-        totalUsers: totalUsers || 0,
-        totalLeads: totalLeads || 0,
-        leadsLast30d: leadsLast30d || 0,
-        totalPages: totalPages || 0,
-        growth:
-          totalLeads > 0
-            ? (((leadsLast30d || 0) / totalLeads) * 100).toFixed(1)
-            : '0',
-      }
-    })
-  )
+  const [{ data: allUsers }, { data: allLeads }, { data: recentLeads }, { data: allPages }] =
+    await Promise.all([
+      supabase.from('users').select('company_id').in('company_id', companyIds),
+      supabase.from('leads').select('company_id').in('company_id', companyIds),
+      supabase
+        .from('leads')
+        .select('company_id')
+        .in('company_id', companyIds)
+        .gte('created_at', thirtyDaysAgo.toISOString()),
+      supabase.from('landing_pages').select('company_id').in('company_id', companyIds),
+    ])
+
+  const countByCompany = (rows: { company_id: string }[] | null) => {
+    const map: Record<string, number> = {}
+    for (const row of rows || []) {
+      map[row.company_id] = (map[row.company_id] || 0) + 1
+    }
+    return map
+  }
+
+  const usersCountMap = countByCompany(allUsers)
+  const leadsCountMap = countByCompany(allLeads)
+  const recentLeadsCountMap = countByCompany(recentLeads)
+  const pagesCountMap = countByCompany(allPages)
+
+  const companiesWithStats: Array<{
+    id: string
+    name: string
+    totalUsers: number
+    totalLeads: number
+    leadsLast30d: number
+    totalPages: number
+    growth: string
+  }> = companies.map((company: any) => {
+    const totalUsers = usersCountMap[company.id] || 0
+    const totalLeads = leadsCountMap[company.id] || 0
+    const leadsLast30d = recentLeadsCountMap[company.id] || 0
+    const totalPages = pagesCountMap[company.id] || 0
+
+    return {
+      id: company.id,
+      name: company.name,
+      totalUsers,
+      totalLeads,
+      leadsLast30d,
+      totalPages,
+      growth: totalLeads > 0 ? ((leadsLast30d / totalLeads) * 100).toFixed(1) : '0',
+    }
+  })
 
   return companiesWithStats.sort(
     (a, b) => b.leadsLast30d - a.leadsLast30d

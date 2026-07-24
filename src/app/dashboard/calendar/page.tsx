@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import CalendarViewWrapper from '@/components/calendar/CalendarViewWrapper'
 import UpgradeNotice from '@/components/UpgradeNotice'
@@ -18,7 +18,7 @@ export default async function CalendarPage({
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

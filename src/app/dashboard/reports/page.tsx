@@ -1,4 +1,4 @@
-import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
+import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import ReportsClient from './ReportsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
@@ -22,7 +22,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
 
   const {
     data: { user },
-  } = await supabase.auth.getUser()
+  } = await getCachedUser()
 
   if (!user) {
     redirect('/auth/login')

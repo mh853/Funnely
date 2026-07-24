@@ -48,42 +48,64 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   }
 
   useEffect(() => {
+    // Realtime이 SUBSCRIBED로 확인되기 전까지는 30초 폴백 폴링을 유지하고,
+    // 확인되면 멈춘다. 이후 연결이 끊기면(CHANNEL_ERROR/TIMED_OUT/CLOSED)
+    // 다시 폴링을 재개한다 — 알림 유실을 막는 게 쿼리 수를 줄이는 것보다 우선.
+    // isActive는 cleanup에서 가장 먼저 false로 바꿔야 한다: removeChannel()이
+    // 내부적으로 동기적으로 CLOSED 상태를 발생시킬 수 있는데, 이때 정리된 이후에
+    // 다시 setInterval이 걸려 타이머가 새는 것을 막기 위함이다.
+    let isActive = true
+    let pollIntervalId: ReturnType<typeof setInterval> | null = null
+
+    const startPolling = () => {
+      if (!isActive || pollIntervalId) return
+      pollIntervalId = setInterval(fetchNotifications, 30000)
+    }
+    const stopPolling = () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId)
+        pollIntervalId = null
+      }
+    }
+
     fetchNotifications()
 
     const supabase = createClient()
 
-    const subscribeToNotifications = () => {
-      return supabase
-        .channel(`notifications-bell-${companyId}`)
-        .on(
-          'postgres_changes',
-          {
-            event: 'INSERT',
-            schema: 'public',
-            table: 'notifications',
-            filter: `company_id=eq.${companyId}`,
-          },
-          (payload) => {
-            fetchNotifications()
-            // 초기 로드 이후에만 토스트 표시
-            if (!isInitialLoad.current) {
-              showToast(payload.new as Notification)
-            }
+    // 연결 확인 전 공백이 없도록 폴백을 먼저 시작해둔다
+    startPolling()
+
+    const channel = supabase
+      .channel(`notifications-bell-${companyId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `company_id=eq.${companyId}`,
+        },
+        (payload) => {
+          fetchNotifications()
+          // 초기 로드 이후에만 토스트 표시
+          if (!isInitialLoad.current) {
+            showToast(payload.new as Notification)
           }
-        )
-        .subscribe()
-    }
-
-    const channel = subscribeToNotifications()
-
-    // Realtime이 누락할 경우를 대비한 폴링 백업 (30초)
-    const pollInterval = setInterval(() => {
-      fetchNotifications()
-    }, 30000)
+        }
+      )
+      .subscribe((status) => {
+        if (!isActive) return
+        if (status === 'SUBSCRIBED') {
+          stopPolling()
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          startPolling()
+        }
+      })
 
     return () => {
+      isActive = false
       supabase.removeChannel(channel)
-      clearInterval(pollInterval)
+      stopPolling()
     }
   }, [userId, companyId])
 
