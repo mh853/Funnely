@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { SparklesIcon, CheckIcon } from '@heroicons/react/24/solid'
 
@@ -43,6 +43,12 @@ interface TrialExpiredModalProps {
 export default function TrialExpiredModal({ onDismiss }: TrialExpiredModalProps) {
   const router = useRouter()
   const [dismissConfirm, setDismissConfirm] = useState(false)
+  const panelRef = useRef<HTMLDivElement>(null)
+  const primaryButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    primaryButtonRef.current?.focus()
+  }, [])
 
   const handleSelectPlan = () => {
     router.push('/dashboard/subscription')
@@ -52,15 +58,41 @@ export default function TrialExpiredModal({ onDismiss }: TrialExpiredModalProps)
     router.push('/dashboard/subscription')
   }
 
+  // 안내/결제 유도 모달이라 Esc나 배경 클릭으로 닫히지 않도록 의도적으로 설계돼 있음(닫기 버튼도 없음).
+  // 그 특성상 포커스가 실수로 배경 페이지로 빠지면 사용자가 더 혼란스러우므로 Tab 트랩만 추가한다.
+  const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab') return
+    const focusables = Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled)') || []
+    )
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trial-expired-title"
+        onKeyDown={handlePanelKeyDown}
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+      >
         {/* Header */}
         <div className="px-8 pt-8 pb-6 text-center border-b border-gray-100">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-amber-50 rounded-full mb-4">
             <SparklesIcon className="h-7 w-7 text-amber-500" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">무료 체험이 종료되었습니다</h2>
+          <h2 id="trial-expired-title" className="text-2xl font-bold text-gray-900 mb-2">무료 체험이 종료되었습니다</h2>
           <p className="text-gray-500 text-sm">
             서비스를 계속 이용하려면 플랜을 선택해주세요.<br />
             언제든지 취소 가능하며, 취소 후 결제 기간 만료까지 이용하실 수 있습니다.
@@ -120,6 +152,7 @@ export default function TrialExpiredModal({ onDismiss }: TrialExpiredModalProps)
         {/* CTA */}
         <div className="px-6 pb-6 space-y-3">
           <button
+            ref={primaryButtonRef}
             onClick={handleSelectPlan}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-full font-semibold shadow-md hover:from-blue-700 hover:to-indigo-700 hover:shadow-lg transition-all"
           >

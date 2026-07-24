@@ -242,6 +242,9 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
         onClick={() => setIsOpen(!isOpen)}
         className="relative p-2 text-gray-400 hover:text-gray-500"
         title={unreadCount > 0 ? `읽지 않은 알림 ${unreadCount}개` : undefined}
+        aria-label={unreadCount > 0 ? `알림, 읽지 않은 알림 ${unreadCount}개` : '알림'}
+        aria-haspopup="true"
+        aria-expanded={isOpen}
       >
         {unreadCount > 0 ? (
           <BellIconSolid className="h-6 w-6 text-blue-600" />

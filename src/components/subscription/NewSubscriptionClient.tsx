@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { CheckIcon } from '@heroicons/react/24/outline'
@@ -115,6 +115,48 @@ export default function NewSubscriptionClient({
   } | null>(null)
   const [upgradeLoading, setUpgradeLoading] = useState(false)
   const [cardChanging, setCardChanging] = useState(false)
+  const cancelModalRef = useRef<HTMLDivElement>(null)
+  const upgradeModalRef = useRef<HTMLDivElement>(null)
+
+  // 손수 만든 모달들이 role/포커스 트랩 없이 배경 클릭으로만 닫히던 것을 보완:
+  // Tab을 모달 안에서 순환시키고 Escape로 닫는다.
+  const trapModalTab = (
+    e: React.KeyboardEvent<HTMLDivElement>,
+    panelRef: React.RefObject<HTMLDivElement>,
+    close: () => void
+  ) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      close()
+      return
+    }
+    if (e.key !== 'Tab') return
+    const focusables = Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') || []
+    )
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
+  useEffect(() => {
+    if (cancelModalOpen) {
+      cancelModalRef.current?.querySelector<HTMLElement>('button')?.focus()
+    }
+  }, [cancelModalOpen])
+
+  useEffect(() => {
+    if (upgradeModal) {
+      upgradeModalRef.current?.querySelector<HTMLElement>('button')?.focus()
+    }
+  }, [upgradeModal])
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
 
@@ -695,9 +737,16 @@ export default function NewSubscriptionClient({
       {/* 구독 취소 확인 모달 */}
       {cancelModalOpen && currentSubscription && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div
+            ref={cancelModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cancel-subscription-title"
+            onKeyDown={(e) => trapModalTab(e, cancelModalRef, () => setCancelModalOpen(false))}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+          >
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">구독을 취소하시겠습니까?</h3>
+              <h3 id="cancel-subscription-title" className="text-lg font-bold text-gray-900">구독을 취소하시겠습니까?</h3>
             </div>
             <div className="p-6 space-y-4">
               {cancelResult ? (
@@ -760,9 +809,16 @@ export default function NewSubscriptionClient({
       {/* 업그레이드 확인 모달 */}
       {upgradeModal && currentSubscription && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+          <div
+            ref={upgradeModalRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upgrade-confirm-title"
+            onKeyDown={(e) => trapModalTab(e, upgradeModalRef, () => setUpgradeModal(null))}
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md"
+          >
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-bold text-gray-900">업그레이드 결제 확인</h3>
+              <h3 id="upgrade-confirm-title" className="text-lg font-bold text-gray-900">업그레이드 결제 확인</h3>
             </div>
             <div className="p-6 space-y-4">
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-2 text-sm text-blue-800">

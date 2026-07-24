@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
@@ -24,14 +24,43 @@ export default function DeleteLandingPageModal({
   const [confirmText, setConfirmText] = useState('')
   const [isDeleting, setIsDeleting] = useState(false)
   const [error, setError] = useState('')
+  const panelRef = useRef<HTMLDivElement>(null)
+  const confirmInputRef = useRef<HTMLInputElement>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (isOpen) {
       setConfirmText('')
       setIsDeleting(false)
       setError('')
+      previousFocusRef.current = document.activeElement as HTMLElement
+      confirmInputRef.current?.focus()
+    } else {
+      previousFocusRef.current?.focus()
     }
   }, [isOpen])
+
+  const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Escape') {
+      e.preventDefault()
+      if (!isDeleting) onClose()
+      return
+    }
+    if (e.key !== 'Tab') return
+    const focusables = Array.from(
+      panelRef.current?.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)') || []
+    )
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
 
   const handleDelete = async () => {
     if (confirmText !== landingPage.title) {
@@ -65,14 +94,21 @@ export default function DeleteLandingPageModal({
 
   return createPortal(
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl">
+      <div
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="delete-landing-page-title"
+        onKeyDown={handlePanelKeyDown}
+        className="bg-white rounded-2xl max-w-md w-full shadow-2xl"
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-red-100 rounded-lg">
               <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900">랜딩페이지 삭제</h3>
+            <h3 id="delete-landing-page-title" className="text-xl font-bold text-gray-900">랜딩페이지 삭제</h3>
           </div>
           <button
             onClick={onClose}
@@ -111,6 +147,7 @@ export default function DeleteLandingPageModal({
               삭제를 확인하려면 랜딩페이지 이름을 정확히 입력하세요:
             </label>
             <input
+              ref={confirmInputRef}
               type="text"
               value={confirmText}
               onChange={(e) => {
