@@ -1133,9 +1133,11 @@ export default function ReservationsClient({
             <ArrowDownTrayIcon className="h-4 w-4" />
             엑셀 다운로드
           </button>
-          {/* 총 예약 건수 */}
+          {/* 이번 달 예약 확정 건수 (캘린더에 표시 중인 달 기준) */}
           <div className="inline-flex items-center px-2.5 py-1 rounded-full text-sm font-semibold bg-emerald-100 text-emerald-800 gap-1">
-            <span className="text-lg font-bold">{leads.length}</span>
+            <span className="text-lg font-bold">
+              {getMonthlyContractCount(calendarCurrentMonth.getFullYear(), calendarCurrentMonth.getMonth())}
+            </span>
             <span className="text-xs">건</span>
           </div>
         </div>

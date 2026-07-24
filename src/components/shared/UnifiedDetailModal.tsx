@@ -621,12 +621,16 @@ export default function UnifiedDetailModal({
                                     href={landingPageUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
+                                    title={lead.landing_pages.title}
+                                    className="block truncate text-sm text-indigo-600 hover:text-indigo-800 hover:underline font-medium"
                                   >
                                     {lead.landing_pages.title}
                                   </a>
                                 ) : (
-                                  <span className="text-sm text-gray-900">
+                                  <span
+                                    title={lead.landing_pages.title}
+                                    className="block truncate text-sm text-gray-900"
+                                  >
                                     {lead.landing_pages.title}
                                   </span>
                                 )}

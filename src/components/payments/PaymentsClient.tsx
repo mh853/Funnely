@@ -171,7 +171,7 @@ export default function PaymentsClient({
                 원
               </p>
               <p className="text-sm opacity-90 mt-1">
-                {subscription.billing_cycle === 'monthly' ? '/ 월' : '/ 년'}
+                {subscription.billing_cycle === 'monthly' ? '/ 월' : '/ 년'} (VAT 별도)
               </p>
               {subscription.trial_end_date && subscription.status === 'trial' && (
                 <p className="text-sm mt-2 opacity-90">

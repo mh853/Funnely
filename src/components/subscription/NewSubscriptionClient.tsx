@@ -911,6 +911,7 @@ export default function NewSubscriptionClient({
                     <p className="text-3xl font-bold text-gray-900">
                       {price.toLocaleString()}원<span className="text-sm text-gray-600">/{priceLabel}</span>
                     </p>
+                    <p className="text-xs text-gray-500 mt-1">VAT 별도</p>
                     {billingCycle === 'yearly' && plan.price_monthly > 0 && (
                       <p className="text-xs text-green-600 mt-1">
                         연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약

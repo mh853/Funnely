@@ -11,6 +11,11 @@ export default function NotificationBell() {
   const lastSyncTime = useRef<number>(0)
 
   useEffect(() => {
+    // React StrictMode(dev)에서 effect가 mount→cleanup→remount를 겪는 동안, 이미
+    // cleanup된 첫 구독의 상태 콜백이 뒤늦게 CHANNEL_ERROR로 도착해 실제로는 문제
+    // 없는 상황을 에러로 잘못 보고하는 것을 막기 위한 가드.
+    let isActive = true
+
     fetchUnreadCount()
 
     // 1. Polling: 10초마다 카운트 새로고침 (백업 메커니즘)
@@ -36,6 +41,7 @@ export default function NotificationBell() {
         }
       )
       .subscribe((status) => {
+        if (!isActive) return
         if (status === 'CHANNEL_ERROR') {
           console.error('[NotificationBell] Realtime subscription error')
         } else if (status === 'TIMED_OUT') {
@@ -44,6 +50,7 @@ export default function NotificationBell() {
       })
 
     return () => {
+      isActive = false
       clearInterval(pollingInterval)
       supabase.removeChannel(channel)
     }
