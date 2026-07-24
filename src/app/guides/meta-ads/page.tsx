@@ -32,7 +32,7 @@ export default function MetaAdsSetupGuide() {
           <div className="flex">
             <ExclamationTriangleIcon className="h-6 w-6 text-blue-600 flex-shrink-0" />
             <div className="ml-3">
-              <h3 className="text-sm font-medium text-blue-800">시작하기 전에</h3>
+              <h2 className="text-sm font-medium text-blue-800">시작하기 전에</h2>
               <ul className="mt-2 text-sm text-blue-700 list-disc list-inside space-y-1">
                 <li>Facebook 비즈니스 계정이 필요합니다</li>
                 <li>Meta for Developers 계정이 필요합니다</li>
@@ -277,7 +277,7 @@ export default function MetaAdsSetupGuide() {
               <div className="mt-6">
                 <Link
                   href="/dashboard/settings/api-credentials"
-                  className="inline-block bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition font-medium"
+                  className="inline-block bg-green-700 text-white px-6 py-3 rounded-lg hover:bg-green-800 transition font-medium"
                 >
                   <CheckCircleIcon className="h-5 w-5 inline mr-2" />
                   Funnely에 인증 정보 입력하기

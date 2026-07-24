@@ -6,6 +6,7 @@ import { useState, useEffect, useMemo, memo, Suspense, useRef, useCallback } fro
 import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/client'
+import { getContrastTextColor } from '@/lib/utils/color'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -634,8 +635,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                     }
                   }}
                   disabled={isSubmitting}
-                  className="w-full max-w-xs py-4 rounded-xl text-lg font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
-                  style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
+                  className="w-full max-w-xs py-4 rounded-xl text-lg font-bold shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
+                  style={{
+                    backgroundColor: landingPage.cta_color || '#3B82F6',
+                    color: getContrastTextColor(landingPage.cta_color || '#3B82F6'),
+                  }}
                 >
                   {isSubmitting && (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -715,8 +719,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             }
           }}
           disabled={isSubmitting}
-          className="w-full py-4 text-lg rounded-xl font-bold text-white shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
-          style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
+          className="w-full py-4 text-lg rounded-xl font-bold shadow-xl hover:shadow-2xl transition-shadow disabled:opacity-50 flex items-center justify-center gap-2"
+          style={{
+            backgroundColor: landingPage.cta_color || '#3B82F6',
+            color: getContrastTextColor(landingPage.cta_color || '#3B82F6'),
+          }}
         >
           {isSubmitting && (
             <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -1097,8 +1104,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               <button
                 onClick={handleFormSubmit}
                 disabled={isSubmitting}
-                className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
-                style={{ backgroundColor: landingPage.cta_color || '#3B82F6' }}
+                className="w-full py-4 rounded-xl font-bold shadow-lg transition-all hover:shadow-xl disabled:opacity-50 flex items-center justify-center gap-2"
+                style={{
+                  backgroundColor: landingPage.cta_color || '#3B82F6',
+                  color: getContrastTextColor(landingPage.cta_color || '#3B82F6'),
+                }}
               >
                 {isSubmitting && (
                   <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>

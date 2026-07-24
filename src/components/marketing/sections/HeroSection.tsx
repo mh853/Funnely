@@ -256,7 +256,7 @@ export default function HeroSection() {
               <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold mb-3">
                 {feature.number}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">{feature.name}</h3>
+              <h2 className="text-lg font-semibold text-gray-900 mb-1">{feature.name}</h2>
               <p className="text-base text-gray-500 leading-relaxed">{feature.description}</p>
             </motion.div>
           ))}

@@ -48,7 +48,8 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         {toasts.map((toast) => (
           <div
             key={toast.id}
-            role="alert"
+            role={toast.variant === 'error' ? 'alert' : 'status'}
+            aria-atomic="true"
             className={`pointer-events-auto flex items-start gap-2.5 rounded-xl border px-4 py-3 shadow-lg ${
               toast.variant === 'success'
                 ? 'bg-green-50 border-green-200 text-green-800'

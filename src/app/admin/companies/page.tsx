@@ -270,16 +270,17 @@ function Field({
 // ─── Sort helpers ──────────────────────────────────────────────────────────────
 
 function SortButton({
-  column, current, order, onClick,
+  column, current, order, onClick, label,
 }: {
   column: SortColumn; current: SortColumn; order: 'asc' | 'desc'
-  onClick: (col: SortColumn) => void
+  onClick: (col: SortColumn) => void; label: string
 }) {
   const active = current === column
   return (
     <button
       className="inline-flex flex-col -space-y-1 ml-1 opacity-50 hover:opacity-100"
       onClick={(e) => { e.stopPropagation(); onClick(column) }}
+      aria-label={`${label} 정렬${active ? (order === 'asc' ? ' (오름차순)' : ' (내림차순)') : ''}`}
     >
       <ChevronUp className={`w-3 h-3 ${active && order === 'asc' ? 'text-indigo-600 opacity-100' : ''}`} />
       <ChevronDown className={`w-3 h-3 ${active && order === 'desc' ? 'text-indigo-600 opacity-100' : ''}`} />
@@ -293,14 +294,16 @@ function Th({
   label: string; col: SortColumn; sortBy: SortColumn; sortOrder: 'asc' | 'desc'
   onSort: (col: SortColumn) => void; align?: 'left' | 'right'
 }) {
+  const active = sortBy === col
   return (
     <th
       className={`px-4 py-3 text-xs font-semibold text-gray-500 cursor-pointer select-none whitespace-nowrap ${align === 'right' ? 'text-right' : 'text-left'}`}
       onClick={() => onSort(col)}
+      aria-sort={active ? (sortOrder === 'asc' ? 'ascending' : 'descending') : undefined}
     >
       <span className="inline-flex items-center gap-0.5">
         {label}
-        <SortButton column={col} current={sortBy} order={sortOrder} onClick={onSort} />
+        <SortButton column={col} current={sortBy} order={sortOrder} onClick={onSort} label={label} />
       </span>
     </th>
   )

@@ -68,7 +68,7 @@ export default function ContactPage() {
                 key={link.name}
                 href={link.href}
                 className={`relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-lg transition-all hover:scale-105 ${
-                  link.comingSoon ? 'opacity-60 cursor-not-allowed' : ''
+                  link.comingSoon ? 'cursor-not-allowed' : ''
                 }`}
                 onClick={(e) => handleClick(e, link.comingSoon)}
               >
@@ -79,7 +79,7 @@ export default function ContactPage() {
                     </span>
                   </div>
                 )}
-                <div className="inline-flex rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-3 shadow-lg mb-4">
+                <div className={`inline-flex rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 p-3 shadow-lg mb-4 ${link.comingSoon ? 'opacity-60' : ''}`}>
                   <link.icon className="h-6 w-6 text-white" aria-hidden="true" />
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
