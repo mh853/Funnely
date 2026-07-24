@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type CSSProperties } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -2691,13 +2691,13 @@ export default function LandingPageNewForm({
 
       {/* Interactive Preview Sidebar with Resizable Handle */}
       <div
-        className="hidden lg:flex flex-shrink-0"
-        style={{ width: sidebarWidth }}
+        className="flex flex-shrink-0 w-full lg:w-[var(--pv-sidebar-w)]"
+        style={{ '--pv-sidebar-w': `${sidebarWidth}px` } as CSSProperties}
       >
-        {/* Resize Handle */}
+        {/* Resize Handle - 데스크탑에서만 드래그로 폭 조절 가능 */}
         <div
           onMouseDown={handleMouseDown}
-          className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize group z-20 flex items-center justify-center
+          className={`absolute left-0 top-0 bottom-0 w-2 cursor-col-resize group z-20 hidden lg:flex items-center justify-center
             ${isResizing ? 'bg-indigo-500' : 'hover:bg-indigo-400'} transition-colors`}
         >
           <div className={`w-0.5 h-12 rounded-full transition-all
@@ -2706,9 +2706,9 @@ export default function LandingPageNewForm({
         </div>
 
         {/* Sticky Container */}
-        <div className="sticky top-6 self-start w-full ml-2">
+        <div className="lg:sticky lg:top-6 self-start w-full lg:ml-2">
           {/* Height Constraint Wrapper */}
-          <div className="h-[calc(100vh-3rem)] flex flex-col bg-white rounded-2xl shadow-lg p-6">
+          <div className="h-[600px] lg:h-[calc(100vh-3rem)] flex flex-col bg-white rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
               <EyeIcon className="h-6 w-6 text-indigo-600" />

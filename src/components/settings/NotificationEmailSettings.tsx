@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { BellIcon, PlusIcon, TrashIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { useToast } from '@/components/shared/Toast'
 
 interface NotificationEmailSettingsProps {
   companyId: string
@@ -14,11 +15,11 @@ export default function NotificationEmailSettings({
   initialEmails,
   canEdit,
 }: NotificationEmailSettingsProps) {
+  const toast = useToast()
   const [emails, setEmails] = useState<string[]>(initialEmails)
   const [newEmail, setNewEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
 
   // 이메일 유효성 검증
   const isValidEmail = (email: string): boolean => {
@@ -29,27 +30,26 @@ export default function NotificationEmailSettings({
   // 이메일 추가
   const handleAddEmail = async () => {
     if (!newEmail.trim()) {
-      setMessage({ type: 'error', text: '이메일 주소를 입력해주세요.' })
+      toast.error('이메일 주소를 입력해주세요.')
       return
     }
 
     if (!isValidEmail(newEmail)) {
-      setMessage({ type: 'error', text: '올바른 이메일 형식이 아닙니다.' })
+      toast.error('올바른 이메일 형식이 아닙니다.')
       return
     }
 
     if (emails.includes(newEmail)) {
-      setMessage({ type: 'error', text: '이미 등록된 이메일 주소입니다.' })
+      toast.error('이미 등록된 이메일 주소입니다.')
       return
     }
 
     if (emails.length >= 5) {
-      setMessage({ type: 'error', text: '최대 5개까지만 등록 가능합니다.' })
+      toast.error('최대 5개까지만 등록 가능합니다.')
       return
     }
 
     setIsLoading(true)
-    setMessage(null)
 
     try {
       const response = await fetch('/api/settings/notification-emails', {
@@ -66,12 +66,9 @@ export default function NotificationEmailSettings({
 
       setEmails(data.emails)
       setNewEmail('')
-      setMessage({ type: 'success', text: '이메일이 추가되었습니다.' })
+      toast.success('이메일이 추가되었습니다.')
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : '이메일 추가에 실패했습니다.',
-      })
+      toast.error(error instanceof Error ? error.message : '이메일 추가에 실패했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -84,7 +81,6 @@ export default function NotificationEmailSettings({
     }
 
     setIsLoading(true)
-    setMessage(null)
 
     try {
       const response = await fetch('/api/settings/notification-emails', {
@@ -100,12 +96,9 @@ export default function NotificationEmailSettings({
       }
 
       setEmails(data.emails)
-      setMessage({ type: 'success', text: '이메일이 삭제되었습니다.' })
+      toast.success('이메일이 삭제되었습니다.')
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : '이메일 삭제에 실패했습니다.',
-      })
+      toast.error(error instanceof Error ? error.message : '이메일 삭제에 실패했습니다.')
     } finally {
       setIsLoading(false)
     }
@@ -114,12 +107,11 @@ export default function NotificationEmailSettings({
   // 테스트 이메일 전송
   const handleSendTestEmail = async () => {
     if (emails.length === 0) {
-      setMessage({ type: 'error', text: '등록된 이메일 주소가 없습니다.' })
+      toast.error('등록된 이메일 주소가 없습니다.')
       return
     }
 
     setTestLoading(true)
-    setMessage(null)
 
     try {
       const response = await fetch('/api/notifications/test-lead-email', {
@@ -133,15 +125,9 @@ export default function NotificationEmailSettings({
         throw new Error(data.error || '테스트 이메일 전송에 실패했습니다.')
       }
 
-      setMessage({
-        type: 'success',
-        text: `테스트 이메일이 전송되었습니다. (${data.sentTo} 수신)`,
-      })
+      toast.success(`테스트 이메일이 전송되었습니다. (${data.sentTo} 수신)`)
     } catch (error) {
-      setMessage({
-        type: 'error',
-        text: error instanceof Error ? error.message : '테스트 이메일 전송에 실패했습니다.',
-      })
+      toast.error(error instanceof Error ? error.message : '테스트 이메일 전송에 실패했습니다.')
     } finally {
       setTestLoading(false)
     }
@@ -149,25 +135,6 @@ export default function NotificationEmailSettings({
 
   return (
     <div className="space-y-6">
-      {/* 메시지 표시 */}
-      {message && (
-        <div
-          className={`rounded-md p-4 ${
-            message.type === 'success'
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
-          }`}
-        >
-          <p
-            className={`text-sm ${
-              message.type === 'success' ? 'text-green-800' : 'text-red-800'
-            }`}
-          >
-            {message.text}
-          </p>
-        </div>
-      )}
-
       {/* 등록된 이메일 목록 */}
       <div>
         <h3 className="text-sm font-medium text-gray-900 mb-3 flex items-center gap-2">
