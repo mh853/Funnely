@@ -25,6 +25,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/Toast'
 
 interface Ticket {
   id: string
@@ -100,6 +101,7 @@ const ALLOWED_FILE_TYPES = [
 ]
 
 export default function SupportPage() {
+  const toast = useToast()
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
@@ -112,7 +114,6 @@ export default function SupportPage() {
   })
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [uploading, setUploading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [perPage] = useState(20)
@@ -181,13 +182,13 @@ export default function SupportPage() {
     for (const file of files) {
       // Validate file size
       if (file.size > MAX_FILE_SIZE) {
-        setError(`파일 "${file.name}"이(가) 너무 큽니다. 최대 10MB까지 업로드 가능합니다.`)
+        toast.error(`파일 "${file.name}"이(가) 너무 큽니다. 최대 10MB까지 업로드 가능합니다.`)
         continue
       }
 
       // Validate file type
       if (!ALLOWED_FILE_TYPES.includes(file.type)) {
-        setError(`파일 "${file.name}"은(는) 지원하지 않는 형식입니다.`)
+        toast.error(`파일 "${file.name}"은(는) 지원하지 않는 형식입니다.`)
         continue
       }
 
@@ -247,7 +248,6 @@ export default function SupportPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    setError(null)
     setUploading(true)
 
     try {
@@ -293,14 +293,14 @@ export default function SupportPage() {
       })
       setAttachedFiles([])
       fetchTickets()
-      alert(
-        attachmentSaveFailed
-          ? '문의가 접수되었지만 첨부파일 저장에는 실패했습니다. 문의 상세에서 다시 첨부해주세요.'
-          : '문의가 접수되었습니다'
-      )
+      if (attachmentSaveFailed) {
+        toast.error('문의가 접수되었지만 첨부파일 저장에는 실패했습니다. 문의 상세에서 다시 첨부해주세요.')
+      } else {
+        toast.success('문의가 접수되었습니다')
+      }
     } catch (error: any) {
       console.error('Error creating ticket:', error)
-      setError(error.message || '문의 접수에 실패했습니다')
+      toast.error(error.message || '문의 접수에 실패했습니다')
     } finally {
       setUploading(false)
     }
@@ -314,7 +314,6 @@ export default function SupportPage() {
       category: 'technical',
     })
     setAttachedFiles([])
-    setError(null)
     setIsDialogOpen(false)
   }
 
@@ -402,11 +401,6 @@ export default function SupportPage() {
 
                     {/* Content */}
                     <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                      {error && (
-                        <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800">
-                          {error}
-                        </div>
-                      )}
 
                       {/* 제목 */}
                       <div>

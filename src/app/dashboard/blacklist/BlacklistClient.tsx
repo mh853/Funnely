@@ -4,6 +4,7 @@ import React, { useState } from 'react'
 import { PlusIcon, TrashIcon, ShieldExclamationIcon } from '@heroicons/react/24/outline'
 import { formatDateTime } from '@/lib/utils/date'
 import AddBlacklistModal from '@/components/modals/AddBlacklistModal'
+import { useToast } from '@/components/shared/Toast'
 
 interface BlacklistEntry {
   id: string
@@ -21,6 +22,7 @@ interface BlacklistClientProps {
 }
 
 export default function BlacklistClient({ blacklist: initialBlacklist, userProfile }: BlacklistClientProps) {
+  const toast = useToast()
   const [blacklist, setBlacklist] = useState(initialBlacklist)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState<string | null>(null)
@@ -45,7 +47,7 @@ export default function BlacklistClient({ blacklist: initialBlacklist, userProfi
       setBlacklist((prev) => prev.filter((entry) => entry.id !== id))
     } catch (error) {
       console.error('Error deleting blacklist entry:', error)
-      alert('블랙리스트 삭제 중 오류가 발생했습니다.')
+      toast.error('블랙리스트 삭제 중 오류가 발생했습니다.')
     } finally {
       setIsDeleting(null)
     }

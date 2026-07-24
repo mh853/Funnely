@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { TrackingPixels } from '@/types/landing-page.types'
+import { useToast } from '@/components/shared/Toast'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
 
 interface TrackingPixelsClientProps {
@@ -15,8 +16,8 @@ export default function TrackingPixelsClient({
   initialData,
 }: TrackingPixelsClientProps) {
   const supabase = createClient()
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
-  const [success, setSuccess] = useState(false)
   const [hasRecord, setHasRecord] = useState(!!initialData)
 
   // Form state
@@ -31,7 +32,6 @@ export default function TrackingPixelsClient({
 
   const handleSave = async () => {
     setSaving(true)
-    setSuccess(false)
 
     try {
       const pixelData = {
@@ -66,11 +66,10 @@ export default function TrackingPixelsClient({
         setHasRecord(true)
       }
 
-      setSuccess(true)
-      setTimeout(() => setSuccess(false), 3000)
+      toast.success('픽셀 설정이 저장되었습니다!')
     } catch (error) {
       console.error('Error saving tracking pixels:', error)
-      alert('픽셀 설정 저장 중 오류가 발생했습니다.')
+      toast.error('픽셀 설정 저장 중 오류가 발생했습니다.')
     } finally {
       setSaving(false)
     }
@@ -78,20 +77,6 @@ export default function TrackingPixelsClient({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100">
-      {/* Success Message */}
-      {success && (
-        <div className="bg-green-50 border-l-4 border-green-400 p-4 mx-6 mt-6 rounded">
-          <div className="flex">
-            <CheckCircleIcon className="h-5 w-5 text-green-400" />
-            <div className="ml-3">
-              <p className="text-sm text-green-700">
-                픽셀 설정이 저장되었습니다!
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Info Box */}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mx-6 mt-6 rounded">
         <div className="flex">

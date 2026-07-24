@@ -8,12 +8,14 @@ import UsersTab from './components/UsersTab'
 import ActivityTab from './components/ActivityTab'
 import FeaturesTab from './components/FeaturesTab'
 import type { CompanyDetailResponse } from '@/types/admin'
+import { useToast } from '@/components/shared/Toast'
 
 type TabType = 'overview' | 'users' | 'features' | 'activities'
 
 export default function CompanyDetailPage() {
   const params = useParams()
   const companyId = params.id as string
+  const toast = useToast()
 
   const [data, setData] = useState<CompanyDetailResponse | null>(null)
   const [loading, setLoading] = useState(true)
@@ -58,7 +60,7 @@ export default function CompanyDetailPage() {
       // 데이터 새로고침
       await fetchCompany()
     } catch (err) {
-      alert('회사 상태 변경에 실패했습니다')
+      toast.error('회사 상태 변경에 실패했습니다')
       console.error(err)
     } finally {
       setIsUpdating(false)

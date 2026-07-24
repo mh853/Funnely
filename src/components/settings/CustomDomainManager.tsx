@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { GlobeAltIcon, CheckCircleIcon, XCircleIcon, ClockIcon, PlusIcon, TrashIcon, StarIcon } from '@heroicons/react/24/outline'
 import { CheckCircleIcon as CheckCircleSolid } from '@heroicons/react/24/solid'
+import { useToast } from '@/components/shared/Toast'
 import type { CompanyCustomDomain } from '@/types/custom-domain.types'
 
 type Step = 'list' | 'add-domain' | 'dns-guide' | 'verifying'
@@ -14,6 +15,7 @@ interface DnsGuideData {
 }
 
 export default function CustomDomainManager() {
+  const toast = useToast()
   const [domains, setDomains] = useState<CompanyCustomDomain[]>([])
   const [loading, setLoading] = useState(true)
   const [step, setStep] = useState<Step>('list')
@@ -21,8 +23,6 @@ export default function CustomDomainManager() {
   const [dnsGuide, setDnsGuide] = useState<DnsGuideData | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [verifying, setVerifying] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   const fetchDomains = useCallback(async () => {
     try {
@@ -31,25 +31,19 @@ export default function CustomDomainManager() {
       const data = await res.json()
       setDomains(data.domains || [])
     } catch {
-      setError('도메인 목록을 불러오는데 실패했습니다.')
+      toast.error('도메인 목록을 불러오는데 실패했습니다.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     fetchDomains()
   }, [fetchDomains])
 
-  const showSuccess = (msg: string) => {
-    setSuccessMessage(msg)
-    setTimeout(() => setSuccessMessage(null), 3000)
-  }
-
   const handleAddDomain = async () => {
     if (!newDomain.trim()) return
     setSubmitting(true)
-    setError(null)
 
     try {
       const res = await fetch('/api/company/custom-domains', {
@@ -60,7 +54,7 @@ export default function CustomDomainManager() {
 
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || '도메인 등록에 실패했습니다.')
+        toast.error(data.error || '도메인 등록에 실패했습니다.')
         return
       }
 
@@ -71,7 +65,7 @@ export default function CustomDomainManager() {
 
       if (!vercelRes.ok) {
         const vercelData = await vercelRes.json().catch(() => ({}))
-        setError(vercelData.error || 'Vercel 도메인 등록에 실패했습니다. 다시 시도해주세요.')
+        toast.error(vercelData.error || 'Vercel 도메인 등록에 실패했습니다. 다시 시도해주세요.')
         await fetchDomains()
         return
       }
@@ -84,7 +78,7 @@ export default function CustomDomainManager() {
       setStep('dns-guide')
       await fetchDomains()
     } catch {
-      setError('도메인 등록 중 오류가 발생했습니다.')
+      toast.error('도메인 등록 중 오류가 발생했습니다.')
     } finally {
       setSubmitting(false)
     }
@@ -92,7 +86,6 @@ export default function CustomDomainManager() {
 
   const handleVerify = async (domainId: string) => {
     setVerifying(domainId)
-    setError(null)
 
     try {
       const res = await fetch(`/api/company/custom-domains/${domainId}/verify`, {
@@ -101,20 +94,19 @@ export default function CustomDomainManager() {
       const data = await res.json()
 
       if (data.verified) {
-        showSuccess('도메인 소유권이 확인되었습니다!')
+        toast.success('도메인 소유권이 확인되었습니다!')
         await fetchDomains()
       } else {
-        setError(data.message || 'DNS 레코드를 찾을 수 없습니다. 설정 후 최대 48시간이 소요될 수 있습니다.')
+        toast.error(data.message || 'DNS 레코드를 찾을 수 없습니다. 설정 후 최대 48시간이 소요될 수 있습니다.')
       }
     } catch {
-      setError('인증 확인 중 오류가 발생했습니다.')
+      toast.error('인증 확인 중 오류가 발생했습니다.')
     } finally {
       setVerifying(null)
     }
   }
 
   const handleSetDefault = async (domainId: string) => {
-    setError(null)
     try {
       const res = await fetch(`/api/company/custom-domains/${domainId}`, {
         method: 'PATCH',
@@ -123,32 +115,31 @@ export default function CustomDomainManager() {
       })
       const data = await res.json()
       if (!res.ok) {
-        setError(data.error || '기본 도메인 설정에 실패했습니다.')
+        toast.error(data.error || '기본 도메인 설정에 실패했습니다.')
         return
       }
-      showSuccess('기본 도메인이 설정되었습니다.')
+      toast.success('기본 도메인이 설정되었습니다.')
       await fetchDomains()
     } catch {
-      setError('기본 도메인 설정 중 오류가 발생했습니다.')
+      toast.error('기본 도메인 설정 중 오류가 발생했습니다.')
     }
   }
 
   const handleDelete = async (domainId: string, domain: string) => {
     if (!confirm(`"${domain}" 도메인을 삭제하시겠습니까?`)) return
-    setError(null)
     try {
       const res = await fetch(`/api/company/custom-domains/${domainId}`, {
         method: 'DELETE',
       })
       if (!res.ok) {
         const data = await res.json()
-        setError(data.error || '삭제에 실패했습니다.')
+        toast.error(data.error || '삭제에 실패했습니다.')
         return
       }
-      showSuccess('도메인이 삭제되었습니다.')
+      toast.success('도메인이 삭제되었습니다.')
       await fetchDomains()
     } catch {
-      setError('삭제 중 오류가 발생했습니다.')
+      toast.error('삭제 중 오류가 발생했습니다.')
     }
   }
 
@@ -204,7 +195,7 @@ export default function CustomDomainManager() {
           </div>
           {step === 'list' && (
             <button
-              onClick={() => { setStep('add-domain'); setNewDomain(''); setError(null) }}
+              onClick={() => { setStep('add-domain'); setNewDomain('') }}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
             >
               <PlusIcon className="h-4 w-4" />
@@ -213,15 +204,6 @@ export default function CustomDomainManager() {
           )}
         </div>
       </div>
-
-      {/* 알림 메시지 */}
-      {(error || successMessage) && (
-        <div className={`px-6 py-3 ${error ? 'bg-red-50 border-b border-red-100' : 'bg-green-50 border-b border-green-100'}`}>
-          <p className={`text-sm ${error ? 'text-red-700' : 'text-green-700'}`}>
-            {error || successMessage}
-          </p>
-        </div>
-      )}
 
       {/* Step: 도메인 입력 */}
       {step === 'add-domain' && (
@@ -233,7 +215,7 @@ export default function CustomDomainManager() {
             <input
               type="text"
               value={newDomain}
-              onChange={e => { setNewDomain(e.target.value); setError(null) }}
+              onChange={e => setNewDomain(e.target.value)}
               onKeyDown={e => e.key === 'Enter' && handleAddDomain()}
               placeholder="my-clinic.com"
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
@@ -242,7 +224,7 @@ export default function CustomDomainManager() {
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => { setStep('list'); setError(null) }}
+              onClick={() => setStep('list')}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               취소

@@ -26,6 +26,7 @@ import { ko } from 'date-fns/locale'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/Toast'
 
 interface TicketDetail {
   id: string
@@ -112,6 +113,7 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 export default function TicketDetailPage({ params }: { params: { id: string } }) {
   const router = useRouter()
+  const toast = useToast()
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [reply, setReply] = useState<Reply | null>(null)
@@ -221,7 +223,7 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
       fetchTicketDetail()
     } catch (error) {
       console.error('Error sending message:', error)
-      alert('메시지 전송에 실패했습니다')
+      toast.error('메시지 전송에 실패했습니다')
     } finally {
       setSending(false)
     }

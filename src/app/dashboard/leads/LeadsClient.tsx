@@ -9,6 +9,7 @@ import { formatDateTime } from '@/lib/utils/date'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 import AddLeadModal from '@/components/shared/AddLeadModal'
+import { useToast } from '@/components/shared/Toast'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -79,6 +80,8 @@ export default function LeadsClient({
   userRole,
   leadStatuses = [],
 }: LeadsClientProps) {
+  const toast = useToast()
+
   // 관리자 여부 확인 (simple_role: admin)
   const isAdmin = userRole === 'admin'
 
@@ -407,7 +410,7 @@ export default function LeadsClient({
       }
     } catch (error) {
       console.error('Add payment error:', error)
-      alert('결제 내역 추가에 실패했습니다.')
+      toast.error('결제 내역 추가에 실패했습니다.')
     } finally {
       setAddingPayment(false)
     }
@@ -446,7 +449,7 @@ export default function LeadsClient({
       }
     } catch (error) {
       console.error('Delete payment error:', error)
-      alert('결제 내역 삭제에 실패했습니다.')
+      toast.error('결제 내역 삭제에 실패했습니다.')
     }
   }
 
@@ -480,7 +483,7 @@ export default function LeadsClient({
       setSelectedLead({ ...selectedLead, payment_amount: 0 })
     } catch (error) {
       console.error('Delete legacy payment error:', error)
-      alert('기존 데이터 삭제에 실패했습니다.')
+      toast.error('기존 데이터 삭제에 실패했습니다.')
     }
   }
 
@@ -611,7 +614,7 @@ export default function LeadsClient({
       setSelectedLead({ ...selectedLead, notes: notesValue })
     } catch (error) {
       console.error('Notes save error:', error)
-      alert('비고 저장에 실패했습니다.')
+      toast.error('비고 저장에 실패했습니다.')
     } finally {
       setSavingNotes(false)
     }
@@ -646,7 +649,7 @@ export default function LeadsClient({
       setSelectedLead({ ...selectedLead, payment_amount: amountValue })
     } catch (error) {
       console.error('Payment amount save error:', error)
-      alert('결제금액 저장에 실패했습니다.')
+      toast.error('결제금액 저장에 실패했습니다.')
     } finally {
       setSavingPaymentAmount(false)
     }
@@ -776,7 +779,7 @@ export default function LeadsClient({
   // 계약완료 확정 핸들러
   const confirmContractComplete = async () => {
     if (!contractModalLeadId || !contractDate || !contractTime) {
-      alert('날짜와 시간을 선택해주세요.')
+      toast.error('날짜와 시간을 선택해주세요.')
       return
     }
 
@@ -816,7 +819,7 @@ export default function LeadsClient({
       setContractModalLeadId(null)
     } catch (error) {
       console.error('Contract complete error:', error)
-      alert('계약 완료 처리에 실패했습니다.')
+      toast.error('계약 완료 처리에 실패했습니다.')
     } finally {
       setUpdatingLeadId(null)
     }
@@ -869,7 +872,7 @@ export default function LeadsClient({
       setDropdownPosition(null)
     } catch (error) {
       console.error('Status update error:', error)
-      alert('상태 업데이트에 실패했습니다.')
+      toast.error('상태 업데이트에 실패했습니다.')
     } finally {
       setUpdatingLeadId(null)
     }
@@ -910,7 +913,7 @@ export default function LeadsClient({
       setEditingAssigneeLeadId(null)
     } catch (error) {
       console.error('Assignee update error:', error)
-      alert('콜 담당자 변경에 실패했습니다.')
+      toast.error('콜 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingAssigneeLeadId(null)
     }
@@ -951,7 +954,7 @@ export default function LeadsClient({
       setEditingCounselorLeadId(null)
     } catch (error) {
       console.error('Counselor update error:', error)
-      alert('상담 담당자 변경에 실패했습니다.')
+      toast.error('상담 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselorLeadId(null)
     }
@@ -1073,7 +1076,7 @@ export default function LeadsClient({
 
   const handleExcelExport = async () => {
     if (!leads || leads.length === 0) {
-      alert('내보낼 데이터가 없습니다.')
+      toast.error('내보낼 데이터가 없습니다.')
       return
     }
 
@@ -1093,7 +1096,7 @@ export default function LeadsClient({
       const { leads: allLeads } = await response.json()
 
       if (!allLeads || allLeads.length === 0) {
-        alert('내보낼 데이터가 없습니다.')
+        toast.error('내보낼 데이터가 없습니다.')
         return
       }
 
@@ -1206,7 +1209,7 @@ export default function LeadsClient({
       XLSX.writeFile(workbook, fileName)
     } catch (error) {
       console.error('Excel export error:', error)
-      alert('엑셀 내보내기 중 오류가 발생했습니다.')
+      toast.error('엑셀 내보내기 중 오류가 발생했습니다.')
     }
   }
 
@@ -1246,7 +1249,7 @@ export default function LeadsClient({
       }, 2000) // 2초 후 새로고침 (사용자가 결과를 볼 시간 제공)
     } catch (error: any) {
       console.error('Distribution error:', error)
-      alert(`리드 분배 실패: ${error.message}`)
+      toast.error(`리드 분배 실패: ${error.message}`)
     } finally {
       setIsDistributing(false)
     }

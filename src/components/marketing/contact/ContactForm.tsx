@@ -2,7 +2,8 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { CheckCircleIcon, XCircleIcon } from '@heroicons/react/24/outline'
+import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import { useToast } from '@/components/shared/Toast'
 
 const CATEGORIES = [
   { value: 'technical', label: '기술 문의' },
@@ -33,10 +34,10 @@ const initialFormData: FormData = {
 }
 
 export default function ContactForm() {
+  const toast = useToast()
   const [formData, setFormData] = useState<FormData>(initialFormData)
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [ticketId, setTicketId] = useState<string | null>(null)
 
   const handleChange = (
@@ -49,7 +50,6 @@ export default function ContactForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
-    setError(null)
     setSuccess(false)
 
     try {
@@ -71,7 +71,7 @@ export default function ContactForm() {
       setTicketId(data.ticketId)
       setFormData(initialFormData)
     } catch (err) {
-      setError(err instanceof Error ? err.message : '문의 전송에 실패했습니다.')
+      toast.error(err instanceof Error ? err.message : '문의 전송에 실패했습니다.')
     } finally {
       setLoading(false)
     }
@@ -252,14 +252,6 @@ export default function ContactForm() {
               문제를 빠르게 해결하기 위해 가능한 자세히 설명해주시면 감사하겠습니다.
             </p>
           </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="rounded-xl bg-red-50 p-4 flex items-start gap-3">
-              <XCircleIcon className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
 
           {/* Submit Button */}
           <button

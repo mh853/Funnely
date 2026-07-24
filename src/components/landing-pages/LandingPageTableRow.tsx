@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils/date'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { generateLandingPageURL } from '@/lib/utils/landing-page-url'
+import { useToast } from '@/components/shared/Toast'
 
 interface LandingPageTableRowProps {
   page: {
@@ -26,6 +27,7 @@ interface LandingPageTableRowProps {
 }
 
 export default function LandingPageTableRow({ page, index, companyShortId }: LandingPageTableRowProps) {
+  const toast = useToast()
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [isActive, setIsActive] = useState(page.is_active)
   const [isUpdating, setIsUpdating] = useState(false)
@@ -83,7 +85,7 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
       router.refresh()
     } catch (error) {
       console.error('Failed to update status:', error)
-      alert('상태 업데이트에 실패했습니다.')
+      toast.error('상태 업데이트에 실패했습니다.')
     } finally {
       setIsUpdating(false)
     }

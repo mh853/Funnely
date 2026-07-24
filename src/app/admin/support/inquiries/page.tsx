@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { useToast } from '@/components/shared/Toast'
 
 type Inquiry = {
   id: string
@@ -44,6 +45,7 @@ const TYPE_CONFIG = {
 }
 
 export default function AdminInquiriesPage() {
+  const toast = useToast()
   const [inquiries, setInquiries] = useState<Inquiry[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -96,7 +98,7 @@ export default function AdminInquiriesPage() {
       }
     } catch (err) {
       console.error(err)
-      alert('상태 변경에 실패했습니다')
+      toast.error('상태 변경에 실패했습니다')
     } finally {
       setIsUpdating(false)
     }

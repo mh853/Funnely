@@ -6,6 +6,7 @@ import { Fragment } from 'react'
 import { XMarkIcon, DocumentTextIcon, CheckCircleIcon, ExclamationTriangleIcon, CreditCardIcon } from '@heroicons/react/24/outline'
 import { formatDateTime, formatDate } from '@/lib/utils/date'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
+import { useToast } from '@/components/shared/Toast'
 
 interface Transaction {
   id: string
@@ -63,6 +64,7 @@ export default function PaymentsClient({
   transactions,
   companyId,
 }: PaymentsClientProps) {
+  const toast = useToast()
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [cardChanging, setCardChanging] = useState(false)
@@ -99,7 +101,7 @@ export default function PaymentsClient({
 
   const handleRequestTaxInvoice = async (transactionId: string) => {
     // 세금계산서 발행 요청 로직 (추후 구현)
-    alert('세금계산서 발행 요청이 접수되었습니다. 영업일 기준 1-2일 내에 이메일로 발송됩니다.')
+    toast.success('세금계산서 발행 요청이 접수되었습니다. 영업일 기준 1-2일 내에 이메일로 발송됩니다.')
   }
 
   const handleChangeCard = async () => {
@@ -116,7 +118,7 @@ export default function PaymentsClient({
       setCardChanging(false)
     } catch (err) {
       console.error('Card change error:', err)
-      alert('카드 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
+      toast.error('카드 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
       setCardChanging(false)
     }
   }

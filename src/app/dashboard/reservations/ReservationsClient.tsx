@@ -28,6 +28,7 @@ import {
 } from '@heroicons/react/24/outline'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
+import { useToast } from '@/components/shared/Toast'
 
 interface LandingPage {
   id: string
@@ -113,6 +114,7 @@ export default function ReservationsClient({
   teamMembers,
 }: ReservationsClientProps) {
   const router = useRouter()
+  const toast = useToast()
   const [leads, setLeads] = useState<Lead[]>(initialLeads)
   const supabaseRef = useRef(createClient())
   const supabase = supabaseRef.current
@@ -310,7 +312,7 @@ export default function ReservationsClient({
       }
     } catch (error) {
       console.error('Counselor update error:', error)
-      alert('상담담당자 변경에 실패했습니다.')
+      toast.error('상담담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselor(false)
     }
@@ -367,7 +369,7 @@ export default function ReservationsClient({
       }
     } catch (error) {
       console.error('Call assignee update error:', error)
-      alert('콜 담당자 변경에 실패했습니다.')
+      toast.error('콜 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCallAssignee(false)
     }
@@ -446,7 +448,7 @@ export default function ReservationsClient({
       setEditingReservationDate(false)
     } catch (error) {
       console.error('Reservation date update error:', error)
-      alert('예약일 변경에 실패했습니다.')
+      toast.error('예약일 변경에 실패했습니다.')
     } finally {
       setUpdatingReservationDate(false)
     }
@@ -618,7 +620,7 @@ export default function ReservationsClient({
       console.error('Schedule update error:', error)
       // 롤백
       setLeads(initialLeads)
-      alert('스케줄 변경에 실패했습니다.')
+      toast.error('스케줄 변경에 실패했습니다.')
     }
   }
 
@@ -708,7 +710,7 @@ export default function ReservationsClient({
   // 예약 스케줄 저장
   const handleSaveSchedule = async () => {
     if (!scheduleInputLeadId || !scheduleInputDate) {
-      alert('고객과 날짜를 선택해주세요.')
+      toast.error('고객과 날짜를 선택해주세요.')
       return
     }
 
@@ -763,10 +765,10 @@ export default function ReservationsClient({
       setShowScheduleInputModal(false)
       setShowCalendarModal(false)
       setScheduleInputCounselorId('')  // 상담담당자 선택 초기화
-      alert('예약 스케줄이 저장되었습니다.')
+      toast.success('예약 스케줄이 저장되었습니다.')
     } catch (error) {
       console.error('Error saving schedule:', error)
-      alert('예약 스케줄 저장에 실패했습니다.')
+      toast.error('예약 스케줄 저장에 실패했습니다.')
     } finally {
       setSavingSchedule(false)
     }
@@ -775,7 +777,7 @@ export default function ReservationsClient({
   // 엑셀 다운로드 핸들러
   const handleExcelDownload = async () => {
     if (leads.length === 0) {
-      alert('다운로드할 예약 데이터가 없습니다.')
+      toast.error('다운로드할 예약 데이터가 없습니다.')
       return
     }
 
@@ -876,7 +878,7 @@ export default function ReservationsClient({
       XLSX.writeFile(workbook, fileName)
     } catch (error) {
       console.error('Excel download error:', error)
-      alert('엑셀 다운로드에 실패했습니다.')
+      toast.error('엑셀 다운로드에 실패했습니다.')
     }
   }
 
@@ -935,7 +937,7 @@ export default function ReservationsClient({
       ))
     } catch (error) {
       console.error('Error updating status:', error)
-      alert('상태 업데이트에 실패했습니다.')
+      toast.error('상태 업데이트에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }

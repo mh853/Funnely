@@ -16,6 +16,7 @@ import {
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/Toast'
 
 function fmtDate(d: string | null | undefined, fmt = 'yyyy-MM-dd') {
   if (!d) return '-'
@@ -91,6 +92,7 @@ const STATUS_ICONS: Record<string, any> = {
 }
 
 export default function SubscriptionsPage() {
+  const toast = useToast()
   const [data, setData] = useState<SubscriptionsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<string>('all')
@@ -170,10 +172,10 @@ export default function SubscriptionsPage() {
       if (!response.ok) throw new Error('Failed to update subscription')
 
       fetchSubscriptions()
-      alert('구독 상태가 변경되었습니다')
+      toast.success('구독 상태가 변경되었습니다')
     } catch (error) {
       console.error('Error updating subscription:', error)
-      alert('구독 상태 변경에 실패했습니다')
+      toast.error('구독 상태 변경에 실패했습니다')
     }
   }
 

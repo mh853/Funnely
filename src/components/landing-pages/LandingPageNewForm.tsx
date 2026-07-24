@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { utcToKstDatetimeLocal, kstDatetimeLocalToUtc } from '@/lib/utils/timezone'
+import { useToast } from '@/components/shared/Toast'
 
 // 한글 → 로마자 변환 (Revised Romanization 간이 구현)
 function generateSlugFromTitle(title: string): string {
@@ -242,8 +243,8 @@ export default function LandingPageNewForm({
   // Deployment state
   const [isActive, setIsActive] = useState(landingPage?.is_active ?? true)
 
+  const toast = useToast()
   const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
 
   // Section ordering for preview - hydrate from existing landing page data when editing
   const [sections, setSections] = useState<Section[]>(
@@ -365,11 +366,11 @@ export default function LandingPageNewForm({
 
           if (error) {
             console.error('Failed to auto-disable landing page:', error)
-            setError('타이머 마감으로 인한 자동 비활성화 중 오류가 발생했습니다.')
+            toast.error('타이머 마감으로 인한 자동 비활성화 중 오류가 발생했습니다.')
           } else {
             // Update local state
             setIsActive(false)
-            setError('타이머가 마감되어 랜딩페이지가 자동으로 비활성화되었습니다.')
+            toast.error('타이머가 마감되어 랜딩페이지가 자동으로 비활성화되었습니다.')
           }
         } catch (err) {
           console.error('Unexpected error during auto-disable:', err)
@@ -1102,7 +1103,7 @@ export default function LandingPageNewForm({
             {/* Submit Button */}
             <button
               onClick={() => {
-                alert('미리보기 모드입니다')
+                toast.success('미리보기 모드입니다')
               }}
               className="w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all hover:shadow-xl"
               style={{ backgroundColor: ctaColor }}
@@ -1121,7 +1122,6 @@ export default function LandingPageNewForm({
 
   const handleSave = async () => {
     setSaving(true)
-    setError('')
 
     try {
       // Build collect_fields array
@@ -1245,7 +1245,7 @@ export default function LandingPageNewForm({
       router.refresh()
     } catch (err: any) {
       console.error('Save failed:', err)
-      setError(err.message || '저장에 실패했습니다')
+      toast.error(err.message || '저장에 실패했습니다')
     } finally {
       setSaving(false)
     }
@@ -1349,13 +1349,13 @@ export default function LandingPageNewForm({
       }
 
       if (uploadedUrls.length < files.length) {
-        alert(`${files.length - uploadedUrls.length}개의 이미지 업로드가 실패했습니다.`)
+        toast.error(`${files.length - uploadedUrls.length}개의 이미지 업로드가 실패했습니다.`)
       }
 
       setImages([...images, ...uploadedUrls])
     } catch (error) {
       console.error('Error uploading images:', error)
-      alert('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
+      toast.error('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
     } finally {
       setSaving(false)
     }
@@ -1372,13 +1372,13 @@ export default function LandingPageNewForm({
 
     // Validate file type
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      alert('JPG, PNG, WebP 형식의 이미지만 업로드 가능합니다.')
+      toast.error('JPG, PNG, WebP 형식의 이미지만 업로드 가능합니다.')
       return
     }
 
     // Validate file size (2MB limit)
     if (file.size > 2 * 1024 * 1024) {
-      alert('이미지 크기는 2MB 이하여야 합니다.')
+      toast.error('이미지 크기는 2MB 이하여야 합니다.')
       return
     }
 
@@ -1414,7 +1414,7 @@ export default function LandingPageNewForm({
       setCompletionBgImage(publicUrl)
     } catch (error) {
       console.error('Error uploading completion background:', error)
-      alert('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
+      toast.error('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)
     } finally {
       setUploadingCompletionBg(false)
     }
@@ -1513,7 +1513,7 @@ export default function LandingPageNewForm({
               onClick={() => {
                 // Prevent activation if timer is expired
                 if (!isActive && timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
-                  setError('타이머가 마감되었습니다. 먼저 타이머 설정을 변경해주세요.')
+                  toast.error('타이머가 마감되었습니다. 먼저 타이머 설정을 변경해주세요.')
                   return
                 }
                 setIsActive(!isActive)
@@ -2115,7 +2115,7 @@ export default function LandingPageNewForm({
                   checked={timerEnabled}
                   onChange={() => {
                     if (!timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
-                      setError('마감된 날짜입니다. 새로운 마감 날짜를 설정해주세요.')
+                      toast.error('마감된 날짜입니다. 새로운 마감 날짜를 설정해주세요.')
                     }
                     setTimerEnabled(true)
                   }}
@@ -2624,13 +2624,6 @@ export default function LandingPageNewForm({
           </div>
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="bg-red-50 border-2 border-red-200 rounded-2xl p-4">
-            <p className="text-sm text-red-600">{error}</p>
-          </div>
-        )}
-
         {/* Action Buttons */}
         <div className="flex gap-3 sm:gap-4">
           <button
@@ -2873,7 +2866,7 @@ export default function LandingPageNewForm({
                           {/* Close Button */}
                           <div className="flex justify-center">
                             <button
-                              onClick={() => alert('미리보기 모드입니다')}
+                              onClick={() => toast.success('미리보기 모드입니다')}
                               className="inline-flex items-center justify-center px-5 py-2 rounded-lg text-xs font-medium text-white transition-all hover:opacity-90 hover:shadow-lg bg-indigo-600"
                             >
                               <svg className="w-3 h-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

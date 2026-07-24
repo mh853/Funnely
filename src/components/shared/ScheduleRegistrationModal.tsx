@@ -3,6 +3,7 @@
 import { useState, useEffect, Fragment } from 'react'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, CalendarIcon } from '@heroicons/react/24/outline'
+import { useToast } from '@/components/shared/Toast'
 
 interface ScheduleRegistrationModalProps {
   isOpen: boolean
@@ -17,6 +18,7 @@ export default function ScheduleRegistrationModal({
   leadId,
   onConfirm,
 }: ScheduleRegistrationModalProps) {
+  const toast = useToast()
   const [date, setDate] = useState('')
   const [time, setTime] = useState('')
   const [loading, setLoading] = useState(false)
@@ -35,7 +37,7 @@ export default function ScheduleRegistrationModal({
   // 확인 핸들러
   const handleConfirm = async () => {
     if (!date || !time) {
-      alert('날짜와 시간을 선택해주세요.')
+      toast.error('날짜와 시간을 선택해주세요.')
       return
     }
 

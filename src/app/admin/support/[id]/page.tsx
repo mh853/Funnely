@@ -34,6 +34,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/Toast'
 
 interface TicketDetail {
   id: string
@@ -140,6 +141,7 @@ export default function AdminTicketDetailPage({
 }: {
   params: { id: string }
 }) {
+  const toast = useToast()
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
   const [messages, setMessages] = useState<Message[]>([])
   const [reply, setReply] = useState<Reply | null>(null)
@@ -216,7 +218,7 @@ export default function AdminTicketDetailPage({
       setNewMessage('')
       fetchTicketDetail()
     } catch {
-      alert('메시지 전송에 실패했습니다')
+      toast.error('메시지 전송에 실패했습니다')
     } finally {
       setSending(false)
     }
@@ -234,7 +236,7 @@ export default function AdminTicketDetailPage({
       if (!response.ok) throw new Error('Failed to update status')
       fetchTicketDetail()
     } catch {
-      alert('상태 변경에 실패했습니다')
+      toast.error('상태 변경에 실패했습니다')
     } finally {
       setUpdating(false)
     }
@@ -252,14 +254,14 @@ export default function AdminTicketDetailPage({
       if (!response.ok) throw new Error('Failed to update priority')
       fetchTicketDetail()
     } catch {
-      alert('우선순위 변경에 실패했습니다')
+      toast.error('우선순위 변경에 실패했습니다')
     } finally {
       setUpdating(false)
     }
   }
 
   async function handleSaveReply() {
-    if (!replyText.trim()) { alert('답변 내용을 입력해주세요'); return }
+    if (!replyText.trim()) { toast.error('답변 내용을 입력해주세요'); return }
     try {
       setSavingReply(true)
       const response = await fetch(`/api/admin/support/tickets/${params.id}/reply`, {
@@ -271,7 +273,7 @@ export default function AdminTicketDetailPage({
       await fetchReply()
       setEditingReply(false)
     } catch {
-      alert('답변 저장에 실패했습니다')
+      toast.error('답변 저장에 실패했습니다')
     } finally {
       setSavingReply(false)
     }
@@ -286,7 +288,7 @@ export default function AdminTicketDetailPage({
       setReply(null)
       setReplyText('')
     } catch {
-      alert('답변 삭제에 실패했습니다')
+      toast.error('답변 삭제에 실패했습니다')
     } finally {
       setSavingReply(false)
     }

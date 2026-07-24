@@ -8,10 +8,12 @@ import OverviewTab from './components/OverviewTab'
 import ActivityTab from './components/ActivityTab'
 import SettingsTab from './components/SettingsTab'
 import type { UserDetail } from '@/types/admin'
+import { useToast } from '@/components/shared/Toast'
 
 export default function UserDetailPage() {
   const params = useParams()
   const userId = params.id as string
+  const toast = useToast()
 
   const [user, setUser] = useState<UserDetail | null>(null)
   const [loading, setLoading] = useState(true)
@@ -55,7 +57,7 @@ export default function UserDetailPage() {
       await fetchUser()
     } catch (err) {
       console.error('Update error:', err)
-      alert('사용자 상태 변경에 실패했습니다')
+      toast.error('사용자 상태 변경에 실패했습니다')
     } finally {
       setIsUpdating(false)
     }
@@ -77,7 +79,7 @@ export default function UserDetailPage() {
       await fetchUser()
     } catch (err) {
       console.error('Update error:', err)
-      alert('역할 변경에 실패했습니다')
+      toast.error('역할 변경에 실패했습니다')
     } finally {
       setIsUpdating(false)
     }
@@ -94,10 +96,10 @@ export default function UserDetailPage() {
 
       if (!response.ok) throw new Error('Failed to send password reset email')
 
-      alert('비밀번호 재설정 이메일이 발송되었습니다')
+      toast.success('비밀번호 재설정 이메일이 발송되었습니다')
     } catch (err) {
       console.error('Reset password error:', err)
-      alert('비밀번호 재설정 이메일 발송에 실패했습니다')
+      toast.error('비밀번호 재설정 이메일 발송에 실패했습니다')
     }
   }
 

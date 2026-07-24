@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useToast } from '@/components/shared/Toast'
 import {
   PlusIcon,
   PencilIcon,
@@ -41,6 +42,7 @@ function getColorClasses(color: string) {
 }
 
 export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
+  const toast = useToast()
   const [statuses, setStatuses] = useState<LeadStatus[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -48,7 +50,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
   const [editForm, setEditForm] = useState({ label: '', color: 'gray' })
   const [showAddForm, setShowAddForm] = useState(false)
   const [newStatus, setNewStatus] = useState({ code: '', label: '', color: 'gray' })
-  const [error, setError] = useState<string | null>(null)
 
   const fetchStatuses = useCallback(async () => {
     try {
@@ -58,15 +59,15 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
       if (data.success) {
         setStatuses(data.data)
       } else {
-        setError(data.error?.message || '목록을 불러오지 못했습니다.')
+        toast.error(data.error?.message || '목록을 불러오지 못했습니다.')
       }
     } catch (err) {
       console.error('Failed to fetch statuses:', err)
-      setError('DB 상태 목록을 불러오지 못했습니다.')
+      toast.error('DB 상태 목록을 불러오지 못했습니다.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     fetchStatuses()
@@ -74,12 +75,11 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
 
   const handleAdd = async () => {
     if (!newStatus.code || !newStatus.label) {
-      setError('코드와 이름을 모두 입력해주세요.')
+      toast.error('코드와 이름을 모두 입력해주세요.')
       return
     }
 
     setSaving(true)
-    setError(null)
 
     try {
       const res = await fetch('/api/lead-statuses', {
@@ -94,10 +94,10 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
         setShowAddForm(false)
         setNewStatus({ code: '', label: '', color: 'gray' })
       } else {
-        setError(data.error?.message || '추가에 실패했습니다.')
+        toast.error(data.error?.message || '추가에 실패했습니다.')
       }
     } catch (err) {
-      setError('추가에 실패했습니다.')
+      toast.error('추가에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -105,7 +105,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
 
   const handleUpdate = async (id: string) => {
     setSaving(true)
-    setError(null)
 
     try {
       const res = await fetch('/api/lead-statuses', {
@@ -119,10 +118,10 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
         setStatuses(statuses.map(s => s.id === id ? data.data : s))
         setEditingId(null)
       } else {
-        setError(data.error?.message || '수정에 실패했습니다.')
+        toast.error(data.error?.message || '수정에 실패했습니다.')
       }
     } catch (err) {
-      setError('수정에 실패했습니다.')
+      toast.error('수정에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -132,7 +131,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
     if (!confirm(`"${label}" 상태를 삭제하시겠습니까?`)) return
 
     setSaving(true)
-    setError(null)
 
     try {
       const res = await fetch(`/api/lead-statuses?id=${id}`, {
@@ -144,15 +142,15 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
         if (data.soft_deleted) {
           // Refresh to get updated list
           fetchStatuses()
-          alert(data.message)
+          toast.success(data.message)
         } else {
           setStatuses(statuses.filter(s => s.id !== id))
         }
       } else {
-        setError(data.error?.message || '삭제에 실패했습니다.')
+        toast.error(data.error?.message || '삭제에 실패했습니다.')
       }
     } catch (err) {
-      setError('삭제에 실패했습니다.')
+      toast.error('삭제에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -160,7 +158,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
 
   const handleSetDefault = async (id: string) => {
     setSaving(true)
-    setError(null)
 
     try {
       const res = await fetch('/api/lead-statuses', {
@@ -176,10 +173,10 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
           is_default: s.id === id,
         })))
       } else {
-        setError(data.error?.message || '기본값 설정에 실패했습니다.')
+        toast.error(data.error?.message || '기본값 설정에 실패했습니다.')
       }
     } catch (err) {
-      setError('기본값 설정에 실패했습니다.')
+      toast.error('기본값 설정에 실패했습니다.')
     } finally {
       setSaving(false)
     }
@@ -218,11 +215,11 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
       })
       if (!res.ok) {
         console.error('Failed to save order:', res.status)
-        setError('순서 저장에 실패했습니다.')
+        toast.error('순서 저장에 실패했습니다.')
       }
     } catch (err) {
       console.error('Failed to save order:', err)
-      setError('순서 저장에 실패했습니다.')
+      toast.error('순서 저장에 실패했습니다.')
     }
   }
 
@@ -260,12 +257,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
           </button>
         )}
       </div>
-
-      {error && (
-        <div className="p-3 rounded-lg bg-red-50 text-red-700 text-sm">
-          {error}
-        </div>
-      )}
 
       {/* Add Form */}
       {showAddForm && (
@@ -310,7 +301,6 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
               onClick={() => {
                 setShowAddForm(false)
                 setNewStatus({ code: '', label: '', color: 'gray' })
-                setError(null)
               }}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
             >

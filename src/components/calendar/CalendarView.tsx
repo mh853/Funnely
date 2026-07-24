@@ -18,6 +18,7 @@ import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
 import { decryptPhone } from '@/lib/encryption/phone'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
+import { useToast } from '@/components/shared/Toast'
 
 interface Lead {
   id: string
@@ -147,6 +148,7 @@ export default function CalendarView({
   onReservationCountChange,
 }: CalendarViewProps) {
   const router = useRouter()
+  const toast = useToast()
   const supabase = createClient()
   const [currentDate, setCurrentDate] = useState(new Date())
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
@@ -531,7 +533,7 @@ export default function CalendarView({
       // 롤백 - 필터링된 leads로 복원
       const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
       setLocalLeads(filtered)
-      alert('스케줄 변경에 실패했습니다.')
+      toast.error('스케줄 변경에 실패했습니다.')
     }
   }
 

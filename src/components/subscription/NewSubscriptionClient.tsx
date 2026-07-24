@@ -7,6 +7,7 @@ import { CheckIcon } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils/date'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
+import { useToast } from '@/components/shared/Toast'
 
 interface Plan {
   id: string
@@ -97,6 +98,7 @@ export default function NewSubscriptionClient({
   companyCardInfo,
 }: NewSubscriptionClientProps) {
   const router = useRouter()
+  const toast = useToast()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
   const [loading, setLoading] = useState(false)
@@ -246,10 +248,10 @@ export default function NewSubscriptionClient({
         throw new Error(err.error || '업그레이드 결제에 실패했습니다.')
       }
       setUpgradeModal(null)
-      alert(`${upgradeModal.plan.name} 플랜으로 업그레이드되었습니다.`)
+      toast.success(`${upgradeModal.plan.name} 플랜으로 업그레이드되었습니다.`)
       router.refresh()
     } catch (error: any) {
-      alert(`오류가 발생했습니다: ${error.message}`)
+      toast.error(`오류가 발생했습니다: ${error.message}`)
     } finally {
       setUpgradeLoading(false)
     }
@@ -258,7 +260,7 @@ export default function NewSubscriptionClient({
   const handleSelectPlan = async (plan: Plan) => {
     // 가격 협의 플랜
     if (plan.price_monthly === 0 && plan.price_yearly === 0) {
-      alert('대규모 조직을 위한 플랜은 별도 문의가 필요합니다. 고객센터로 연락해주세요.')
+      toast.error('대규모 조직을 위한 플랜은 별도 문의가 필요합니다. 고객센터로 연락해주세요.')
       return
     }
 
@@ -281,7 +283,7 @@ export default function NewSubscriptionClient({
             const err = await res.json()
             throw new Error(err.error || '재구독에 실패했습니다.')
           }
-          alert('구독이 재개되었습니다.')
+          toast.success('구독이 재개되었습니다.')
           router.refresh()
         } else if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription)) {
           // 체험 중 또는 만료/취소/결제지연 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
@@ -302,7 +304,7 @@ export default function NewSubscriptionClient({
             const err = await res.json()
             throw new Error(err.error || '결제에 실패했습니다.')
           }
-          alert(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
+          toast.success(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
           router.refresh()
         } else if (isFree) {
           // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음.
@@ -353,7 +355,7 @@ export default function NewSubscriptionClient({
 
           if (error) throw new Error(error.message)
 
-          alert('Free 플랜으로 변경되었습니다.')
+          toast.success('Free 플랜으로 변경되었습니다.')
           router.refresh()
         } else if (isActivePaidUser && hasBillingKey) {
           // 유료 구독 중 + 빌링키 있음: 업그레이드/다운그레이드 분기
@@ -404,7 +406,7 @@ export default function NewSubscriptionClient({
               const err = await res.json()
               throw new Error(err.error || '플랜 변경 예약에 실패했습니다.')
             }
-            alert(`${periodEndLabel}부터 ${plan.name} 플랜으로 변경됩니다.`)
+            toast.success(`${periodEndLabel}부터 ${plan.name} 플랜으로 변경됩니다.`)
             router.refresh()
           } else {
             // 같은 가격 티어 (주기 변경 등): 업그레이드와 동일하게 처리
@@ -447,7 +449,7 @@ export default function NewSubscriptionClient({
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
 
-          alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          toast.success('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
           router.refresh()
         } else {
           // 신규 사용자 + 기타 유료 플랜 → 카드 등록 후 즉시 결제
@@ -489,7 +491,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          alert('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          toast.success('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
           router.refresh()
         } else {
           // 기타 유료 플랜: 구독 생성 후 카드 등록
@@ -517,7 +519,7 @@ export default function NewSubscriptionClient({
       }
     } catch (error: any) {
       console.error('Subscription error:', error)
-      alert(`오류가 발생했습니다: ${error.message}`)
+      toast.error(`오류가 발생했습니다: ${error.message}`)
     } finally {
       setLoading(false)
       setSelectedPlan(null)
@@ -556,13 +558,13 @@ export default function NewSubscriptionClient({
       const res = await fetch('/api/subscription/cancel-pending-change', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || '예약 취소에 실패했습니다.')
+        toast.error(data.error || '예약 취소에 실패했습니다.')
         return
       }
-      alert('예약된 플랜 변경이 취소되었습니다.')
+      toast.success('예약된 플랜 변경이 취소되었습니다.')
       router.refresh()
     } catch {
-      alert('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      toast.error('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setCancelPendingLoading(false)
     }
@@ -574,13 +576,13 @@ export default function NewSubscriptionClient({
       const res = await fetch('/api/subscription/cancel', { method: 'POST' })
       const data = await res.json()
       if (!res.ok) {
-        alert(data.error || '구독 취소에 실패했습니다.')
+        toast.error(data.error || '구독 취소에 실패했습니다.')
         return
       }
       setCancelResult({ accessUntil: data.accessUntil })
       router.refresh()
     } catch {
-      alert('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
+      toast.error('오류가 발생했습니다. 잠시 후 다시 시도해주세요.')
     } finally {
       setCancelLoading(false)
     }

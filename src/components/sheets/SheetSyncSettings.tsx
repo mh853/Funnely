@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { useToast } from '@/components/shared/Toast'
 import {
   ArrowPathIcon,
   CloudArrowDownIcon,
@@ -53,6 +54,7 @@ export default function SheetSyncSettings({
   landingPages: LandingPage[]
 }) {
   const supabase = createClient()
+  const toast = useToast()
   const [configs, setConfigs] = useState<SyncConfig[]>([])
   const [logs, setLogs] = useState<SyncLog[]>([])
   const [loading, setLoading] = useState(true)
@@ -155,7 +157,7 @@ export default function SheetSyncSettings({
 
   async function handleAddConfig() {
     if (!newConfig.spreadsheet_id) {
-      alert('스프레드시트 ID를 입력하세요')
+      toast.error('스프레드시트 ID를 입력하세요')
       return
     }
 
@@ -170,7 +172,7 @@ export default function SheetSyncSettings({
     })
 
     if (error) {
-      alert('설정 추가 실패: ' + error.message)
+      toast.error('설정 추가 실패: ' + error.message)
       return
     }
 
@@ -211,21 +213,21 @@ export default function SheetSyncSettings({
       const result = await response.json()
 
       if (response.ok) {
-        alert(`동기화 완료!\n- 가져온 데이터: ${result.imported}건\n- 중복 제외: ${result.duplicates}건`)
+        toast.success(`동기화 완료!\n- 가져온 데이터: ${result.imported}건\n- 중복 제외: ${result.duplicates}건`)
         loadData()
       } else {
         // Show available sheets if sheet not found
         if (result.availableSheets && result.availableSheets.length > 0) {
           const sheetList = result.availableSheets.join(', ')
-          alert(
+          toast.error(
             `동기화 실패: ${result.error}\n\n사용 가능한 시트:\n${sheetList}\n\n힌트: ${result.hint || '위의 시트 이름 중 하나를 선택하세요'}`
           )
         } else {
-          alert('동기화 실패: ' + (result.error || '알 수 없는 오류'))
+          toast.error('동기화 실패: ' + (result.error || '알 수 없는 오류'))
         }
       }
     } catch (error: any) {
-      alert('동기화 오류: ' + error.message)
+      toast.error('동기화 오류: ' + error.message)
     } finally {
       setSyncing(null)
     }
@@ -288,7 +290,7 @@ export default function SheetSyncSettings({
   async function handleUpdateConfig() {
     if (!editingConfig) return
     if (!newConfig.spreadsheet_id) {
-      alert('스프레드시트 ID를 입력하세요')
+      toast.error('스프레드시트 ID를 입력하세요')
       return
     }
 
@@ -304,7 +306,7 @@ export default function SheetSyncSettings({
       .eq('id', editingConfig)
 
     if (error) {
-      alert('설정 수정 실패: ' + error.message)
+      toast.error('설정 수정 실패: ' + error.message)
       return
     }
 
