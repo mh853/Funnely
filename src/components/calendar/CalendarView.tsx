@@ -397,7 +397,7 @@ export default function CalendarView({
   }
 
   // Handle lead click - open lead detail modal
-  const handleLeadClick = async (lead: Lead, e: React.MouseEvent) => {
+  const handleLeadClick = async (lead: Lead, e: React.SyntheticEvent) => {
     e.stopPropagation()
     // 읽음 표시
     markLeadAsRead(lead.id)
@@ -868,10 +868,19 @@ export default function CalendarView({
                               <div
                                 key={leadIdx}
                                 draggable
+                                tabIndex={0}
+                                role="button"
+                                aria-label={`${lead.name}, ${lead.preferred_time || formatTime(lead.created_at)}, 상세보기`}
                                 onDragStart={(e) => handleDragStart(e, lead)}
                                 onDragEnd={handleDragEnd}
                                 onClick={(e) => handleLeadClick(lead, e)}
-                                className={`p-1.5 mb-1 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition overflow-hidden min-w-0 ${
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault()
+                                    handleLeadClick(lead, e)
+                                  }
+                                }}
+                                className={`p-1.5 mb-1 rounded text-xs cursor-grab active:cursor-grabbing hover:shadow-md transition overflow-hidden min-w-0 focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                                   LEAD_STATUS_COLORS[lead.status as keyof typeof LEAD_STATUS_COLORS] || 'bg-gray-100 border-gray-500 text-gray-900'
                                 } border-l-2 ${draggedLead?.id === lead.id ? 'opacity-50 scale-95' : ''}`}
                               >

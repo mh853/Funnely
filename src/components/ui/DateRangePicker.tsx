@@ -145,6 +145,38 @@ export default function DateRangePicker({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [isOpen])
 
+  // 팝오버는 body에 포털 렌더링되어 DOM상 트리거 바로 뒤에 있지 않으므로,
+  // 열릴 때 포커스를 안으로 옮기고 Tab을 팝오버 안에서만 순환시켜야
+  // 키보드로 팝오버 전체를 건너뛰지 않는다. 닫히면 포커스를 트리거로 되돌린다.
+  const wasOpenRef = useRef(false)
+  useEffect(() => {
+    if (isOpen) {
+      wasOpenRef.current = true
+      const first = dropdownRef.current?.querySelector<HTMLElement>('button, input')
+      first?.focus()
+    } else if (wasOpenRef.current) {
+      wasOpenRef.current = false
+      triggerRef.current?.focus()
+    }
+  }, [isOpen])
+
+  const handlePopoverKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key !== 'Tab') return
+    const focusables = Array.from(
+      e.currentTarget.querySelectorAll<HTMLElement>('button:not(:disabled), input:not(:disabled)')
+    )
+    if (focusables.length === 0) return
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault()
+      last.focus()
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault()
+      first.focus()
+    }
+  }
+
   // 입력 필드 동기화
   useEffect(() => {
     setStartInput(tempStart ? formatDateForInput(tempStart) : '')
@@ -371,6 +403,10 @@ export default function DateRangePicker({
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="날짜 범위 선택"
+          onKeyDown={handlePopoverKeyDown}
           className="fixed z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-4"
           style={{
             top: dropdownPosition.top,

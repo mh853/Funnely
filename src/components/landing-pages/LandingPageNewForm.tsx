@@ -40,6 +40,8 @@ import {
   PlusIcon,
   Bars3Icon,
   EyeIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
 } from '@heroicons/react/24/outline'
 
 // Timer calculation utility
@@ -515,6 +517,26 @@ export default function LandingPageNewForm({
 
   const handleDragEnd = () => {
     setDraggedIndex(null)
+  }
+
+  // 드래그를 쓸 수 없는 키보드 사용자를 위한 섹션 순서 이동 버튼
+  // 미리보기 목록은 비활성/스티키 섹션을 걸러낸 목록이라, sections 배열의 인덱스를 그대로
+  // ±1 하면 화면에 보이지 않는 섹션과 뒤바뀌어 아무 변화도 없는 것처럼 보인다.
+  // 그래서 "현재 보이는 목록에서 바로 위/아래 섹션"을 id로 찾아 원본 배열에서 서로 위치를 바꾼다.
+  const moveSection = (visibleList: Section[], sectionId: string, direction: -1 | 1) => {
+    const visibleIndex = visibleList.findIndex(s => s.id === sectionId)
+    const targetVisibleIndex = visibleIndex + direction
+    if (visibleIndex === -1 || targetVisibleIndex < 0 || targetVisibleIndex >= visibleList.length) return
+
+    const targetId = visibleList[targetVisibleIndex].id
+    setSections(prev => {
+      const i = prev.findIndex(s => s.id === sectionId)
+      const j = prev.findIndex(s => s.id === targetId)
+      if (i === -1 || j === -1) return prev
+      const next = [...prev]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return next
+    })
   }
 
   // Get preview content for each section (Mobile)
@@ -2751,8 +2773,8 @@ export default function LandingPageNewForm({
 
                       {/* Scrollable Content */}
                       <div className="p-4 space-y-4">
-                        {sections
-                          .filter(section => {
+                        {(() => {
+                          const visibleSections = sections.filter(section => {
                             // Filter out disabled sections
                             const content = getPreviewContent(section)
                             if (content === null) return false
@@ -2764,7 +2786,8 @@ export default function LandingPageNewForm({
 
                             return true
                           })
-                          .map((section, index) => {
+
+                          return visibleSections.map((section, index) => {
                           const content = getPreviewContent(section)
                           if (!content) return null
 
@@ -2788,6 +2811,28 @@ export default function LandingPageNewForm({
                                 </div>
                               </div>
 
+                              {/* 순서 이동 버튼 - 드래그를 쓸 수 없는 키보드 사용자를 위한 대안 */}
+                              <div className="absolute -right-2 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10">
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(visibleSections, section.id, -1)}
+                                  disabled={index === 0}
+                                  aria-label={`${section.label} 섹션 위로 이동`}
+                                  className="bg-indigo-500 text-white rounded-full p-1 shadow-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronUpIcon className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(visibleSections, section.id, 1)}
+                                  disabled={index === visibleSections.length - 1}
+                                  aria-label={`${section.label} 섹션 아래로 이동`}
+                                  className="bg-indigo-500 text-white rounded-full p-1 shadow-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronDownIcon className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
                               {/* Section Label Badge */}
                               <div className="absolute -top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                 <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
@@ -2799,7 +2844,8 @@ export default function LandingPageNewForm({
                               <div className="relative">{content}</div>
                             </div>
                           )
-                        })}
+                          })
+                        })()}
 
                         {/* Empty State */}
                         {sections.every(section => getPreviewContent(section) === null) && (
@@ -2950,8 +2996,8 @@ export default function LandingPageNewForm({
 
                     {/* Desktop Layout - Fixed 800px width */}
                     <div className="w-[800px] mx-auto p-12 space-y-8">
-                      {sections
-                        .filter(section => {
+                      {(() => {
+                        const visibleSections = sections.filter(section => {
                           const content = getDesktopPreviewContent(section)
                           if (content === null) return false
 
@@ -2962,7 +3008,8 @@ export default function LandingPageNewForm({
 
                           return true
                         })
-                        .map((section, index) => {
+
+                        return visibleSections.map((section, index) => {
                           const content = getDesktopPreviewContent(section)
                           if (!content) return null
 
@@ -2986,6 +3033,28 @@ export default function LandingPageNewForm({
                                 </div>
                               </div>
 
+                              {/* 순서 이동 버튼 - 드래그를 쓸 수 없는 키보드 사용자를 위한 대안 */}
+                              <div className="absolute -right-6 top-1/2 -translate-y-1/2 flex flex-col gap-0.5 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity z-10">
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(visibleSections, section.id, -1)}
+                                  disabled={index === 0}
+                                  aria-label={`${section.label} 섹션 위로 이동`}
+                                  className="bg-indigo-500 text-white rounded-full p-1 shadow-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronUpIcon className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => moveSection(visibleSections, section.id, 1)}
+                                  disabled={index === visibleSections.length - 1}
+                                  aria-label={`${section.label} 섹션 아래로 이동`}
+                                  className="bg-indigo-500 text-white rounded-full p-1 shadow-lg hover:bg-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                  <ChevronDownIcon className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+
                               {/* Section Label Badge */}
                               <div className="absolute -top-3 left-4 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                                 <span className="bg-indigo-500 text-white text-xs px-2 py-1 rounded-full font-medium shadow-md">
@@ -2997,7 +3066,8 @@ export default function LandingPageNewForm({
                               <div className="relative">{content}</div>
                             </div>
                           )
-                        })}
+                        })
+                      })()}
 
                       {/* Empty State */}
                       {sections.every(section => getDesktopPreviewContent(section) === null) && (

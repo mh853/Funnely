@@ -290,6 +290,8 @@ export default function LeadsClient({
   const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; openUpward?: boolean } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  // 드롭다운을 연 트리거 버튼 - Escape/포커스 이탈 시 포커스를 돌려주기 위해 기억해둠
+  const lastDropdownTriggerRef = useRef<HTMLButtonElement | null>(null)
 
   // 계약완료 날짜/시간 입력 모달 상태
   const [contractModalLeadId, setContractModalLeadId] = useState<string | null>(null)
@@ -684,6 +686,53 @@ export default function LeadsClient({
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [editingLeadId, editingAssigneeLeadId, editingCounselorLeadId])
 
+  // 드롭다운 메뉴 키보드 조작: 방향키로 옵션 이동, Escape로 닫고 트리거로 포커스 복귀
+  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>, close: () => void) => {
+    const items = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('button:not(:disabled)'))
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault()
+      items[(currentIndex + 1) % items.length]?.focus()
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault()
+      items[(currentIndex - 1 + items.length) % items.length]?.focus()
+    } else if (e.key === 'Escape') {
+      e.preventDefault()
+      close()
+      lastDropdownTriggerRef.current?.focus()
+    }
+  }, [])
+
+  // 메뉴 밖으로 포커스가 이동하면(Tab 등) 열린 채로 남지 않도록 닫기
+  const handleMenuBlur = useCallback((e: React.FocusEvent<HTMLDivElement>, close: () => void) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+      close()
+    }
+  }, [])
+
+  // 메뉴가 열리면 선택된 항목(없으면 첫 항목)으로 포커스를 옮겨 키보드로 바로 조작 가능하게 함
+  useEffect(() => {
+    if (!editingLeadId) return
+    const menu = dropdownRef.current
+    const target = menu?.querySelector<HTMLButtonElement>('button[aria-checked="true"]') || menu?.querySelector<HTMLButtonElement>('button')
+    target?.focus()
+  }, [editingLeadId])
+
+  useEffect(() => {
+    if (!editingAssigneeLeadId) return
+    const menu = assigneeDropdownRef.current
+    const target = menu?.querySelector<HTMLButtonElement>('button[aria-checked="true"]') || menu?.querySelector<HTMLButtonElement>('button')
+    target?.focus()
+  }, [editingAssigneeLeadId])
+
+  useEffect(() => {
+    if (!editingCounselorLeadId) return
+    const menu = counselorDropdownRef.current
+    const target = menu?.querySelector<HTMLButtonElement>('button[aria-checked="true"]') || menu?.querySelector<HTMLButtonElement>('button')
+    target?.focus()
+  }, [editingCounselorLeadId])
+
   // 드롭다운 버튼 클릭 시 위치 계산 (화면 하단 가까우면 위로 펼침)
   const handleDropdownToggle = useCallback((leadId: string, event: React.MouseEvent<HTMLButtonElement>) => {
     if (editingLeadId === leadId) {
@@ -707,6 +756,7 @@ export default function LeadsClient({
         left: rect.left,
         openUpward: shouldOpenUpward,
       })
+      lastDropdownTriggerRef.current = button
       setEditingLeadId(leadId)
     }
   }, [editingLeadId])
@@ -725,6 +775,7 @@ export default function LeadsClient({
         top: rect.bottom,
         left: rect.left,
       })
+      lastDropdownTriggerRef.current = button
       setEditingAssigneeLeadId(leadId)
       // 다른 드롭다운 닫기
       setEditingCounselorLeadId(null)
@@ -748,6 +799,7 @@ export default function LeadsClient({
         top: rect.bottom,
         left: rect.left,
       })
+      lastDropdownTriggerRef.current = button
       setEditingCounselorLeadId(leadId)
       // 다른 드롭다운 닫기
       setEditingAssigneeLeadId(null)
@@ -1665,6 +1717,8 @@ export default function LeadsClient({
                         <button
                           onClick={(e) => handleDropdownToggle(lead.id, e)}
                           disabled={updatingLeadId === lead.id}
+                          aria-haspopup="menu"
+                          aria-expanded={editingLeadId === lead.id}
                           className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full transition-all ${
                             statusStyles[lead.status]?.bg || 'bg-gray-100'
                           } ${statusStyles[lead.status]?.text || 'text-gray-800'} ${
@@ -1713,6 +1767,9 @@ export default function LeadsClient({
                         <button
                           onClick={(e) => handleAssigneeDropdownToggle(lead.id, e)}
                           disabled={updatingAssigneeLeadId === lead.id}
+                          aria-haspopup="menu"
+                          aria-expanded={editingAssigneeLeadId === lead.id}
+                          aria-label={`콜 담당자: ${lead.call_assigned_user?.full_name || '미지정'}`}
                           className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 rounded-full px-3 py-1.5 text-sm text-blue-700 cursor-pointer hover:border-blue-300 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors min-w-[100px]"
                         >
                           {updatingAssigneeLeadId === lead.id ? (
@@ -1735,6 +1792,9 @@ export default function LeadsClient({
                         <button
                           onClick={(e) => handleCounselorDropdownToggle(lead.id, e)}
                           disabled={updatingCounselorLeadId === lead.id}
+                          aria-haspopup="menu"
+                          aria-expanded={editingCounselorLeadId === lead.id}
+                          aria-label={`상담 담당자: ${lead.counselor_assigned_user?.full_name || '미지정'}`}
                           className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 rounded-full px-3 py-1.5 text-sm text-emerald-700 cursor-pointer hover:border-emerald-300 hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-colors min-w-[100px]"
                         >
                           {updatingCounselorLeadId === lead.id ? (
@@ -1789,6 +1849,10 @@ export default function LeadsClient({
       {editingLeadId && dropdownPosition && typeof document !== 'undefined' && createPortal(
         <div
           ref={dropdownRef}
+          role="menu"
+          aria-label="결과 상태 선택"
+          onKeyDown={(e) => handleMenuKeyDown(e, () => { setEditingLeadId(null); setDropdownPosition(null) })}
+          onBlur={(e) => handleMenuBlur(e, () => { setEditingLeadId(null); setDropdownPosition(null) })}
           className="status-dropdown-menu fixed z-50 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-80 overflow-y-auto"
           style={{
             top: dropdownPosition.top,
@@ -1800,6 +1864,8 @@ export default function LeadsClient({
             return (
               <button
                 key={option.value}
+                role="menuitemradio"
+                aria-checked={currentLead?.status === option.value}
                 onClick={() => handleStatusChange(editingLeadId, option.value)}
                 disabled={updatingLeadId === editingLeadId}
                 className={`w-full px-4 py-2 text-left text-sm hover:bg-gray-50 flex items-center justify-between ${
@@ -1821,6 +1887,10 @@ export default function LeadsClient({
       {editingAssigneeLeadId && assigneeDropdownPosition && typeof document !== 'undefined' && createPortal(
         <div
           ref={assigneeDropdownRef}
+          role="menu"
+          aria-label="콜 담당자 선택"
+          onKeyDown={(e) => handleMenuKeyDown(e, () => { setEditingAssigneeLeadId(null); setAssigneeDropdownPosition(null) })}
+          onBlur={(e) => handleMenuBlur(e, () => { setEditingAssigneeLeadId(null); setAssigneeDropdownPosition(null) })}
           className="assignee-dropdown-menu fixed z-50 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-80 overflow-y-auto"
           style={{
             top: assigneeDropdownPosition.top,
@@ -1829,6 +1899,8 @@ export default function LeadsClient({
         >
           {/* 미지정 옵션 */}
           <button
+            role="menuitemradio"
+            aria-checked={!leads.find(l => l.id === editingAssigneeLeadId)?.call_assigned_user?.id}
             onClick={() => {
               handleAssigneeChange(editingAssigneeLeadId, '')
               setEditingAssigneeLeadId(null)
@@ -1851,6 +1923,8 @@ export default function LeadsClient({
             return (
               <button
                 key={member.id}
+                role="menuitemradio"
+                aria-checked={isSelected}
                 onClick={() => {
                   handleAssigneeChange(editingAssigneeLeadId, member.id)
                   setEditingAssigneeLeadId(null)
@@ -1876,6 +1950,10 @@ export default function LeadsClient({
       {editingCounselorLeadId && counselorDropdownPosition && typeof document !== 'undefined' && createPortal(
         <div
           ref={counselorDropdownRef}
+          role="menu"
+          aria-label="상담 담당자 선택"
+          onKeyDown={(e) => handleMenuKeyDown(e, () => { setEditingCounselorLeadId(null); setCounselorDropdownPosition(null) })}
+          onBlur={(e) => handleMenuBlur(e, () => { setEditingCounselorLeadId(null); setCounselorDropdownPosition(null) })}
           className="counselor-dropdown-menu fixed z-50 w-44 bg-white rounded-lg shadow-xl border border-gray-200 py-1 max-h-80 overflow-y-auto"
           style={{
             top: counselorDropdownPosition.top,
@@ -1884,6 +1962,8 @@ export default function LeadsClient({
         >
           {/* 미지정 옵션 */}
           <button
+            role="menuitemradio"
+            aria-checked={!leads.find(l => l.id === editingCounselorLeadId)?.counselor_assigned_user?.id}
             onClick={() => {
               handleCounselorChange(editingCounselorLeadId, '')
               setEditingCounselorLeadId(null)
@@ -1906,6 +1986,8 @@ export default function LeadsClient({
             return (
               <button
                 key={member.id}
+                role="menuitemradio"
+                aria-checked={isSelected}
                 onClick={() => {
                   handleCounselorChange(editingCounselorLeadId, member.id)
                   setEditingCounselorLeadId(null)
