@@ -1,10 +1,11 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { Search, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, X, Download, Building2, Calendar, User, CreditCard, TrendingUp, LogOut } from 'lucide-react'
+import { Search, ChevronUp, ChevronDown, X, Download, Building2, Calendar, User, CreditCard, TrendingUp, LogOut } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { Pagination } from '@/components/ui/pagination'
 
 interface Company {
   id: string
@@ -542,23 +543,11 @@ export default function CompaniesPage() {
                   총 {pagination.total}개 중 {(pagination.page - 1) * pagination.limit + 1}–
                   {Math.min(pagination.page * pagination.limit, pagination.total)}개
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setPage(page - 1)}
-                    disabled={!pagination.hasPrev}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="h-4 w-4" />이전
-                  </button>
-                  <span className="px-3 py-1.5 text-sm text-gray-600">{pagination.page} / {pagination.totalPages}</span>
-                  <button
-                    onClick={() => setPage(page + 1)}
-                    disabled={!pagination.hasNext}
-                    className="flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  >
-                    다음<ChevronRight className="h-4 w-4" />
-                  </button>
-                </div>
+                <Pagination
+                  currentPage={pagination.page}
+                  totalPages={pagination.totalPages}
+                  onPageChange={setPage}
+                />
               </div>
             )}
           </>

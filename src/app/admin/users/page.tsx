@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Search, ChevronLeft, ChevronRight, Users as UsersIcon, UserCheck, UserX } from 'lucide-react'
+import { Search, Users as UsersIcon, UserCheck, UserX } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import type { UsersListResponse, UserListItem } from '@/types/admin'
 import { getRoleLabel, getRoleBadgeColor, ROLE_FILTER_OPTIONS } from '@/lib/admin/role-utils'
+import { Pagination } from '@/components/ui/pagination'
 
 export default function UsersPage() {
   const router = useRouter()
@@ -352,29 +353,11 @@ export default function UsersPage() {
                 총 {data.pagination.total}개 중 {(page - 1) * 20 + 1}-
                 {Math.min(page * 20, data.pagination.total)}개 표시
               </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page - 1)}
-                  disabled={!data.pagination.hasPrev}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  이전
-                </Button>
-                <span className="px-4 py-2 text-sm">
-                  {page} / {data.pagination.totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage(page + 1)}
-                  disabled={!data.pagination.hasNext}
-                >
-                  다음
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+              <Pagination
+                currentPage={page}
+                totalPages={data.pagination.totalPages}
+                onPageChange={setPage}
+              />
             </div>
           </>
         ) : (
