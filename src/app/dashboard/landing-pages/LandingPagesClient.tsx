@@ -35,6 +35,13 @@ export default function LandingPagesClient({
   const [searchQuery, setSearchQuery] = useState('')
   const [landingPages, setLandingPages] = useState(initialLandingPages)
 
+  // 삭제 등으로 서버 데이터가 바뀌어 router.refresh()가 새 initialLandingPages를
+  // 내려보내도, useState 초기값은 최초 마운트 때만 쓰이므로 별도 동기화가 없으면
+  // 로컬 상태가 옛 목록에 머물러 있었다(예: 삭제 직후 새로고침 전까지 항목이 안 사라짐)
+  useEffect(() => {
+    setLandingPages(initialLandingPages)
+  }, [initialLandingPages])
+
   // Schedule precise timers for pages that will expire while the dashboard is open
   useEffect(() => {
     const now = Date.now()

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import ReservationsClient from './ReservationsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 export default async function ReservationsPage() {
   const supabase = await createClient()
@@ -68,9 +69,16 @@ export default async function ReservationsPage() {
   // 디버깅용 로그
   console.log('Reservations query result:', { contractLeads, error, companyId: userProfile.company_id })
 
+  // leads.phone은 암호화 저장되므로 클라이언트로 넘기기 전에 서버에서 복호화한다
+  // (복호화 키는 서버 전용이라 클라이언트 컴포넌트에서 직접 복호화할 수 없음)
+  const decryptedLeads = (contractLeads || []).map((lead: any) => ({
+    ...lead,
+    phone: lead.phone ? decryptPhone(lead.phone) : lead.phone,
+  }))
+
   return (
     <ReservationsClient
-      initialLeads={contractLeads || []}
+      initialLeads={decryptedLeads}
       companyId={userProfile.company_id}
       teamMembers={teamMembers || []}
     />

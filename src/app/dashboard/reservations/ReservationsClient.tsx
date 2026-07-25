@@ -108,6 +108,33 @@ const DEFAULT_STATUS_OPTIONS = [
   { value: 'other', label: '기타' },
 ]
 
+// leads.phone은 암호화 저장되어 있고 복호화 키는 서버 전용이라, 브라우저에서
+// supabase.from('leads')로 직접 조회한 phone은 클라이언트 측 decryptPhone()으로는
+// 복호화할 수 없다(항상 암호문 그대로 반환됨). 서버 API를 거쳐 복호화된 값을
+// 받아와 병합한다.
+async function decryptLeadPhones<T extends { id: string; phone: string | null }>(
+  leads: T[]
+): Promise<T[]> {
+  const ids = leads.map(l => l.id)
+  if (ids.length === 0) return leads
+
+  try {
+    const res = await fetch('/api/leads/decrypt-phones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadIds: ids }),
+    })
+    if (!res.ok) return leads
+
+    const { phones } = await res.json()
+    return leads.map(lead =>
+      phones[lead.id] ? { ...lead, phone: phones[lead.id] } : lead
+    )
+  } catch {
+    return leads
+  }
+}
+
 export default function ReservationsClient({
   initialLeads,
   companyId,
@@ -248,7 +275,8 @@ export default function ReservationsClient({
       ])
 
       if (leadResult.error) throw leadResult.error
-      setLeadDetails(leadResult.data)
+      const [decryptedLead] = await decryptLeadPhones([leadResult.data as any])
+      setLeadDetails(decryptedLead)
 
       if (!logsResult.error && logsResult.data) {
         setStatusLogs(logsResult.data)
@@ -697,7 +725,7 @@ export default function ReservationsClient({
           .limit(200)
 
         if (error) throw error
-        setAvailableLeadsForSchedule(data || [])
+        setAvailableLeadsForSchedule(await decryptLeadPhones(data || []))
       } catch (error) {
         console.error('Error fetching available leads:', error)
         setAvailableLeadsForSchedule([])
@@ -753,12 +781,13 @@ export default function ReservationsClient({
         .single()
 
       if (updatedLead) {
+        const [decryptedLead] = await decryptLeadPhones([updatedLead as any])
         setLeads(prev => {
-          const exists = prev.find(l => l.id === updatedLead.id)
+          const exists = prev.find(l => l.id === decryptedLead.id)
           if (exists) {
-            return prev.map(l => l.id === updatedLead.id ? updatedLead as Lead : l)
+            return prev.map(l => l.id === decryptedLead.id ? decryptedLead as Lead : l)
           }
-          return [...prev, updatedLead as Lead]
+          return [...prev, decryptedLead as Lead]
         })
       }
 
@@ -982,20 +1011,21 @@ export default function ReservationsClient({
                 .single()
 
               if (leadWithRelations) {
+                const [decryptedLead] = await decryptLeadPhones([leadWithRelations as any])
                 setLeads((prevLeads) => {
                   // 기존에 있는 리드인지 확인
                   const existingIndex = prevLeads.findIndex(
-                    (l) => l.id === leadWithRelations.id
+                    (l) => l.id === decryptedLead.id
                   )
 
                   if (existingIndex >= 0) {
                     // 업데이트: 기존 리드 교체
                     const updated = [...prevLeads]
-                    updated[existingIndex] = leadWithRelations as Lead
+                    updated[existingIndex] = decryptedLead as Lead
                     return updated
                   } else {
                     // 새로 추가
-                    return [...prevLeads, leadWithRelations as Lead]
+                    return [...prevLeads, decryptedLead as Lead]
                   }
                 })
               }
@@ -1401,8 +1431,8 @@ export default function ReservationsClient({
                                 .neq('status', 'rejected')
                                 .order('created_at', { ascending: false })
                                 .limit(200)
-                                .then(({ data }) => {
-                                  setAvailableLeadsForSchedule(data || [])
+                                .then(async ({ data }) => {
+                                  setAvailableLeadsForSchedule(await decryptLeadPhones(data || []))
                                   setLoadingAvailableLeads(false)
                                 })
                             }
@@ -1742,7 +1772,7 @@ export default function ReservationsClient({
                     .order('created_at', { ascending: false })
                     .limit(200)
 
-                  setAvailableLeadsForSchedule(availableLeads || [])
+                  setAvailableLeadsForSchedule(await decryptLeadPhones(availableLeads || []))
                   setLoadingAvailableLeads(false)
                 }}
                 className="px-4 py-2 text-sm text-emerald-600 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition flex items-center gap-2"

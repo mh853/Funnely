@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import CalendarViewWrapper from '@/components/calendar/CalendarViewWrapper'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 interface SearchParams {
   status?: string
@@ -88,7 +89,14 @@ export default async function CalendarPage({
     leadsQuery = leadsQuery.eq('status', statusFilter)
   }
 
-  const { data: leads } = await leadsQuery.order('created_at', { ascending: false })
+  const { data: rawLeads } = await leadsQuery.order('created_at', { ascending: false })
+
+  // leads.phone은 암호화 저장되므로 클라이언트로 넘기기 전에 서버에서 복호화한다
+  // (복호화 키는 서버 전용이라 클라이언트 컴포넌트에서 직접 복호화할 수 없음)
+  const leads = (rawLeads || []).map((lead: any) => ({
+    ...lead,
+    phone: lead.phone ? decryptPhone(lead.phone) : lead.phone,
+  }))
 
   // Get team members for event assignment
   const { data: teamMembers } = await supabase
