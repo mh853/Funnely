@@ -72,7 +72,13 @@ export default function SubscriptionExpiredPage() {
         .order('created_at', { ascending: false })
         .limit(10)
 
-      // 차단 원인이 된 구독 표시: active+기간만료 > 체험 만료 > expired/cancelled > 최신순
+      // 차단 원인이 된 구독 표시: active+기간만료 > 체험 만료 > expired/cancelled
+      // (마지막에 subs[0]로 아무 구독이나 fallback하지 않는다 — 실제로 차단 사유가
+      // 없는데도(예: 이미 결제 완료되어 정상화된 경우) 가장 최근 구독을 "만료됨"으로
+      // 잘못 표시해 정상 이용 중인 사용자에게 "대시보드 접근이 제한되었습니다"라는
+      // 거짓 안내를 보여주는 버그가 있었다. 이 페이지는 middleware가 실제로 차단
+      // 상태를 확인한 뒤에만 리다이렉트하므로, 여기서 다시 조회했을 때 차단 사유를
+      // 못 찾으면 그 사이 상태가 정상화된 것 — 대시보드로 돌려보낸다.
       const now = new Date().toISOString()
       const subs = (allSubsRaw as SubRow[] | null) ?? []
       const blockedSub =
@@ -87,7 +93,6 @@ export default function SubscriptionExpiredPage() {
           s.trial_end_date < now
         ) ??
         subs.find(s => ['expired', 'cancelled', 'suspended'].includes(s.status)) ??
-        subs[0] ??
         null
 
       if (blockedSub) {
@@ -100,6 +105,8 @@ export default function SubscriptionExpiredPage() {
           grace_period_end: blockedSub.grace_period_end,
           plan: (blockedSub.subscription_plans ?? { name: '알 수 없음', plan_type: 'individual' }) as any,
         })
+      } else {
+        router.replace('/dashboard')
       }
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
