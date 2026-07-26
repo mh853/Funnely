@@ -1,6 +1,6 @@
 // Phase 4.2: Bulk Operations - Leads API
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { executeBulkOperation } from '@/lib/bulk/bulkProcessor'
 import type { LeadBulkOperation } from '@/types/bulk'
@@ -13,7 +13,14 @@ export async function POST(request: NextRequest) {
     }
     const user = adminUser.user
 
-    const supabase = await createClient()
+    // 서비스 롤 사용: leads/lead_notes 등 대상 테이블의 RLS 정책이 회사 소속
+    // 직원 role만 허용하고 최고관리자 우회를 두지 않아, 일반 클라이언트로는
+    // 벌크 작업이 에러 없이 조용히 0건 처리되던 문제가 있었다(최고관리자 인증은
+    // 이미 위에서 getSuperAdminUser()로 확인했으므로 RLS를 다시 거칠 필요가 없다).
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Parse request body
     const body = await request.json()

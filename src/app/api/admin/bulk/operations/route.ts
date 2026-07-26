@@ -1,6 +1,6 @@
 // Phase 4.2: Bulk Operations - Operations Log List API
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import type { BulkOperationLog } from '@/types/bulk'
 
@@ -11,7 +11,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const supabase = await createClient()
+    // 다른 어드민 라우트와 동일하게 서비스 롤 사용(최고관리자 인증은 이미
+    // getSuperAdminUser()로 확인했으므로 RLS를 다시 거칠 필요가 없다)
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    )
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams
