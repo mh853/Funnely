@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { encryptPhone } from '@/lib/encryption/phone'
 import {
   fetchSheetData,
   parseSheetToLeads,
@@ -100,7 +101,7 @@ export async function GET(request: NextRequest) {
             company_id: config.company_id,
             landing_page_id: config.landing_page_id || null,
             name: lead.name,
-            phone: lead.phone,
+            phone: encryptPhone(lead.phone),
             email: lead.email || null,
             phone_hash: crypto
               .createHash('sha256')

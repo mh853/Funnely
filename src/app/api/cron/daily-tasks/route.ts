@@ -11,7 +11,7 @@ import {
 import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
-import { decryptPhone } from '@/lib/encryption/phone'
+import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 
 /**
  * Unified daily tasks cron job
@@ -475,7 +475,7 @@ async function syncGoogleSheets(supabase: any) {
           company_id: config.company_id,
           landing_page_id: config.landing_page_id || null,
           name: lead.name,
-          phone: lead.phone,
+          phone: encryptPhone(lead.phone),
           email: lead.email || null,
           phone_hash: crypto
             .createHash('sha256')
