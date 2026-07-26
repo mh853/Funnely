@@ -51,6 +51,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // 폼에서는 필수(*)로 표시되지만 클라이언트/서버 모두 형식 검증이 없어
+    // "123" 같은 값도 그대로 저장되고 있었다 — 이 번호는 이메일 찾기에 쓰이므로
+    // 형식이 틀리면 계정 복구 기능이 조용히 깨진다.
+    const phoneDigitsOnly = (phone ?? '').replace(/\D/g, '')
+    if (phoneDigitsOnly.length < 9 || phoneDigitsOnly.length > 11) {
+      return NextResponse.json(
+        { error: '올바른 핸드폰 번호를 입력해주세요.' },
+        { status: 400 }
+      )
+    }
+
     const supabase = createAdminClient()
 
     // 1. Create auth user
