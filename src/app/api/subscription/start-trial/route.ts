@@ -36,19 +36,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
+    // 무료체험 중복 사용 방지: has_used_trial이 true인 회사는 다시 trial 상태로
+    // 전환할 수 없다. 이 체크가 없으면 구독 취소 후 재신청을 반복해 무료체험을
+    // 무한정 재사용할 수 있다.
     if (subscriptionId) {
       const { data: currentSub } = await serviceSupabase
         .from('company_subscriptions')
-        .select('company_id')
+        .select('company_id, has_used_trial')
         .eq('id', subscriptionId)
-        .maybeSingle()
+        .maybeSingle() as { data: { company_id: string; has_used_trial: boolean } | null }
 
       if (!currentSub || currentSub.company_id !== profile.company_id) {
         return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
       }
+
+      if (currentSub.has_used_trial) {
+        return NextResponse.json({ error: '이미 무료체험을 사용하셨습니다.' }, { status: 400 })
+      }
     } else if (companyId) {
       if (companyId !== profile.company_id) {
         return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
+      }
+
+      const { data: existingSubs } = await serviceSupabase
+        .from('company_subscriptions')
+        .select('has_used_trial')
+        .eq('company_id', companyId) as { data: { has_used_trial: boolean }[] | null }
+
+      if (existingSubs?.some((s) => s.has_used_trial)) {
+        return NextResponse.json({ error: '이미 무료체험을 사용하셨습니다.' }, { status: 400 })
       }
     }
 
