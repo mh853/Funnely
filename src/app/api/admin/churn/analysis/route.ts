@@ -131,7 +131,11 @@ export async function GET(request: NextRequest) {
     }
 
     // 9. 고위험 회사 식별 (customer_health_scores 활용)
-    const { data: atRiskCompanies } = await supabase
+    // customer_health_scores는 회사당 하루 한 건씩 쌓이는 이력 테이블이라, risk_level로만
+    // 필터링해 score순 10건을 뽑으면 같은 회사의 과거 스냅샷 여러 개가 중복으로 뽑혀
+    // "고위험 회사 10곳"이 실제로는 회사 1~2곳의 반복으로 채워지는 문제가 있었다.
+    // 회사별 최신 스냅샷만 남기고 나서 필터링·정렬해야 한다.
+    const { data: healthScoreHistory } = await supabase
       .from('customer_health_scores')
       .select(
         `
@@ -139,15 +143,27 @@ export async function GET(request: NextRequest) {
         score,
         risk_level,
         metrics,
+        created_at,
         companies:company_id (
           name,
           created_at
         )
       `
       )
-      .in('risk_level', ['high', 'critical'])
-      .order('score', { ascending: true })
-      .limit(10)
+      .order('created_at', { ascending: false })
+      .limit(500)
+
+    const latestByCompany = new Map<string, any>()
+    for (const item of healthScoreHistory || []) {
+      if (!latestByCompany.has(item.company_id)) {
+        latestByCompany.set(item.company_id, item)
+      }
+    }
+
+    const atRiskCompanies = Array.from(latestByCompany.values())
+      .filter((item) => ['high', 'critical'].includes(item.risk_level))
+      .sort((a, b) => a.score - b.score)
+      .slice(0, 10)
 
     const atRisk = (atRiskCompanies || []).map((item: any) => {
       const tenureDays = Math.floor(
