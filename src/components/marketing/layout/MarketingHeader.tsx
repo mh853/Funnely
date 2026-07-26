@@ -142,90 +142,93 @@ export default function MarketingHeader() {
             </div>
           </div>
         </nav>
+      </header>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden">
-            <div className="fixed inset-0 z-50" onClick={() => setMobileMenuOpen(false)} />
-            <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
-              <div className="flex items-center justify-between">
-                <Link href="/" className="-m-1.5 p-1.5">
-                  <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                    Funnely
-                  </span>
-                </Link>
-                <button
-                  type="button"
-                  className="-m-2.5 rounded-md p-2.5 text-gray-700"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  <span className="sr-only">메뉴 닫기</span>
-                  <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-                </button>
-              </div>
-              <div className="mt-6 flow-root">
-                <div className="-my-6 divide-y divide-gray-500/10">
-                  <div className="space-y-2 py-6">
-                    <a
-                      href="/#features"
-                      onClick={(e) => handleSmoothScroll(e, '#features')}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+      {/* Mobile menu — header 바깥에 위치. header에 backdrop-blur(scrolled 상태)가 걸리면
+          backdrop-filter가 fixed 자손의 containing block을 바꿔버려서, header 안에 있으면
+          스크롤된 상태에서 열었을 때 뷰포트 기준이 아니라 header의 좁은 박스 기준으로
+          포지셔닝되어 화면에 아무것도 안 보이는 버그가 있었다. */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden">
+          <div className="fixed inset-0 z-50" onClick={() => setMobileMenuOpen(false)} />
+          <div className="fixed inset-y-0 right-0 z-50 w-full overflow-y-auto bg-white px-6 py-6 sm:max-w-sm sm:ring-1 sm:ring-gray-900/10">
+            <div className="flex items-center justify-between">
+              <Link href="/" className="-m-1.5 p-1.5">
+                <span className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                  Funnely
+                </span>
+              </Link>
+              <button
+                type="button"
+                className="-m-2.5 rounded-md p-2.5 text-gray-700"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                <span className="sr-only">메뉴 닫기</span>
+                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="mt-6 flow-root">
+              <div className="-my-6 divide-y divide-gray-500/10">
+                <div className="space-y-2 py-6">
+                  <a
+                    href="/#features"
+                    onClick={(e) => handleSmoothScroll(e, '#features')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+                  >
+                    기능
+                  </a>
+                  <a
+                    href="/#pricing"
+                    onClick={(e) => handleSmoothScroll(e, '#pricing')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+                  >
+                    요금제
+                  </a>
+                  <a
+                    href="/#faq"
+                    onClick={(e) => handleSmoothScroll(e, '#faq')}
+                    className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+                  >
+                    FAQ
+                  </a>
+                </div>
+                <div className="py-6 space-y-4">
+                  {isLoggedIn ? (
+                    <Link
+                      href="/dashboard"
+                      className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
                     >
-                      기능
-                    </a>
-                    <a
-                      href="/#pricing"
-                      onClick={(e) => handleSmoothScroll(e, '#pricing')}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+                      대시보드로 이동
+                    </Link>
+                  ) : (
+                    <Link
+                      href="/auth/login"
+                      className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
                     >
-                      요금제
-                    </a>
-                    <a
-                      href="/#faq"
-                      onClick={(e) => handleSmoothScroll(e, '#faq')}
-                      className="-mx-3 block rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50 cursor-pointer"
+                      로그인
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setMobileMenuOpen(false); setIsInquiryOpen(true) }}
+                    className="block w-full text-left rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
+                  >
+                    고객센터
+                  </button>
+                  {!isLoggedIn && (
+                    <Link
+                      href="/auth/signup?plan=pro&trial=true"
+                      className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
                     >
-                      FAQ
-                    </a>
-                  </div>
-                  <div className="py-6 space-y-4">
-                    {isLoggedIn ? (
-                      <Link
-                        href="/dashboard"
-                        className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
-                      >
-                        대시보드로 이동
-                      </Link>
-                    ) : (
-                      <Link
-                        href="/auth/login"
-                        className="block rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                      >
-                        로그인
-                      </Link>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => { setMobileMenuOpen(false); setIsInquiryOpen(true) }}
-                      className="block w-full text-left rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
-                    >
-                      고객센터
-                    </button>
-                    {!isLoggedIn && (
-                      <Link
-                        href="/auth/signup?plan=pro&trial=true"
-                        className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
-                      >
-                        7일 무료체험
-                      </Link>
-                    )}
-                  </div>
+                      7일 무료체험
+                    </Link>
+                  )}
                 </div>
               </div>
             </div>
           </div>
-        )}
-      </header>
+        </div>
+      )}
     </>
   )
 }
