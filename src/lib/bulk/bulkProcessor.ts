@@ -8,6 +8,7 @@ import type {
   BulkOperationLog,
 } from '@/types/bulk'
 import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
+import { addMonthsClamped } from '@/lib/utils/date'
 
 export class BulkProcessor {
   private static readonly BATCH_SIZE = 100 // Process 100 entities at a time
@@ -389,12 +390,10 @@ export class BulkProcessor {
 
           if (reactivatingFromExpired || periodEndInPast || neverHadPeriod) {
             const now = new Date()
-            const periodEnd = new Date(now)
-            if (current?.billing_cycle === 'yearly') {
-              periodEnd.setFullYear(periodEnd.getFullYear() + 1)
-            } else {
-              periodEnd.setMonth(periodEnd.getMonth() + 1)
-            }
+            const periodEnd =
+              current?.billing_cycle === 'yearly'
+                ? addMonthsClamped(now, 12)
+                : addMonthsClamped(now, 1)
             updateData.current_period_start = now.toISOString()
             updateData.current_period_end = periodEnd.toISOString()
             updateData.grace_period_end = null

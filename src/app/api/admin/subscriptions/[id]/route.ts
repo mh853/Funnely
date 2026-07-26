@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { addMonthsClamped } from '@/lib/utils/date'
 
 /**
  * PATCH /api/admin/subscriptions/[id]
@@ -90,15 +91,10 @@ export async function PATCH(
         const now = new Date()
         const cycle = current?.billing_cycle
         const periodStart = now.toISOString()
-        let periodEnd: Date
-        if (cycle === 'yearly') {
-          periodEnd = new Date(now)
-          periodEnd.setFullYear(periodEnd.getFullYear() + 1)
-        } else {
-          // monthly (기본)
-          periodEnd = new Date(now)
-          periodEnd.setMonth(periodEnd.getMonth() + 1)
-        }
+        const periodEnd =
+          cycle === 'yearly'
+            ? addMonthsClamped(now, 12)
+            : addMonthsClamped(now, 1) // monthly (기본)
         updateData.current_period_start = periodStart
         updateData.current_period_end = periodEnd.toISOString()
         updateData.grace_period_end = null

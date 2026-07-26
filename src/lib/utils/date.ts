@@ -165,6 +165,26 @@ export function isToday(date: string | Date | number | null | undefined): boolea
 }
 
 /**
+ * 월/연 단위로 날짜를 더하되, 말일 오버플로우를 방지한다.
+ * 예: 1월 31일 + 1개월 → Date.setMonth()를 그냥 쓰면 3월 3일로 밀리는데(2월엔 31일이 없어서),
+ * 이 함수는 대상 월의 마지막 날(2월 28일/29일)로 고정한다. 정기결제 기간(current_period_end)
+ * 계산처럼 매달 반복 호출되는 곳에서 오버플로우가 누적되면 결제 주기가 조금씩 앞당겨진다.
+ */
+export function addMonthsClamped(date: Date, months: number): Date {
+  const result = new Date(date)
+  const originalDay = result.getDate()
+  result.setDate(1)
+  result.setMonth(result.getMonth() + months)
+  const daysInTargetMonth = new Date(
+    result.getFullYear(),
+    result.getMonth() + 1,
+    0
+  ).getDate()
+  result.setDate(Math.min(originalDay, daysInTargetMonth))
+  return result
+}
+
+/**
  * Get date range for period filter
  * @param period - 'today' | 'week' | 'month' | 'all'
  * @returns Start date or null for 'all'
