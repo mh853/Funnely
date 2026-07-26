@@ -181,7 +181,25 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Task 6: Disable Expired Landing Page Timers
+    // Task 6: Send Pending Payment Notification Emails
+    console.log('[Cron] Running payment notification emails')
+    try {
+      const paymentNotifResult = await sendPaymentNotificationEmails(supabase)
+      results.tasksExecuted.push({
+        task: 'payment_notifications',
+        status: 'success',
+        ...paymentNotifResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Payment notifications error:', error)
+      results.tasksExecuted.push({
+        task: 'payment_notifications',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 7: Disable Expired Landing Page Timers
     console.log('[Cron] Running expired timer check')
     try {
       const timerResult = await disableExpiredTimers(supabase)
@@ -987,6 +1005,87 @@ async function sendLeadDigestEmails(supabase: any) {
     emailsSent: totalEmailsSent,
     emailsFailed: totalFailed,
     message: `Processed ${notificationsByCompany.size} companies with ${pendingNotifications.length} total leads`,
+  }
+}
+
+/**
+ * 결제 관련 알림(결제완료/결제실패/구독취소/체험종료임박) 발송
+ *
+ * toss-payment-webhook/toss-billing-payment/subscription-cron 세 곳이 payment_notifications에
+ * status:'pending'으로 insert만 하고, 이를 다시 읽어 실제 이메일로 보내는 코드가 프로젝트
+ * 어디에도 없었다(신규 발견). subject/body_text는 이미 생성 시점에 채워져 있으므로 여기서는
+ * 그대로 발송만 한다. body_html은 생성부에서 채우지 않으므로(항상 null) HTML 없이 텍스트
+ * 메일로만 보낸다 - 이스케이프되지 않은 값을 HTML로 렌더링할 필요 자체가 없어 안전하다.
+ */
+async function sendPaymentNotificationEmails(supabase: any) {
+  console.log('[Payment Notifications] Starting email processing')
+
+  const { data: pending, error: queryError } = await supabase
+    .from('payment_notifications')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+
+  if (queryError) {
+    throw new Error(`결제 알림 조회 실패: ${queryError.message}`)
+  }
+
+  if (!pending || pending.length === 0) {
+    console.log('[Payment Notifications] No pending notifications')
+    return {
+      totalNotifications: 0,
+      emailsSent: 0,
+      emailsFailed: 0,
+      message: 'No pending payment notifications',
+    }
+  }
+
+  console.log(`[Payment Notifications] Found ${pending.length} pending notifications`)
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  let emailsSent = 0
+  let emailsFailed = 0
+
+  for (const notif of pending) {
+    try {
+      const { error: sendError } = await resend.emails.send({
+        from: 'Funnely <noreply@funnely.co.kr>',
+        to: [notif.recipient_email],
+        subject: notif.subject,
+        text: notif.body_text,
+      })
+
+      if (sendError) {
+        throw sendError
+      }
+
+      await supabase
+        .from('payment_notifications')
+        .update({ status: 'sent', sent_at: new Date().toISOString() })
+        .eq('id', notif.id)
+
+      emailsSent++
+      console.log(`[Payment Notifications] Sent to ${notif.recipient_email} (${notif.notification_type})`)
+    } catch (error) {
+      console.error(`[Payment Notifications] Failed to send to ${notif.recipient_email}:`, error)
+
+      await supabase
+        .from('payment_notifications')
+        .update({
+          status: 'failed',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+        })
+        .eq('id', notif.id)
+
+      emailsFailed++
+    }
+  }
+
+  return {
+    totalNotifications: pending.length,
+    emailsSent,
+    emailsFailed,
+    message: `Processed ${pending.length} payment notifications`,
   }
 }
 
