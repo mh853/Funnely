@@ -360,10 +360,10 @@ export default function BillingPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-100">
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">회사</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">금액</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">상태</th>
-                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500">결제일</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">회사</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">금액</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">상태</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">결제일</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">

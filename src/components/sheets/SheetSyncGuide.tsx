@@ -180,8 +180,8 @@ export default function SheetSyncGuide() {
               <table className="text-xs w-full">
                 <thead>
                   <tr className="bg-gray-100">
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">시트의 열 이름</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-600">입력할 값</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">시트의 열 이름</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-600 whitespace-nowrap">입력할 값</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">

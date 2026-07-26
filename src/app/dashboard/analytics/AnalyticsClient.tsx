@@ -508,19 +508,19 @@ export default function AnalyticsClient({
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     날짜
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     합계
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     PC
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     MOBILE
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     TABLET
                   </th>
                 </tr>
@@ -615,19 +615,19 @@ export default function AnalyticsClient({
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     날짜
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     합계
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     PC
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     MOBILE
                   </th>
-                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase">
+                  <th className="px-3 py-2 text-center text-xs font-semibold text-gray-700 uppercase whitespace-nowrap">
                     TABLET
                   </th>
                 </tr>
@@ -753,34 +753,34 @@ export default function AnalyticsClient({
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center whitespace-nowrap">
                   생성 날짜
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-left whitespace-nowrap">
                   랜딩페이지 이름
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center whitespace-nowrap">
                   트래픽 유입 합계<br/>(페이지뷰)
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-blue-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-blue-50 whitespace-nowrap">
                   PC
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-green-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-green-50 whitespace-nowrap">
                   MOBILE
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-purple-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-purple-50 whitespace-nowrap">
                   TABLET
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center whitespace-nowrap">
                   DB 전환수<br/>(전환율%)
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-blue-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-blue-50 whitespace-nowrap">
                   PC
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-green-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-green-50 whitespace-nowrap">
                   MOBILE
                 </th>
-                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-purple-50">
+                <th className="px-3 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider text-center bg-purple-50 whitespace-nowrap">
                   TABLET
                 </th>
               </tr>

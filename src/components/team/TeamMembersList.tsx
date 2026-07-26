@@ -76,19 +76,19 @@ export default function TeamMembersList({
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
             <tr>
-              <th className="py-3.5 pl-6 pr-4 text-left text-sm font-semibold text-gray-900 sm:pl-8">
+              <th className="py-3.5 pl-6 pr-4 text-left text-sm font-semibold text-gray-900 sm:pl-8 whitespace-nowrap">
                 사용자
               </th>
-              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">
                 담당부서
               </th>
-              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">
                 유입 ID
               </th>
-              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">
                 권한
               </th>
-              <th className="px-6 py-3.5 pr-8 text-left text-sm font-semibold text-gray-900">
+              <th className="px-6 py-3.5 pr-8 text-left text-sm font-semibold text-gray-900 whitespace-nowrap">
                 가입일
               </th>
             </tr>

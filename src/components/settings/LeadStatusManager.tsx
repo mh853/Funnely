@@ -323,16 +323,16 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
           <thead className="bg-gray-50">
             <tr>
               {canEdit && (
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-20">
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 w-20 whitespace-nowrap">
                   <ArrowsUpDownIcon className="h-4 w-4" />
                 </th>
               )}
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">미리보기</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">코드</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">표시 이름</th>
-              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">기본값</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">미리보기</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">코드</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">표시 이름</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">기본값</th>
               {canEdit && (
-                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 w-32">작업</th>
+                <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 w-32 whitespace-nowrap">작업</th>
               )}
             </tr>
           </thead>

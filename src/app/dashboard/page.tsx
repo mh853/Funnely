@@ -524,37 +524,37 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             <table className="min-w-full divide-y divide-gray-200">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     날짜
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     DB 유입
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     상담 전
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     상담 거절
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     상담 진행중
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     상담 완료
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     예약 확정
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     추가상담 필요
                   </th>
-                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     기타
                   </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     결제금액
                   </th>
-                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                     결제횟수
                   </th>
                 </tr>
@@ -760,11 +760,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">날짜</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">합계</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">PC</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Mobile</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">날짜</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">합계</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">PC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">Mobile</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">Tablet</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -844,11 +844,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
               <table className="min-w-full divide-y divide-gray-200">
                 <thead>
                   <tr className="bg-gray-50">
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">날짜</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">합계</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">PC</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Mobile</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%]">Tablet(기타)</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">날짜</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">합계</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">PC</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">Mobile</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase w-[20%] whitespace-nowrap">Tablet(기타)</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">

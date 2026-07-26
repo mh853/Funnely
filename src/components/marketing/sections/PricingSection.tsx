@@ -236,7 +236,7 @@ export default function PricingSection() {
             <table className="min-w-[900px] w-full">
               <thead>
                 <tr className="border-b border-gray-100">
-                  <th className="px-5 py-4 text-left text-sm font-semibold text-gray-500 w-44">기능</th>
+                  <th className="px-5 py-4 text-left text-sm font-semibold text-gray-500 w-44 whitespace-nowrap">기능</th>
                   {plans.map((plan) => (
                     <th
                       key={plan.id}

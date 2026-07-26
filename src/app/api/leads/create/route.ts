@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { encryptPhone, hashPhone } from '@/lib/encryption/phone'
+import { encryptPhone, hashPhone, decryptPhone } from '@/lib/encryption/phone'
 
 // POST /api/leads/create - Create lead manually from dashboard
 export async function POST(request: NextRequest) {
@@ -87,9 +87,11 @@ export async function POST(request: NextRequest) {
       throw new Error('리드 생성에 실패했습니다.')
     }
 
+    const leadResult = newLead as any
+
     return NextResponse.json({
       success: true,
-      data: { lead: newLead },
+      data: { lead: { ...leadResult, phone: leadResult.phone ? decryptPhone(leadResult.phone) : leadResult.phone } },
     })
   } catch (error: any) {
     console.error('Create lead error:', error)

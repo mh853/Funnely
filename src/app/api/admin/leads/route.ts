@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 /**
  * GET /api/admin/leads
@@ -98,7 +99,7 @@ export async function GET(request: NextRequest) {
     const formattedLeads = (leads || []).map((lead: any) => ({
       id: lead.id,
       name: lead.name,
-      phone: lead.phone,
+      phone: lead.phone ? decryptPhone(lead.phone) : lead.phone,
       email: lead.email,
       status: lead.status,
       priority: lead.priority,

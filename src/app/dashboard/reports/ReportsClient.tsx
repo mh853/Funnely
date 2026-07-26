@@ -561,37 +561,37 @@ export default function ReportsClient({
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                   날짜
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   DB유입
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   상담전
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   거절
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   진행중
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   완료
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   예약확정
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   추가상담
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   기타
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                   결제금액
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                   결제횟수
                 </th>
               </tr>
@@ -831,17 +831,17 @@ export default function ReportsClient({
                 <table className="min-w-full">
                   <thead>
                     <tr className="bg-gray-50">
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
-                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
+                      <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">날짜</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">DB유입</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">상담전</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">거절</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">진행중</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">완료</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">예약확정</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">추가상담</th>
+                      <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">기타</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">결제금액</th>
+                      <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">결제횟수</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
@@ -939,17 +939,17 @@ export default function ReportsClient({
                     <table className="min-w-full">
                       <thead>
                         <tr className="bg-gray-50">
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">날짜</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">DB유입</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">상담전</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">거절</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">진행중</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">완료</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">예약확정</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">추가상담</th>
-                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">기타</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제금액</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">결제횟수</th>
+                          <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">날짜</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">DB유입</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">상담전</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">거절</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">진행중</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">완료</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">예약확정</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">추가상담</th>
+                          <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">기타</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">결제금액</th>
+                          <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">결제횟수</th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -1024,37 +1024,37 @@ export default function ReportsClient({
           <table className="min-w-full">
             <thead>
               <tr className="bg-gray-50">
-                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                   부서
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   DB유입
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   상담전
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   거절
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   진행중
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   완료
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   예약확정
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   추가상담
                 </th>
-                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                   기타
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                   결제금액
                 </th>
-                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                   결제횟수
                 </th>
               </tr>
@@ -1255,40 +1255,40 @@ export default function ReportsClient({
             <table className="min-w-full">
               <thead>
                 <tr className="bg-gray-50">
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                     담당자
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-left text-xs font-semibold text-gray-700 whitespace-nowrap">
                     부서
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     DB유입
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     상담전
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     거절
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     진행중
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     완료
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     예약확정
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     추가상담
                   </th>
-                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-center text-xs font-semibold text-gray-700 whitespace-nowrap">
                     기타
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                     결제금액
                   </th>
-                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700">
+                  <th className="px-4 py-2 text-right text-xs font-semibold text-gray-700 whitespace-nowrap">
                     결제횟수
                   </th>
                 </tr>

@@ -197,28 +197,28 @@ export default function LandingPagesClient({
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gradient-to-r from-indigo-500 to-purple-600">
                   <tr>
-                    <th className="px-4 py-3.5 text-left text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       생성일
                     </th>
-                    <th className="px-4 py-3.5 text-left text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-left text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       제목
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       상태
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       페이지뷰
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       DB 유입
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       거절
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       확정
                     </th>
-                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider">
+                    <th className="px-4 py-3.5 text-center text-xs font-bold text-white uppercase tracking-wider whitespace-nowrap">
                       작업
                     </th>
                   </tr>

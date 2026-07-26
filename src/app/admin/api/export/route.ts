@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 export async function GET(request: Request) {
   try {
@@ -134,7 +135,7 @@ async function exportLeads(supabase: any) {
   const rows = leads
     .map(
       (l: any) =>
-        `"${l.id}","${l.name || '-'}","${l.phone || '-'}","${l.email || '-'}","${l.status}","${(l.companies as any).name}","${l.landing_pages?.title || '-'}","${new Date(l.created_at).toLocaleString('ko-KR')}"`
+        `"${l.id}","${l.name || '-'}","${l.phone ? decryptPhone(l.phone) : '-'}","${l.email || '-'}","${l.status}","${(l.companies as any).name}","${l.landing_pages?.title || '-'}","${new Date(l.created_at).toLocaleString('ko-KR')}"`
     )
     .join('\n')
 

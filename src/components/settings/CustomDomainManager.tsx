@@ -257,9 +257,9 @@ export default function CustomDomainManager() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500">
-                    <th className="text-left py-1 pr-3 font-medium">유형</th>
-                    <th className="text-left py-1 pr-3 font-medium">호스트</th>
-                    <th className="text-left py-1 font-medium">값</th>
+                    <th className="text-left py-1 pr-3 font-medium whitespace-nowrap">유형</th>
+                    <th className="text-left py-1 pr-3 font-medium whitespace-nowrap">호스트</th>
+                    <th className="text-left py-1 font-medium whitespace-nowrap">값</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -280,9 +280,9 @@ export default function CustomDomainManager() {
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500">
-                    <th className="text-left py-1 pr-3 font-medium">유형</th>
-                    <th className="text-left py-1 pr-3 font-medium">호스트</th>
-                    <th className="text-left py-1 font-medium">값</th>
+                    <th className="text-left py-1 pr-3 font-medium whitespace-nowrap">유형</th>
+                    <th className="text-left py-1 pr-3 font-medium whitespace-nowrap">호스트</th>
+                    <th className="text-left py-1 font-medium whitespace-nowrap">값</th>
                   </tr>
                 </thead>
                 <tbody>

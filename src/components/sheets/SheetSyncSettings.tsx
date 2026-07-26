@@ -918,10 +918,10 @@ export default function SheetSyncSettings({
             <table className="w-full text-sm">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="text-left px-4 py-2 font-medium text-gray-600">시간</th>
-                  <th className="text-left px-4 py-2 font-medium text-gray-600">결과</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-600">가져옴</th>
-                  <th className="text-right px-4 py-2 font-medium text-gray-600">중복</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600 whitespace-nowrap">시간</th>
+                  <th className="text-left px-4 py-2 font-medium text-gray-600 whitespace-nowrap">결과</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-600 whitespace-nowrap">가져옴</th>
+                  <th className="text-right px-4 py-2 font-medium text-gray-600 whitespace-nowrap">중복</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">

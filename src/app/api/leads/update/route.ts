@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 // PUT /api/leads/update - Update lead status, priority, and assignment
 export async function PUT(request: NextRequest) {
@@ -286,9 +287,11 @@ export async function PUT(request: NextRequest) {
       }
     }
 
+    const leadResult = updatedLead as any
+
     return NextResponse.json({
       success: true,
-      data: updatedLead,
+      data: { ...leadResult, phone: leadResult.phone ? decryptPhone(leadResult.phone) : leadResult.phone },
     })
   } catch (error: any) {
     console.error('Lead update error:', error)

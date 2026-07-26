@@ -11,6 +11,7 @@ import {
 import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 /**
  * Unified daily tasks cron job
@@ -906,7 +907,7 @@ async function sendLeadDigestEmails(supabase: any) {
       return {
         number: index + 1,
         name: leadData.name,
-        phone: leadData.phone,
+        phone: leadData.phone ? decryptPhone(leadData.phone) : leadData.phone,
         email: leadData.email || '미입력',
         landingPageTitle: leadData.landing_page_title || '알 수 없음',
         deviceType: leadData.device_type || 'pc',

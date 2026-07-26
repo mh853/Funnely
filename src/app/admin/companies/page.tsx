@@ -188,10 +188,10 @@ function CompanyModal({ company, onClose }: { company: Company; onClose: () => v
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 w-20">결제회차</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500">날짜</th>
-                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500">구독플랜</th>
-                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500">결제금액(원)</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 w-20 whitespace-nowrap">결제회차</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">날짜</th>
+                    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 whitespace-nowrap">구독플랜</th>
+                    <th className="px-4 py-2.5 text-right text-xs font-semibold text-gray-500 whitespace-nowrap">결제금액(원)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-50">
