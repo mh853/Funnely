@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         action,
         user_id,
         created_at,
-        user:users!user_id(email, profiles(full_name))
+        user:users!user_id(email, full_name)
       `
       )
       .gte('created_at', startDateTime.toISOString())
@@ -76,7 +76,7 @@ export async function GET(request: NextRequest) {
             const user = log.user as any
             acc[log.user_id] = {
               userId: log.user_id,
-              userName: user?.profiles?.full_name || user?.email || 'Unknown',
+              userName: user?.full_name || user?.email || 'Unknown',
               userEmail: user?.email || null,
               count: 0,
             }
