@@ -13,8 +13,7 @@ import {
   recommendNextPlan,
   estimateMRRImpact,
 } from './signalDetection'
-import type { Signal, GrowthOpportunity, UsageMetrics } from '@/types/growth'
-import { getPlanLimits } from '@/types/growth'
+import type { Signal, GrowthOpportunity, UsageMetrics, PlanLimits } from '@/types/growth'
 
 export interface DetectionResult {
   success: boolean
@@ -40,21 +39,32 @@ export async function detectGrowthOpportunities(
 
   try {
     // Get all active companies with subscriptions
+    // 실제 구독 테이블명은 'subscriptions'가 아니라 'company_subscriptions'이고,
+    // plan_name/amount 컬럼은 존재하지 않는다(plan_id로 subscription_plans를 조인해야
+    // 요금제명/가격을 얻을 수 있다). plan_id FK가 2개(plan_id, pending_plan_id) 있어
+    // PostgREST 임베딩 시 'subscription_plans!plan_id'로 명시해야 한다.
     const { data: companies, error: companiesError } = await supabase
       .from('companies')
       .select(
         `
         id,
         name,
-        subscriptions!inner (
+        company_subscriptions!inner (
           id,
-          plan_name,
           status,
-          amount
+          billing_cycle,
+          subscription_plans!plan_id (
+            name,
+            price_monthly,
+            price_yearly,
+            max_leads,
+            max_users,
+            max_landing_pages
+          )
         )
       `
       )
-      .eq('subscriptions.status', 'active')
+      .eq('company_subscriptions.status', 'active')
 
     if (companiesError) {
       result.errors.push(`Failed to fetch companies: ${companiesError.message}`)
@@ -69,14 +79,27 @@ export async function detectGrowthOpportunities(
     // Process each company
     for (const company of companies) {
       try {
-        const subscription = (company as any).subscriptions[0]
+        const subscription = (company as any).company_subscriptions[0]
         if (!subscription) continue
+
+        const plan = subscription.subscription_plans
+        if (!plan) continue
+
+        // 플랜별 실제 한도는 subscription_plans에 이미 컬럼으로 존재하므로,
+        // types/growth.ts의 'basic'/'pro'/'enterprise' 하드코딩 테이블(실제 한글
+        // 플랜명과 매칭되지 않아 항상 null을 반환하던 것)을 참조하지 않고 DB 값을 직접 사용한다
+        const planLimits: PlanLimits = {
+          leads: plan.max_leads ?? -1,
+          users: plan.max_users ?? -1,
+          landing_pages: plan.max_landing_pages ?? -1,
+          features: [],
+        }
 
         // Detect signals for this company
         const signals = await detectSignalsForCompany(
           supabase,
           company.id,
-          subscription.plan_name
+          planLimits
         )
 
         if (signals.length === 0) {
@@ -89,23 +112,31 @@ export async function detectGrowthOpportunities(
         // Calculate opportunity details
         const opportunityType = determineOpportunityType(signals)
         const confidenceScore = calculateConfidenceScore(signals)
+        // 참고: recommendNextPlan/estimateMRRImpact는 'basic'/'pro'/'enterprise'
+        // 영문 플랜 하이러키·달러 가격을 가정하고 있어 실제 한글 플랜명과 매칭되지
+        // 않는다. 플랜 업그레이드 순서·가격을 재정의하는 것은 제품 판단이 필요한
+        // 별개 사안이라, 여기서는 그대로 두어 recommended_plan은 null/mrr는 0으로
+        // 남긴다(잘못된 추천을 지어내지 않고 신호 감지 자체는 정상 동작하도록 함)
         const recommendedPlan = recommendNextPlan(
-          subscription.plan_name,
+          plan.name,
           opportunityType
         )
 
-        const currentMRR = subscription.amount
+        const currentMRR =
+          subscription.billing_cycle === 'yearly'
+            ? Number(plan.price_yearly) / 12
+            : Number(plan.price_monthly)
         const mrrImpact = estimateMRRImpact(
-          subscription.plan_name,
+          plan.name,
           recommendedPlan,
           currentMRR
         )
 
         // Create or update opportunity
-        const created = await upsertOpportunity(supabase, {
+        const upsertResult = await upsertOpportunity(supabase, {
           company_id: company.id,
           opportunity_type: opportunityType,
-          current_plan: subscription.plan_name,
+          current_plan: plan.name,
           recommended_plan: recommendedPlan,
           signals,
           confidence_score: confidenceScore,
@@ -115,10 +146,14 @@ export async function detectGrowthOpportunities(
             opportunityType === 'downsell_risk' ? Math.abs(mrrImpact) : null,
         })
 
-        if (created) {
+        if (upsertResult.outcome === 'created') {
           result.detected++
-        } else {
+        } else if (upsertResult.outcome === 'updated') {
           result.updated++
+        } else {
+          result.errors.push(
+            `Failed to upsert opportunity for company ${company.id}: ${upsertResult.errorMessage}`
+          )
         }
       } catch (error) {
         result.errors.push(
@@ -141,7 +176,7 @@ export async function detectGrowthOpportunities(
 async function detectSignalsForCompany(
   supabase: SupabaseClient,
   companyId: string,
-  planName: string
+  planLimits: PlanLimits
 ): Promise<Signal[]> {
   const signals: Signal[] = []
 
@@ -170,12 +205,6 @@ async function detectSignalsForCompany(
     .eq('company_id', companyId)
     .eq('metric_month', previousMonth.toISOString().split('T')[0])
     .single()
-
-  // Get plan limits
-  const planLimits = getPlanLimits(planName)
-  if (!planLimits) {
-    return signals
-  }
 
   // Detect usage limit signals
   const usageLimitSignals = detectUsageLimitSignals(
@@ -273,7 +302,7 @@ async function upsertOpportunity(
     estimated_additional_mrr: number | null
     potential_lost_mrr: number | null
   }
-): Promise<boolean> {
+): Promise<{ outcome: 'created' | 'updated' | 'error'; errorMessage?: string }> {
   // Check if active opportunity exists
   const { data: existing } = await supabase
     .from('growth_opportunities')
@@ -298,7 +327,7 @@ async function upsertOpportunity(
       })
       .eq('id', existing.id)
 
-    return error === null ? false : true
+    return error ? { outcome: 'error', errorMessage: error.message } : { outcome: 'updated' }
   } else {
     // Create new opportunity
     const { error } = await supabase.from('growth_opportunities').insert({
@@ -307,7 +336,7 @@ async function upsertOpportunity(
       detected_at: new Date().toISOString(),
     })
 
-    return error === null
+    return error ? { outcome: 'error', errorMessage: error.message } : { outcome: 'created' }
   }
 }
 
