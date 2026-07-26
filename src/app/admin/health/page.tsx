@@ -3,23 +3,42 @@
 import { useState, useEffect } from 'react'
 import { HealthScoreCard } from '@/components/health/HealthScoreCard'
 
+// 2025-12-21 커밋(7ca2603)에서 API(route.ts)는 실제 DB 스키마(score/risk_level/metrics)에
+// 맞게 고쳐졌지만 이 페이지는 이전 스키마(overall_score/health_status 등 최상위 컬럼) 그대로
+// 방치되어 있었다. 실제 값은 route.ts가 그대로 통과시키는 metrics JSONB 안에
+// 들어있다(calculateHealthScore.ts의 toCustomerHealthScoreRow 참고).
 interface HealthScore {
   id: string
   company: {
     id: string
     name: string
-    slug: string
-    status: string
+    short_id: string
+    is_active: boolean
   }
-  overall_score: number
-  engagement_score: number
-  product_usage_score: number
-  support_score: number
-  payment_score: number
-  health_status: 'critical' | 'at_risk' | 'healthy' | 'excellent'
-  risk_factors: any[]
-  recommendations: any[]
+  score: number
+  risk_level: 'low' | 'medium' | 'high' | 'critical'
+  metrics: {
+    engagement_score?: number
+    product_usage_score?: number
+    support_score?: number
+    payment_score?: number
+    health_status?: 'critical' | 'at_risk' | 'healthy' | 'excellent'
+    risk_factors?: any[]
+    recommendations?: any[]
+  }
   calculated_at: string
+}
+
+// metrics.health_status가 없는(과거) 데이터를 위한 risk_level 기반 대체 매핑
+const RISK_LEVEL_TO_STATUS: Record<string, HealthScore['metrics']['health_status']> = {
+  critical: 'critical',
+  high: 'at_risk',
+  medium: 'at_risk',
+  low: 'healthy',
+}
+
+function getHealthStatus(s: HealthScore): NonNullable<HealthScore['metrics']['health_status']> {
+  return s.metrics?.health_status || RISK_LEVEL_TO_STATUS[s.risk_level] || 'healthy'
 }
 
 export default function HealthDashboardPage() {
@@ -50,10 +69,10 @@ export default function HealthDashboardPage() {
   }
 
   const stats = {
-    critical: healthScores.filter((s) => s.health_status === 'critical').length,
-    at_risk: healthScores.filter((s) => s.health_status === 'at_risk').length,
-    healthy: healthScores.filter((s) => s.health_status === 'healthy').length,
-    excellent: healthScores.filter((s) => s.health_status === 'excellent').length,
+    critical: healthScores.filter((s) => getHealthStatus(s) === 'critical').length,
+    at_risk: healthScores.filter((s) => getHealthStatus(s) === 'at_risk').length,
+    healthy: healthScores.filter((s) => getHealthStatus(s) === 'healthy').length,
+    excellent: healthScores.filter((s) => getHealthStatus(s) === 'excellent').length,
   }
 
   const filteredScores = search
@@ -137,16 +156,16 @@ export default function HealthDashboardPage() {
               key={score.id}
               companyId={score.company.id}
               companyName={score.company.name}
-              overallScore={score.overall_score}
-              healthStatus={score.health_status}
+              overallScore={score.score}
+              healthStatus={getHealthStatus(score)}
               componentScores={{
-                engagement: score.engagement_score,
-                productUsage: score.product_usage_score,
-                support: score.support_score,
-                payment: score.payment_score,
+                engagement: score.metrics?.engagement_score ?? 0,
+                productUsage: score.metrics?.product_usage_score ?? 0,
+                support: score.metrics?.support_score ?? 0,
+                payment: score.metrics?.payment_score ?? 0,
               }}
-              riskFactorCount={score.risk_factors.length}
-              recommendationCount={score.recommendations.length}
+              riskFactorCount={score.metrics?.risk_factors?.length ?? 0}
+              recommendationCount={score.metrics?.recommendations?.length ?? 0}
               calculatedAt={score.calculated_at}
             />
           ))}

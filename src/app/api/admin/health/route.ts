@@ -35,7 +35,89 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 카운트 쿼리
+    const validSortColumns = ['calculated_at', 'score']
+    const sortColumn = validSortColumns.includes(sortBy)
+      ? sortBy
+      : 'calculated_at'
+
+    // customer_health_scores는 회사당 하루(때로는 하루에도 여러 번) 한 건씩 쌓이는
+    // 이력 테이블이다(/api/admin/churn/analysis에서 동일한 문제를 먼저 발견·수정함).
+    // date 필터가 없는 "현재 상태" 조회에서 dedup 없이 그대로 필터·페이지네이션하면
+    // 이력이 많이 쌓인 회사가 결과를 반복 도배하고 count도 실제 회사 수보다 부풀려진다.
+    // date 필터가 있는 경우는 특정 날짜의 스냅샷을 보려는 의도이므로 dedup하지 않는다.
+    if (!date) {
+      let allQuery = supabase
+        .from('customer_health_scores')
+        .select(
+          `
+          id,
+          company_id,
+          score,
+          risk_level,
+          metrics,
+          calculated_at,
+          created_at,
+          companies!inner(id, name, short_id, is_active)
+        `
+        )
+        .order('calculated_at', { ascending: false })
+
+      if (riskLevel) {
+        allQuery = allQuery.eq('risk_level', riskLevel)
+      }
+
+      const { data: allScores, error } = await allQuery
+
+      if (error) {
+        console.error('[Health API] Query error:', error)
+        return NextResponse.json(
+          { error: 'Failed to fetch health scores' },
+          { status: 500 }
+        )
+      }
+
+      const latestByCompany = new Map<string, any>()
+      for (const item of allScores || []) {
+        if (!latestByCompany.has(item.company_id)) {
+          latestByCompany.set(item.company_id, item)
+        }
+      }
+
+      const deduped = Array.from(latestByCompany.values()).sort((a, b) => {
+        const dir = sortOrder === 'asc' ? 1 : -1
+        return a[sortColumn] > b[sortColumn] ? dir : a[sortColumn] < b[sortColumn] ? -dir : 0
+      })
+
+      const page = deduped.slice(offset, offset + limit)
+
+      const formattedScores = page.map((score: any) => ({
+        id: score.id,
+        company: {
+          id: score.companies.id,
+          name: score.companies.name,
+          short_id: score.companies.short_id,
+          is_active: score.companies.is_active,
+        },
+        score: score.score,
+        risk_level: score.risk_level,
+        metrics: score.metrics || {},
+        calculated_at: score.calculated_at,
+        created_at: score.created_at,
+      }))
+
+      return NextResponse.json({
+        success: true,
+        health_scores: formattedScores,
+        pagination: {
+          total: deduped.length,
+          limit,
+          offset,
+          hasMore: deduped.length > offset + limit,
+        },
+      })
+    }
+
+    // date 필터가 있는 경우: 해당 날짜의 스냅샷을 그대로 조회(dedup 없음)
     let countQuery = supabase
       .from('customer_health_scores')
       .select('*', { count: 'exact', head: true })
@@ -44,17 +126,14 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('risk_level', riskLevel)
     }
 
-    if (date) {
-      const targetDate = new Date(date)
-      const nextDate = new Date(targetDate)
-      nextDate.setDate(nextDate.getDate() + 1)
+    const targetDate = new Date(date)
+    const nextDate = new Date(targetDate)
+    nextDate.setDate(nextDate.getDate() + 1)
 
-      countQuery = countQuery
-        .gte('calculated_at', targetDate.toISOString())
-        .lt('calculated_at', nextDate.toISOString())
-    }
+    countQuery = countQuery
+      .gte('calculated_at', targetDate.toISOString())
+      .lt('calculated_at', nextDate.toISOString())
 
-    // 데이터 쿼리
     let dataQuery = supabase
       .from('customer_health_scores')
       .select(
@@ -70,27 +149,13 @@ export async function GET(request: NextRequest) {
       `
       )
       .range(offset, offset + limit - 1)
+      .gte('calculated_at', targetDate.toISOString())
+      .lt('calculated_at', nextDate.toISOString())
 
-    // 필터 적용
     if (riskLevel) {
       dataQuery = dataQuery.eq('risk_level', riskLevel)
     }
 
-    if (date) {
-      const targetDate = new Date(date)
-      const nextDate = new Date(targetDate)
-      nextDate.setDate(nextDate.getDate() + 1)
-
-      dataQuery = dataQuery
-        .gte('calculated_at', targetDate.toISOString())
-        .lt('calculated_at', nextDate.toISOString())
-    }
-
-    // 정렬
-    const validSortColumns = ['calculated_at', 'score']
-    const sortColumn = validSortColumns.includes(sortBy)
-      ? sortBy
-      : 'calculated_at'
     dataQuery = dataQuery.order(sortColumn, { ascending: sortOrder === 'asc' })
 
     // count/data 쿼리는 서로 무관하므로 병렬로 실행
