@@ -74,7 +74,7 @@ export default function HeroSection() {
             transition={{ delay: 0.3 }}
             className="text-xl sm:text-2xl text-gray-600 max-w-2xl mx-auto mb-10"
           >
-            랜딩페이지 제작부터 DB 관리, 트래픽 분석까지
+            랜딩페이지 제작부터 DB 관리, 트래픽 분석까지{' '}
             <br className="hidden sm:block" />
             올인원 마케팅 플랫폼으로 편리하게 관리하세요!
           </motion.p>

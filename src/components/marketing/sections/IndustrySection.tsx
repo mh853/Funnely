@@ -202,7 +202,8 @@ export default function IndustrySection() {
               교육, 보험, 병원, 대출, 박람회 등 업종별로 쉽게 활용하실 수 있습니다.
             </p>
             <p className="mt-3 text-sm text-gray-500">
-              타이머, 실시간 DB 수집현황, DB 수집 폼, 상담신청 버튼, 전화연결 버튼, 신청완료 페이지 등<br className="hidden sm:block" />
+              타이머, 실시간 DB 수집현황, DB 수집 폼, 상담신청 버튼, 전화연결 버튼, 신청완료 페이지 등{' '}
+              <br className="hidden sm:block" />
               원하는 옵션을 선택하여 나만의 랜딩페이지 혹은 홈페이지 제작이 가능합니다.
             </p>
           </motion.div>

@@ -188,11 +188,13 @@ export async function POST(request: NextRequest) {
             .single()
         : Promise.resolve({ data: null, error: null }),
 
-      // 2. 중복 체크 (같은 회사 내에서만)
+      // 2. 중복 체크 (같은 회사 내에서만 — company_id 필터가 없으면 다른 회사의
+      // 최근 리드가 .limit(1)에 먼저 걸려 정작 같은 회사의 중복을 놓칠 수 있었다)
       supabase
         .from('leads')
         .select('id, company_id')
         .eq('phone_hash', phoneHash)
+        .eq('company_id', landingPage.company_id)
         .gte('created_at', threeHoursAgo)
         .limit(1)
         .maybeSingle(),
@@ -232,8 +234,8 @@ export async function POST(request: NextRequest) {
     // Referrer company ID 설정
     const actualReferrerCompanyId = referrerCompany?.id
 
-    // 중복 체크 (같은 회사 내에서만)
-    if (existingLead && existingLead.company_id === landingPage.company_id) {
+    // 중복 체크 (위 쿼리가 이미 company_id로 필터링했으므로 존재 여부만 확인)
+    if (existingLead) {
       return NextResponse.json(
         { error: { message: '이미 신청완료 되었습니다.' } },
         { status: 409 }
