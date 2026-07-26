@@ -58,13 +58,13 @@ export default function UsersTab({ companyId }: UsersTabProps) {
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-500">활성 사용자</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {data.users.filter((u) => u.is_active).length}
+              {data.stats.activeCount}
             </p>
           </div>
           <div className="bg-white rounded-lg border border-gray-200 p-4">
             <p className="text-sm text-gray-500">관리자</p>
             <p className="text-2xl font-bold text-gray-900 mt-1">
-              {data.users.filter((u) => u.role === 'admin').length}
+              {data.stats.adminCount}
             </p>
           </div>
         </div>

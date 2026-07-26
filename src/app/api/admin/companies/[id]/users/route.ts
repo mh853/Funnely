@@ -71,6 +71,22 @@ export async function GET(
     const to = from + limit - 1
     query = query.range(from, to)
 
+    // "활성 사용자"/"관리자" 통계 카드는 현재 페이지(최대 limit건)가 아니라
+    // 회사 전체 사용자 수를 반영해야 한다. users 배열로 client-side filter하면
+    // 회사 사용자가 limit(기본 20)을 넘는 경우 2페이지 이후 사용자는 통계에서 누락된다.
+    const [{ count: activeCount }, { count: adminCount }] = await Promise.all([
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('is_active', true),
+      supabase
+        .from('users')
+        .select('*', { count: 'exact', head: true })
+        .eq('company_id', companyId)
+        .eq('simple_role', 'admin'),
+    ])
+
     const { data: users, error, count } = await query
 
     if (error) {
@@ -98,6 +114,10 @@ export async function GET(
         totalPages,
         hasNext: page < totalPages,
         hasPrev: page > 1,
+      },
+      stats: {
+        activeCount: activeCount || 0,
+        adminCount: adminCount || 0,
       },
     }
 

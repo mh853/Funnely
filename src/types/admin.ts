@@ -121,6 +121,10 @@ export interface CompanyDetailResponse {
 export interface CompanyUsersResponse {
   users: CompanyUser[]
   pagination: PaginationInfo
+  stats: {
+    activeCount: number
+    adminCount: number
+  }
 }
 
 export interface CompanyActivitiesResponse {
