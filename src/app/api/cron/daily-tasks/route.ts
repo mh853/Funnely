@@ -12,6 +12,7 @@ import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
 import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
+import { escapeHtml } from '@/lib/email/template-renderer'
 
 /**
  * Unified daily tasks cron job
@@ -1110,13 +1111,13 @@ function generateDigestEmailHTML(
     <tr style="border-bottom: 1px solid #e5e7eb;">
       <td style="padding: 16px; text-align: center; font-weight: 600; color: #6366f1;">${lead.number}</td>
       <td style="padding: 16px;">
-        <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${lead.name}</div>
-        <div style="color: #6b7280; font-size: 14px;">${lead.phone}</div>
+        <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${escapeHtml(lead.name)}</div>
+        <div style="color: #6b7280; font-size: 14px;">${escapeHtml(lead.phone)}</div>
       </td>
-      <td style="padding: 16px; color: #374151;">${lead.email}</td>
-      <td style="padding: 16px; color: #374151;">${lead.landingPageTitle}</td>
+      <td style="padding: 16px; color: #374151;">${escapeHtml(lead.email)}</td>
+      <td style="padding: 16px; color: #374151;">${escapeHtml(lead.landingPageTitle)}</td>
       <td style="padding: 16px; text-align: center;">${deviceIcons[lead.deviceType as keyof typeof deviceIcons] || deviceIcons.pc}</td>
-      <td style="padding: 16px; color: #6b7280; font-size: 14px;">${lead.createdAt}</td>
+      <td style="padding: 16px; color: #6b7280; font-size: 14px;">${escapeHtml(lead.createdAt)}</td>
     </tr>
   `
     )
@@ -1139,7 +1140,7 @@ function generateDigestEmailHTML(
           <tr>
             <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">📊 상담 신청 알림</h1>
-              <p style="margin: 8px 0 0 0; color: #e0e7ff; font-size: 16px;">${companyName}</p>
+              <p style="margin: 8px 0 0 0; color: #e0e7ff; font-size: 16px;">${escapeHtml(companyName)}</p>
             </td>
           </tr>
 
@@ -1185,7 +1186,7 @@ function generateDigestEmailHTML(
           <tr>
             <td style="padding: 24px 32px; background-color: #f9fafb; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
               <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                이 이메일은 <strong>${companyName}</strong>의 리드 알림 시스템에서 자동 발송되었습니다.<br>
+                이 이메일은 <strong>${escapeHtml(companyName)}</strong>의 리드 알림 시스템에서 자동 발송되었습니다.<br>
                 매일 오전 8시에 새로운 상담 신청을 정리하여 보내드립니다.
               </p>
               <p style="margin: 16px 0 0 0; color: #9ca3af; font-size: 12px;">
