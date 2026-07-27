@@ -133,6 +133,16 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // 회사가 설정한 기본 리드 상태 조회 — status:'new' 하드코딩 시 "DB 상태 관리"의
+    // "기본값으로 설정" 기능이 실제로는 아무 효과가 없었다.
+    const { data: defaultStatus } = await supabaseAdmin
+      .from('lead_statuses')
+      .select('code')
+      .eq('company_id', companyId)
+      .eq('is_default', true)
+      .limit(1)
+      .maybeSingle()
+
     // 리드 삽입
     const leadsToInsert = newLeads.map((lead) => ({
       company_id: companyId,
@@ -146,7 +156,7 @@ export async function POST(request: NextRequest) {
         .digest('hex'),
       source: lead.source || 'google_sheets',
       custom_fields: lead.customFields || [],
-      status: 'new',
+      status: defaultStatus?.code || 'new',
       created_at: lead.createdAt
         ? new Date(lead.createdAt).toISOString()
         : new Date().toISOString(),

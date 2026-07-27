@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
     const [
       { data: referrerCompany },
       { data: existingLead },
-      { data: blacklistedPhone }
+      { data: blacklistedPhone },
+      { data: defaultStatus }
     ] = await Promise.all([
       // 1. Referrer company 조회
       referrer_user_id
@@ -205,6 +206,17 @@ export async function POST(request: NextRequest) {
         .select('id')
         .eq('phone_number', phone.replace(/\D/g, ''))
         .eq('company_id', landingPage.company_id)
+        .maybeSingle(),
+
+      // 4. 회사가 설정한 기본 리드 상태 조회 — 이전에는 status:'new'를 무조건
+      // 하드코딩해서 "DB 상태 관리"의 "기본값으로 설정" 기능이 실제로는 아무
+      // 효과가 없었다.
+      supabase
+        .from('lead_statuses')
+        .select('code')
+        .eq('company_id', landingPage.company_id)
+        .eq('is_default', true)
+        .limit(1)
         .maybeSingle()
     ])
 
@@ -306,7 +318,7 @@ export async function POST(request: NextRequest) {
         consultation_items: form_data.consultation_items || undefined,
         preferred_date: form_data.preferred_date || undefined,
         preferred_time: form_data.preferred_time || undefined,
-        status: 'new',
+        status: defaultStatus?.code || 'new',
         priority: 'medium',
         tags: [],
         utm_source: utm_params?.utm_source,

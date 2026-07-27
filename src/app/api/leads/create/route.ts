@@ -67,6 +67,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 회사가 설정한 기본 리드 상태 조회 — status:'new' 하드코딩 시 "DB 상태 관리"의
+    // "기본값으로 설정" 기능이 실제로는 아무 효과가 없었다.
+    const { data: defaultStatus } = await supabase
+      .from('lead_statuses')
+      .select('code')
+      .eq('company_id', userProfile.company_id)
+      .eq('is_default', true)
+      .limit(1)
+      .maybeSingle()
+
     // 리드 생성
     const { data: newLead, error: createError } = await supabase
       .from('leads')
@@ -75,7 +85,7 @@ export async function POST(request: NextRequest) {
         name: name.trim(),
         phone: encryptedPhone,
         phone_hash: phoneHash,
-        status: 'new',
+        status: defaultStatus?.code || 'new',
         source: 'manual',
         device_type: 'manual',
       })
