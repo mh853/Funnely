@@ -25,14 +25,20 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'all' // upsell | downsell_risk | all
     const status = searchParams.get('status') || 'active'
     const minConfidence = parseInt(searchParams.get('min_confidence') || '50')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
+    const offset = (page - 1) * limit
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Build query
-    let query = supabase
+    // 목록 조회(페이지네이션 적용)와 요약 통계 조회(전체 필터 결과 기준, 페이지와 무관)는
+    // 서로 다른 범위의 데이터가 필요하므로 별도 쿼리로 분리한다. summary를 목록과 같은
+    // 배열에서 계산하면 페이지네이션 도입 시 현재 페이지 20건만으로 집계돼 total_opportunities
+    // 등 통계가 실제 값보다 훨씬 작게 표시되는 문제가 생긴다.
+    let listQuery = supabase
       .from('growth_opportunities')
       .select(
         `
@@ -41,25 +47,43 @@ export async function GET(request: NextRequest) {
           id,
           name
         )
-      `
+      `,
+        { count: 'exact' }
       )
       .gte('confidence_score', minConfidence)
       .order('detected_at', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    let summaryQuery = supabase
+      .from('growth_opportunities')
+      .select('opportunity_type, estimated_additional_mrr, potential_lost_mrr, confidence_score')
+      .gte('confidence_score', minConfidence)
 
     if (type !== 'all') {
-      query = query.eq('opportunity_type', type)
+      listQuery = listQuery.eq('opportunity_type', type)
+      summaryQuery = summaryQuery.eq('opportunity_type', type)
     }
 
     if (status !== 'all') {
-      query = query.eq('status', status)
+      listQuery = listQuery.eq('status', status)
+      summaryQuery = summaryQuery.eq('status', status)
     }
 
-    const { data: opportunities, error } = await query
+    const [{ data: opportunities, error, count }, { data: summaryRows, error: summaryError }] =
+      await Promise.all([listQuery, summaryQuery])
 
     if (error) {
       console.error('Error fetching growth opportunities:', error)
       return NextResponse.json(
         { error: 'Failed to fetch opportunities' },
+        { status: 500 }
+      )
+    }
+
+    if (summaryError) {
+      console.error('Error fetching growth opportunities summary:', summaryError)
+      return NextResponse.json(
+        { error: 'Failed to fetch opportunities summary' },
         { status: 500 }
       )
     }
@@ -76,40 +100,48 @@ export async function GET(request: NextRequest) {
         },
       })) || []
 
-    // Calculate summary
+    // Calculate summary (전체 필터 결과 기준)
+    const summaryData = summaryRows || []
     const summary = {
-      total_opportunities: opportunitiesWithCompany.length,
-      upsell_count: opportunitiesWithCompany.filter(
+      total_opportunities: summaryData.length,
+      upsell_count: summaryData.filter(
         (o) => o.opportunity_type === 'upsell'
       ).length,
-      downsell_risk_count: opportunitiesWithCompany.filter(
+      downsell_risk_count: summaryData.filter(
         (o) => o.opportunity_type === 'downsell_risk'
       ).length,
-      expansion_count: opportunitiesWithCompany.filter(
+      expansion_count: summaryData.filter(
         (o) => o.opportunity_type === 'expansion'
       ).length,
-      total_potential_mrr: opportunitiesWithCompany.reduce(
+      total_potential_mrr: summaryData.reduce(
         (sum, o) => sum + (o.estimated_additional_mrr || 0),
         0
       ),
-      total_at_risk_mrr: opportunitiesWithCompany.reduce(
+      total_at_risk_mrr: summaryData.reduce(
         (sum, o) => sum + (o.potential_lost_mrr || 0),
         0
       ),
       avg_confidence_score:
-        opportunitiesWithCompany.length > 0
+        summaryData.length > 0
           ? Math.round(
-              opportunitiesWithCompany.reduce(
-                (sum, o) => sum + o.confidence_score,
-                0
-              ) / opportunitiesWithCompany.length
+              summaryData.reduce((sum, o) => sum + o.confidence_score, 0) /
+                summaryData.length
             )
           : 0,
     }
 
+    const total = count || 0
     const response: GrowthOpportunitiesResponse = {
       opportunities: opportunitiesWithCompany,
       summary,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNext: offset + limit < total,
+        hasPrev: page > 1,
+      },
     }
 
     return NextResponse.json(response)

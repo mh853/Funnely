@@ -134,9 +134,19 @@ export interface OpportunitiesSummary {
   avg_confidence_score: number
 }
 
+export interface OpportunitiesPagination {
+  total: number
+  page: number
+  limit: number
+  totalPages: number
+  hasNext: boolean
+  hasPrev: boolean
+}
+
 export interface GrowthOpportunitiesResponse {
   opportunities: OpportunityWithCompany[]
   summary: OpportunitiesSummary
+  pagination: OpportunitiesPagination
 }
 
 // API Request Types

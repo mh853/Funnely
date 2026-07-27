@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react'
 import type { GrowthOpportunitiesResponse } from '@/types/growth'
+import { Pagination } from '@/components/ui/pagination'
 
 export default function GrowthOpportunitiesPage() {
   const [data, setData] = useState<GrowthOpportunitiesResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [detecting, setDetecting] = useState(false)
+  const [page, setPage] = useState(1)
   const [filter, setFilter] = useState({
     type: 'all',
     status: 'active',
@@ -16,7 +18,15 @@ export default function GrowthOpportunitiesPage() {
 
   useEffect(() => {
     fetchOpportunities()
-  }, [filter])
+  }, [filter, page])
+
+  // 필터가 바뀌면 페이지를 1로 리셋한다(필터 변경과 페이지 리셋을 한 핸들러에서
+  // 같이 처리해야 함 - 별도 useEffect로 분리하면 필터 변경 시 이전 페이지 번호로
+  // 먼저 fetch가 한 번 나갔다가 리셋된 페이지로 다시 fetch되는 경합이 생긴다).
+  function updateFilter(next: Partial<typeof filter>) {
+    setFilter((prev) => ({ ...prev, ...next }))
+    setPage(1)
+  }
 
   async function fetchOpportunities() {
     try {
@@ -27,6 +37,8 @@ export default function GrowthOpportunitiesPage() {
         type: filter.type,
         status: filter.status,
         min_confidence: filter.minConfidence,
+        page: String(page),
+        limit: '20',
       })
 
       const response = await fetch(
@@ -215,7 +227,7 @@ export default function GrowthOpportunitiesPage() {
             </label>
             <select
               value={filter.type}
-              onChange={(e) => setFilter({ ...filter, type: e.target.value })}
+              onChange={(e) => updateFilter({ type: e.target.value })}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="all">전체</option>
@@ -230,7 +242,7 @@ export default function GrowthOpportunitiesPage() {
             <select
               value={filter.status}
               onChange={(e) =>
-                setFilter({ ...filter, status: e.target.value })
+                updateFilter({ status: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -248,7 +260,7 @@ export default function GrowthOpportunitiesPage() {
             <select
               value={filter.minConfidence}
               onChange={(e) =>
-                setFilter({ ...filter, minConfidence: e.target.value })
+                updateFilter({ minConfidence: e.target.value })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -384,6 +396,15 @@ export default function GrowthOpportunitiesPage() {
             </tbody>
           </table>
           </div>
+          {data.pagination.totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200">
+              <Pagination
+                currentPage={data.pagination.page}
+                totalPages={data.pagination.totalPages}
+                onPageChange={setPage}
+              />
+            </div>
+          )}
         </div>
       )}
     </div>
