@@ -137,6 +137,13 @@ export default function AuditLogsPage() {
     return labels[action] || action
   }
 
+  // 값에 큰따옴표가 포함되면 CSV 구조가 깨지므로 ""로 이스케이프한다(RFC 4180).
+  // 사용자명/회사명은 자유 입력값이라 따옴표가 들어올 수 있다.
+  const escapeCSV = (value: unknown): string => {
+    const str = String(value ?? '')
+    return `"${str.replace(/"/g, '""')}"`
+  }
+
   // CSV 내보내기
   const exportToCSV = () => {
     const csvHeaders = [
@@ -161,7 +168,7 @@ export default function AuditLogsPage() {
     ])
 
     const csvContent = [csvHeaders, ...csvRows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
+      .map((row) => row.map(escapeCSV).join(','))
       .join('\n')
 
     const blob = new Blob(['\uFEFF' + csvContent], {

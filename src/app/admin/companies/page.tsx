@@ -374,6 +374,13 @@ export default function CompaniesPage() {
     if (DB_SORT_COLS.includes(col)) setPage(1)
   }
 
+  // 값에 큰따옴표가 포함되면 CSV 구조가 깨지므로 ""로 이스케이프한다(RFC 4180).
+  // 회사명/담당자명은 자유 입력값이라 쉼표·따옴표가 들어올 수 있다.
+  function escapeCSV(value: unknown): string {
+    const str = String(value ?? '')
+    return `"${str.replace(/"/g, '""')}"`
+  }
+
   function handleExportCSV() {
     const headers = ['회사명','담당자','이메일','사용자수','구독플랜','구독상태','월결제금액','결제회차','누적결제금액','최초결제일','마지막결제일','상태','가입일','탈퇴일']
     const rows = companies.map((c) => [
@@ -383,7 +390,7 @@ export default function CompaniesPage() {
       c.payment_stats.first_payment_date||'', c.payment_stats.last_payment_date||'',
       c.is_active?'활성':'비활성', c.created_at.split('T')[0], c.withdrawn_at?c.withdrawn_at.split('T')[0]:'',
     ])
-    const csv = [headers, ...rows].map((r) => r.join(',')).join('\n')
+    const csv = [headers, ...rows].map((r) => r.map(escapeCSV).join(',')).join('\n')
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
