@@ -452,7 +452,9 @@ async function syncGoogleSheets(supabase: any) {
       }
 
       // Fetch sheet data
-      const range = `${config.sheet_name || 'Sheet1'}!A:Z`
+      // A:Z(26개 컬럼)로 하드코딩되어 있으면 컬럼 매핑이 AA 이후(커스텀 필드가 많은
+      // 회사)를 가리킬 때 그 컬럼이 항상 빈 값으로 처리되며 에러도 안 남았다.
+      const range = `${config.sheet_name || 'Sheet1'}!A:ZZ`
       const rows = await fetchSheetData(config.spreadsheet_id, range)
 
       if (rows.length < 2) {
