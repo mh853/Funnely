@@ -1,25 +1,35 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
+import { toKSTDateStr, getKSTDayRange } from '@/lib/utils/date'
 
 export async function GET(request: Request) {
   try {
     await requireSuperAdmin()
 
     const { searchParams } = new URL(request.url)
-    const startDate = searchParams.get('start_date') || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const endDate = searchParams.get('end_date') || new Date().toISOString().split('T')[0]
+    // start_date/end_date는 KST 캘린더 날짜 문자열로 다룬다 — 응답의 period에도
+    // 그대로 노출되므로 "YYYY-MM-DD" 형태를 유지하되, 실제 쿼리 경계는
+    // getKSTDayRange()로 KST 하루 단위 UTC 인스턴트로 변환해서 써야 한다.
+    const startDate = searchParams.get('start_date') || toKSTDateStr(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
+    const endDate = searchParams.get('end_date') || toKSTDateStr(new Date())
     const companyId = searchParams.get('company_id')
     const granularity = searchParams.get('granularity') || 'day' // day, week, month
 
     const supabase = await createClient()
 
+    // 서버(Vercel)는 UTC라서 "YYYY-MM-DD" 문자열을 그대로 TIMESTAMPTZ 컬럼과
+    // 비교하면 Postgres가 UTC 자정으로 캐스팅해 KST 기준 하루와 최대 9시간
+    // 어긋난다(하한 쪽은 그날 이른 새벽 리드 누락, 상한 쪽은 그날 밤 리드 누락).
+    const queryStart = getKSTDayRange(startDate).start
+    const queryEnd = getKSTDayRange(endDate).end // 배타적 상한(다음날 KST 시작)
+
     // 시계열 데이터 조회
     let query = supabase
       .from('leads')
       .select('created_at, status, company_id')
-      .gte('created_at', startDate)
-      .lte('created_at', endDate)
+      .gte('created_at', queryStart.toISOString())
+      .lt('created_at', queryEnd.toISOString())
       .order('created_at', { ascending: true })
 
     if (companyId) {
@@ -33,18 +43,23 @@ export async function GET(request: Request) {
     }
 
     // 날짜별 집계 함수
+    // new Date(date).getDate()/.getDay()/.getMonth()는 서버(UTC) 로컬 게터라서
+    // KST 기준 날짜/요일/월과 최대 9시간 어긋난다 — KST 캘린더 날짜 문자열을 먼저
+    // 구하고 그 y/m/d로 순수 달력 계산만 해야 한다.
     const getDateKey = (date: string) => {
-      const d = new Date(date)
+      const kstStr = toKSTDateStr(new Date(date)) // "YYYY-MM-DD" (KST)
       if (granularity === 'day') {
-        return d.toISOString().split('T')[0]
-      } else if (granularity === 'week') {
-        const weekStart = new Date(d)
-        weekStart.setDate(d.getDate() - d.getDay())
+        return kstStr
+      }
+      const [y, m, day] = kstStr.split('-').map(Number)
+      if (granularity === 'week') {
+        const asUTC = new Date(Date.UTC(y, m - 1, day))
+        const weekStart = new Date(Date.UTC(y, m - 1, day - asUTC.getUTCDay()))
         return weekStart.toISOString().split('T')[0]
       } else if (granularity === 'month') {
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+        return `${y}-${String(m).padStart(2, '0')}`
       }
-      return d.toISOString().split('T')[0]
+      return kstStr
     }
 
     // 시계열 데이터 집계
