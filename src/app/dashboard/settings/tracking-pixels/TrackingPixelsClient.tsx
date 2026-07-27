@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { TrackingPixels } from '@/types/landing-page.types'
 import { useToast } from '@/components/shared/Toast'
 import { CheckCircleIcon } from '@heroicons/react/24/solid'
+import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 
 interface TrackingPixelsClientProps {
   companyId: string
@@ -31,6 +32,25 @@ export default function TrackingPixelsClient({
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
 
   const handleSave = async () => {
+    // 픽셀 ID는 랜딩페이지에서 <script> 안에 그대로 문자열 보간되므로, 저장 시점에
+    // 형식을 검증해 따옴표/꺾쇠괄호 등 안전하지 않은 문자가 섞이지 않도록 막는다
+    // (렌더링 쪽에도 동일한 화이트리스트 검증이 있지만, 잘못된 값을 애초에 저장하지
+    // 않도록 여기서도 막아 사용자에게 즉시 피드백을 준다).
+    const fieldsToCheck: [string, string][] = [
+      ['페이스북 픽셀 ID', facebookPixelId],
+      ['Google Analytics ID', googleAnalyticsId],
+      ['Google Ads ID', googleAdsId],
+      ['카카오 픽셀 ID', kakaoPixelId],
+      ['네이버 픽셀 ID', naverPixelId],
+      ['틱톡 픽셀 ID', tiktokPixelId],
+      ['당근마켓 픽셀 ID', karrotPixelId],
+    ]
+    const invalidField = fieldsToCheck.find(([, value]) => value && !isValidPixelId(value))
+    if (invalidField) {
+      toast.error(`${invalidField[0]}에 영문자, 숫자, 하이픈(-), 언더스코어(_)만 입력할 수 있습니다.`)
+      return
+    }
+
     setSaving(true)
 
     try {

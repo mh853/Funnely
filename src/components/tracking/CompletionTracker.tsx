@@ -1,6 +1,7 @@
 'use client'
 
 import Script from 'next/script'
+import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 
 interface CompletionTrackerProps {
   trackingPixels?: {
@@ -16,10 +17,21 @@ interface CompletionTrackerProps {
 }
 
 export default function CompletionTracker({ trackingPixels }: CompletionTrackerProps) {
+  // 회사 소유자가 설정 화면에서 자유 입력한 픽셀 ID를 아래에서 <script> 안에
+  // 그대로 문자열 보간하므로, 검증되지 않은 값은 여기서 전부 걸러낸다
+  // (저장형 XSS 방지 - DB에는 형식 제약이 없어 여기가 사실상 유일한 방어선이다).
+  const facebookPixelId = isValidPixelId(trackingPixels?.facebook_pixel_id) ? trackingPixels.facebook_pixel_id : null
+  const googleAnalyticsId = isValidPixelId(trackingPixels?.google_analytics_id) ? trackingPixels.google_analytics_id : null
+  const googleAdsId = isValidPixelId(trackingPixels?.google_ads_id) ? trackingPixels.google_ads_id : null
+  const naverPixelId = isValidPixelId(trackingPixels?.naver_pixel_id) ? trackingPixels.naver_pixel_id : null
+  const kakaoPixelId = isValidPixelId(trackingPixels?.kakao_pixel_id) ? trackingPixels.kakao_pixel_id : null
+  const tiktokPixelId = isValidPixelId(trackingPixels?.tiktok_pixel_id) ? trackingPixels.tiktok_pixel_id : null
+  const karrotPixelId = isValidPixelId(trackingPixels?.karrot_pixel_id) ? trackingPixels.karrot_pixel_id : null
+
   return (
     <>
       {/* Facebook Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.facebook_pixel_id && (
+      {trackingPixels?.is_active && facebookPixelId && (
         <>
           <Script
             id="facebook-pixel-completion"
@@ -34,7 +46,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${trackingPixels.facebook_pixel_id}');
+                fbq('init', '${facebookPixelId}');
                 fbq('track', 'PageView');
                 fbq('track', 'CompleteRegistration');
               `,
@@ -45,7 +57,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
               height="1"
               width="1"
               style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${trackingPixels.facebook_pixel_id}&ev=PageView&noscript=1`}
+              src={`https://www.facebook.com/tr?id=${facebookPixelId}&ev=PageView&noscript=1`}
               alt=""
             />
           </noscript>
@@ -53,10 +65,10 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* Google Analytics 4 */}
-      {trackingPixels?.is_active && trackingPixels?.google_analytics_id && (
+      {trackingPixels?.is_active && googleAnalyticsId && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_analytics_id}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
             strategy="afterInteractive"
           />
           <Script
@@ -67,9 +79,9 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${trackingPixels.google_analytics_id}');
+                gtag('config', '${googleAnalyticsId}');
                 gtag('event', 'conversion', {
-                  'send_to': '${trackingPixels.google_analytics_id}',
+                  'send_to': '${googleAnalyticsId}',
                   'event_category': 'registration',
                   'event_label': 'complete'
                 });
@@ -80,10 +92,10 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* Google Ads Conversion */}
-      {trackingPixels?.is_active && trackingPixels?.google_ads_id && (
+      {trackingPixels?.is_active && googleAdsId && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleAdsId}`}
             strategy="afterInteractive"
           />
           <Script
@@ -94,8 +106,8 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${trackingPixels.google_ads_id}');
-                gtag('event', 'conversion', { 'send_to': '${trackingPixels.google_ads_id}' });
+                gtag('config', '${googleAdsId}');
+                gtag('event', 'conversion', { 'send_to': '${googleAdsId}' });
               `,
             }}
           />
@@ -103,7 +115,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* Naver Pixel Conversion */}
-      {trackingPixels?.is_active && trackingPixels?.naver_pixel_id && (
+      {trackingPixels?.is_active && naverPixelId && (
         <Script
           id="naver-pixel-completion"
           strategy="afterInteractive"
@@ -113,7 +125,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
               a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
               f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
               "https://wcs.naver.net/wcslog.js","naver_pixel");
-              naver_pixel('init', '${trackingPixels.naver_pixel_id}');
+              naver_pixel('init', '${naverPixelId}');
               naver_pixel('track', 'PageView');
               naver_pixel('track', 'CompleteRegistration');
             `,
@@ -122,7 +134,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* Kakao Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
+      {trackingPixels?.is_active && kakaoPixelId && (
         <Script
           id="kakao-pixel-completion"
           strategy="afterInteractive"
@@ -134,8 +146,8 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 script.src = '//t1.daumcdn.net/kas/static/kp.js';
                 script.onload = function() {
                   if (typeof kakaoPixel !== 'undefined') {
-                    kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
-                    kakaoPixel('${trackingPixels.kakao_pixel_id}').completeRegistration();
+                    kakaoPixel('${kakaoPixelId}').pageView();
+                    kakaoPixel('${kakaoPixelId}').completeRegistration();
                   }
                 };
                 document.head.appendChild(script);
@@ -146,7 +158,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* TikTok Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.tiktok_pixel_id && (
+      {trackingPixels?.is_active && tiktokPixelId && (
         <Script
           id="tiktok-pixel-completion"
           strategy="afterInteractive"
@@ -154,7 +166,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
             __html: `
               !function (w, d, t) {
                 w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie","holdConsent","revokeConsent","grantConsent"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var r="https://analytics.tiktok.com/i18n/pixel/events.js",o=n&&n.partner;ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=r,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=r+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-                ttq.load('${trackingPixels.tiktok_pixel_id}');
+                ttq.load('${tiktokPixelId}');
                 ttq.page();
                 ttq.track('CompleteRegistration');
               }(window, document, 'ttq');
@@ -164,7 +176,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
       )}
 
       {/* Karrot Market Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.karrot_pixel_id && (
+      {trackingPixels?.is_active && karrotPixelId && (
         <Script
           id="karrot-pixel-completion"
           strategy="afterInteractive"
@@ -175,7 +187,7 @@ export default function CompletionTracker({ trackingPixels }: CompletionTrackerP
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
                   if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
-                    window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                    window.karrotPixel.init('${karrotPixelId}');
                     window.karrotPixel.track('ViewPage');
                     window.karrotPixel.track('CompleteRegistration');
                   }

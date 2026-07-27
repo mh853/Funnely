@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
 import { createClient } from '@/lib/supabase/client'
 import { getContrastTextColor } from '@/lib/utils/color'
+import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 
 // 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
 const formatPhoneNumber = (value: string): string => {
@@ -770,10 +771,21 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     ? trackingPixelsRaw[0]
     : trackingPixelsRaw
 
+  // 회사 소유자가 설정 화면에서 자유 입력한 픽셀 ID를 아래에서 <script> 안에
+  // 그대로 문자열 보간하므로, 검증되지 않은 값은 여기서 전부 걸러낸다
+  // (저장형 XSS 방지 - DB에는 형식 제약이 없어 여기가 사실상 유일한 방어선이다).
+  const facebookPixelId = isValidPixelId(trackingPixels?.facebook_pixel_id) ? trackingPixels.facebook_pixel_id : null
+  const googleAnalyticsId = isValidPixelId(trackingPixels?.google_analytics_id) ? trackingPixels.google_analytics_id : null
+  const googleAdsId = isValidPixelId(trackingPixels?.google_ads_id) ? trackingPixels.google_ads_id : null
+  const naverPixelId = isValidPixelId(trackingPixels?.naver_pixel_id) ? trackingPixels.naver_pixel_id : null
+  const kakaoPixelId = isValidPixelId(trackingPixels?.kakao_pixel_id) ? trackingPixels.kakao_pixel_id : null
+  const tiktokPixelId = isValidPixelId(trackingPixels?.tiktok_pixel_id) ? trackingPixels.tiktok_pixel_id : null
+  const karrotPixelId = isValidPixelId(trackingPixels?.karrot_pixel_id) ? trackingPixels.karrot_pixel_id : null
+
   return (
     <>
       {/* Facebook Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.facebook_pixel_id && (
+      {trackingPixels?.is_active && facebookPixelId && (
         <>
           <Script
             id="facebook-pixel"
@@ -788,7 +800,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 t.src=v;s=b.getElementsByTagName(e)[0];
                 s.parentNode.insertBefore(t,s)}(window, document,'script',
                 'https://connect.facebook.net/en_US/fbevents.js');
-                fbq('init', '${trackingPixels.facebook_pixel_id}');
+                fbq('init', '${facebookPixelId}');
                 fbq('track', 'PageView');
               `,
             }}
@@ -798,7 +810,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               height="1"
               width="1"
               style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${trackingPixels.facebook_pixel_id}&ev=PageView&noscript=1`}
+              src={`https://www.facebook.com/tr?id=${facebookPixelId}&ev=PageView&noscript=1`}
               alt=""
             />
           </noscript>
@@ -806,10 +818,10 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* Google Analytics 4 */}
-      {trackingPixels?.is_active && trackingPixels?.google_analytics_id && (
+      {trackingPixels?.is_active && googleAnalyticsId && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_analytics_id}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}`}
             strategy="afterInteractive"
           />
           <Script
@@ -820,7 +832,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${trackingPixels.google_analytics_id}');
+                gtag('config', '${googleAnalyticsId}');
               `,
             }}
           />
@@ -828,10 +840,10 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* Google Ads */}
-      {trackingPixels?.is_active && trackingPixels?.google_ads_id && (
+      {trackingPixels?.is_active && googleAdsId && (
         <>
           <Script
-            src={`https://www.googletagmanager.com/gtag/js?id=${trackingPixels.google_ads_id}`}
+            src={`https://www.googletagmanager.com/gtag/js?id=${googleAdsId}`}
             strategy="afterInteractive"
           />
           <Script
@@ -842,7 +854,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 window.dataLayer = window.dataLayer || [];
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
-                gtag('config', '${trackingPixels.google_ads_id}');
+                gtag('config', '${googleAdsId}');
               `,
             }}
           />
@@ -850,7 +862,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* Kakao Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.kakao_pixel_id && (
+      {trackingPixels?.is_active && kakaoPixelId && (
         <Script
           id="kakao-pixel"
           strategy="afterInteractive"
@@ -862,7 +874,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 script.src = '//t1.daumcdn.net/kas/static/kp.js';
                 script.onload = function() {
                   if (typeof kakaoPixel !== 'undefined') {
-                    kakaoPixel('${trackingPixels.kakao_pixel_id}').pageView();
+                    kakaoPixel('${kakaoPixelId}').pageView();
                   }
                 };
                 document.head.appendChild(script);
@@ -873,7 +885,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* Naver Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.naver_pixel_id && (
+      {trackingPixels?.is_active && naverPixelId && (
         <Script
           id="naver-pixel"
           strategy="afterInteractive"
@@ -883,7 +895,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
               f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
               "https://wcs.naver.net/wcslog.js","naver_pixel");
-              naver_pixel('init', '${trackingPixels.naver_pixel_id}');
+              naver_pixel('init', '${naverPixelId}');
               naver_pixel('track', 'PageView');
             `,
           }}
@@ -891,7 +903,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* TikTok Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.tiktok_pixel_id && (
+      {trackingPixels?.is_active && tiktokPixelId && (
         <>
           <Script
             id="tiktok-pixel"
@@ -900,7 +912,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               __html: `
                 !function (w, d, t) {
                   w.TiktokAnalyticsObject=t;var ttq=w[t]=w[t]||[];ttq.methods=["page","track","identify","instances","debug","on","off","once","ready","alias","group","enableCookie","disableCookie"],ttq.setAndDefer=function(t,e){t[e]=function(){t.push([e].concat(Array.prototype.slice.call(arguments,0)))}};for(var i=0;i<ttq.methods.length;i++)ttq.setAndDefer(ttq,ttq.methods[i]);ttq.instance=function(t){for(var e=ttq._i[t]||[],n=0;n<ttq.methods.length;n++)ttq.setAndDefer(e,ttq.methods[n]);return e},ttq.load=function(e,n){var i="https://analytics.tiktok.com/i18n/pixel/events.js";ttq._i=ttq._i||{},ttq._i[e]=[],ttq._i[e]._u=i,ttq._t=ttq._t||{},ttq._t[e]=+new Date,ttq._o=ttq._o||{},ttq._o[e]=n||{};n=document.createElement("script");n.type="text/javascript",n.async=!0,n.src=i+"?sdkid="+e+"&lib="+t;e=document.getElementsByTagName("script")[0];e.parentNode.insertBefore(n,e)};
-                  ttq.load('${trackingPixels.tiktok_pixel_id}');
+                  ttq.load('${tiktokPixelId}');
                   ttq.page();
                 }(window, document, 'ttq');
               `,
@@ -910,7 +922,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       )}
 
       {/* Karrot Market Pixel */}
-      {trackingPixels?.is_active && trackingPixels?.karrot_pixel_id && (
+      {trackingPixels?.is_active && karrotPixelId && (
         <Script
           id="karrot-pixel"
           strategy="afterInteractive"
@@ -921,7 +933,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 script.src = 'https://karrot-pixel.business.daangn.com/karrot-pixel.js';
                 script.onload = function() {
                   if (window.karrotPixel && typeof window.karrotPixel.init === 'function') {
-                    window.karrotPixel.init('${trackingPixels.karrot_pixel_id}');
+                    window.karrotPixel.init('${karrotPixelId}');
                     window.karrotPixel.track('ViewPage');
                   }
                 };
