@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
+import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
 import { decryptPhone } from '@/lib/encryption/phone'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
@@ -154,8 +154,13 @@ export default function CalendarView({
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
 
   // 주간 리스트 뷰용 상태 (월요일 시작)
+  // Next.js에서는 'use client' 컴포넌트도 최초 렌더가 서버(UTC)에서 한 번 실행되므로,
+  // new Date()의 로컬 게터를 바로 쓰면 자정 근처(00~09시 KST)에 서버가 하루 전 날짜로
+  // "오늘"을 계산해 시작 주가 하이드레이션 전후로 다르게 나올 수 있다. KST 캘린더
+  // 날짜를 먼저 구하고, 이후 계산은 로컬 생성자로 일관되게 한다.
   const [weekStartDate, setWeekStartDate] = useState(() => {
-    const today = new Date()
+    const [y, m, d] = toKSTDateStr(new Date()).split('-').map(Number)
+    const today = new Date(y, m - 1, d)
     const day = today.getDay()
     // 월요일을 시작으로 (일요일=0이면 -6, 그 외에는 1-day)
     const diff = today.getDate() - day + (day === 0 ? -6 : 1)
@@ -772,7 +777,7 @@ export default function CalendarView({
                     days.push(day)
                   }
                   return days.map((day, idx) => {
-                    const isToday = day.toDateString() === new Date().toDateString()
+                    const isToday = isTodayKST(day)
                     const dayOfWeek = day.getDay()
                     const dayLeads = localLeads.filter(lead => {
                       const leadDate = lead.preferred_date || lead.created_at
@@ -830,7 +835,7 @@ export default function CalendarView({
                         days.push(day)
                       }
                       return days.map((day, dayIdx) => {
-                        const isToday = day.toDateString() === new Date().toDateString()
+                        const isToday = isTodayKST(day)
                         const slotHour = parseInt(timeSlot.split(':')[0])
                         const slotId = `${getLocalDateString(day)}-${timeSlot}`
                         const isDropTarget = dragOverSlot === slotId

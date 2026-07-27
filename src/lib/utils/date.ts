@@ -43,6 +43,17 @@ export function getKSTMonthStart(year: number, month: number, dayOffset = 0): Da
 }
 
 /**
+ * 주어진 Date가 KST 기준 "오늘"과 같은 날인지 판정한다.
+ * 'use client' 컴포넌트도 Next.js에서는 최초 렌더가 서버(UTC)에서 한 번 실행되므로,
+ * date.toDateString() === new Date().toDateString()처럼 실행 환경의 로컬 타임존에
+ * 의존하는 비교를 쓰면 서버(UTC)와 클라이언트(브라우저=KST) 계산이 갈려, 자정 근처
+ * (00~09시 KST)에 "오늘" 하이라이트가 하이드레이션 중 깜빡이거나 틀리게 나온다.
+ */
+export function isTodayKST(date: Date): boolean {
+  return toKSTDateStr(date) === toKSTDateStr(new Date())
+}
+
+/**
  * "YYYY-MM-DD" 문자열이 나타내는 KST 캘린더 하루를 [시작, 다음날 시작) UTC 인스턴트
  * 범위로 변환한다. TIMESTAMPTZ 컬럼을 특정 KST 날짜로 필터링할 때 new Date(dateStr)를
  * 직접 쓰면 UTC 자정으로 해석되어 9시간 어긋나므로(day 필터가 KST 기준 하루가 아니라

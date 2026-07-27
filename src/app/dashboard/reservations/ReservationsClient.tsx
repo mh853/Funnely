@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
-import { formatDateTime, formatDate, formatTime } from '@/lib/utils/date'
+import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -171,8 +171,13 @@ export default function ReservationsClient({
   const [selectedCounselor, setSelectedCounselor] = useState<string>('all')
 
   // 주간 캘린더 뷰 상태 (월요일 시작)
+  // Next.js에서는 'use client' 컴포넌트도 최초 렌더가 서버(UTC)에서 한 번 실행되므로,
+  // new Date()의 로컬 게터를 바로 쓰면 자정 근처(00~09시 KST)에 서버가 하루 전 날짜로
+  // "오늘"을 계산해 시작 주가 하이드레이션 전후로 다르게 나올 수 있다. KST 캘린더
+  // 날짜를 먼저 구하고, 이후 계산은 로컬 생성자로 일관되게 한다.
   const [weekStartDate, setWeekStartDate] = useState(() => {
-    const today = new Date()
+    const [y, m, d] = toKSTDateStr(new Date()).split('-').map(Number)
+    const today = new Date(y, m - 1, d)
     const dayOfWeek = today.getDay() // 0 = Sunday
     // 월요일을 시작으로 (일요일=0이면 -6, 그 외에는 1-dayOfWeek)
     const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1)
@@ -1243,13 +1248,13 @@ export default function ReservationsClient({
                   calendarCurrentMonth.getMonth(),
                   day
                 )
-                const isToday =
-                  new Date().toDateString() ===
+                const isToday = isTodayKST(
                   new Date(
                     calendarCurrentMonth.getFullYear(),
                     calendarCurrentMonth.getMonth(),
                     day
-                  ).toDateString()
+                  )
+                )
                 const dayOfWeek = idx % 7
 
                 // 최대 3개 표시, 나머지는 "더보기"
@@ -1357,7 +1362,7 @@ export default function ReservationsClient({
                   시간
                 </div>
                 {getWeekDays().map((day, idx) => {
-                  const isToday = day.toDateString() === new Date().toDateString()
+                  const isToday = isTodayKST(day)
                   const dayOfWeek = day.getDay()
                   const leadCount = getLeadCountForDay(day)
                   return (
@@ -1402,7 +1407,7 @@ export default function ReservationsClient({
 
                     {/* Day Cells */}
                     {getWeekDays().map((day, dayIdx) => {
-                      const isToday = day.toDateString() === new Date().toDateString()
+                      const isToday = isTodayKST(day)
                       const leadsInSlot = getLeadsForTimeSlot(day, timeSlot)
                       const dateStr = getLocalDateString(day)
                       const slotId = `${dateStr}-${timeSlot}`
@@ -1872,12 +1877,13 @@ export default function ReservationsClient({
                       : 0
                     const isToday =
                       day &&
-                      new Date().toDateString() ===
+                      isTodayKST(
                         new Date(
                           calendarCurrentMonth.getFullYear(),
                           calendarCurrentMonth.getMonth(),
                           day
-                        ).toDateString()
+                        )
+                      )
                     const dayOfWeek = idx % 7
 
                     return (
