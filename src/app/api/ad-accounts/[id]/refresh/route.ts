@@ -1,11 +1,16 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { decryptCredentials } from '@/lib/encryption/credentials'
+import { AD_INTEGRATION_ENABLED, FEATURE_DISABLED_RESPONSE } from '@/lib/feature-flags/disabled-features'
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  if (!AD_INTEGRATION_ENABLED) {
+    return NextResponse.json(FEATURE_DISABLED_RESPONSE, { status: 503 })
+  }
+
   try {
     const { id } = await params
     const supabase = await createClient()

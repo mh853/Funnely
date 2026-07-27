@@ -1,8 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { decryptCredentials } from '@/lib/encryption/credentials'
+import { AD_INTEGRATION_ENABLED } from '@/lib/feature-flags/disabled-features'
 
 export async function GET(request: NextRequest) {
+  if (!AD_INTEGRATION_ENABLED) {
+    return NextResponse.redirect(
+      new URL('/dashboard?error=현재 준비 중인 기능입니다.', request.url)
+    )
+  }
+
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
   const error = searchParams.get('error')

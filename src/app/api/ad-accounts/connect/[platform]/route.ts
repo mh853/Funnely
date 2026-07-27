@@ -2,11 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import type { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials } from '@/types/database.types'
 import { decryptCredentials } from '@/lib/encryption/credentials'
+import { AD_INTEGRATION_ENABLED, FEATURE_DISABLED_RESPONSE } from '@/lib/feature-flags/disabled-features'
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> }
 ) {
+  if (!AD_INTEGRATION_ENABLED) {
+    return NextResponse.json(FEATURE_DISABLED_RESPONSE, { status: 503 })
+  }
+
   try {
     const { platform: platformParam } = await params
     const supabase = await createClient()

@@ -1,8 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { FORM_BUILDER_ENABLED } from '@/lib/feature-flags/disabled-features'
 
 // GET /api/form-templates - 폼 템플릿 목록 조회
 export async function GET(request: NextRequest) {
+  if (!FORM_BUILDER_ENABLED) {
+    return NextResponse.json({ error: { message: '현재 준비 중인 기능입니다.' } }, { status: 503 })
+  }
+
   try {
     const supabase = await createClient()
 
@@ -44,6 +49,10 @@ export async function GET(request: NextRequest) {
 
 // POST /api/form-templates - 폼 템플릿 생성
 export async function POST(request: NextRequest) {
+  if (!FORM_BUILDER_ENABLED) {
+    return NextResponse.json({ error: { message: '현재 준비 중인 기능입니다.' } }, { status: 503 })
+  }
+
   try {
     const supabase = await createClient()
 
@@ -128,6 +137,10 @@ export async function POST(request: NextRequest) {
 
 // PUT /api/form-templates - 폼 템플릿 수정
 export async function PUT(request: NextRequest) {
+  if (!FORM_BUILDER_ENABLED) {
+    return NextResponse.json({ error: { message: '현재 준비 중인 기능입니다.' } }, { status: 503 })
+  }
+
   try {
     const supabase = await createClient()
 
