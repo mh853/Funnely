@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 // GET /api/lead-statuses - 리드 상태 목록 조회
 export async function GET() {
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     // Get user's company and role
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, simple_role')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check admin role
-    if (userProfile.simple_role !== 'admin') {
+    if (!isAdminUser(userProfile)) {
       return NextResponse.json({ error: { message: 'Admin access required' } }, { status: 403 })
     }
 
@@ -151,7 +152,7 @@ export async function PATCH(request: NextRequest) {
     // Get user's company and role
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, simple_role')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -160,7 +161,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Check admin role
-    if (userProfile.simple_role !== 'admin') {
+    if (!isAdminUser(userProfile)) {
       return NextResponse.json({ error: { message: 'Admin access required' } }, { status: 403 })
     }
 
@@ -235,7 +236,7 @@ export async function DELETE(request: NextRequest) {
     // Get user's company and role
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, simple_role')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -244,7 +245,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Check admin role
-    if (userProfile.simple_role !== 'admin') {
+    if (!isAdminUser(userProfile)) {
       return NextResponse.json({ error: { message: 'Admin access required' } }, { status: 403 })
     }
 

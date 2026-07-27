@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import LeadStatusManager from '@/components/settings/LeadStatusManager'
 import { ArrowLeftIcon } from '@heroicons/react/24/outline'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 export default async function LeadStatusesPage() {
   const supabase = await createClient()
@@ -18,7 +19,7 @@ export default async function LeadStatusesPage() {
   // Get user profile
   const { data: userProfile } = await supabase
     .from('users')
-    .select('company_id, simple_role')
+    .select('company_id, simple_role, role')
     .eq('id', user.id)
     .maybeSingle()
 
@@ -32,9 +33,11 @@ export default async function LeadStatusesPage() {
     )
   }
 
-  // 백엔드(/api/lead-statuses, /api/lead-statuses/reorder)는 simple_role === 'admin'만 허용하므로
-  // isAdminUser()(manager도 통과)가 아닌 동일한 기준으로 노출 여부를 판단한다.
-  const canEdit = userProfile.simple_role === 'admin'
+  // 백엔드(/api/lead-statuses, /api/lead-statuses/reorder)도 isAdminUser()와 동일한
+  // 기준(simple_role IN admin/manager 또는 레거시 role IN 4개 관리자 역할)을 쓰도록
+  // 함께 수정함 - 이전에는 simple_role==='admin'만 확인해 레거시 role만 설정된
+  // company_owner 계정이 잠겨 있었다.
+  const canEdit = isAdminUser(userProfile)
 
   return (
     <div className="px-4 space-y-6">
