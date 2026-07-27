@@ -442,6 +442,68 @@ export default function TicketDetailPage({ params }: { params: { id: string } })
           )}
         </CardContent>
       </Card>
+
+      {/* 추가 문의 내역 */}
+      <Card className="border-gray-200">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium text-gray-700">추가 문의</CardTitle>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="space-y-3">
+            {messages.length === 0 ? (
+              <div className="text-center text-gray-400 py-8 text-sm">
+                아직 추가 문의 내역이 없습니다
+              </div>
+            ) : (
+              messages.map((message) => (
+                <div key={message.id} className="flex gap-2.5">
+                  <div
+                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+                      message.user.is_super_admin ? 'bg-blue-100' : 'bg-gray-100'
+                    }`}
+                  >
+                    {message.user.is_super_admin ? (
+                      <Shield className="h-4 w-4 text-blue-600" />
+                    ) : (
+                      <User className="h-4 w-4 text-gray-600" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1">
+                      <span className="text-xs font-semibold text-gray-900">
+                        {message.user.full_name}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {format(new Date(message.created_at), 'MM/dd HH:mm', { locale: ko })}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {message.message}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form onSubmit={handleSendMessage} className="mt-4 space-y-3 border-t border-gray-100 pt-4">
+            <Textarea
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="추가로 문의할 내용을 입력하세요..."
+              rows={3}
+              disabled={sending}
+              className="text-sm"
+            />
+            <div className="flex justify-end">
+              <Button type="submit" size="sm" disabled={sending || !newMessage.trim()}>
+                <Send className="h-3.5 w-3.5 mr-1.5" />
+                {sending ? '전송 중...' : '보내기'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
       </div>
 
       {/* 이미지 미리보기 모달 */}
