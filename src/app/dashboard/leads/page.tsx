@@ -2,6 +2,7 @@ import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabas
 import { redirect } from 'next/navigation'
 import { decryptPhone } from '@/lib/encryption/phone'
 import LeadsClient from './LeadsClient'
+import { getLeadStatusCategoryMap, getCodesForCategory, isValidLeadStatusCategory } from '@/lib/leadStatusCategory'
 
 interface SearchParams {
   dateRange?: string
@@ -147,13 +148,20 @@ export default async function LeadsPage({
     }
 
     if (status) {
-      if (status === 'new') {
-        query = query.in('status', ['new', 'pending'])
-      } else if (status === 'contacted') {
-        // 'qualified'는 실제로 존재하지 않는 상태 코드였다 (leads.status 실제
-        // 값에 없음) — 제거.
-        query = query.eq('status', 'contacted')
+      if (isValidLeadStatusCategory(status)) {
+        // 대시보드 드릴다운 링크는 6개 범주 토큰(new/rejected/contacted/converted/
+        // contract_completed/needs_followup)을 보낸다 - 회사가 만든 커스텀 상태도
+        // 같은 범주면 함께 걸리도록 코드 목록으로 확장한다. 리드 목록 드롭다운은
+        // 항상 실제 코드(s.code)를 보내므로, 시스템 기본 코드와 겹치는 경우에도
+        // 결과가 달라지지 않는다.
+        const categoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
+        const codes = getCodesForCategory(categoryMap, status)
+        // 'new' 범주는 실제 코드에 없는 레거시 값 'pending'도 계속 포함시킨다
+        // (과거 코드가 new/pending을 항상 동일하게 취급해왔음).
+        if (status === 'new') codes.push('pending')
+        query = query.in('status', codes.length > 0 ? codes : [status])
       } else {
+        // 범주 토큰이 아닌 특정 코드를 직접 선택한 경우(드롭다운) - 정확히 그 코드만
         query = query.eq('status', status)
       }
     }
@@ -198,7 +206,7 @@ export default async function LeadsPage({
       .order('full_name'),
     supabase
       .from('lead_statuses')
-      .select('id, code, label, color, sort_order, is_default')
+      .select('id, code, label, color, sort_order, is_default, category')
       .eq('company_id', userProfile.company_id)
       .eq('is_active', true)
       .order('sort_order'),

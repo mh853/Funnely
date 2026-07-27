@@ -9,6 +9,7 @@ import {
   HomeIcon,
 } from '@heroicons/react/24/outline'
 import { toKSTDateStr, getKSTNow, getKSTStartOfDay, getKSTMonthStart } from '@/lib/utils/date'
+import { getLeadStatusCategoryMap, getBucketKeyForStatus } from '@/lib/leadStatusCategory'
 
 // ISR: Revalidate every 30 seconds for real-time dashboard updates
 export const revalidate = 30
@@ -69,6 +70,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     .gte('created_at', queryStart)
     .lt('created_at', queryEnd)
     .order('created_at', { ascending: true })
+
+  // 회사가 만든 커스텀 상태도 정확한 통계 버킷(완료/거절/진행중 등)에 잡히도록
+  // code → category 매핑을 조회한다 (이전에는 7개 시스템 기본 코드만 하드코딩
+  // 확인해 커스텀 상태가 전부 "기타"로 뭉뚱그려졌다).
+  const leadStatusCategoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
 
   // 선택된 월의 결제 데이터 조회 (리드의 created_at 기준으로 집계)
   const { data: paymentData } = await supabase
@@ -192,14 +198,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     else if (deviceType === 'tablet') resultsByDate[dateStr].tabletCount++
     else resultsByDate[dateStr].unknownDeviceCount++
 
-    const status = lead.status || 'pending'
-    if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
-    else if (status === 'rejected') resultsByDate[dateStr].rejected++
-    else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
-    else if (status === 'converted') resultsByDate[dateStr].completed++
-    else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
-    else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
-    else resultsByDate[dateStr].other++
+    resultsByDate[dateStr][getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
   })
 
   // 결제 데이터를 날짜별로 집계

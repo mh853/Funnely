@@ -2,6 +2,7 @@ import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { getKSTDayRange } from '@/lib/utils/date'
+import { getLeadStatusCategoryMap, getCodesForCategory, isValidLeadStatusCategory } from '@/lib/leadStatusCategory'
 
 export async function GET(request: Request) {
   try {
@@ -120,12 +121,14 @@ export async function GET(request: Request) {
       }
 
       if (status) {
-        if (status === 'new') {
-          query = query.in('status', ['new', 'pending'])
-        } else if (status === 'contacted') {
-          // 'qualified'는 실제로 존재하지 않는 상태 코드였다 (leads.status 실제
-          // 값에 없음) — 제거.
-          query = query.eq('status', 'contacted')
+        // dashboard/leads/page.tsx와 동일한 규칙: 대시보드 드릴다운 링크는 범주
+        // 토큰을, 목록 드롭다운은 실제 코드를 보낸다 - 커스텀 상태 코드도 같은
+        // 범주면 함께 걸리도록 코드 목록으로 확장한다.
+        if (isValidLeadStatusCategory(status)) {
+          const categoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
+          const codes = getCodesForCategory(categoryMap, status)
+          if (status === 'new') codes.push('pending')
+          query = query.in('status', codes.length > 0 ? codes : [status])
         } else {
           query = query.eq('status', status)
         }

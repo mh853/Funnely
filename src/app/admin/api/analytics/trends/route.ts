@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 import { toKSTDateStr, getKSTDayRange } from '@/lib/utils/date'
+import { getLeadStatusCategoryMapForAdmin } from '@/lib/leadStatusCategory'
 
 export async function GET(request: Request) {
   try {
@@ -36,7 +37,10 @@ export async function GET(request: Request) {
       query = query.eq('company_id', companyId)
     }
 
-    const { data: leads, error } = await query
+    const [{ data: leads, error }, statusCategoryMap] = await Promise.all([
+      query,
+      getLeadStatusCategoryMapForAdmin(supabase, companyId),
+    ])
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
@@ -97,9 +101,9 @@ export async function GET(request: Request) {
       const data = timeSeriesData.get(dateKey)!
       data.total++
 
-      const status = lead.status as 'new' | 'contacted' | 'converted' | 'rejected'
-      if (status === 'new' || status === 'contacted' || status === 'converted' || status === 'rejected') {
-        data[status]++
+      const category = statusCategoryMap.get(`${lead.company_id}:${lead.status}`)
+      if (category === 'new' || category === 'contacted' || category === 'converted' || category === 'rejected') {
+        data[category]++
       } else {
         data.other++
       }

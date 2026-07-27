@@ -4,6 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { getLeadStatusCategoryMapForAdmin } from '@/lib/leadStatusCategory'
 
 /**
  * GET /api/admin/leads
@@ -83,17 +84,22 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    // 리드 상태는 회사별 커스텀 lead_statuses 기반이며, 시스템 기본값은
-    // new/rejected/contacted/converted/contract_completed/needs_followup/other이다
-    // ('qualified'/'lost'는 실제로 존재하지 않는 코드).
-    const { data: stats } = await supabase.from('leads').select('status')
+    // 리드 상태는 회사별 커스텀 lead_statuses 기반이므로, 회사가 만든 커스텀
+    // 코드도 올바른 범주로 집계되도록 company_id별 category 맵을 사용한다.
+    const [{ data: stats }, statusCategoryMap] = await Promise.all([
+      supabase.from('leads').select('status, company_id'),
+      getLeadStatusCategoryMapForAdmin(supabase, companyId || undefined),
+    ])
+
+    const categoryOf = (s: { status: string; company_id: string }) =>
+      statusCategoryMap.get(`${s.company_id}:${s.status}`)
 
     const summary = {
       total: count || 0,
-      new: stats?.filter((s: any) => s.status === 'new').length || 0,
-      contacted: stats?.filter((s: any) => s.status === 'contacted').length || 0,
-      contract_completed: stats?.filter((s: any) => s.status === 'contract_completed').length || 0,
-      converted: stats?.filter((s: any) => s.status === 'converted').length || 0,
+      new: stats?.filter((s: any) => categoryOf(s) === 'new').length || 0,
+      contacted: stats?.filter((s: any) => categoryOf(s) === 'contacted').length || 0,
+      contract_completed: stats?.filter((s: any) => categoryOf(s) === 'contract_completed').length || 0,
+      converted: stats?.filter((s: any) => categoryOf(s) === 'converted').length || 0,
     }
 
     const formattedLeads = (leads || []).map((lead: any) => ({

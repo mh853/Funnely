@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
+import { getLeadStatusCategoryMapForAdmin } from '@/lib/leadStatusCategory'
 
 export async function GET(request: Request) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: Request) {
     // UTM 소스별 리드 데이터 조회
     let query = supabase
       .from('leads')
-      .select('utm_source, utm_medium, utm_campaign, status, created_at')
+      .select('company_id, utm_source, utm_medium, utm_campaign, status, created_at')
       .gte('created_at', startDate)
       .lte('created_at', endDate)
 
@@ -24,13 +25,17 @@ export async function GET(request: Request) {
       query = query.eq('company_id', companyId)
     }
 
-    const { data: leadsRaw, error } = await query
+    const [{ data: leadsRaw, error }, statusCategoryMap] = await Promise.all([
+      query,
+      getLeadStatusCategoryMapForAdmin(supabase, companyId),
+    ])
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
     const leads = leadsRaw as Array<{
+      company_id: string
       utm_source: string | null
       utm_medium: string | null
       utm_campaign: string | null
@@ -52,7 +57,7 @@ export async function GET(request: Request) {
       const source = lead.utm_source || 'direct'
       const medium = lead.utm_medium || 'none'
       const campaign = lead.utm_campaign || 'none'
-      const isConverted = lead.status === 'converted'
+      const isConverted = statusCategoryMap.get(`${lead.company_id}:${lead.status}`) === 'converted'
 
       if (!channelStats.has(source)) {
         channelStats.set(source, {
@@ -99,7 +104,9 @@ export async function GET(request: Request) {
     // 상위 채널 요약
     const topChannels = channelPerformance.slice(0, 5)
     const totalLeads = leads?.length || 0
-    const totalConverted = leads?.filter(l => l.status === 'converted').length || 0
+    const totalConverted = leads?.filter(
+      l => statusCategoryMap.get(`${l.company_id}:${l.status}`) === 'converted'
+    ).length || 0
 
     return NextResponse.json({
       channels: channelPerformance,

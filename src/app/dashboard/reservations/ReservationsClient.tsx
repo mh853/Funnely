@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
+import { getLeadStatusCategoryMap, getCodesForCategory } from '@/lib/leadStatusCategory'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -711,7 +712,15 @@ export default function ReservationsClient({
       setLoadingAvailableLeads(true)
       setScheduleSearchQuery('')
       try {
-        const { data, error } = await supabase
+        // 커스텀 상태도 정확히 제외되도록, "계약완료/거절" 리터럴 코드가 아니라
+        // 그 범주에 속하는 모든 코드를 제외 목록으로 사용한다.
+        const categoryMap = await getLeadStatusCategoryMap(supabase, companyId)
+        const excludedCodes = [
+          ...getCodesForCategory(categoryMap, 'contract_completed'),
+          ...getCodesForCategory(categoryMap, 'rejected'),
+        ]
+
+        let leadsQuery = supabase
           .from('leads')
           .select(`
             id,
@@ -724,8 +733,12 @@ export default function ReservationsClient({
             )
           `)
           .eq('company_id', companyId)
-          .neq('status', 'contract_completed')
-          .neq('status', 'rejected')
+
+        excludedCodes.forEach((code) => {
+          leadsQuery = leadsQuery.neq('status', code)
+        })
+
+        const { data, error } = await leadsQuery
           .order('created_at', { ascending: false })
           .limit(200)
 

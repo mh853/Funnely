@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { getLeadStatusCategoryMap } from '@/lib/leadStatusCategory'
 
 // PUT /api/leads/update - Update lead status, priority, and assignment
 export async function PUT(request: NextRequest) {
@@ -71,9 +72,16 @@ export async function PUT(request: NextRequest) {
         updateData.completed_at = new Date().toISOString()
       }
 
-      // contract_completed 상태로 변경 시 타임스탬프 설정
+      // 회사가 커스텀 코드를 만들어도(예: 'signed') 통계 범주(category)가
+      // 'contract_completed'인 상태로 바뀌면 타임스탬프가 정확히 반영되도록
+      // 리터럴 코드가 아니라 category 기준으로 판단한다.
+      const categoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
+      const newIsContractCompleted = categoryMap[status] === 'contract_completed'
+      const previousWasContractCompleted = categoryMap[lead.status] === 'contract_completed'
+
+      // contract_completed 범주로 변경 시 타임스탬프 설정
       // 클라이언트에서 날짜/시간을 지정한 경우 해당 값 사용, 아니면 현재 시간 사용
-      if (status === 'contract_completed') {
+      if (newIsContractCompleted) {
         // 기존에 contract_completed_at이 있으면 previous_contract_completed_at에 저장
         if (lead.contract_completed_at) {
           updateData.previous_contract_completed_at = lead.contract_completed_at
@@ -81,9 +89,9 @@ export async function PUT(request: NextRequest) {
         updateData.contract_completed_at = contract_completed_at || new Date().toISOString()
       }
 
-      // contract_completed에서 다른 상태로 변경 시 날짜 이동
+      // contract_completed 범주에서 다른 범주로 변경 시 날짜 이동
       // contract_completed_at → previous_contract_completed_at으로 이동, contract_completed_at은 null로
-      if (lead.status === 'contract_completed' && status !== 'contract_completed') {
+      if (previousWasContractCompleted && !newIsContractCompleted) {
         if (lead.contract_completed_at) {
           updateData.previous_contract_completed_at = lead.contract_completed_at
         }

@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { isAdminUser } from '@/lib/auth/permissions'
+import { isValidLeadStatusCategory } from '@/lib/leadStatusCategory'
 
 // GET /api/lead-statuses - 리드 상태 목록 조회
 export async function GET() {
@@ -63,10 +64,14 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { code, label, color } = body
+    const { code, label, color, category } = body
 
     if (!code || !label) {
       return NextResponse.json({ error: { message: 'Code and label are required' } }, { status: 400 })
+    }
+
+    if (category !== undefined && !isValidLeadStatusCategory(category)) {
+      return NextResponse.json({ error: { message: 'Invalid category' } }, { status: 400 })
     }
 
     // Get user's company and role
@@ -105,6 +110,9 @@ export async function POST(request: NextRequest) {
         label,
         color: color || 'gray',
         sort_order: nextSortOrder,
+        // 지정 안 하면 DB 기본값(other)으로 들어감 - 통계에서는 일단 "기타"로
+        // 잡히고 관리자가 나중에 올바른 범주로 수정할 수 있다.
+        category: category || 'other',
       })
       .select()
       .single()
@@ -143,10 +151,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, label, color, sort_order, is_default, is_active } = body
+    const { id, label, color, sort_order, is_default, is_active, category } = body
 
     if (!id) {
       return NextResponse.json({ error: { message: 'Status ID is required' } }, { status: 400 })
+    }
+
+    if (category !== undefined && !isValidLeadStatusCategory(category)) {
+      return NextResponse.json({ error: { message: 'Invalid category' } }, { status: 400 })
     }
 
     // Get user's company and role
@@ -172,6 +184,7 @@ export async function PATCH(request: NextRequest) {
     if (sort_order !== undefined) updateData.sort_order = sort_order
     if (is_default !== undefined) updateData.is_default = is_default
     if (is_active !== undefined) updateData.is_active = is_active
+    if (category !== undefined) updateData.category = category
 
     // If setting as default, unset other defaults first
     if (is_default === true) {

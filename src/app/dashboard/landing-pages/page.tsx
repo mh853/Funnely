@@ -1,6 +1,7 @@
 import { createClient, getCachedUser, getCachedUserProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import LandingPagesClient from './LandingPagesClient'
+import { getLeadStatusCategoryMap } from '@/lib/leadStatusCategory'
 
 // force-dynamic: authenticated dashboard page — ISR causes stale data and chunk mismatch errors on dev server restart
 export const dynamic = 'force-dynamic'
@@ -42,11 +43,14 @@ export default async function LandingPagesPage() {
 
   const companyShortId = companyShortIdData?.short_id || null
 
-  // Get all leads statistics in a single query (prevents N+1 problem)
-  const { data: leadsStats } = await supabase
-    .from('leads')
-    .select('landing_page_id, status, created_at')
-    .in('landing_page_id', (landingPages || []).map(p => p.id))
+  // 리드 통계와 상태 범주 맵은 서로 무관하므로 병렬로 조회
+  const [{ data: leadsStats }, leadStatusCategoryMap] = await Promise.all([
+    supabase
+      .from('leads')
+      .select('landing_page_id, status, created_at')
+      .in('landing_page_id', (landingPages || []).map(p => p.id)),
+    getLeadStatusCategoryMap(supabase, userProfile.company_id),
+  ])
 
   // Aggregate statistics by landing page ID
   const statsMap = new Map<string, { dbInflow: number; rejectedCount: number; contractCount: number }>()
@@ -58,8 +62,9 @@ export default async function LandingPagesPage() {
     }
     const stats = statsMap.get(pageId)!
     stats.dbInflow++
-    if (lead.status === 'rejected') stats.rejectedCount++
-    if (lead.status === 'contract_completed') stats.contractCount++
+    const category = leadStatusCategoryMap[lead.status] || 'other'
+    if (category === 'rejected') stats.rejectedCount++
+    if (category === 'contract_completed') stats.contractCount++
   })
 
   // Combine landing pages with their statistics

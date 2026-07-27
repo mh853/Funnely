@@ -12,6 +12,7 @@ import {
   ChevronUpIcon,
   ChevronDownIcon,
 } from '@heroicons/react/24/outline'
+import { LEAD_STATUS_CATEGORY_OPTIONS, type LeadStatusCategory } from '@/lib/leadStatusCategory'
 
 interface LeadStatus {
   id: string
@@ -21,6 +22,7 @@ interface LeadStatus {
   sort_order: number
   is_default: boolean
   is_active: boolean
+  category: LeadStatusCategory
 }
 
 const COLOR_OPTIONS = [
@@ -47,9 +49,9 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState({ label: '', color: 'gray' })
+  const [editForm, setEditForm] = useState<{ label: string; color: string; category: LeadStatusCategory }>({ label: '', color: 'gray', category: 'other' })
   const [showAddForm, setShowAddForm] = useState(false)
-  const [newStatus, setNewStatus] = useState({ code: '', label: '', color: 'gray' })
+  const [newStatus, setNewStatus] = useState<{ code: string; label: string; color: string; category: LeadStatusCategory }>({ code: '', label: '', color: 'gray', category: 'other' })
 
   const fetchStatuses = useCallback(async () => {
     try {
@@ -92,7 +94,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
       if (data.success) {
         setStatuses([...statuses, data.data])
         setShowAddForm(false)
-        setNewStatus({ code: '', label: '', color: 'gray' })
+        setNewStatus({ code: '', label: '', color: 'gray', category: 'other' })
       } else {
         toast.error(data.error?.message || '추가에 실패했습니다.')
       }
@@ -225,7 +227,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
 
   const startEdit = (status: LeadStatus) => {
     setEditingId(status.id)
-    setEditForm({ label: status.label, color: status.color })
+    setEditForm({ label: status.label, color: status.color, category: status.category || 'other' })
   }
 
   if (loading) {
@@ -262,7 +264,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
       {showAddForm && (
         <div className="p-4 border border-indigo-200 bg-indigo-50 rounded-lg">
           <h4 className="text-sm font-medium text-gray-900 mb-3">새 상태 추가</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs text-gray-600 mb-1">코드 (영문)</label>
               <input
@@ -295,12 +297,27 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
                 ))}
               </select>
             </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">통계 분류</label>
+              <select
+                value={newStatus.category}
+                onChange={e => setNewStatus({ ...newStatus, category: e.target.value as LeadStatusCategory })}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              >
+                {LEAD_STATUS_CATEGORY_OPTIONS.map(option => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
+            </div>
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            통계 분류는 대시보드·리포트·분석 화면에서 이 상태를 어느 항목으로 집계할지 결정합니다.
+          </p>
           <div className="flex justify-end gap-2 mt-3">
             <button
               onClick={() => {
                 setShowAddForm(false)
-                setNewStatus({ code: '', label: '', color: 'gray' })
+                setNewStatus({ code: '', label: '', color: 'gray', category: 'other' })
               }}
               className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900"
             >
@@ -330,6 +347,7 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">미리보기</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">코드</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">표시 이름</th>
+              <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">통계 분류</th>
               <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 whitespace-nowrap">기본값</th>
               {canEdit && (
                 <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 w-32 whitespace-nowrap">작업</th>
@@ -398,6 +416,23 @@ export default function LeadStatusManager({ canEdit }: { canEdit: boolean }) {
                       </div>
                     ) : (
                       <span className="text-sm text-gray-900">{status.label}</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2">
+                    {isEditing ? (
+                      <select
+                        value={editForm.category}
+                        onChange={e => setEditForm({ ...editForm, category: e.target.value as LeadStatusCategory })}
+                        className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                      >
+                        {LEAD_STATUS_CATEGORY_OPTIONS.map(option => (
+                          <option key={option.value} value={option.value}>{option.label}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-xs text-gray-600">
+                        {LEAD_STATUS_CATEGORY_OPTIONS.find(o => o.value === status.category)?.label || '기타'}
+                      </span>
                     )}
                   </td>
                   <td className="px-4 py-2">

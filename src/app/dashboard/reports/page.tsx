@@ -4,6 +4,7 @@ import ReportsClient from './ReportsClient'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
 import { toKSTDateStr, getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
+import { getLeadStatusCategoryMap, getBucketKeyForStatus } from '@/lib/leadStatusCategory'
 
 export const dynamic = 'force-dynamic'
 
@@ -109,8 +110,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     paymentQuery = paymentQuery.gte('leads.created_at', queryStart).lt('leads.created_at', queryEnd)
   }
 
-  // 팀원/리드/결제 조회는 서로 무관하므로 병렬로 실행
-  const [{ data: teamMembers }, { data: allLeads }, { data: paymentData }] = await Promise.all([
+  // 팀원/리드/결제/상태분류 조회는 서로 무관하므로 병렬로 실행
+  const [{ data: teamMembers }, { data: allLeads }, { data: paymentData }, leadStatusCategoryMap] = await Promise.all([
     supabase
       .from('users')
       .select('id, full_name, department')
@@ -119,6 +120,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       .order('full_name'),
     leadsQuery,
     paymentQuery,
+    getLeadStatusCategoryMap(supabase, userProfile.company_id),
   ])
 
   // 부서 목록 추출
@@ -209,14 +211,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       else if (deviceType === 'mobile') resultsByDate[dateStr].mobileCount++
 
       // Status
-      const status = lead.status || 'pending'
-      if (status === 'new' || status === 'pending') resultsByDate[dateStr].pending++
-      else if (status === 'rejected') resultsByDate[dateStr].rejected++
-      else if (status === 'contacted' || status === 'qualified') resultsByDate[dateStr].inProgress++
-      else if (status === 'converted') resultsByDate[dateStr].completed++
-      else if (status === 'contract_completed') resultsByDate[dateStr].contractCompleted++
-      else if (status === 'needs_followup') resultsByDate[dateStr].needsFollowUp++
-      else resultsByDate[dateStr].other++
+      resultsByDate[dateStr][getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
     }
   })
 
@@ -314,14 +309,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     resultsByDepartment[deptName].total++
 
     // Status
-    const status = lead.status || 'pending'
-    if (status === 'new' || status === 'pending') resultsByDepartment[deptName].pending++
-    else if (status === 'rejected') resultsByDepartment[deptName].rejected++
-    else if (status === 'contacted' || status === 'qualified') resultsByDepartment[deptName].inProgress++
-    else if (status === 'converted') resultsByDepartment[deptName].completed++
-    else if (status === 'contract_completed') resultsByDepartment[deptName].contractCompleted++
-    else if (status === 'needs_followup') resultsByDepartment[deptName].needsFollowUp++
-    else resultsByDepartment[deptName].other++
+    resultsByDepartment[deptName][getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
   })
 
   // 부서별 결제 데이터 집계
@@ -448,14 +436,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         else if (deviceType === 'mobile') dayData.mobileCount++
 
         // Status
-        const status = lead.status || 'pending'
-        if (status === 'new' || status === 'pending') dayData.pending++
-        else if (status === 'rejected') dayData.rejected++
-        else if (status === 'contacted' || status === 'qualified') dayData.inProgress++
-        else if (status === 'converted') dayData.completed++
-        else if (status === 'contract_completed') dayData.contractCompleted++
-        else if (status === 'needs_followup') dayData.needsFollowUp++
-        else dayData.other++
+        dayData[getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
       }
     }
   })
@@ -513,14 +494,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     resultsByStaff[staffId].total++
 
     // Status
-    const status = lead.status || 'pending'
-    if (status === 'new' || status === 'pending') resultsByStaff[staffId].pending++
-    else if (status === 'rejected') resultsByStaff[staffId].rejected++
-    else if (status === 'contacted' || status === 'qualified') resultsByStaff[staffId].inProgress++
-    else if (status === 'converted') resultsByStaff[staffId].completed++
-    else if (status === 'contract_completed') resultsByStaff[staffId].contractCompleted++
-    else if (status === 'needs_followup') resultsByStaff[staffId].needsFollowUp++
-    else resultsByStaff[staffId].other++
+    resultsByStaff[staffId][getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
   })
 
   // 담당자별 결제 데이터 집계
@@ -607,14 +581,7 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
         else if (deviceType === 'mobile') dayData.mobileCount++
 
         // Status
-        const status = lead.status || 'pending'
-        if (status === 'new' || status === 'pending') dayData.pending++
-        else if (status === 'rejected') dayData.rejected++
-        else if (status === 'contacted' || status === 'qualified') dayData.inProgress++
-        else if (status === 'converted') dayData.completed++
-        else if (status === 'contract_completed') dayData.contractCompleted++
-        else if (status === 'needs_followup') dayData.needsFollowUp++
-        else dayData.other++
+        dayData[getBucketKeyForStatus(leadStatusCategoryMap, lead.status)]++
       }
     }
   })
@@ -734,22 +701,22 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     })
   }
 
-  // 요약 통계
+  // 요약 통계 - 커스텀 상태도 정확히 잡히도록 코드가 아니라 category로 판단
+  const completedLeads = filteredLeads.filter((l) => {
+    const category = leadStatusCategoryMap[l.status || ''] || 'other'
+    return category === 'converted' || category === 'contract_completed'
+  })
+  const contractCompletedLeads = filteredLeads.filter(
+    (l) => leadStatusCategoryMap[l.status || ''] === 'contract_completed'
+  )
+
   const summary = {
     totalDB: filteredLeads.length,
-    completed: filteredLeads.filter(
-      (l) => l.status === 'converted' || l.status === 'contract_completed'
-    ).length,
-    contractCompleted: filteredLeads.filter((l) => l.status === 'contract_completed').length,
+    completed: completedLeads.length,
+    contractCompleted: contractCompletedLeads.length,
     conversionRate:
       filteredLeads.length > 0
-        ? (
-            (filteredLeads.filter(
-              (l) => l.status === 'converted' || l.status === 'contract_completed'
-            ).length /
-              filteredLeads.length) *
-            100
-          ).toFixed(1)
+        ? ((completedLeads.length / filteredLeads.length) * 100).toFixed(1)
         : '0',
   }
 

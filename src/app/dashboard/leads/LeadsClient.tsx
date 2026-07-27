@@ -32,6 +32,7 @@ interface LeadStatus {
   color: string
   sort_order: number
   is_default: boolean
+  category?: string
 }
 
 interface LeadsClientProps {
@@ -117,6 +118,20 @@ export default function LeadsClient({
     }
     return leadStatuses.map(s => ({ value: s.code, label: s.label }))
   }, [leadStatuses])
+
+  // 코드 → 통계 범주(category) 맵 (커스텀 코드도 '계약완료' 범주인지 정확히 판단하기 위함)
+  const codeToCategory = useMemo(() => {
+    const map: { [code: string]: string } = {}
+    for (const status of leadStatuses) {
+      map[status.code] = status.category || 'other'
+    }
+    return map
+  }, [leadStatuses])
+  const isContractCompletedCode = useCallback(
+    (code: string) => (leadStatuses.length > 0 ? codeToCategory[code] === 'contract_completed' : code === 'contract_completed'),
+    [leadStatuses, codeToCategory]
+  )
+
   const router = useRouter()
   const searchParams = useSearchParams()
   const [isPending, startTransition] = useTransition()
@@ -295,6 +310,8 @@ export default function LeadsClient({
 
   // 계약완료 날짜/시간 입력 모달 상태
   const [contractModalLeadId, setContractModalLeadId] = useState<string | null>(null)
+  // 실제로 저장할 상태 코드 (커스텀 코드일 수 있으므로 'contract_completed' 리터럴을 그대로 쓰면 안 됨)
+  const [contractModalStatus, setContractModalStatus] = useState<string>('contract_completed')
   const [contractDate, setContractDate] = useState('')
   const [contractTime, setContractTime] = useState('')
 
@@ -810,7 +827,7 @@ export default function LeadsClient({
   }, [editingCounselorLeadId])
 
   // 계약완료 모달 열기 (날짜/시간 선택)
-  const openContractModal = (leadId: string) => {
+  const openContractModal = (leadId: string, status: string) => {
     // 기본값: 현재 날짜/시간
     const now = new Date()
     const dateStr = toLocalDateStr(now)
@@ -818,6 +835,7 @@ export default function LeadsClient({
     setContractDate(dateStr)
     setContractTime(timeStr)
     setContractModalLeadId(leadId)
+    setContractModalStatus(status)
     setEditingLeadId(null)
     setDropdownPosition(null)
   }
@@ -847,7 +865,7 @@ export default function LeadsClient({
         },
         body: JSON.stringify({
           id: contractModalLeadId,
-          status: 'contract_completed',
+          status: contractModalStatus,
           contract_completed_at: contractCompletedAt,
         }),
       })
@@ -862,7 +880,7 @@ export default function LeadsClient({
           lead.id === contractModalLeadId
             ? {
                 ...lead,
-                status: 'contract_completed',
+                status: contractModalStatus,
                 previous_contract_completed_at: lead.contract_completed_at || null,
                 contract_completed_at: contractCompletedAt
               }
@@ -880,9 +898,9 @@ export default function LeadsClient({
 
   // 상태 변경 핸들러
   const handleStatusChange = async (leadId: string, newStatus: string) => {
-    // 계약완료 선택 시 모달 열기
-    if (newStatus === 'contract_completed') {
-      openContractModal(leadId)
+    // 계약완료 선택 시 모달 열기 (커스텀 코드도 category가 contract_completed면 동일하게 처리)
+    if (isContractCompletedCode(newStatus)) {
+      openContractModal(leadId, newStatus)
       return
     }
 
@@ -909,7 +927,7 @@ export default function LeadsClient({
           if (lead.id !== leadId) return lead
 
           // 계약완료에서 다른 상태로 변경 시 날짜 이동
-          if (lead.status === 'contract_completed' && newStatus !== 'contract_completed') {
+          if (isContractCompletedCode(lead.status) && !isContractCompletedCode(newStatus)) {
             return {
               ...lead,
               status: newStatus,
