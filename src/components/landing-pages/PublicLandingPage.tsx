@@ -151,11 +151,30 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
   // Timer countdown calculation + real-time expiry notification
   useEffect(() => {
-    if (!landingPage.timer_enabled || !landingPage.timer_deadline || landingPage.timer_auto_update) return
+    if (!landingPage.timer_enabled || !landingPage.timer_deadline) return
+
+    // "자동 마감일 업데이트"(timer_auto_update)가 켜져 있으면, 저장된 timer_deadline이
+    // 지나도 페이지를 만료시키지 않고 timer_auto_update_days 간격으로 계속 미래까지
+    // 이월된 마감일로 카운트다운해야 한다("마감 시간이 지나면 자동으로 N일 후로
+    // 업데이트됩니다" — 에디터 UI 안내 문구). DB에 다시 쓰지 않고 매번 파생 계산만
+    // 한다 — 이전에는 이 분기 자체가 통째로 스킵되어 자동 업데이트 타이머가 항상
+    // 0일 0시간 0분 0초로 멈춰 보였다.
+    const getEffectiveDeadlineMs = () => {
+      const original = new Date(landingPage.timer_deadline!).getTime()
+      if (!landingPage.timer_auto_update) return original
+
+      const intervalMs = (landingPage.timer_auto_update_days || 1) * 24 * 60 * 60 * 1000
+      if (intervalMs <= 0) return original
+
+      const now = Date.now()
+      if (original > now) return original
+
+      const cyclesPassed = Math.floor((now - original) / intervalMs) + 1
+      return original + cyclesPassed * intervalMs
+    }
 
     const calculateTimeLeft = () => {
-      const deadline = new Date(landingPage.timer_deadline!)
-      const difference = deadline.getTime() - Date.now()
+      const difference = getEffectiveDeadlineMs() - Date.now()
 
       if (difference > 0) {
         return {
@@ -173,6 +192,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       const remaining = calculateTimeLeft()
       setTimeLeft(remaining)
 
+      // 자동 업데이트 타이머는 절대 "만료"되지 않는다 - 계속 다음 주기로 이월될 뿐이다.
+      if (landingPage.timer_auto_update) return
+
       // Detect the moment timer hits zero and notify server once
       const isNowExpired = remaining.days === 0 && remaining.hours === 0 && remaining.minutes === 0 && remaining.seconds === 0
       if (isNowExpired && !timerExpiredNotified.current) {
@@ -189,7 +211,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }
     }, 1000)
     return () => clearInterval(timer)
-  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update, landingPage.id])
+  }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update, landingPage.timer_auto_update_days, landingPage.id])
 
   // Fetch actual leads from Supabase with Realtime subscription
   useEffect(() => {
