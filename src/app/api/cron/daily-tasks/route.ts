@@ -481,34 +481,68 @@ async function syncGoogleSheets(supabase: any) {
         existingLeads?.map((l: any) => l.phone_hash) || []
       )
 
+      // 시트 안에서 같은 전화번호가 여러 행에 있으면 기존 DB 대조만으로는 못 걸러진다
+      // (existingHashes는 DB에 이미 있는 것만 담고 있음) - 같은 배치 안에서도 먼저
+      // 나온 행만 남기고 중복 제거해야 한 번의 동기화로 같은 리드가 여러 건 생기지 않는다.
+      const seenPhoneHashesInBatch = new Set<string>()
       const newLeads = sheetLeads.filter((lead) => {
         const phoneHash = crypto
           .createHash('sha256')
           .update(lead.phone.replace(/\D/g, ''))
           .digest('hex')
-        return !existingHashes.has(phoneHash)
+        if (existingHashes.has(phoneHash) || seenPhoneHashesInBatch.has(phoneHash)) {
+          return false
+        }
+        seenPhoneHashesInBatch.add(phoneHash)
+        return true
       })
+
+      // 회사가 설정한 기본 리드 상태 조회 — status:'new' 하드코딩 시 "DB 상태 관리"의
+      // "기본값으로 설정" 기능이 실제로는 아무 효과가 없었다.
+      const { data: defaultStatus } = await supabase
+        .from('lead_statuses')
+        .select('code')
+        .eq('company_id', config.company_id)
+        .eq('is_default', true)
+        .limit(1)
+        .maybeSingle()
 
       let importedCount = 0
 
       if (newLeads.length > 0) {
-        const leadsToInsert = newLeads.map((lead) => ({
-          company_id: config.company_id,
-          landing_page_id: config.landing_page_id || null,
-          name: lead.name,
-          phone: encryptPhone(lead.phone),
-          email: lead.email || null,
-          phone_hash: crypto
-            .createHash('sha256')
-            .update(lead.phone.replace(/\D/g, ''))
-            .digest('hex'),
-          source: 'google_sheets',
-          custom_fields: lead.customFields || [],
-          status: 'new',
-          created_at: lead.createdAt
-            ? new Date(lead.createdAt).toISOString()
-            : new Date().toISOString(),
-        }))
+        const leadsToInsert = newLeads.map((lead) => {
+          // 매핑된 createdAt 컬럼 값 하나가 파싱 불가능하면 new Date(...).toISOString()가
+          // RangeError를 던져 map() 전체가 실패하고, 그 결과 이 스프레드시트 전체의
+          // import가 조용히 중단됐다(게다가 아래에서 last_synced_at도 안 갱신되니
+          // 다음 실행에서 같은 행을 또 만나 매번 반복 실패). 파싱 실패 시 현재 시각으로
+          // 폴백해 그 행 하나 때문에 나머지 행까지 막히지 않도록 한다.
+          let createdAtIso = new Date().toISOString()
+          if (lead.createdAt) {
+            const parsed = new Date(lead.createdAt)
+            if (!isNaN(parsed.getTime())) {
+              createdAtIso = parsed.toISOString()
+            }
+          }
+
+          return {
+            company_id: config.company_id,
+            landing_page_id: config.landing_page_id || null,
+            name: lead.name,
+            phone: encryptPhone(lead.phone),
+            email: lead.email || null,
+            phone_hash: crypto
+              .createHash('sha256')
+              .update(lead.phone.replace(/\D/g, ''))
+              .digest('hex'),
+            // 관리자가 매핑한 source 컬럼 값을 무시하고 'google_sheets'로 덮어써서
+            // 광고/캠페인 유입 경로 정보가 사라지고 있었다 - 수동 동기화(api/sheets/sync)는
+            // 이미 lead.source를 올바르게 우선하고 있어 그 패턴에 맞춘다.
+            source: lead.source || 'google_sheets',
+            custom_fields: lead.customFields || [],
+            status: defaultStatus?.code || 'new',
+            created_at: createdAtIso,
+          }
+        })
 
         const { data: inserted, error: insertError } = await supabase
           .from('leads')

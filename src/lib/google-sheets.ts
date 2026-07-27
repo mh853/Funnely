@@ -66,7 +66,7 @@ export function parseSheetToLeads(
     .map((row) => {
       const lead: SheetLeadData = {
         name: getColumnValue(row, headers, columnMapping.name) || '',
-        phone: getColumnValue(row, headers, columnMapping.phone) || '',
+        phone: normalizeSheetPhone(getColumnValue(row, headers, columnMapping.phone) || ''),
       }
 
       if (columnMapping.email) {
@@ -94,6 +94,19 @@ export function parseSheetToLeads(
       return lead
     })
     .filter((lead) => lead.name && lead.phone) // 필수 필드 검증
+}
+
+// 구글 시트 특유의 숫자 서식 문제를 보정한다: 전화번호 컬럼을 "숫자"로 서식
+// 지정한 셀은 앞자리 0이 잘려 내려온다("010-1234-5678" → "1012345678"). 이미
+// 텍스트로 입력되어 대시 등을 포함한 값(다른 모든 리드 생성 경로와 동일한 형태)은
+// 건드리지 않고, 순수 숫자 10자리(0이 잘린 11자리 한국 휴대폰 번호)로만 이루어진
+// 값일 때만 앞에 0을 복원한다.
+function normalizeSheetPhone(rawPhone: string): string {
+  const trimmed = rawPhone.trim()
+  if (/^\d{10}$/.test(trimmed)) {
+    return `0${trimmed}`
+  }
+  return rawPhone
 }
 
 function getColumnValue(
