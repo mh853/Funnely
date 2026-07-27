@@ -8,6 +8,7 @@ import { formatDate } from '@/lib/utils/date'
 import { canUseCustomDomain } from '@/lib/subscription-access'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import AccountDeletionSection from '@/components/settings/AccountDeletionSection'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -73,7 +74,11 @@ export default async function SettingsPage() {
 
   // Check if user has permission to edit company settings
   const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
-  const isAdmin = userProfile.simple_role === 'admin'
+  // DB 상태 관리/Sheets 동기화 링크가 연결된 페이지들은 이미 isAdminUser()
+  // (simple_role IN admin/manager 또는 레거시 role 4종)로 접근을 허용하는데,
+  // 이 허브 페이지는 simple_role==='admin'만 확인해 정당한 사용자에게 링크
+  // 자체를 안 보여주고 있었다(URL을 직접 알아야만 접근 가능한 상태).
+  const isAdmin = isAdminUser(userProfile)
 
   // Check custom domain feature access
   const { allowed: hasCustomDomain } = await canUseCustomDomain(userProfile.company_id)
