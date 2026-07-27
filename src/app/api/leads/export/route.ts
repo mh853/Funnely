@@ -1,6 +1,7 @@
 import { createClient, getCachedUserProfile } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { getKSTDayRange } from '@/lib/utils/date'
 
 export async function GET(request: Request) {
   try {
@@ -39,18 +40,16 @@ export async function GET(request: Request) {
     let endDate: Date | null = null
 
     // 단일 날짜 필터 (대시보드 그래프에서 클릭 시) - 가장 높은 우선순위
+    // "YYYY-MM-DD"를 new Date()로 직접 파싱하면 UTC 자정으로 해석되어(브라우저는
+    // KST 기준으로 보낸 날짜인데) setHours(0,0,0,0)을 서버(UTC)에서 적용해도 여전히
+    // KST 하루가 아니라 KST 09:00~다음날 09:00 범위가 되어버린다.
     if (singleDateParam) {
-      startDate = new Date(singleDateParam)
-      startDate.setHours(0, 0, 0, 0)
-      endDate = new Date(singleDateParam)
-      endDate.setHours(23, 59, 59, 999)
+      ;({ start: startDate, end: endDate } = getKSTDayRange(singleDateParam))
     }
     // 직접 입력된 날짜 범위 우선 처리
     else if (startDateParam && endDateParam) {
-      startDate = new Date(startDateParam)
-      startDate.setHours(0, 0, 0, 0)
-      endDate = new Date(endDateParam)
-      endDate.setHours(23, 59, 59, 999)
+      startDate = getKSTDayRange(startDateParam).start
+      endDate = getKSTDayRange(endDateParam).end
     } else if (dateRange) {
       // 프리셋 날짜 범위 처리
       switch (dateRange) {
@@ -109,7 +108,7 @@ export async function GET(request: Request) {
         query = query.gte('created_at', startDate.toISOString())
       }
       if (endDate) {
-        query = query.lte('created_at', endDate.toISOString())
+        query = query.lt('created_at', endDate.toISOString())
       }
 
       if (landingPageId) {

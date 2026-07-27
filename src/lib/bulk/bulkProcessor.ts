@@ -8,7 +8,7 @@ import type {
   BulkOperationLog,
 } from '@/types/bulk'
 import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
-import { addMonthsClamped } from '@/lib/utils/date'
+import { addMonthsClamped, getKSTStartOfDay } from '@/lib/utils/date'
 
 export class BulkProcessor {
   private static readonly BATCH_SIZE = 100 // Process 100 entities at a time
@@ -241,10 +241,10 @@ export class BulkProcessor {
 
         // Check if today's score exists
         // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이다.
-        const today = new Date()
-        today.setHours(0, 0, 0, 0)
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
+        // UTC 자정이 아니라 KST 자정 기준이어야 daily-tasks 크론/수동 재계산과
+        // dedup 판정이 일치한다.
+        const today = getKSTStartOfDay(0)
+        const tomorrow = getKSTStartOfDay(1)
 
         const { data: existingScore } = await this.supabase
           .from('customer_health_scores')
