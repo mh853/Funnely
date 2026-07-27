@@ -1,0 +1,12 @@
+-- company_invitations의 "Anyone can view invitation by code" SELECT 정책(USING (TRUE))은
+-- invitation_code로 필터링하지 않아 인증 여부와 무관하게 모든 회사의 초대 행 전체
+-- (invitation_code, email, role, department, company_id 포함)를 노출한다.
+--
+-- 실제 초대 수락 플로우(src/app/api/users/invite/accept/route.ts GET/POST)는 이미
+-- 서비스 롤 클라이언트로 이 테이블을 조회하며, 응답에는 필요한 필드만 골라 담아
+-- 반환하므로 이 RLS 정책에 의존하지 않는다. 라이브 DB에도 현재 이 정책은 존재하지
+-- 않는다(pg_policies로 확인) - 다만 원본 마이그레이션(20250208000000_user_management_system.sql)
+-- 파일 자체에는 여전히 이 위험한 정의가 남아 있어, 마이그레이션 이력을 처음부터
+-- 재생하는 환경(새 스테이징/로컬 개발/재해복구 등)에서는 재생성될 수 있다.
+-- 이를 막기 위해 명시적으로 드롭한다.
+DROP POLICY IF EXISTS "Anyone can view invitation by code" ON company_invitations;
