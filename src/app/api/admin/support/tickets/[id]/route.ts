@@ -103,7 +103,14 @@ export async function PATCH(
       updated_at: new Date().toISOString(),
     }
 
-    if (status) updates.status = status
+    if (status) {
+      updates.status = status
+      // resolved_at/closed_at은 이 라우트가 유일한 상태 변경 지점인데도 여태 어디서도
+      // 채워진 적이 없어(스키마 컬럼만 있고 값이 항상 null), "오늘 해결된 티켓 수" 같은
+      // 통계가 이 컬럼으로는 절대 계산될 수 없었다. 상태가 바뀌는 시점에 채운다.
+      if (status === 'resolved') updates.resolved_at = new Date().toISOString()
+      if (status === 'closed') updates.closed_at = new Date().toISOString()
+    }
     if (priority) updates.priority = priority
     if (assigned_admin_id !== undefined) updates.assigned_admin_id = assigned_admin_id
 

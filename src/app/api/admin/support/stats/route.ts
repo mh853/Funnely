@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { getKSTStartOfDay } from '@/lib/utils/date'
 
 /**
  * GET /api/admin/support/stats
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
     // 전체 티켓 조회
     const { data: tickets, error } = await supabase
       .from('support_tickets')
-      .select('status, priority, category, created_at')
+      .select('status, priority, category, created_at, resolved_at')
 
     if (error) {
       console.error('[Support Stats API] Error fetching tickets:', error)
@@ -35,9 +36,9 @@ export async function GET(request: NextRequest) {
     const byPriority: Record<string, number> = {}
     const byCategory: Record<string, number> = {}
 
-    // 오늘 날짜 (UTC 기준)
-    const today = new Date()
-    today.setUTCHours(0, 0, 0, 0)
+    // 오늘 날짜 (KST 기준) - 서버(UTC)에서 setUTCHours(0,0,0,0)을 쓰면 KST 기준
+    // 하루와 최대 9시간 어긋난다
+    const todayStart = getKSTStartOfDay(0)
     let resolvedToday = 0
 
     tickets?.forEach((ticket) => {
@@ -50,10 +51,10 @@ export async function GET(request: NextRequest) {
       // 카테고리별 집계
       byCategory[ticket.category] = (byCategory[ticket.category] || 0) + 1
 
-      // 오늘 해결된 티켓 집계
-      if (ticket.status === 'resolved') {
-        const createdDate = new Date(ticket.created_at)
-        if (createdDate >= today) {
+      // 오늘 해결된 티켓 집계 - 생성일이 아니라 실제 해결 시각 기준
+      if (ticket.status === 'resolved' && ticket.resolved_at) {
+        const resolvedDate = new Date(ticket.resolved_at)
+        if (resolvedDate >= todayStart) {
           resolvedToday++
         }
       }
