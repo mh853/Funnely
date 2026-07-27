@@ -122,8 +122,16 @@ export async function calculateEngagementScore(
   // Active users (0-40 points)
   score += Math.min(40, activeUserPercentage * 100 * 0.4)
 
-  // Login frequency (0-35 points) - 1+ login per day = max
-  score += Math.min(35, (loginFrequency / 7) * 35)
+  // Login frequency (0-35 points) - 최근 7일 내 로그인한 사용자 비율.
+  // last_login이 사용자당 최근 1회만 저장되어 "하루 몇 번 로그인했는지"는 셀 수
+  // 없으므로, 원래 있던 "(loginFrequency / 7) * 35"(7일치 로그인 횟수를 가정한 계산)는
+  // recentLogins가 사실 "최근 7일 내 로그인한 서로 다른 사용자 수"(회사 전체
+  // 인원수를 절대 못 넘음)라는 실제 의미와 안 맞았다 - 인원이 7명 미만인 회사는
+  // 전 직원이 매일 로그인해도 이 만점(35점)에 절대 도달할 수 없었다(라이브 DB
+  // 확인 결과 현재 모든 회사가 7명 미만). 위 activeUserPercentage와 동일하게
+  // 회사 인원 대비 비율로 정규화해 회사 규모와 무관하게 만점 도달이 가능하도록 함.
+  const recentLoginRate = totalUsers > 0 ? recentLogins / totalUsers : 0
+  score += Math.min(35, recentLoginRate * 35)
 
   // Recency (0-25 points)
   if (daysSinceLastActivity === 0) score += 25
