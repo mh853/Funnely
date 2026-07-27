@@ -1149,7 +1149,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             </div>
             <div className="p-6">
               <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
-                {landingPage.privacy_policy || '개인정보 수집 및 이용 동의 내용이 없습니다.'}
+                {landingPage.privacy_content || '개인정보 수집 및 이용 동의 내용이 없습니다.'}
               </div>
             </div>
           </div>
@@ -1173,7 +1173,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             </div>
             <div className="p-6">
               <div className="prose prose-sm max-w-none text-gray-600 whitespace-pre-wrap">
-                {landingPage.marketing_consent || '마케팅 활용 동의 내용이 없습니다.'}
+                {landingPage.marketing_content || '마케팅 활용 동의 내용이 없습니다.'}
               </div>
             </div>
           </div>
