@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 /**
  * GET /api/admin/audit-logs/stats
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
     // 5. 일별 활동
     const dailyActivity = Object.entries(
       (logs || []).reduce((acc, log) => {
-        const date = new Date(log.created_at).toISOString().split('T')[0]
+        const date = toKSTDateStr(new Date(log.created_at))
         acc[date] = (acc[date] || 0) + 1
         return acc
       }, {} as Record<string, number>)

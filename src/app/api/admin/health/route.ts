@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
+import { getKSTDayRange } from '@/lib/utils/date'
 
 /**
  * GET /api/admin/health
@@ -126,9 +127,9 @@ export async function GET(request: NextRequest) {
       countQuery = countQuery.eq('risk_level', riskLevel)
     }
 
-    const targetDate = new Date(date)
-    const nextDate = new Date(targetDate)
-    nextDate.setDate(nextDate.getDate() + 1)
+    // new Date(date)로 직접 파싱하면 "YYYY-MM-DD"가 UTC 자정으로 해석되어 KST 기준
+    // 하루(00:00~24:00 KST)가 아니라 KST 09:00~다음날 09:00 범위가 되어버린다.
+    const { start: targetDate, end: nextDate } = getKSTDayRange(date)
 
     countQuery = countQuery
       .gte('calculated_at', targetDate.toISOString())

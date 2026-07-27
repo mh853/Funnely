@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/admin/audit-middleware'
 import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/calculateHealthScore'
+import { getKSTStartOfDay } from '@/lib/utils/date'
 
 /**
  * POST /api/admin/health/calculate
@@ -167,10 +168,11 @@ async function calculateAndSaveHealthScore(
 
   // 오늘 날짜의 기존 점수 확인
   // 실제 테이블명은 'health_scores'가 아니라 'customer_health_scores'이다.
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const tomorrow = new Date(today)
-  tomorrow.setDate(tomorrow.getDate() + 1)
+  // UTC 자정(setHours(0,0,0,0))이 아니라 KST 자정 기준이어야 daily-tasks 크론의
+  // dedup 판정과 일치한다 — 이 라우트는 관리자가 임의 시각에 수동 재계산할 때 쓰이므로
+  // 어긋나면 크론이 "오늘 이미 있다"고 잘못 판단해 다음날 스냅샷을 덮어쓸 수 있다.
+  const today = getKSTStartOfDay(0)
+  const tomorrow = getKSTStartOfDay(1)
 
   const { data: existingScore } = await supabase
     .from('customer_health_scores')

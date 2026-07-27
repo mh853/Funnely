@@ -4,6 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/admin/audit-middleware'
+import { getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
 /**
  * GET /api/admin/companies/[id]
@@ -44,9 +45,13 @@ export async function GET(
     // (admin_user/users/subscription/recent_activity(단수)는 어디서도 소비되지 않으며,
     // 존재하지 않는 profiles/subscriptions 테이블과 company_id 컬럼이 없는 audit_logs를
     // 잘못 참조하고 있어 제거한다).
-    const now = new Date()
-    const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
-    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+    // 서버(Vercel)는 UTC라서 new Date(year, month, 1)을 그대로 쓰면 KST 기준 매월 1일
+    // 00:00~09:00 사이 리드가 전월로 새는 문제가 있어 KST 캘린더 기준으로 계산한다.
+    const kstNow = getKSTNow()
+    const kstYear = kstNow.getUTCFullYear()
+    const kstMonth = kstNow.getUTCMonth() + 1
+    const startOfThisMonth = getKSTMonthStart(kstYear, kstMonth).toISOString()
+    const startOfLastMonth = getKSTMonthStart(kstYear, kstMonth - 1).toISOString()
 
     const [
       { count: totalUsers },

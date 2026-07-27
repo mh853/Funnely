@@ -4,17 +4,22 @@
 // route.ts에 그대로 두면 타입 체크가 깨진다(ignoreBuildErrors로 가려져 있었음).
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 import { createClient } from '@supabase/supabase-js'
+import { getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
+// 서버(Vercel)는 UTC라서 new Date(year, month, 1)을 그대로 쓰면 KST 기준 매월 1일
+// 00:00~09:00 사이 집계가 전월로 새는 문제가 있어 KST 캘린더 기준으로 계산한다.
 function getMonthRange() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth(), 1)
-  return { start: start.toISOString(), end: now.toISOString() }
+  const kstNow = getKSTNow()
+  const start = getKSTMonthStart(kstNow.getUTCFullYear(), kstNow.getUTCMonth() + 1)
+  return { start: start.toISOString(), end: new Date().toISOString() }
 }
 
 function getLastMonthRange() {
-  const now = new Date()
-  const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
-  const end = new Date(now.getFullYear(), now.getMonth(), 1)
+  const kstNow = getKSTNow()
+  const kstYear = kstNow.getUTCFullYear()
+  const kstMonth = kstNow.getUTCMonth() + 1
+  const start = getKSTMonthStart(kstYear, kstMonth - 1)
+  const end = getKSTMonthStart(kstYear, kstMonth)
   return { start: start.toISOString(), end: end.toISOString() }
 }
 

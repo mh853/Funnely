@@ -43,6 +43,20 @@ export function getKSTMonthStart(year: number, month: number, dayOffset = 0): Da
 }
 
 /**
+ * "YYYY-MM-DD" 문자열이 나타내는 KST 캘린더 하루를 [시작, 다음날 시작) UTC 인스턴트
+ * 범위로 변환한다. TIMESTAMPTZ 컬럼을 특정 KST 날짜로 필터링할 때 new Date(dateStr)를
+ * 직접 쓰면 UTC 자정으로 해석되어 9시간 어긋나므로(day 필터가 KST 기준 하루가 아니라
+ * KST 09:00~다음날 09:00을 가리키게 됨) 이 함수를 통해야 한다.
+ */
+export function getKSTDayRange(dateStr: string): { start: Date; end: Date } {
+  const [year, month, day] = dateStr.split('-').map(Number)
+  return {
+    start: getKSTMonthStart(year, month, day - 1),
+    end: getKSTMonthStart(year, month, day),
+  }
+}
+
+/**
  * Format date to standard format: YYYY-MM-DD HH:mm
  * @param date - Date string, Date object, or timestamp
  * @returns Formatted date string or '-' if invalid

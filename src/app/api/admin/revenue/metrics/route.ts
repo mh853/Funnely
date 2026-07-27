@@ -16,6 +16,7 @@ import type {
   RevenueTrend,
   Subscription,
 } from '@/types/revenue'
+import { getKSTNow, getKSTMonthStart, toKSTDateStr } from '@/lib/utils/date'
 
 export async function GET(request: NextRequest) {
   try {
@@ -36,17 +37,16 @@ export async function GET(request: NextRequest) {
 
     // 7/11번에서 쓰는 날짜 계산은 activeSubscriptions 결과와 무관하므로 먼저 계산해두고,
     // 세 쿼리를 병렬로 실행한다 (기존엔 순차 실행이었음)
-    const lastMonth = new Date()
-    lastMonth.setMonth(lastMonth.getMonth() - 1)
-    const lastMonthStr = lastMonth.toISOString().split('T')[0]
-    const lastMonthEndStr = new Date(
-      lastMonth.getFullYear(),
-      lastMonth.getMonth() + 1,
-      1
-    ).toISOString().split('T')[0]
+    // period_start는 DATE 컬럼(KST 기준 날짜 문자열)이므로, 서버 UTC 시각에서
+    // new Date().setMonth()/toISOString()으로 직접 계산하면 (a) KST와 최대 9시간
+    // 어긋나고 (b) 월말(29~31일)에 setMonth 오버플로우로 엉뚱한 달로 튈 수 있다.
+    const kstNow = getKSTNow()
+    const kstYear = kstNow.getUTCFullYear()
+    const kstMonth = kstNow.getUTCMonth() + 1 // 1~12
+    const lastMonthStr = toKSTDateStr(getKSTMonthStart(kstYear, kstMonth - 1))
+    const lastMonthEndStr = toKSTDateStr(getKSTMonthStart(kstYear, kstMonth))
 
-    const sixMonthsAgo = new Date()
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
+    const sixMonthsAgo = getKSTMonthStart(kstYear, kstMonth - 5) // 이번 달 포함 최근 6개월
 
     // 4. 현재 활성 구독 조회 (company_subscriptions + subscription_plans)
     // 새로운 플랜 구조: 개인(Personal)/기업(Business) × Free/Basic/Pro
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
       supabase
         .from('revenue_metrics')
         .select('period_start, mrr, arr')
-        .gte('period_start', sixMonthsAgo.toISOString().split('T')[0])
+        .gte('period_start', toKSTDateStr(sixMonthsAgo))
         .order('period_start', { ascending: true }),
     ])
 
