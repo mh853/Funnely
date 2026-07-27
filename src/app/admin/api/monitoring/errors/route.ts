@@ -9,8 +9,8 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url)
     const severity = searchParams.get('severity')
     const resolved = searchParams.get('resolved')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '50')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50'), 100)
 
     const supabase = createAdminClient()
 

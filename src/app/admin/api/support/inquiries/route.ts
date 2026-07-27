@@ -10,8 +10,8 @@ export async function GET(request: Request) {
     const status = searchParams.get('status')
     const type = searchParams.get('inquiry_type')
     const search = searchParams.get('search')
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '20')
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1'))
+    const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 100)
     const offset = (page - 1) * limit
 
     const supabase = createAdminClient()
