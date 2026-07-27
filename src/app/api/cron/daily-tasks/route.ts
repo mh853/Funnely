@@ -822,13 +822,38 @@ async function checkSubscriptionExpiry(supabase: any) {
         .single()
 
       if (!expiredNotifSent) {
+        const companyName = (sub.companies as any)?.name || '회사'
+
         await supabase.from('notifications').insert({
           company_id: sub.company_id,
           title: `구독이 만료되었습니다`,
-          message: `${(sub.companies as any)?.name || '회사'}의 구독이 만료되어 대시보드 접근이 제한됩니다. 서비스를 계속 이용하려면 플랜을 선택해주세요.`,
+          message: `${companyName}의 구독이 만료되어 대시보드 접근이 제한됩니다. 서비스를 계속 이용하려면 플랜을 선택해주세요.`,
           type: 'subscription_expired',
           metadata: { subscription_id: sub.id },
         })
+
+        // 인앱 알림만으로는 대시보드에 다시 들어오기 전까지 접근이 막혔다는 사실 자체를
+        // 알 방법이 없었다 - payment_notifications에도 남겨 이메일로 안내되게 한다
+        // (실제 발송은 sendPaymentNotificationEmails가 처리).
+        const { data: admins } = await supabase
+          .from('users')
+          .select('email, full_name')
+          .eq('company_id', sub.company_id)
+          .in('role', ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'])
+
+        if (admins && admins.length > 0) {
+          for (const admin of admins) {
+            await supabase.from('payment_notifications').insert({
+              company_id: sub.company_id,
+              notification_type: 'subscription_expired',
+              recipient_email: admin.email,
+              recipient_name: admin.full_name,
+              subject: '[Funnely] 구독이 만료되었습니다',
+              body_text: `${admin.full_name}님, ${companyName}의 구독이 만료되어 대시보드 접근이 제한됩니다.\n\n서비스를 계속 이용하시려면 대시보드에서 플랜을 다시 선택해 주세요.`,
+              status: 'pending',
+            })
+          }
+        }
 
         await supabase.from('notification_sent_logs').insert({
           subscription_id: sub.id,
