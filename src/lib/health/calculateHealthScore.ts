@@ -547,11 +547,16 @@ export function toCustomerHealthScoreRow(
   metrics: Record<string, any>
   calculated_at: string
 } {
+  // admin/health/page.tsx의 RISK_LEVEL_TO_STATUS 역매핑(high: 'at_risk')이 이미
+  // risk_level='high'가 at_risk를 나타낸다고 전제하고 있었는데, 정작 이 함수는
+  // 'medium'을 내보내고 있어 실제로는 'high'가 절대 나오지 않고 있었다 - 고위험
+  // 이탈 워치리스트(risk_level IN ('high','critical'))에서 at_risk 회사가 전부
+  // 조용히 빠지는 결과로 이어짐.
   const riskLevel: 'low' | 'medium' | 'high' | 'critical' =
     result.health_status === 'critical'
       ? 'critical'
       : result.health_status === 'at_risk'
-        ? 'medium'
+        ? 'high'
         : 'low'
 
   return {
