@@ -27,11 +27,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
     }
 
+    // 리드 제출 시 블랙리스트 대조(landing-pages/submit/route.ts)는 숫자만 남긴
+    // 값으로 비교하므로, 저장 쪽도 반드시 같은 방식으로 정규화해야 매칭이 된다.
+    // 클라이언트(AddBlacklistModal)가 이미 숫자만 보내고 있지만, 향후 다른
+    // 호출부(예: 일괄 등록)가 하이픈 포함 값을 그대로 보내면 대조가 조용히
+    // 실패할 수 있어 API 쪽에서도 한 번 더 정규화한다.
+    const normalizedPhone = phone_number.replace(/\D/g, '')
+    if (!normalizedPhone) {
+      return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
+    }
+
     const { data, error } = await supabase
       .from('phone_blacklist')
       .insert({
         company_id: user.company_id,
-        phone_number: phone_number.trim(),
+        phone_number: normalizedPhone,
         reason: reason?.trim() || null,
         blocked_by_user_id: authUser.id,
       })
