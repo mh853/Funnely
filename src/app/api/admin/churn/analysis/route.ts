@@ -12,6 +12,7 @@ import {
   calculateLostRevenue,
 } from '@/lib/churn/calculations'
 import type { ChurnAnalysisResponse } from '@/types/churn'
+import { getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -35,29 +36,36 @@ export async function GET(request: NextRequest) {
       'monthly') as 'monthly' | 'quarterly' | 'yearly'
 
     // 4. 기간 설정
+    // 서버(Vercel)는 UTC라서 new Date(year, month, 1)을 그대로 쓰면 KST 기준 매월 1일
+    // 00:00~09:00 사이의 경계가 하루 밀린다. KST 캘린더 기준 연/월을 먼저 구하고
+    // getKSTMonthStart()로 실제 UTC 인스턴트를 계산해야 한다.
     const now = new Date()
+    const kstNow = getKSTNow()
+    const kstYear = kstNow.getUTCFullYear()
+    const kstMonth = kstNow.getUTCMonth() + 1 // 1~12
     let startDate: Date
 
     switch (period) {
       case 'monthly':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+        startDate = getKSTMonthStart(kstYear, kstMonth - 1)
         break
       case 'quarterly':
-        startDate = new Date(now.getFullYear(), now.getMonth() - 3, 1)
+        startDate = getKSTMonthStart(kstYear, kstMonth - 3)
         break
       case 'yearly':
-        startDate = new Date(now.getFullYear() - 1, now.getMonth(), 1)
+        startDate = getKSTMonthStart(kstYear - 1, kstMonth)
         break
     }
 
     // 5+6+8 준비: 12개월 트렌드 루프가 매달 2개씩(총 24회) 순차 조회하던 것을,
     // 전체 회사 생성일 + 12개월 윈도우 이탈 기록을 한 번씩만 가져와 루프 안에서는
-    // JS로 필터링하도록 바꿨다. 원래 루프의 월 경계(monthStart/monthEnd) 계산과
-    // 집계 로직 자체는 그대로 두고 "어떻게 가져오는지"만 바꿔, 출력값은 기존과
-    // 동일하다. period=yearly는 트렌드 윈도우(최근 12개월)보다 1개월 더 앞선
-    // 시점까지 봐야 하므로 6번(churnRecords)은 별도 쿼리로 유지한다.
-    const trendWindowStart = new Date(now.getFullYear(), now.getMonth() - 11, 1)
-    const trendWindowEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    // JS로 필터링하도록 바꿨다. period=yearly는 트렌드 윈도우(최근 12개월)보다 1개월
+    // 더 앞선 시점까지 봐야 하므로 6번(churnRecords)은 별도 쿼리로 유지한다.
+    // 상한은 "다음 달 KST 시작"을 배타적(exclusive)으로 써야 한다 — 예전처럼
+    // "다음달의 0일"(=이번달 마지막날 00:00)을 포함 상한으로 쓰면 마지막 날 00:00
+    // 이후 발생한 이탈이 그 달에도, 다음 달에도 속하지 못하고 통째로 누락된다.
+    const trendWindowStart = getKSTMonthStart(kstYear, kstMonth - 11)
+    const trendWindowEndExclusive = getKSTMonthStart(kstYear, kstMonth + 1)
 
     const [
       { data: allCompanies, error: allCompaniesError },
@@ -69,7 +77,7 @@ export async function GET(request: NextRequest) {
         .from('churn_records')
         .select('*')
         .gte('churn_date', trendWindowStart.toISOString())
-        .lte('churn_date', trendWindowEnd.toISOString()),
+        .lt('churn_date', trendWindowEndExclusive.toISOString()),
       supabase
         .from('churn_records')
         .select('*')
@@ -101,16 +109,18 @@ export async function GET(request: NextRequest) {
     const preventableAnalysis = analyzePreventableChurn(churnRecords || [])
 
     // 8. 12개월 트렌드 계산 (더 이상 루프 안에서 쿼리하지 않음)
+    // monthEnd를 배타적 상한(다음 달 KST 시작)으로 써야 마지막 날 이탈이 누락되지 않는다.
     const trends = []
     for (let i = 11; i >= 0; i--) {
-      const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 0)
+      const targetMonthIndex = kstMonth - i // 1~12 범위를 벗어나도 아래 두 함수가 정규화한다
+      const monthStart = getKSTMonthStart(kstYear, targetMonthIndex)
+      const monthEndExclusive = getKSTMonthStart(kstYear, targetMonthIndex + 1)
       const startMs = monthStart.getTime()
-      const endMs = monthEnd.getTime()
+      const endMs = monthEndExclusive.getTime()
 
       const monthRecords = (allTrendChurnRecords || []).filter((r) => {
         const t = new Date(r.churn_date).getTime()
-        return t >= startMs && t <= endMs
+        return t >= startMs && t < endMs
       })
 
       const monthChurnedCount = monthRecords.length
@@ -122,8 +132,12 @@ export async function GET(request: NextRequest) {
       // 해당 월 시작 시점 총 회사 수
       const monthTotalAtStart = companyCreatedMs.filter((t) => t <= startMs).length
 
+      // 라벨용 연/월 표기 — 실제 타임스탬프가 아니라 순수 달력 계산이므로 UTC 게터로
+      // targetMonthIndex(1~12 범위를 벗어날 수 있음)를 정규화해서 읽는다.
+      const labelDate = new Date(Date.UTC(kstYear, targetMonthIndex - 1, 1))
+
       trends.push({
-        period: `${monthStart.getFullYear()}-${String(monthStart.getMonth() + 1).padStart(2, '0')}`,
+        period: `${labelDate.getUTCFullYear()}-${String(labelDate.getUTCMonth() + 1).padStart(2, '0')}`,
         churn_rate: calculateChurnRate(monthChurnedCount, monthTotalAtStart),
         churned_count: monthChurnedCount,
         lost_mrr: monthLostMrr,

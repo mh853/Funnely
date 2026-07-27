@@ -13,6 +13,7 @@ import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
 import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 import { escapeHtml } from '@/lib/email/template-renderer'
+import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
 
 /**
  * Unified daily tasks cron job
@@ -268,7 +269,8 @@ async function calculateRevenue(supabase: any) {
 
   // Calculate MRR/ARR for each company
   const revenueMetrics = []
-  const todayDate = new Date().toISOString().split('T')[0]
+  // 크론은 23:00 UTC(=08:00 KST)에 실행되므로 UTC 날짜를 그대로 쓰면 KST 기준으로 하루 전 날짜가 찍힌다.
+  const todayDate = toKSTDateStr(new Date())
 
   for (const [companyId, companySubs] of Array.from(
     companySubscriptionsMap.entries()
@@ -361,10 +363,10 @@ async function calculateHealthScores(supabase: any) {
 
       // Check if today's score exists
       // Real table name is 'customer_health_scores', not 'health_scores'.
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      const tomorrow = new Date(today)
-      tomorrow.setDate(tomorrow.getDate() + 1)
+      // KST 기준 하루 경계를 써야 한다 — UTC 기준 setHours(0,0,0,0)을 쓰면 서버(UTC)
+      // 자정과 KST 자정이 9시간 어긋나 수동 재계산 기록과 겹치는 날짜 판정이 틀어질 수 있다.
+      const today = getKSTStartOfDay(0)
+      const tomorrow = getKSTStartOfDay(1)
 
       const { data: existingScore } = await supabase
         .from('customer_health_scores')
