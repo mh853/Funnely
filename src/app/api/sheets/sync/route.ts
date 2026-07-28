@@ -117,13 +117,20 @@ export async function POST(request: NextRequest) {
       existingLeads?.map((l) => l.phone_hash) || []
     )
 
-    // 새로운 리드만 필터링
+    // 시트 안에서 같은 전화번호가 여러 행에 있으면 기존 DB 대조만으로는 못 걸러진다
+    // (existingHashes는 DB에 이미 있는 것만 담고 있음) - 같은 배치 안에서도 먼저
+    // 나온 행만 남기고 중복 제거해야 한 번의 동기화로 같은 리드가 여러 건 생기지 않는다.
+    const seenPhoneHashesInBatch = new Set<string>()
     const newLeads = sheetLeads.filter((lead) => {
       const phoneHash = crypto
         .createHash('sha256')
         .update(lead.phone.replace(/\D/g, ''))
         .digest('hex')
-      return !existingHashes.has(phoneHash)
+      if (existingHashes.has(phoneHash) || seenPhoneHashesInBatch.has(phoneHash)) {
+        return false
+      }
+      seenPhoneHashesInBatch.add(phoneHash)
+      return true
     })
 
     if (newLeads.length === 0) {
@@ -146,23 +153,35 @@ export async function POST(request: NextRequest) {
       .maybeSingle()
 
     // 리드 삽입
-    const leadsToInsert = newLeads.map((lead) => ({
-      company_id: companyId,
-      landing_page_id: landingPageId || null,
-      name: lead.name,
-      phone: encryptPhone(lead.phone),
-      email: lead.email || null,
-      phone_hash: crypto
-        .createHash('sha256')
-        .update(lead.phone.replace(/\D/g, ''))
-        .digest('hex'),
-      source: lead.source || 'google_sheets',
-      custom_fields: lead.customFields || [],
-      status: defaultStatus?.code || 'new',
-      created_at: lead.createdAt
-        ? new Date(lead.createdAt).toISOString()
-        : new Date().toISOString(),
-    }))
+    const leadsToInsert = newLeads.map((lead) => {
+      // 매핑된 createdAt 컬럼 값 하나가 파싱 불가능하면 new Date(...).toISOString()가
+      // RangeError를 던져 map() 전체가 실패하고, 그 결과 이 스프레드시트 전체의
+      // import가 조용히 중단된다. 파싱 실패 시 현재 시각으로 폴백해 그 행 하나
+      // 때문에 나머지 행까지 막히지 않도록 한다.
+      let createdAtIso = new Date().toISOString()
+      if (lead.createdAt) {
+        const parsed = new Date(lead.createdAt)
+        if (!isNaN(parsed.getTime())) {
+          createdAtIso = parsed.toISOString()
+        }
+      }
+
+      return {
+        company_id: companyId,
+        landing_page_id: landingPageId || null,
+        name: lead.name,
+        phone: encryptPhone(lead.phone),
+        email: lead.email || null,
+        phone_hash: crypto
+          .createHash('sha256')
+          .update(lead.phone.replace(/\D/g, ''))
+          .digest('hex'),
+        source: lead.source || 'google_sheets',
+        custom_fields: lead.customFields || [],
+        status: defaultStatus?.code || 'new',
+        created_at: createdAtIso,
+      }
+    })
 
     const { data: inserted, error: insertError } = await supabaseAdmin
       .from('leads')
