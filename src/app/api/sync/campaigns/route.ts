@@ -103,6 +103,8 @@ export async function POST(request: NextRequest) {
 async function syncMetaCampaigns(adAccount: any, campaignId?: string) {
   // TODO: Implement Meta Ads API integration
   // This is a placeholder that will be implemented when API integration is ready
+  // 실제 구현 시 adAccount.access_token은 암호화된 채로 저장돼 있으므로
+  // '@/lib/encryption/credentials'의 decryptToken()으로 복호화한 뒤 써야 한다.
 
   return {
     platform: 'meta',

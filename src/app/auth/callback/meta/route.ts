@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { decryptCredentials } from '@/lib/encryption/credentials'
+import { decryptCredentials, encryptToken } from '@/lib/encryption/credentials'
 import { AD_INTEGRATION_ENABLED } from '@/lib/feature-flags/disabled-features'
 
 export async function GET(request: NextRequest) {
@@ -154,7 +154,10 @@ export async function GET(request: NextRequest) {
         account_id: account.id,
         account_name: account.name || account.id,
         is_active: account.account_status === 1,
-        access_token: access_token,
+        // access_token은 실제 Meta Graph API 토큰이라 그대로 저장하면 안 된다
+        // (api_credentials의 app_id/app_secret은 이미 암호화 컬럼으로 옮겨져
+        // 있었는데 이 사용자별 OAuth 토큰만 그 리팩터링에서 빠져 있었음)
+        access_token: encryptToken(access_token),
         token_expires_at: expiresAt,
         metadata: {
           currency: account.currency,

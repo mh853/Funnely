@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
-import { decryptCredentials } from '@/lib/encryption/credentials'
+import { decryptCredentials, encryptToken, decryptToken } from '@/lib/encryption/credentials'
 import { AD_INTEGRATION_ENABLED, FEATURE_DISABLED_RESPONSE } from '@/lib/feature-flags/disabled-features'
 
 export async function POST(
@@ -80,7 +80,7 @@ export async function POST(
     switch (adAccount.platform) {
       case 'meta':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshMetaToken(
-          adAccount.access_token,
+          decryptToken(adAccount.access_token),
           decryptedCredentials as { app_id: string; app_secret: string }
         ))
         // Meta: 토큰 갱신 후 계정 상태도 조회
@@ -88,13 +88,13 @@ export async function POST(
         break
       case 'kakao':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshKakaoToken(
-          adAccount.refresh_token,
+          decryptToken(adAccount.refresh_token),
           decryptedCredentials as { rest_api_key: string }
         ))
         break
       case 'google':
         ;({ accessToken: newAccessToken, expiresIn } = await refreshGoogleToken(
-          adAccount.refresh_token,
+          decryptToken(adAccount.refresh_token),
           decryptedCredentials as { client_id: string; client_secret: string }
         ))
         break
@@ -106,7 +106,7 @@ export async function POST(
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString()
 
     const updateData: Record<string, any> = {
-      access_token: newAccessToken,
+      access_token: encryptToken(newAccessToken),
       token_expires_at: expiresAt,
       updated_at: new Date().toISOString(),
     }
