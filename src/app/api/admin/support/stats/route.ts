@@ -20,14 +20,29 @@ export async function GET(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // 전체 티켓 조회
-    const { data: tickets, error } = await supabase
-      .from('support_tickets')
-      .select('status, priority, category, created_at, resolved_at')
+    // 전체 티켓 조회 - range() 없이 조회하면 supabase의 암묵적 max_rows(1000)에
+    // 걸려 플랫폼 전체 티켓이 1000건을 넘는 순간부터 이 통계 전체가 조용히
+    // 축소된 값이 된다(api/leads/export 등에서 이미 겪은 것과 동일한 원인).
+    // 1000건씩 배치로 반복 조회해 전체를 가져온다.
+    const tickets: { status: string; priority: string; category: string; created_at: string; resolved_at: string | null }[] = []
+    {
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('support_tickets')
+          .select('status, priority, category, created_at, resolved_at')
+          .range(offset, offset + BATCH_SIZE - 1)
 
-    if (error) {
-      console.error('[Support Stats API] Error fetching tickets:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+        if (error) {
+          console.error('[Support Stats API] Error fetching tickets:', error)
+          return NextResponse.json({ error: error.message }, { status: 500 })
+        }
+        if (!data || data.length === 0) break
+        tickets.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
     }
 
     // 통계 계산
