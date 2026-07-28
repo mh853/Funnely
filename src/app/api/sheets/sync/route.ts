@@ -58,6 +58,27 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 구글 시트 접근은 회사마다 다른 자격증명이 아니라 전체 회사가 공유하는
+    // 서비스 계정 하나로 이뤄지므로(각 회사가 자기 시트를 이 계정에 공유하는
+    // 방식), companyId 검증만으로는 부족하다 - 요청받은 spreadsheetId가 실제로
+    // 그 회사가 sheet_sync_configs에 등록해 둔 시트인지까지 확인해야 한다.
+    // 그렇지 않으면 다른 회사가 이미 공유해 둔(=이 서비스 계정이 읽을 수 있는)
+    // 스프레드시트 ID를 알아내 자기 회사 companyId로 요청을 조작해 남의 시트
+    // 데이터를 자기 리드로 끌어올 수 있다.
+    const { data: ownedConfig } = await supabaseAdmin
+      .from('sheet_sync_configs')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('spreadsheet_id', spreadsheetId)
+      .maybeSingle()
+
+    if (!ownedConfig) {
+      return NextResponse.json(
+        { error: '이 회사에 등록되지 않은 스프레드시트입니다.' },
+        { status: 403 }
+      )
+    }
+
     // 먼저 사용 가능한 시트 목록 확인
     let availableSheets: string[] = []
     try {
