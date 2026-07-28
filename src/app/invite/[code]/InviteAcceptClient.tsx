@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { CheckCircleIcon, XCircleIcon, ClockIcon } from '@heroicons/react/24/outline'
+import { createClient } from '@/lib/supabase/client'
 
 interface InviteAcceptClientProps {
   code: string
@@ -29,6 +30,10 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
   const [success, setSuccess] = useState(false)
   const [invitation, setInvitation] = useState<InvitationInfo | null>(null)
   const [invalidStatus, setInvalidStatus] = useState<string | null>(null)
+  // 초대가 실제로 무효(만료/취소/이미 수락)한 것이 아니라, 조회 자체가 실패한
+  // 경우(네트워크 오류, 예상치 못한 5xx 등)를 구분하기 위한 플래그.
+  // invalidStatus와 달리 재시도가 의미 있는 상황이다.
+  const [checkFailed, setCheckFailed] = useState(false)
 
   const [formData, setFormData] = useState({
     email: '',
@@ -42,12 +47,22 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
   }, [code])
 
   const fetchInvitationInfo = async () => {
+    setLoading(true)
+    setCheckFailed(false)
+    setError(null)
+
     try {
       const response = await fetch(`/api/users/invite/accept?code=${code}`)
       const data = await response.json()
 
       if (!response.ok) {
         setError(data.error || '초대 정보를 불러오는데 실패했습니다.')
+        // 404는 "이 코드는 존재하지 않는다"는 API의 명확한 판정이라 재시도가 무의미하다
+        // (기존 동작 유지). 반면 5xx는 서버 쪽 문제일 뿐 초대 코드 자체가 무효하다는
+        // 뜻이 아니므로 "확인 중 문제 발생"으로 구분해 재시도를 제공한다.
+        if (response.status >= 500) {
+          setCheckFailed(true)
+        }
         return
       }
 
@@ -59,10 +74,22 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
 
       setInvitation(data.invitation)
     } catch (err) {
-      setError('서버 오류가 발생했습니다.')
+      setError('초대 정보를 확인하는 중 문제가 발생했습니다.')
+      setCheckFailed(true)
     } finally {
       setLoading(false)
     }
+  }
+
+  // 초대 수락으로 새 계정을 만들어도 service-role admin API로만 생성되므로
+  // 브라우저 세션은 바뀌지 않는다. 이미 다른 계정으로 로그인되어 있던 상태라면
+  // /auth/login으로 이동해도 미들웨어가 "이미 로그인된 사용자"로 보고 기존 계정의
+  // 대시보드로 되돌려보내 버린다 - 새로 만든 계정으로 로그인할 기회조차 없이.
+  // 이동 전에 기존 세션을 명시적으로 지워야 새 계정 로그인 폼이 실제로 보인다.
+  const signOutAndGoToLogin = async () => {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/auth/login')
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -116,7 +143,7 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
 
       // Redirect to login after 3 seconds
       setTimeout(() => {
-        router.push('/auth/login')
+        signOutAndGoToLogin()
       }, 3000)
     } catch (err: any) {
       setError(err.message || '가입에 실패했습니다.')
@@ -144,7 +171,7 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
           잠시 후 로그인 페이지로 이동합니다...
         </p>
         <button
-          onClick={() => router.push('/auth/login')}
+          onClick={signOutAndGoToLogin}
           className="mt-4 text-sm text-blue-600 hover:text-blue-500"
         >
           바로 로그인하기
@@ -178,6 +205,36 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
         >
           홈으로 돌아가기
         </button>
+      </div>
+    )
+  }
+
+  // Check failed state (network/server error while looking up the invitation -
+  // distinct from an actually invalid/expired/accepted/cancelled invitation)
+  if (checkFailed) {
+    return (
+      <div className="text-center py-8">
+        <XCircleIcon className="mx-auto h-12 w-12 text-red-500" />
+        <h3 className="mt-4 text-lg font-medium text-gray-900">
+          초대 정보를 확인하는 중 문제가 발생했습니다
+        </h3>
+        <p className="mt-2 text-sm text-gray-500">
+          네트워크 연결을 확인하고 다시 시도해주세요.
+        </p>
+        <div className="mt-4 flex justify-center gap-4">
+          <button
+            onClick={() => fetchInvitationInfo()}
+            className="text-sm text-blue-600 hover:text-blue-500"
+          >
+            다시 시도
+          </button>
+          <button
+            onClick={() => router.push('/')}
+            className="text-sm text-gray-500 hover:text-gray-700"
+          >
+            홈으로 돌아가기
+          </button>
+        </div>
       </div>
     )
   }
