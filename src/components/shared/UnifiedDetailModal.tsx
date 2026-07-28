@@ -385,9 +385,14 @@ export default function UnifiedDetailModal({
   const handleAddPayment = async () => {
     if (!lead || !newPaymentAmount) return
 
+    const amountValue = Number(newPaymentAmount.replace(/,/g, ''))
+    if (!Number.isFinite(amountValue) || !Number.isInteger(amountValue) || amountValue <= 0) {
+      setError('결제 금액은 1원 이상의 숫자로 입력해주세요.')
+      return
+    }
+
     setAddingPayment(true)
     try {
-      const amountValue = Number(newPaymentAmount.replace(/,/g, ''))
       const response = await fetch('/api/leads/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -398,7 +403,10 @@ export default function UnifiedDetailModal({
         }),
       })
 
-      if (!response.ok) throw new Error('결제 내역 추가 실패')
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => null)
+        throw new Error(errBody?.error?.message || '결제 내역 추가 실패')
+      }
 
       const data = await response.json()
       setPayments((prev) => [data.data.payment, ...prev])
@@ -408,7 +416,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Add payment error:', error)
-      setError('결제 내역 추가에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '결제 내역 추가에 실패했습니다.')
     } finally {
       setAddingPayment(false)
     }

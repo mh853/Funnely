@@ -81,6 +81,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Missing required fields' } }, { status: 400 })
     }
 
+    // 클라이언트는 빈 문자열만 막고 있어서, 음수/NaN/정수 오버플로우가 그대로
+    // parseInt(amount, 10) || 0을 거쳐 저장되고 있었다 - 음수는 결제 총액을
+    // 몰래 깎고, NaN은 0원 결제가 "성공"으로 보이며, PostgreSQL INTEGER 범위를
+    // 넘는 값은 처리되지 않은 500 에러로 이어졌다.
+    const parsedAmount = Number(amount)
+    if (!Number.isFinite(parsedAmount) || !Number.isInteger(parsedAmount) || parsedAmount <= 0 || parsedAmount > 2147483647) {
+      return NextResponse.json(
+        { error: { message: '결제 금액은 1원 이상 2,147,483,647원 이하의 정수여야 합니다.' } },
+        { status: 400 }
+      )
+    }
+
     // Get user's company
     const { data: userProfile } = await supabase
       .from('users')
@@ -110,7 +122,7 @@ export async function POST(request: NextRequest) {
       .insert({
         lead_id,
         company_id: userProfile.company_id,
-        amount: parseInt(amount, 10) || 0,
+        amount: parsedAmount,
         payment_date: payment_date || new Date().toISOString(),
         notes: notes || null,
         created_by: user.id,
@@ -302,7 +314,16 @@ export async function PATCH(request: NextRequest) {
 
     // Build update data
     const updateData: Record<string, any> = {}
-    if (amount !== undefined) updateData.amount = parseInt(amount, 10) || 0
+    if (amount !== undefined) {
+      const parsedAmount = Number(amount)
+      if (!Number.isFinite(parsedAmount) || !Number.isInteger(parsedAmount) || parsedAmount <= 0 || parsedAmount > 2147483647) {
+        return NextResponse.json(
+          { error: { message: '결제 금액은 1원 이상 2,147,483,647원 이하의 정수여야 합니다.' } },
+          { status: 400 }
+        )
+      }
+      updateData.amount = parsedAmount
+    }
     if (payment_date !== undefined) updateData.payment_date = payment_date
     if (notes !== undefined) updateData.notes = notes
 
