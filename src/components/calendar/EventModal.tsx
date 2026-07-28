@@ -61,7 +61,9 @@ export default function EventModal({
         event_type: event.event_type,
         start_time: formatDateTimeLocal(startTime),
         end_time: formatDateTimeLocal(endTime),
-        assigned_to: event.assigned_to || currentUserId,
+        // calendar_events.assigned_to는 배열(UUID[]) 컬럼이라 DB에서 내려온 값도
+        // 배열이다 - 단일 select에 쓰려면 첫 번째 담당자만 꺼내야 한다
+        assigned_to: (Array.isArray(event.assigned_to) ? event.assigned_to[0] : event.assigned_to) || currentUserId,
         lead_id: event.lead_id || '',
         location: event.location || '',
         is_all_day: event.is_all_day || false,

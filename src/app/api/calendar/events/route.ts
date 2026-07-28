@@ -65,7 +65,10 @@ export async function POST(request: NextRequest) {
         event_type,
         start_time,
         end_time,
-        assigned_to: assigned_to || user.id,
+        // calendar_events.assigned_to는 UUID[](배열) 컬럼이라 스칼라를 그대로
+        // 넣으면 "malformed array literal"로 삽입 자체가 실패한다. UI가 담당자
+        // 1명만 선택하는 단일 select이므로 배열로 감싸서 넣는다.
+        assigned_to: [assigned_to || user.id],
         lead_id: lead_id || null,
         location: location || null,
         all_day: is_all_day || false,

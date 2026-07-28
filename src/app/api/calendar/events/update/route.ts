@@ -75,7 +75,9 @@ export async function PUT(request: NextRequest) {
     if (event_type !== undefined) updateData.event_type = event_type
     if (start_time !== undefined) updateData.start_time = start_time
     if (end_time !== undefined) updateData.end_time = end_time
-    if (assigned_to !== undefined) updateData.assigned_to = assigned_to
+    // calendar_events.assigned_to는 UUID[](배열) 컬럼이라 스칼라를 그대로 넣으면
+    // "malformed array literal"로 수정 자체가 실패한다(POST 라우트와 동일 원인).
+    if (assigned_to !== undefined) updateData.assigned_to = [assigned_to]
     if (lead_id !== undefined) updateData.lead_id = lead_id || null
     if (location !== undefined) updateData.location = location || null
     if (is_all_day !== undefined) updateData.all_day = is_all_day
