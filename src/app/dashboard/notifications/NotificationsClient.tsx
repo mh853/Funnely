@@ -8,7 +8,7 @@ import Link from 'next/link'
 
 interface Notification {
   id: string
-  user_id: string
+  user_id: string | null
   company_id: string
   title: string
   message: string
@@ -30,7 +30,29 @@ export default function NotificationsClient({
   companyId,
 }: NotificationsClientProps) {
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
+  // 브로드캐스트(user_id NULL) 알림에 대한 내 읽음 영수증 - notification_id 집합
+  const [readReceiptIds, setReadReceiptIds] = useState<Set<string>>(new Set())
   const supabase = createClient()
+
+  // 특정 알림이 "나에게" 읽음 상태인지 계산 - 개인 알림은 is_read, 브로드캐스트는 읽음 영수증 존재 여부
+  const isReadForMe = (notification: Notification) =>
+    notification.user_id !== null ? notification.is_read : readReceiptIds.has(notification.id)
+
+  // 내 읽음 영수증만 별도로 다시 조회
+  async function fetchReadReceipts() {
+    try {
+      const { data, error } = await supabase
+        .from('notification_reads')
+        .select('notification_id')
+        .eq('user_id', userId)
+
+      if (error) throw error
+
+      setReadReceiptIds(new Set((data || []).map((r) => r.notification_id)))
+    } catch (error) {
+      console.error('❌ [Notifications] Failed to fetch read receipts:', error)
+    }
+  }
 
   // Fetch notifications from server (user-specific OR company-wide)
   async function fetchNotifications() {
@@ -44,29 +66,56 @@ export default function NotificationsClient({
       if (error) throw error
 
       setNotifications(data || [])
+      fetchReadReceipts()
     } catch (error) {
       console.error('❌ [Notifications] Failed to fetch notifications:', error)
     }
   }
 
+  // 최초 마운트 시 읽음 영수증 로드 (초기 알림 목록은 서버에서 이미 내려받음)
+  useEffect(() => {
+    fetchReadReceipts()
+  }, [userId])
+
   // Mark notification as read
-  async function markAsRead(notificationId: string) {
+  async function markAsRead(notification: Notification) {
+    if (isReadForMe(notification)) return
+
     try {
-      // Optimistic update
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-      )
+      if (notification.user_id !== null) {
+        // 개인 대상 알림 - Optimistic update
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n))
+        )
 
-      const { data: updated, error } = await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId)
-        .select('id')
+        const { data: updated, error } = await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notification.id)
+          .select('id')
 
-      if (error) throw error
-      if (!updated || updated.length === 0) throw new Error('읽음 처리 권한이 없습니다.')
+        if (error) throw error
+        if (!updated || updated.length === 0) throw new Error('읽음 처리 권한이 없습니다.')
+      } else {
+        // 브로드캐스트 알림 - 나만의 읽음 영수증을 추가 (다른 팀원에게는 영향 없음)
+        setReadReceiptIds((prev) => new Set(prev).add(notification.id))
 
-      console.log('✅ [Notifications] Marked as read:', notificationId)
+        // notification_reads RLS는 SELECT/INSERT/DELETE만 허용하고 UPDATE는
+        // 허용하지 않는다 - 이미 존재하는 영수증은 갱신할 이유가 없으므로(최초
+        // 읽음 시각만 의미 있음) ignoreDuplicates로 ON CONFLICT DO NOTHING을
+        // 쓴다. onConflict만 주고 이 옵션을 안 주면 기본이 DO UPDATE라 RLS의
+        // UPDATE 정책 부재로 두 번째 호출(중복 클릭, 다른 탭)에서 42501 에러가 난다.
+        const { error } = await supabase
+          .from('notification_reads')
+          .upsert(
+            { notification_id: notification.id, user_id: userId },
+            { onConflict: 'notification_id,user_id', ignoreDuplicates: true }
+          )
+
+        if (error) throw error
+      }
+
+      console.log('✅ [Notifications] Marked as read:', notification.id)
     } catch (error) {
       console.error('❌ [Notifications] Failed to mark as read:', error)
       // Revert optimistic update on error
@@ -156,7 +205,7 @@ export default function NotificationsClient({
         <Link
           href="/dashboard/leads"
           className="block hover:bg-gray-50"
-          onClick={() => markAsRead(notification.id)}
+          onClick={() => markAsRead(notification)}
         >
           {renderNotificationContent(notification)}
         </Link>
@@ -169,7 +218,7 @@ export default function NotificationsClient({
         <Link
           href={`/dashboard/support/${notification.metadata.ticket_id}`}
           className="block hover:bg-gray-50"
-          onClick={() => markAsRead(notification.id)}
+          onClick={() => markAsRead(notification)}
         >
           {renderNotificationContent(notification)}
         </Link>
@@ -182,7 +231,7 @@ export default function NotificationsClient({
         <Link
           href="/dashboard/landing-pages"
           className="block hover:bg-gray-50"
-          onClick={() => markAsRead(notification.id)}
+          onClick={() => markAsRead(notification)}
         >
           {renderNotificationContent(notification)}
         </Link>
@@ -195,7 +244,7 @@ export default function NotificationsClient({
         <Link
           href="/dashboard/subscription"
           className="block hover:bg-gray-50"
-          onClick={() => markAsRead(notification.id)}
+          onClick={() => markAsRead(notification)}
         >
           {renderNotificationContent(notification)}
         </Link>
@@ -206,7 +255,7 @@ export default function NotificationsClient({
     return (
       <div
         className="cursor-pointer hover:bg-gray-50"
-        onClick={() => markAsRead(notification.id)}
+        onClick={() => markAsRead(notification)}
       >
         {renderNotificationContent(notification)}
       </div>
@@ -215,7 +264,7 @@ export default function NotificationsClient({
 
   const renderNotificationContent = (notification: Notification) => (
     <div
-      className={`px-6 py-4 ${!notification.is_read ? 'bg-blue-50' : ''}`}
+      className={`px-6 py-4 ${!isReadForMe(notification) ? 'bg-blue-50' : ''}`}
     >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
@@ -227,7 +276,7 @@ export default function NotificationsClient({
             >
               {getTypeLabel(notification.type)}
             </span>
-            {!notification.is_read && (
+            {!isReadForMe(notification) && (
               <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                 새 알림
               </span>
@@ -253,7 +302,7 @@ export default function NotificationsClient({
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">알림</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            기술지원 답변, 예산, 성과, 캠페인 상태에 대한 알림을 확인합니다.
+            새 상담 신청, 기술지원 답변 등 계정에 대한 알림을 확인합니다.
           </p>
         </div>
       </div>
@@ -265,7 +314,7 @@ export default function NotificationsClient({
             <BellIcon className="mx-auto h-12 w-12 text-gray-400" />
             <h3 className="mt-2 text-sm font-medium text-gray-900">알림이 없습니다</h3>
             <p className="mt-1 text-sm text-gray-500">
-              기술지원 답변, 예산 소진율이 높거나 성과에 이상이 발생하면 알림을 받게 됩니다.
+              새 상담 신청이 들어오거나 기술지원 답변이 등록되면 알림을 받게 됩니다.
             </p>
           </div>
         ) : (

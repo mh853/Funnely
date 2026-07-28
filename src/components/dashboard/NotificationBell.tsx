@@ -8,7 +8,7 @@ import { formatDateTime } from '@/lib/utils/date'
 
 interface Notification {
   id: string
-  user_id: string
+  user_id: string | null
   company_id: string
   title: string
   message: string
@@ -28,6 +28,10 @@ interface ToastNotification {
 
 export default function NotificationBell({ companyId, userId }: { companyId: string; userId: string }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  // 브로드캐스트(user_id NULL) 알림에 대한 내 읽음 영수증 - notification_id 집합
+  const [readReceiptIds, setReadReceiptIds] = useState<Set<string>>(new Set())
+  // 뱃지용 미읽음 개수 - 화면에 표시되는 최근 10개가 아니라 회사 전체를 대상으로 별도 계산
+  const [unreadCount, setUnreadCount] = useState(0)
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [toasts, setToasts] = useState<ToastNotification[]>([])
@@ -47,6 +51,10 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
     setTimeout(() => dismissToast(notification.id), 6000)
   }
 
+  // 특정 알림이 "나에게" 읽음 상태인지 계산 - 개인 알림은 is_read, 브로드캐스트는 읽음 영수증 존재 여부
+  const isReadForMe = (notification: Notification) =>
+    notification.user_id !== null ? notification.is_read : readReceiptIds.has(notification.id)
+
   useEffect(() => {
     // Realtime이 SUBSCRIBED로 확인되기 전까지는 30초 폴백 폴링을 유지하고,
     // 확인되면 멈춘다. 이후 연결이 끊기면(CHANNEL_ERROR/TIMED_OUT/CLOSED)
@@ -59,7 +67,10 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
 
     const startPolling = () => {
       if (!isActive || pollIntervalId) return
-      pollIntervalId = setInterval(fetchNotifications, 30000)
+      pollIntervalId = setInterval(() => {
+        fetchNotifications()
+        fetchUnreadCount()
+      }, 30000)
     }
     const stopPolling = () => {
       if (pollIntervalId) {
@@ -69,6 +80,7 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
     }
 
     fetchNotifications()
+    fetchUnreadCount()
 
     const supabase = createClient()
 
@@ -87,6 +99,7 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
         },
         (payload) => {
           fetchNotifications()
+          fetchUnreadCount()
           // 다른 사용자 대상 알림(user_id 지정)은 RLS 때문에 payload.new가 빈
           // 객체로 올 수 있다(company_id 필터는 통과하지만 행 자체는 안 보임) -
           // 이 경우 제목/본문이 undefined인 빈 토스트가 뜨는 걸 막는다.
@@ -116,17 +129,24 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
     try {
       const supabase = createClient()
       // notifications 테이블은 company_id 기반으로 동작
-      const { data, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('company_id', companyId)
-        .order('created_at', { ascending: false })
-        .limit(10)
+      const [{ data }, { data: reads }] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*')
+          .eq('company_id', companyId)
+          .order('created_at', { ascending: false })
+          .limit(10),
+        supabase
+          .from('notification_reads')
+          .select('notification_id')
+          .eq('user_id', userId),
+      ])
 
       if (data) {
         setNotifications(data)
         isInitialLoad.current = false
       }
+      setReadReceiptIds(new Set((reads || []).map((r) => r.notification_id)))
     } catch (error) {
       console.error('Failed to fetch notifications:', error)
     } finally {
@@ -134,18 +154,72 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
     }
   }
 
-  const markAsRead = async (notificationId: string) => {
+  // 뱃지/모두읽음에 쓸 실제 미읽음 개수 - 화면에 표시되는 최근 10개가 아니라
+  // 개인 대상 알림은 카운트 쿼리로, 브로드캐스트 알림은 전체 id와 내 읽음 영수증을
+  // 가져와 차집합으로 계산한다 (회사당 브로드캐스트 알림 수는 많지 않아 허용 가능한 방식).
+  const fetchUnreadCount = async () => {
     try {
       const supabase = createClient()
-      // Notification may be user-specific (user_id set) or company-wide (user_id null)
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .eq('id', notificationId)
 
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notificationId ? { ...n, is_read: true } : n))
-      )
+      const [{ count: targetedUnread }, { data: broadcastNotifs }, { data: myReads }] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('company_id', companyId)
+          .eq('user_id', userId)
+          .eq('is_read', false),
+        supabase
+          .from('notifications')
+          .select('id')
+          .eq('company_id', companyId)
+          .is('user_id', null),
+        supabase
+          .from('notification_reads')
+          .select('notification_id')
+          .eq('user_id', userId),
+      ])
+
+      const readIds = new Set((myReads || []).map((r) => r.notification_id))
+      const broadcastUnread = (broadcastNotifs || []).filter((n) => !readIds.has(n.id)).length
+
+      setUnreadCount((targetedUnread || 0) + broadcastUnread)
+    } catch (error) {
+      console.error('Failed to fetch unread count:', error)
+    }
+  }
+
+  const markAsRead = async (notification: Notification) => {
+    if (isReadForMe(notification)) return
+
+    try {
+      const supabase = createClient()
+
+      if (notification.user_id !== null) {
+        // 개인 대상 알림
+        await supabase
+          .from('notifications')
+          .update({ is_read: true })
+          .eq('id', notification.id)
+
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notification.id ? { ...n, is_read: true } : n))
+        )
+      } else {
+        // 브로드캐스트 알림 - 나만의 읽음 영수증을 추가 (다른 팀원에게는 영향 없음)
+        // notification_reads RLS는 UPDATE 정책이 없으므로 ignoreDuplicates로
+        // ON CONFLICT DO NOTHING을 써야 한다(기본값인 DO UPDATE는 이미 존재하는
+        // 영수증에 대해 RLS 위반 42501을 유발함 - 중복 클릭/여러 탭에서 재현됨).
+        await supabase
+          .from('notification_reads')
+          .upsert(
+            { notification_id: notification.id, user_id: userId },
+            { onConflict: 'notification_id,user_id', ignoreDuplicates: true }
+          )
+
+        setReadReceiptIds((prev) => new Set(prev).add(notification.id))
+      }
+
+      setUnreadCount((prev) => Math.max(0, prev - 1))
     } catch (error) {
       console.error('Failed to mark notification as read:', error)
     }
@@ -154,22 +228,59 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
   const markAllAsRead = async () => {
     try {
       const supabase = createClient()
-      const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id)
-      if (unreadIds.length === 0) return
 
-      // Update by IDs to cover both user-specific (user_id set) and company-wide (user_id null)
-      await supabase
-        .from('notifications')
-        .update({ is_read: true })
-        .in('id', unreadIds)
+      // 화면에 로드된 10개가 아니라 회사 전체의 미읽음 알림을 대상으로 처리
+      const [{ data: targetedUnread }, { data: broadcastNotifs }, { data: myReads }] = await Promise.all([
+        supabase
+          .from('notifications')
+          .select('id')
+          .eq('company_id', companyId)
+          .eq('user_id', userId)
+          .eq('is_read', false),
+        supabase
+          .from('notifications')
+          .select('id')
+          .eq('company_id', companyId)
+          .is('user_id', null),
+        supabase
+          .from('notification_reads')
+          .select('notification_id')
+          .eq('user_id', userId),
+      ])
 
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })))
+      const readIds = new Set((myReads || []).map((r) => r.notification_id))
+      const targetedIds = (targetedUnread || []).map((n) => n.id)
+      const broadcastUnreadIds = (broadcastNotifs || [])
+        .map((n) => n.id)
+        .filter((id) => !readIds.has(id))
+
+      if (targetedIds.length === 0 && broadcastUnreadIds.length === 0) return
+
+      await Promise.all([
+        targetedIds.length > 0
+          ? supabase.from('notifications').update({ is_read: true }).in('id', targetedIds)
+          : Promise.resolve(null),
+        broadcastUnreadIds.length > 0
+          ? supabase.from('notification_reads').upsert(
+              broadcastUnreadIds.map((notification_id) => ({ notification_id, user_id: userId })),
+              { onConflict: 'notification_id,user_id', ignoreDuplicates: true }
+            )
+          : Promise.resolve(null),
+      ])
+
+      setNotifications((prev) =>
+        prev.map((n) => (n.user_id !== null ? { ...n, is_read: true } : n))
+      )
+      setReadReceiptIds((prev) => {
+        const next = new Set(prev)
+        broadcastUnreadIds.forEach((id) => next.add(id))
+        return next
+      })
+      setUnreadCount(0)
     } catch (error) {
       console.error('Failed to mark all as read:', error)
     }
   }
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length
 
   const getTypeColor = (type: string) => {
     const colors: Record<string, string> = {
@@ -303,10 +414,10 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
                   <div
                     key={notification.id}
                     className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${
-                      !notification.is_read ? 'bg-blue-50' : ''
+                      !isReadForMe(notification) ? 'bg-blue-50' : ''
                     }`}
                     onClick={() => {
-                      markAsRead(notification.id)
+                      markAsRead(notification)
                       // Handle different notification types
                       if (notification.type === 'new_lead') {
                         window.location.href = `/dashboard/leads`
@@ -336,7 +447,7 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
                           {formatDateTime(notification.created_at)}
                         </p>
                       </div>
-                      {!notification.is_read && (
+                      {!isReadForMe(notification) && (
                         <div className="flex-shrink-0 ml-2">
                           <div className="h-2 w-2 bg-blue-600 rounded-full" />
                         </div>
