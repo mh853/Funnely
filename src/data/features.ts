@@ -106,7 +106,7 @@ export const features: Feature[] = [
       },
       {
         title: 'SEO 최적화',
-        description: '메타 태그, Open Graph, 사이트맵 자동 생성',
+        description: '메타 태그, Open Graph 설정',
       },
       {
         title: '커스텀 도메인',

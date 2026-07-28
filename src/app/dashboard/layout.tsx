@@ -1,7 +1,15 @@
+import type { Metadata } from 'next'
 import { createClient, getCachedUser, getCachedUserProfile, getCachedCompanySubscriptions } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 export default async function DashboardLayout({
   children,
