@@ -1267,7 +1267,13 @@ export default function LandingPageNewForm({
       router.refresh()
     } catch (err: any) {
       console.error('Save failed:', err)
-      toast.error(err.message || '저장에 실패했습니다')
+      if (err?.code === '23505' && err?.message?.includes('slug')) {
+        toast.error('이미 사용 중인 URL 주소입니다. 다른 주소를 입력해주세요.')
+      } else if (typeof err?.message === 'string' && err.message.startsWith('LANDING_PAGE_LIMIT_EXCEEDED')) {
+        toast.error('현재 요금제의 랜딩페이지 개수 제한에 도달했습니다. 플랜을 업그레이드하거나 기존 페이지를 삭제해주세요.')
+      } else {
+        toast.error(err.message || '저장에 실패했습니다')
+      }
     } finally {
       setSaving(false)
     }
