@@ -18,16 +18,22 @@ const supabaseAdmin = createClient(
 )
 
 export async function POST(request: NextRequest) {
+  // catch 블록에서도 실패 로그를 남기려면 이 변수들이 필요한데, try 블록
+  // 안에서 const로 선언하면 catch 블록(별개의 스코프)에서는 접근할 수 없다.
+  let companyId: string | undefined
+  let spreadsheetId: string | undefined
+  let sheetName = 'Sheet1'
+
   try {
     const body = await request.json()
     const {
-      spreadsheetId,
-      sheetName = 'Sheet1',
-      companyId,
       landingPageId,
       columnMapping = DEFAULT_META_MAPPING,
       syncKey, // 동기화 인증 키 (cron job용)
     } = body
+    spreadsheetId = body.spreadsheetId
+    sheetName = body.sheetName || 'Sheet1'
+    companyId = body.companyId
 
     // 인증 확인: cron job(syncKey) 또는 인증된 사용자 세션 필요
     const cronSecret = process.env.CRON_SECRET
@@ -79,12 +85,48 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // landingPageId도 spreadsheetId와 같은 이유로 검증 없이 신뢰하면 안 된다 -
+    // 다른 회사의 landing_page_id를 그대로 넣어도 FK(ON DELETE SET NULL)는
+    // 존재 여부만 확인해 삽입 자체는 성공해버린다.
+    if (landingPageId) {
+      const { data: ownedLandingPage } = await supabaseAdmin
+        .from('landing_pages')
+        .select('id')
+        .eq('id', landingPageId)
+        .eq('company_id', companyId)
+        .maybeSingle()
+
+      if (!ownedLandingPage) {
+        return NextResponse.json(
+          { error: '이 회사에 속하지 않은 랜딩페이지입니다.' },
+          { status: 403 }
+        )
+      }
+    }
+
+    // 실패 시 sheet_sync_logs에 아무 기록도 안 남으면(성공 경로에서만 insert하고
+    // 있었음) 화면의 "최근 동기화 기록"에서 실패 이력 자체가 보이지 않는다.
+    const logFailure = async (message: string) => {
+      try {
+        await supabaseAdmin.from('sheet_sync_logs').insert({
+          company_id: companyId,
+          spreadsheet_id: spreadsheetId,
+          sheet_name: sheetName,
+          imported_count: 0,
+          error_message: message,
+        })
+      } catch (logError) {
+        console.error('Failed to write sheet_sync_logs error entry:', logError)
+      }
+    }
+
     // 먼저 사용 가능한 시트 목록 확인
     let availableSheets: string[] = []
     try {
       availableSheets = await getSheetNames(spreadsheetId)
     } catch (error: any) {
       console.error('Failed to get sheet names:', error)
+      await logFailure(error.message || '스프레드시트 접근 실패')
       return NextResponse.json(
         {
           error: '스프레드시트 접근 실패',
@@ -97,6 +139,7 @@ export async function POST(request: NextRequest) {
 
     // 요청한 시트 이름이 존재하는지 확인
     if (!availableSheets.includes(sheetName)) {
+      await logFailure(`시트 '${sheetName}'을(를) 찾을 수 없습니다`)
       return NextResponse.json(
         {
           error: `시트 '${sheetName}'을(를) 찾을 수 없습니다`,
@@ -128,11 +171,27 @@ export async function POST(request: NextRequest) {
     // 시트 데이터를 leads 형식으로 변환
     const sheetLeads = parseSheetToLeads(rows, columnMapping as ColumnMapping)
 
-    // 중복 체크를 위한 기존 전화번호 해시 가져오기
-    const { data: existingLeads } = await supabaseAdmin
-      .from('leads')
-      .select('phone_hash')
-      .eq('company_id', companyId)
+    // 중복 체크를 위한 기존 전화번호 해시 가져오기 - range() 없이 조회하면
+    // supabase의 암묵적 max_rows(1000)에 걸려 회사의 리드가 1000건을 넘는
+    // 순간부터 뒤쪽 기존 리드가 안 보여 중복 검사가 조용히 불완전해진다.
+    // 1000건씩 배치로 반복 조회해 전체를 가져온다.
+    const existingLeads: { phone_hash: string }[] = []
+    {
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        const { data } = await supabaseAdmin
+          .from('leads')
+          .select('phone_hash')
+          .eq('company_id', companyId)
+          .range(offset, offset + BATCH_SIZE - 1)
+
+        if (!data || data.length === 0) break
+        existingLeads.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
+    }
 
     const existingHashes = new Set(
       existingLeads?.map((l) => l.phone_hash) || []
@@ -211,6 +270,7 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('Insert error:', insertError)
+      await logFailure('데이터 삽입 중 오류가 발생했습니다')
       return NextResponse.json(
         { error: '데이터 삽입 중 오류가 발생했습니다' },
         { status: 500 }
@@ -235,6 +295,19 @@ export async function POST(request: NextRequest) {
     })
   } catch (error: any) {
     console.error('Sheet sync error:', error)
+    if (companyId && spreadsheetId) {
+      try {
+        await supabaseAdmin.from('sheet_sync_logs').insert({
+          company_id: companyId,
+          spreadsheet_id: spreadsheetId,
+          sheet_name: sheetName,
+          imported_count: 0,
+          error_message: error.message || '동기화 실패',
+        })
+      } catch (logError) {
+        console.error('Failed to write sheet_sync_logs error entry:', logError)
+      }
+    }
     return NextResponse.json(
       { error: error.message || '동기화 실패' },
       { status: 500 }

@@ -454,7 +454,16 @@ async function syncGoogleSheets(supabase: any) {
       // Fetch sheet data
       // A:Z(26개 컬럼)로 하드코딩되어 있으면 컬럼 매핑이 AA 이후(커스텀 필드가 많은
       // 회사)를 가리킬 때 그 컬럼이 항상 빈 값으로 처리되며 에러도 안 남았다.
-      const range = `${config.sheet_name || 'Sheet1'}!A:ZZ`
+      // 시트 이름에 공백이나 작은따옴표가 있으면 A1 표기법상 작은따옴표로 감싸야
+      // 하는데(수동 동기화 api/sheets/sync에는 이미 있던 처리) 이 자동 크론
+      // 경로에는 빠져 있어, 시트 이름에 공백이 있는 회사는 매일 자동 동기화가
+      // 조용히 계속 실패하고 있었다.
+      const sheetName = config.sheet_name || 'Sheet1'
+      const sanitizedSheetName =
+        sheetName.includes(' ') || sheetName.includes("'")
+          ? `'${sheetName.replace(/'/g, "''")}'`
+          : sheetName
+      const range = `${sanitizedSheetName}!A:ZZ`
       const rows = await fetchSheetData(config.spreadsheet_id, range)
 
       if (rows.length < 2) {
@@ -470,13 +479,29 @@ async function syncGoogleSheets(supabase: any) {
       const columnMapping = config.column_mapping as ColumnMapping
       const sheetLeads = parseSheetToLeads(rows, columnMapping)
 
-      const { data: existingLeads, error: existingLeadsError } = await supabase
-        .from('leads')
-        .select('phone_hash')
-        .eq('company_id', config.company_id)
+      // range() 없이 조회하면 supabase의 암묵적 max_rows(1000)에 걸려 회사의
+      // 리드가 1000건을 넘는 순간부터 뒤쪽 기존 리드가 안 보여 중복 검사가
+      // 조용히 불완전해진다(leads/export 등에서 이미 겪은 것과 동일 원인) -
+      // 1000건씩 배치로 반복 조회해 전체를 가져온다.
+      const existingLeads: { phone_hash: string }[] = []
+      {
+        const BATCH_SIZE = 1000
+        let offset = 0
+        while (true) {
+          const { data, error } = await supabase
+            .from('leads')
+            .select('phone_hash')
+            .eq('company_id', config.company_id)
+            .range(offset, offset + BATCH_SIZE - 1)
 
-      if (existingLeadsError) {
-        throw new Error(`Failed to check existing leads: ${existingLeadsError.message}`)
+          if (error) {
+            throw new Error(`Failed to check existing leads: ${error.message}`)
+          }
+          if (!data || data.length === 0) break
+          existingLeads.push(...data)
+          if (data.length < BATCH_SIZE) break
+          offset += BATCH_SIZE
+        }
       }
 
       const existingHashes = new Set(
@@ -564,15 +589,21 @@ async function syncGoogleSheets(supabase: any) {
         .update({ last_synced_at: now.toISOString() })
         .eq('id', config.id)
 
-      // Log sync result
-      await supabase.from('sheet_sync_logs').insert({
-        company_id: config.company_id,
-        spreadsheet_id: config.spreadsheet_id,
-        sheet_name: config.sheet_name,
-        imported_count: importedCount,
-        total_rows: sheetLeads.length,
-        duplicates_skipped: sheetLeads.length - newLeads.length,
-      })
+      // Log sync result - 리드 삽입은 이미 성공했으므로, 이 로그 저장 자체가
+      // 실패하더라도(네트워크 순간 오류 등) 방금 성공한 동기화를 catch 블록의
+      // "error"로 잘못 보고하지 않도록 별도로 감싼다.
+      try {
+        await supabase.from('sheet_sync_logs').insert({
+          company_id: config.company_id,
+          spreadsheet_id: config.spreadsheet_id,
+          sheet_name: config.sheet_name,
+          imported_count: importedCount,
+          total_rows: sheetLeads.length,
+          duplicates_skipped: sheetLeads.length - newLeads.length,
+        })
+      } catch (logError) {
+        console.error('Failed to write sheet_sync_logs success entry:', logError)
+      }
 
       results.push({
         spreadsheetId: config.spreadsheet_id,
@@ -581,13 +612,21 @@ async function syncGoogleSheets(supabase: any) {
         total: sheetLeads.length,
       })
     } catch (syncError: any) {
-      await supabase.from('sheet_sync_logs').insert({
-        company_id: config.company_id,
-        spreadsheet_id: config.spreadsheet_id,
-        sheet_name: config.sheet_name,
-        imported_count: 0,
-        error_message: syncError.message,
-      })
+      // 이 실패 로그 insert 자체가 또 실패하면(네트워크 순간 오류 등) 아무 보호
+      // 장치가 없어 그 예외가 for 루프를 통째로 빠져나가 이 회사 뒤에 있는
+      // 나머지 회사들이 그날 조용히 전부 동기화 스킵됐다 - 로그 저장 실패는
+      // 콘솔에만 남기고 반드시 다음 config로 계속 진행한다.
+      try {
+        await supabase.from('sheet_sync_logs').insert({
+          company_id: config.company_id,
+          spreadsheet_id: config.spreadsheet_id,
+          sheet_name: config.sheet_name,
+          imported_count: 0,
+          error_message: syncError.message,
+        })
+      } catch (logError) {
+        console.error('Failed to write sheet_sync_logs error entry:', logError)
+      }
 
       results.push({
         spreadsheetId: config.spreadsheet_id,
