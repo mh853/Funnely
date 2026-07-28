@@ -57,7 +57,7 @@ async function hasCustomDomainFeatureAccess(companyId: string): Promise<boolean>
  * 커스텀 도메인으로 회사 정보 조회
  * 미들웨어 Edge Runtime에서 Supabase REST API를 직접 호출
  */
-async function lookupCustomDomain(domain: string): Promise<string | null> {
+async function lookupCustomDomain(domain: string): Promise<{ shortId: string; domainId: string } | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
@@ -65,7 +65,7 @@ async function lookupCustomDomain(domain: string): Promise<string | null> {
 
   try {
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/company_custom_domains?domain=eq.${encodeURIComponent(domain)}&verification_status=eq.verified&select=company_id,companies(short_id)`,
+      `${supabaseUrl}/rest/v1/company_custom_domains?domain=eq.${encodeURIComponent(domain)}&verification_status=eq.verified&select=id,company_id,companies(short_id)`,
       {
         headers: {
           apikey: supabaseServiceKey,
@@ -86,38 +86,52 @@ async function lookupCustomDomain(domain: string): Promise<string | null> {
     const record = data[0]
     const shortId = record?.companies?.short_id
     const companyId = record?.company_id
-    if (!shortId || !companyId) return null
+    const domainId = record?.id
+    if (!shortId || !companyId || !domainId) return null
 
     // 도메인 생성 시점에만 검증했던 custom_domain 기능 접근을 요청마다 재검증
     if (!(await hasCustomDomainFeatureAccess(companyId))) return null
 
-    return shortId
+    return { shortId, domainId }
   } catch {
     return null
   }
 }
 
 /**
- * 커스텀 도메인 루트(/) 접속 시 보여줄 대표 랜딩페이지 slug 조회
- * 가장 최근에 게시된 활성 랜딩페이지를 대표 페이지로 사용한다.
+ * 커스텀 도메인 루트(/) 접속 시 보여줄 대표 랜딩페이지 slug 조회.
+ * 1순위: 이 도메인에 명시적으로 배정된(landing_pages.custom_domain_id) 랜딩페이지.
+ * 2순위(폴백): 가장 최근에 게시된 활성 랜딩페이지.
  */
-async function lookupDefaultLandingSlug(companyShortId: string): Promise<string | null> {
+async function lookupDefaultLandingSlug(companyShortId: string, domainId?: string): Promise<string | null> {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseServiceKey) return null
 
+  const headers = {
+    apikey: supabaseServiceKey,
+    Authorization: `Bearer ${supabaseServiceKey}`,
+    Accept: 'application/json',
+  }
+
   try {
+    if (domainId) {
+      const assignedRes = await fetch(
+        `${supabaseUrl}/rest/v1/landing_pages?select=slug&custom_domain_id=eq.${encodeURIComponent(domainId)}&is_active=eq.true&status=eq.published&limit=1`,
+        { headers, next: { revalidate: 60 } }
+      )
+      if (assignedRes.ok) {
+        const assignedData = await assignedRes.json()
+        if (assignedData && assignedData.length > 0 && assignedData[0]?.slug) {
+          return assignedData[0].slug
+        }
+      }
+    }
+
     const res = await fetch(
       `${supabaseUrl}/rest/v1/landing_pages?select=slug,companies!inner(short_id)&companies.short_id=eq.${encodeURIComponent(companyShortId)}&is_active=eq.true&status=eq.published&order=created_at.desc&limit=1`,
-      {
-        headers: {
-          apikey: supabaseServiceKey,
-          Authorization: `Bearer ${supabaseServiceKey}`,
-          Accept: 'application/json',
-        },
-        next: { revalidate: 60 },
-      }
+      { headers, next: { revalidate: 60 } }
     )
 
     if (!res.ok) return null
@@ -172,22 +186,23 @@ export async function middleware(request: NextRequest) {
   if (!isOwnDomain(hostname) && !hostname.includes('localhost') && !hostname.includes('127.0.0.1')) {
     // /landing/* 경로에만 커스텀 도메인 적용
     if (url.pathname.startsWith('/landing/')) {
-      const companyShortId = await lookupCustomDomain(hostname.split(':')[0]) // 포트 제거
+      const domainInfo = await lookupCustomDomain(hostname.split(':')[0]) // 포트 제거
 
-      if (companyShortId) {
+      if (domainInfo) {
         // /{companyShortId}/landing/{slug} 로 리라이팅
-        url.pathname = `/${companyShortId}${url.pathname}`
+        url.pathname = `/${domainInfo.shortId}${url.pathname}`
         return NextResponse.rewrite(url)
       }
     }
 
-    // 커스텀 도메인 루트 접속 → 회사의 대표(최근 게시) 랜딩페이지로 리다이렉트
-    // (slug 없이 '/landing'으로만 보내면 무조건 404가 나므로, 실제 게시된
-    // 랜딩페이지를 찾아 구체적인 경로로 안내한다)
+    // 커스텀 도메인 루트 접속 → 이 도메인에 배정된 랜딩페이지(없으면 회사의
+    // 대표(최근 게시) 랜딩페이지)로 리다이렉트 (slug 없이 '/landing'으로만
+    // 보내면 무조건 404가 나므로, 실제 게시된 랜딩페이지를 찾아 구체적인
+    // 경로로 안내한다)
     if (url.pathname === '/' || url.pathname === '') {
-      const companyShortId = await lookupCustomDomain(hostname.split(':')[0])
-      const defaultSlug = companyShortId
-        ? await lookupDefaultLandingSlug(companyShortId)
+      const domainInfo = await lookupCustomDomain(hostname.split(':')[0])
+      const defaultSlug = domainInfo
+        ? await lookupDefaultLandingSlug(domainInfo.shortId, domainInfo.domainId)
         : null
 
       if (defaultSlug) {

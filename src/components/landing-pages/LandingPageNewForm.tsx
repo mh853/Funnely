@@ -42,7 +42,9 @@ import {
   EyeIcon,
   ChevronUpIcon,
   ChevronDownIcon,
+  GlobeAltIcon,
 } from '@heroicons/react/24/outline'
+import type { CompanyCustomDomain } from '@/types/custom-domain.types'
 
 // Timer calculation utility
 const calculateTimeRemaining = (deadline: string): string => {
@@ -147,6 +149,64 @@ export default function LandingPageNewForm({
       if (data?.short_id) setCompanyShortId(data.short_id)
     })
   }, [companyId])
+
+  // 랜딩페이지별 커스텀 도메인 배정 - 회사가 보유한 인증된 도메인 중 하나를
+  // 이 페이지 전용으로 지정할 수 있다(백엔드는 이미 있었으나 화면에 연결된
+  // 적이 없었음). 도메인 배정은 페이지가 실제로 존재해야 의미가 있으므로
+  // 수정 모드(landingPage 존재)에서만 노출한다.
+  const [customDomains, setCustomDomains] = useState<CompanyCustomDomain[]>([])
+  const [domainMode, setDomainMode] = useState<'service' | 'company_default' | 'custom'>('service')
+  const [selectedDomainId, setSelectedDomainId] = useState<string | null>(null)
+  const [savingDomain, setSavingDomain] = useState(false)
+  const [domainSaveMsg, setDomainSaveMsg] = useState<string | null>(null)
+
+  const verifiedDomains = customDomains.filter((d) => d.verification_status === 'verified')
+  const defaultDomain = verifiedDomains.find((d) => d.is_company_default)
+
+  useEffect(() => {
+    if (!companyId) return
+    fetch('/api/company/custom-domains')
+      .then((r) => r.json())
+      .then((data) => setCustomDomains(data.domains || []))
+      .catch(() => {})
+  }, [companyId])
+
+  useEffect(() => {
+    if (!landingPage?.id) return
+    fetch(`/api/landing-pages/${landingPage.id}/custom-domain`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.customDomainId) {
+          setDomainMode('custom')
+          setSelectedDomainId(data.customDomainId)
+        }
+      })
+      .catch(() => {})
+  }, [landingPage?.id])
+
+  const handleDomainSave = async () => {
+    if (!landingPage?.id) return
+    setSavingDomain(true)
+    setDomainSaveMsg(null)
+    try {
+      const res = await fetch(`/api/landing-pages/${landingPage.id}/custom-domain`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customDomainId: domainMode === 'custom' ? selectedDomainId : null }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setDomainSaveMsg('도메인 설정이 저장되었습니다.')
+        setTimeout(() => setDomainSaveMsg(null), 3000)
+      } else {
+        setDomainSaveMsg(`오류: ${data.error || '저장에 실패했습니다.'}`)
+      }
+    } catch {
+      setDomainSaveMsg('저장에 실패했습니다.')
+    } finally {
+      setSavingDomain(false)
+    }
+  }
 
   // Form state - initialize with existing data if editing
   const [slug, setSlug] = useState(landingPage?.slug || '')
@@ -1594,6 +1654,116 @@ export default function LandingPageNewForm({
             </p>
           </div>
         </div>
+
+        {/* Domain Section - 페이지가 실제로 존재해야(landingPage.id) 배정할 수 있다 */}
+        {landingPage?.id && (
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
+            <div className="flex items-center justify-between mb-4 sm:mb-6">
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">도메인 설정</h2>
+              <Link href="/dashboard/settings" className="text-xs text-indigo-600 hover:text-indigo-700">
+                도메인 관리 →
+              </Link>
+            </div>
+
+            {verifiedDomains.length === 0 ? (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <GlobeAltIcon className="h-5 w-5 text-gray-400 flex-shrink-0" />
+                <p className="text-xs text-gray-600">
+                  서비스 도메인을 사용 중입니다.{' '}
+                  <Link href="/dashboard/settings" className="text-indigo-600 hover:underline">커스텀 도메인 추가</Link>
+                  하면 브랜드 도메인으로 운영할 수 있습니다.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="domainMode"
+                    value="service"
+                    checked={domainMode === 'service'}
+                    onChange={() => setDomainMode('service')}
+                    className="mt-0.5 text-indigo-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-700">서비스 도메인 사용</p>
+                    {companyShortId && slug && (
+                      <p className="text-xs text-gray-400 mt-0.5 font-mono truncate">
+                        {companyShortId}.funnely.co.kr/landing/{slug}
+                      </p>
+                    )}
+                  </div>
+                </label>
+
+                {defaultDomain && (
+                  <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                    <input
+                      type="radio"
+                      name="domainMode"
+                      value="company_default"
+                      checked={domainMode === 'company_default'}
+                      onChange={() => setDomainMode('company_default')}
+                      className="mt-0.5 text-indigo-600"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <p className="text-sm font-medium text-gray-700">회사 기본 도메인</p>
+                        <span className="px-1.5 py-0.5 text-xs bg-indigo-100 text-indigo-600 rounded">기본</span>
+                      </div>
+                      <p className="text-xs text-gray-400 mt-0.5 font-mono truncate">
+                        {defaultDomain.domain}/landing/{slug}
+                      </p>
+                    </div>
+                  </label>
+                )}
+
+                <label className="flex items-start gap-3 p-3 rounded-xl border-2 border-gray-200 cursor-pointer hover:bg-gray-50 transition-colors">
+                  <input
+                    type="radio"
+                    name="domainMode"
+                    value="custom"
+                    checked={domainMode === 'custom'}
+                    onChange={() => setDomainMode('custom')}
+                    className="mt-0.5 text-indigo-600"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-700">다른 도메인 사용</p>
+                    <p className="text-xs text-gray-400 mt-0.5">이 랜딩페이지만 별도 도메인 적용</p>
+                    {domainMode === 'custom' && (
+                      <select
+                        value={selectedDomainId || ''}
+                        onChange={(e) => setSelectedDomainId(e.target.value || null)}
+                        className="mt-2 w-full text-xs border-2 border-gray-200 rounded-lg px-2 py-1.5 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <option value="">도메인 선택...</option>
+                        {verifiedDomains.map((d) => (
+                          <option key={d.id} value={d.id}>{d.domain}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                </label>
+
+                <div className="flex items-center gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={handleDomainSave}
+                    disabled={savingDomain || (domainMode === 'custom' && !selectedDomainId)}
+                    className="px-4 py-2 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {savingDomain ? '저장 중...' : '도메인 설정 저장'}
+                  </button>
+                  {domainSaveMsg && (
+                    <p className={`text-xs ${domainSaveMsg.startsWith('오류') ? 'text-red-600' : 'text-green-600'}`}>
+                      {domainSaveMsg}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Title Section */}
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
