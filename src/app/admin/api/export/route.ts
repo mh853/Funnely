@@ -2,13 +2,22 @@ import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 // 값에 큰따옴표가 포함되면 CSV 구조 자체가 깨지므로("" 로 이스케이프해야 함),
 // 무조건 큰따옴표로 감싸기 전에 내부 큰따옴표를 두 배로 이스케이프해야 한다(RFC 4180).
 // 회사명/이름 등은 사용자가 자유롭게 입력하는 값이라 따옴표가 들어올 수 있다.
+// =/+/-/@로 시작하는 값은 엑셀이 수식으로 해석할 수 있어 먼저 무해화한다.
 function escapeCSV(value: unknown): string {
-  const str = String(value ?? '')
+  const str = String(sanitizeForSpreadsheet(String(value ?? '')))
   return `"${str.replace(/"/g, '""')}"`
+}
+
+// 서버(Vercel)는 UTC라서 toLocaleString('ko-KR')만 쓰면 KST와 최대 9시간
+// 어긋난다 - timeZone을 명시해야 서버 로케일과 무관하게 항상 KST로 나온다.
+function formatKST(date: string | null): string {
+  if (!date) return '-'
+  return new Date(date).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' })
 }
 
 export async function GET(request: Request) {
@@ -81,8 +90,8 @@ async function exportCompanies(supabase: any) {
         c.name,
         c.slug,
         c.is_active ? '활성' : '비활성',
-        new Date(c.created_at).toLocaleString('ko-KR'),
-        new Date(c.updated_at).toLocaleString('ko-KR'),
+        formatKST(c.created_at),
+        formatKST(c.updated_at),
       ]
         .map(escapeCSV)
         .join(',')
@@ -124,8 +133,8 @@ async function exportUsers(supabase: any) {
         u.role,
         u.is_active ? '활성' : '비활성',
         (u.companies as any).name,
-        new Date(u.created_at).toLocaleString('ko-KR'),
-        u.last_login ? new Date(u.last_login).toLocaleString('ko-KR') : '-',
+        formatKST(u.created_at),
+        formatKST(u.last_login),
       ]
         .map(escapeCSV)
         .join(',')
@@ -168,7 +177,7 @@ async function exportLeads(supabase: any) {
         l.status,
         (l.companies as any).name,
         l.landing_pages?.title || '-',
-        new Date(l.created_at).toLocaleString('ko-KR'),
+        formatKST(l.created_at),
       ]
         .map(escapeCSV)
         .join(',')

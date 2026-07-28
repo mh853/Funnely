@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { decryptPhone } from '@/lib/encryption/phone'
 import LeadsClient from './LeadsClient'
 import { getLeadStatusCategoryMap, getCodesForCategory, isValidLeadStatusCategory } from '@/lib/leadStatusCategory'
+import { getKSTDayRange } from '@/lib/utils/date'
 
 interface SearchParams {
   dateRange?: string
@@ -65,18 +66,18 @@ export default async function LeadsPage({
   let endDate: Date | null = null
 
   // 단일 날짜 필터 (대시보드 그래프에서 클릭 시) - 가장 높은 우선순위
+  // "YYYY-MM-DD"를 new Date()로 직접 파싱하면 UTC 자정으로 해석되어(브라우저는
+  // KST 기준으로 보낸 날짜인데) 서버(UTC)에서 setHours(0,0,0,0)을 적용해도 여전히
+  // KST 하루가 아니라 어긋난 범위가 된다 - 엑셀 내보내기(api/leads/export)는 이미
+  // getKSTDayRange()로 고쳐져 있었는데 화면 목록은 안 고쳐져 있어서 같은 필터로도
+  // 화면과 엑셀 결과가 달라질 수 있었다.
   if (singleDateParam) {
-    startDate = new Date(singleDateParam)
-    startDate.setHours(0, 0, 0, 0)
-    endDate = new Date(singleDateParam)
-    endDate.setHours(23, 59, 59, 999)
+    ;({ start: startDate, end: endDate } = getKSTDayRange(singleDateParam))
   }
   // 직접 입력된 날짜 범위 우선 처리
   else if (startDateParam && endDateParam) {
-    startDate = new Date(startDateParam)
-    startDate.setHours(0, 0, 0, 0)
-    endDate = new Date(endDateParam)
-    endDate.setHours(23, 59, 59, 999)
+    startDate = getKSTDayRange(startDateParam).start
+    endDate = getKSTDayRange(endDateParam).end
   } else if (dateRange) {
     // 프리셋 날짜 범위 처리
     switch (dateRange) {
@@ -136,7 +137,8 @@ export default async function LeadsPage({
       query = query.gte('created_at', startDate.toISOString())
     }
     if (endDate) {
-      query = query.lte('created_at', endDate.toISOString())
+      // getKSTDayRange().end는 배타적 상한(다음날 KST 시작)이라 lt를 써야 한다
+      query = query.lt('created_at', endDate.toISOString())
     }
 
     if (landingPageId) {

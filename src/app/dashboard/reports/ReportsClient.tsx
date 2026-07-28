@@ -14,6 +14,7 @@ import {
   ArrowTrendingUpIcon,
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
+import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 interface ResultRow {
   date: string
@@ -213,7 +214,9 @@ export default function ReportsClient({
 
     // CSV 값을 쌍따옴표로 감싸는 함수 (CSV 표준)
     const escapeCSV = (value: any): string => {
-      const strValue = String(value)
+      // 담당자명 등은 =/+/-/@로 시작하면 엑셀이 수식으로 해석할 수 있어(CSV
+      // 인젝션) 따옴표 이스케이프 전에 먼저 무해화한다.
+      const strValue = String(sanitizeForSpreadsheet(String(value)))
       // 콤마, 따옴표, 줄바꿈이 포함된 경우 쌍따옴표로 감싸고, 내부 따옴표는 이스케이프
       if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
         return `"${strValue.replace(/"/g, '""')}"`

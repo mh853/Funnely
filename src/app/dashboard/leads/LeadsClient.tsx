@@ -11,6 +11,7 @@ import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
 import AddLeadModal from '@/components/shared/AddLeadModal'
 import { useToast } from '@/components/shared/Toast'
+import { sanitizeRowsForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -1239,8 +1240,10 @@ export default function LeadsClient({
         }
       })
 
-      // 워크시트 생성
-      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      // 워크시트 생성 - 이름/비고/커스텀 필드 등은 공개 랜딩페이지에서 방문자가
+      // 직접 입력한 값이라, =/+/-/@로 시작하면 엑셀에서 수식으로 해석될 수 있다
+      // (CSV/스프레드시트 인젝션) - 내보내기 직전에 전부 무해화한다.
+      const worksheet = XLSX.utils.json_to_sheet(sanitizeRowsForSpreadsheet(excelData))
 
       // 컬럼 너비 설정 (사용자 경험 향상)
       const columnWidths = [
