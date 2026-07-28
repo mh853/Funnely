@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import type {
   GrowthOpportunity,
@@ -19,8 +20,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Add proper RBAC permission check for VIEW_GROWTH_OPPORTUNITIES
-
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_GROWTH_OPPORTUNITIES)
+    }
     const searchParams = request.nextUrl.searchParams
     const type = searchParams.get('type') || 'all' // upsell | downsell_risk | all
     const status = searchParams.get('status') || 'active'

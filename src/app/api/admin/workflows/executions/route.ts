@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { requirePermission } from '@/lib/admin/rbac-middleware'
+import { PERMISSIONS } from '@/types/rbac'
 
 /**
  * GET /api/admin/workflows/executions
@@ -13,8 +15,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Add proper RBAC permission check for VIEW_WORKFLOWS
-
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_WORKFLOWS)
+    }
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!

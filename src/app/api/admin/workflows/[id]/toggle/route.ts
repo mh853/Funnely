@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { requirePermission } from '@/lib/admin/rbac-middleware'
+import { PERMISSIONS } from '@/types/rbac'
 
 /**
  * POST /api/admin/workflows/[id]/toggle
@@ -16,8 +18,9 @@ export async function POST(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    // TODO: Add proper RBAC permission check for MANAGE_WORKFLOWS
-
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_WORKFLOWS)
+    }
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
