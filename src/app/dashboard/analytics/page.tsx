@@ -63,13 +63,37 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   const queryStart = getKSTMonthStart(selectedYear, selectedMonth).toISOString()
   const queryEnd = getKSTMonthStart(selectedYear, selectedMonth + 1).toISOString()
 
+  // range()/limit() 없이 조회하면 supabase/config.toml의 max_rows(1000)가
+  // 암묵적으로 적용돼 결과가 잘린다(api/leads/export/route.ts에서 이미 같은
+  // 문제를 겪고 고친 바로 그 이슈) - 트래픽이 많은 회사의 월간 페이지뷰/리드가
+  // 1000행을 넘으면 이 페이지의 모든 합계·UTM 분석이 조용히 축소된 값이 된다.
+  // 1000행씩 배치로 반복 조회해 전체를 가져온다.
+  async function fetchAllRows<T>(
+    queryBuilder: { range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }> }
+  ): Promise<T[]> {
+    const BATCH_SIZE = 1000
+    const allRows: T[] = []
+    let offset = 0
+    while (true) {
+      const { data, error } = await queryBuilder.range(offset, offset + BATCH_SIZE - 1)
+      if (error) throw error
+      if (!data || data.length === 0) break
+      allRows.push(...data)
+      if (data.length < BATCH_SIZE) break
+      offset += BATCH_SIZE
+    }
+    return allRows
+  }
+
   // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
-  const { data: pageViewsData } = await supabase
-    .from('landing_page_analytics')
-    .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
-    .eq('landing_pages.company_id', userProfile.company_id)
-    .gte('date', queryStartDate)
-    .lt('date', queryEndDate)
+  const pageViewsData = await fetchAllRows(
+    supabase
+      .from('landing_page_analytics')
+      .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
+      .eq('landing_pages.company_id', userProfile.company_id)
+      .gte('date', queryStartDate)
+      .lt('date', queryEndDate)
+  )
 
   // 페이지뷰를 날짜별로 집계
   const pageViewsByDate: { [key: string]: { total: number; pc: number; mobile: number; tablet: number } } = {}
@@ -85,12 +109,14 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   })
 
   // Get leads (conversions) by date and device with UTM data
-  const { data: leads } = await supabase
-    .from('leads')
-    .select('id, created_at, device_type, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page_id')
-    .eq('company_id', userProfile.company_id)
-    .gte('created_at', queryStart)
-    .lt('created_at', queryEnd)
+  const leads = await fetchAllRows(
+    supabase
+      .from('leads')
+      .select('id, created_at, device_type, utm_source, utm_medium, utm_campaign, utm_content, utm_term, landing_page_id')
+      .eq('company_id', userProfile.company_id)
+      .gte('created_at', queryStart)
+      .lt('created_at', queryEnd)
+  )
 
   // Aggregate traffic data by date
   const trafficByDate: Record<string, { total: number; pc: number; mobile: number; tablet: number }> = {}
@@ -157,11 +183,13 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
 
   // Aggregate landing page performance data — no date filter here so pages created in prior
   // months are included if they had traffic in the selected month
-  const { data: landingPages } = await supabase
-    .from('landing_pages')
-    .select('id, title, slug, created_at, views_count')
-    .eq('company_id', userProfile.company_id)
-    .order('created_at', { ascending: false })
+  const landingPages = await fetchAllRows(
+    supabase
+      .from('landing_pages')
+      .select('id, title, slug, created_at, views_count')
+      .eq('company_id', userProfile.company_id)
+      .order('created_at', { ascending: false })
+  )
 
   // Aggregate monthly device breakdown by landing page
   // (pageViewsData는 위에서 이미 동일 조건(company_id, queryStartDate~queryEndDate)으로
