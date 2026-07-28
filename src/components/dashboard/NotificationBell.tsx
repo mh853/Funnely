@@ -381,8 +381,12 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
             onClick={() => setIsOpen(false)}
           />
 
-          {/* Panel */}
-          <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-20">
+          {/* Panel - 데스크탑은 종 아이콘 기준 absolute right-0(w-96)로 기존과
+              동일하게 두되, 모바일에서는 종 아이콘이 화면 오른쪽 끝(프로필
+              메뉴 등 뒤에 더 있는 요소들)에 붙어있지 않아 그 지점 기준으로
+              384px를 왼쪽으로 펼치면 화면 왼쪽 밖으로 잘려 나갔다 - 뷰포트
+              기준 좌우 여백(inset-x-4)으로 고정폭 없이 펼치도록 전환 */}
+          <div className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto mt-0 sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 z-20">
             {/* Header */}
             <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
               <h3 className="text-sm font-semibold text-gray-900">
