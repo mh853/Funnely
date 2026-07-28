@@ -73,7 +73,13 @@ export default async function SettingsPage() {
   }
 
   // Check if user has permission to edit company settings
-  const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
+  // hospital_owner/hospital_admin이 빠져있었고 simple_role='admin' 폴백도 없어서,
+  // 이 두 레거시 role이거나 simple_role만 admin으로 설정된 계정은 회사 정보
+  // 수정 폼 자체가 비활성화되어 있었다(관리자 등급이지만 매니저는 제외 - RLS
+  // 정책과 동일한 범위로 맞춤, isAdminUser()는 manager도 포함해 범위가 더 넓음).
+  const canEdit =
+    userProfile.simple_role === 'admin' ||
+    ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
   // DB 상태 관리/Sheets 동기화 링크가 연결된 페이지들은 이미 isAdminUser()
   // (simple_role IN admin/manager 또는 레거시 role 4종)로 접근을 허용하는데,
   // 이 허브 페이지는 simple_role==='admin'만 확인해 정당한 사용자에게 링크
