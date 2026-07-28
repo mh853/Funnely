@@ -86,7 +86,7 @@ export async function GET(
 
     if (error) {
       console.error('[Company Activities API] Query error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: '활동 내역을 불러오지 못했습니다' }, { status: 500 })
     }
 
     const totalPages = Math.ceil((count || 0) / limit)

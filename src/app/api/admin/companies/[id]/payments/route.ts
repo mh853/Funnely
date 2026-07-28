@@ -17,16 +17,31 @@ export async function GET(
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
+    const offset = 0
+    const limit = 20
+
+    const { count: totalCount, error: countError } = await supabase
+      .from('payment_transactions')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', params.id)
+      .eq('status', 'success')
+
+    if (countError) {
+      console.error('[Payments API] count error:', countError)
+      return NextResponse.json({ error: '결제 내역을 불러오지 못했습니다' }, { status: 500 })
+    }
+
     const { data: payments, error } = await supabase
       .from('payment_transactions')
       .select('id, total_amount, approved_at, status, subscription_id')
       .eq('company_id', params.id)
       .eq('status', 'success')
       .order('approved_at', { ascending: false })
-      .limit(20)
+      .range(offset, offset + limit - 1)
 
     if (error) {
-      return NextResponse.json({ error: 'Failed to fetch payments' }, { status: 500 })
+      console.error('[Payments API] query error:', error)
+      return NextResponse.json({ error: '결제 내역을 불러오지 못했습니다' }, { status: 500 })
     }
 
     // payment_transactions.subscription_id에는 FK 제약이 없어 PostgREST embed로
@@ -50,7 +65,7 @@ export async function GET(
     }
 
     const rows = (payments || []).map((p: any, i: number) => ({
-      sequence: (payments?.length || 0) - i,
+      sequence: (totalCount || 0) - offset - i,
       date: p.approved_at,
       planName: planNameBySubscriptionId.get(p.subscription_id) || '-',
       amount: p.total_amount || 0,
