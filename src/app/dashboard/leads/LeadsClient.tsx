@@ -1165,11 +1165,17 @@ export default function LeadsClient({
         throw new Error('Failed to fetch export data')
       }
 
-      const { leads: allLeads } = await response.json()
+      const { leads: allLeads, truncated, totalFetched } = await response.json()
 
       if (!allLeads || allLeads.length === 0) {
         toast.error('내보낼 데이터가 없습니다.')
         return
+      }
+
+      if (truncated) {
+        toast.error(
+          `데이터가 너무 많아 최근 ${totalFetched.toLocaleString()}건만 내보냈습니다. 날짜 범위를 좁혀서 다시 시도해주세요.`
+        )
       }
 
       // 엑셀 데이터 생성 (사용자 경험 최적화 - 한글 헤더, 정리된 순서)

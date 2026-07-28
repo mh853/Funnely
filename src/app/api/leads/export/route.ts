@@ -143,21 +143,57 @@ export async function GET(request: Request) {
       }
     }
 
-    // Get all data without pagination
-    const { data: leads, error } = await query.order('created_at', { ascending: false })
+    // 페이지네이션 없이 전체 데이터 가져오기 - PostgREST는 range()/limit() 없이
+    // 요청해도 supabase/config.toml의 max_rows(1000)를 암묵적으로 적용해 결과를
+    // 잘라버리므로, range()로 직접 배치 반복 조회해 진짜 전체 데이터를 가져온다.
+    const orderedQuery = query.order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Leads export error:', error)
-      return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
+    const BATCH_SIZE = 1000 // PostgREST max_rows와 동일하게 맞춤
+    const MAX_TOTAL_ROWS = 20000 // 메모리/응답시간 보호용 상한
+
+    const allLeads: any[] = []
+    let truncated = false
+    let offset = 0
+
+    while (true) {
+      const { data: batch, error } = await orderedQuery.range(offset, offset + BATCH_SIZE - 1)
+
+      if (error) {
+        console.error('Leads export error:', error)
+        return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 })
+      }
+
+      if (!batch || batch.length === 0) {
+        break
+      }
+
+      allLeads.push(...batch)
+
+      if (batch.length < BATCH_SIZE) {
+        // 더 가져올 데이터 없음 (마지막 배치)
+        break
+      }
+
+      if (allLeads.length >= MAX_TOTAL_ROWS) {
+        // 안전장치 - 과도한 메모리/응답시간 사용 방지
+        truncated = true
+        break
+      }
+
+      offset += BATCH_SIZE
     }
 
     // 서버에서 전화번호 복호화
-    const decryptedLeads = (leads || []).map(lead => ({
+    const decryptedLeads = allLeads.map(lead => ({
       ...lead,
       phone: lead.phone ? decryptPhone(lead.phone) : lead.phone
     }))
 
-    return NextResponse.json({ leads: decryptedLeads })
+    return NextResponse.json({
+      leads: decryptedLeads,
+      truncated,
+      totalFetched: decryptedLeads.length,
+    })
   } catch (error) {
     console.error('Export API error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
