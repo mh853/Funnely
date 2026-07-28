@@ -195,7 +195,11 @@ export function detectHealthScoreDeclineSignal(
 ): HealthScoreDeclineSignal | null {
   const threshold = 60 // Score below 60 is risky
 
-  if (currentScore < threshold) {
+  // 절대값(60 미만)만 보고 이전 점수와 비교하지 않으면, 점수가 실제로는 오른
+  // 경우(예: 30 -> 55)에도 "하락"으로 잘못 표시된다. 이전 점수 대비 실제로
+  // 내려간 경우에만 신호를 발생시킨다(이전 점수 자체가 없는 경우는 추세를
+  // 알 수 없으니 "주의 필요"로만 표시).
+  if (currentScore < threshold && (previousScore === null || currentScore < previousScore)) {
     const decline = previousScore ? previousScore - currentScore : 0
 
     return {
