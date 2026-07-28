@@ -160,6 +160,13 @@ export default function SheetSyncSettings({
       toast.error('스프레드시트 ID를 입력하세요')
       return
     }
+    // 화면엔 "이름 열 *", "전화번호 열 *"로 필수 표시만 해두고 실제로는 검증하지
+    // 않아, 이 값이 비어있는 채로 저장되면 이후 모든 동기화가 매번 조용히
+    // "가져올 데이터 없음"만 반환하며 원인을 알 방법이 없었다.
+    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim()) {
+      toast.error('이름 열과 전화번호 열은 필수입니다')
+      return
+    }
 
     const { error } = await supabase.from('sheet_sync_configs').insert({
       company_id: companyId,
@@ -172,7 +179,11 @@ export default function SheetSyncSettings({
     })
 
     if (error) {
-      toast.error('설정 추가 실패: ' + error.message)
+      toast.error(
+        error.code === '23505'
+          ? '이미 등록된 스프레드시트+시트 조합입니다.'
+          : '설정 추가 실패: ' + error.message
+      )
       return
     }
 
@@ -293,6 +304,10 @@ export default function SheetSyncSettings({
       toast.error('스프레드시트 ID를 입력하세요')
       return
     }
+    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim()) {
+      toast.error('이름 열과 전화번호 열은 필수입니다')
+      return
+    }
 
     const { error } = await supabase
       .from('sheet_sync_configs')
@@ -306,7 +321,11 @@ export default function SheetSyncSettings({
       .eq('id', editingConfig)
 
     if (error) {
-      toast.error('설정 수정 실패: ' + error.message)
+      toast.error(
+        error.code === '23505'
+          ? '이미 등록된 스프레드시트+시트 조합입니다.'
+          : '설정 수정 실패: ' + error.message
+      )
       return
     }
 
