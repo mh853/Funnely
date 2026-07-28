@@ -72,7 +72,9 @@ export async function GET(request: NextRequest) {
       searchQuery = searchQuery.or(
         `subject.ilike.${searchTerm},description.ilike.${searchTerm}`
       )
-      searchQuery = searchQuery.order('created_at', { ascending: false })
+      searchQuery = searchQuery
+        .order('created_at', { ascending: false })
+        .range(offset, offset + perPage - 1)
 
       const { data: allTickets, error: searchError, count: totalCount } = await searchQuery
 
@@ -106,11 +108,6 @@ export async function GET(request: NextRequest) {
 
         filteredTickets = ticketsWithRelations || []
         filteredCount = totalCount || 0
-
-        // 페이지네이션 적용
-        const start = offset
-        const end = offset + perPage
-        filteredTickets = filteredTickets.slice(start, end)
       } else {
         filteredTickets = []
         filteredCount = 0
