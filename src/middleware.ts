@@ -90,6 +90,27 @@ function isOwnDomain(hostname: string): boolean {
   )
 }
 
+// 세션 쿠키 없이(공개 폼, 크론 CRON_SECRET, revalidate/sheets-sync 시크릿) 호출되는
+// API 경로 - 로그인 세션이 없으면 user가 null이라 자연히 건너뛰지만, 로그인한
+// 사용자의 브라우저에서 같은 도메인으로 우연히 호출되는 경우까지 대비해 명시적으로
+// 제외한다. 초대 수락은 아직 계정이 없거나 다른 회사에 소속되어 있을 수 있어 제외.
+const PUBLIC_API_PREFIXES = [
+  '/api/contact',
+  '/api/public/inquiry',
+  '/api/auth/',
+  '/api/users/invite/accept',
+  '/api/landing-pages/submit',
+  '/api/landing-pages/view',
+  '/api/landing-pages/timer-expired',
+  '/api/cron/',
+  '/api/revalidate',
+  '/api/sheets/sync',
+]
+
+function isPublicApiPath(pathname: string): boolean {
+  return PUBLIC_API_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(prefix))
+}
+
 export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const url = request.nextUrl.clone()
@@ -281,6 +302,35 @@ export async function middleware(request: NextRequest) {
   // 세션 갱신 + 로그인 여부 확인 (아래에서 재사용)
   const { data: { user } } = await supabase.auth.getUser()
 
+  // API 경로 비활성화 계정 차단 - matcher가 /api 전체를 제외해서(성능 이유),
+  // 대시보드 페이지는 아래 PHASE 3에서 막히지만 API를 직접 호출하면 계속
+  // 통과되고 있었다(비활성화/탈퇴 회사도 /api/leads/export 등으로 데이터
+  // 접근·추출이 계속 가능). 로그인 세션(쿠키)이 있는 요청에만 가볍게
+  // is_active 하나만 확인하고, 세션이 없는 공개 폼/크론/시크릿 인증 라우트는
+  // user가 null이라 자연히 건너뛴다 - 아래 PHASE 3의 무거운 구독 만료 체크는
+  // /dashboard 경로에만 적용되므로 API 경로에는 여전히 적용되지 않는다
+  // (/api를 미들웨어에서 완전히 제외했던 원래 성능 의도를 최대한 지킴).
+  if (user && pathname.startsWith('/api/') && !isPublicApiPath(pathname)) {
+    const { data: apiUserProfile } = await supabase
+      .from('users')
+      .select('is_active, companies(is_active, withdrawn_at)')
+      .eq('id', user.id)
+      .single()
+
+    const apiUserCompany = apiUserProfile?.companies as
+      | { is_active: boolean | null; withdrawn_at: string | null }
+      | null
+      | undefined
+
+    if (
+      apiUserProfile?.is_active === false ||
+      apiUserCompany?.is_active === false ||
+      apiUserCompany?.withdrawn_at
+    ) {
+      return NextResponse.json({ error: '비활성화된 계정입니다.' }, { status: 403 })
+    }
+  }
+
   // 이미 로그인한 사용자가 로그인/가입 페이지에 재접속하면 대시보드로 보낸다.
   // /auth/reset-password 등 다른 /auth/* 경로는 비밀번호 복구용 임시 세션이
   // 필요할 수 있으므로 여기서 건드리지 않는다.
@@ -446,12 +496,16 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files (public folder)
-     * - api (API 라우트는 자체적으로 auth.getUser()로 인증하므로 미들웨어의
-     *   페이지 전용 인증/구독 게이트를 거칠 필요가 없다 — 페이지 이동뿐 아니라
-     *   클라이언트가 날리는 모든 API 호출마다 auth+DB 조회 3단계가 반복 실행되던
-     *   불필요한 지연을 없앤다. /admin/api/*, /dashboard 하위 페이지는
-     *   '/api'로 시작하지 않으므로 영향 없음)
+     *
+     * /api는 예전에 성능 이유로 제외되어 있었다("API 라우트는 자체적으로
+     * auth.getUser()로 인증하므로 미들웨어의 페이지 전용 인증/구독 게이트를
+     * 거칠 필요가 없다") - 그런데 그 인증은 "로그인했는지"만 확인할 뿐
+     * "비활성화/탈퇴된 계정인지"는 확인하지 않아서, 비활성화된 계정이 대시보드
+     * 페이지에서는 막히면서도 API를 직접 호출하면 계속 데이터 접근이 가능했다.
+     * /api를 다시 포함시키되, 위에서 API 경로는 가벼운 is_active 확인만 하고
+     * 무거운 구독 만료 체크는 여전히 /dashboard에만 적용되도록 분리해
+     * 성능 영향을 최소화했다.
      */
-    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
