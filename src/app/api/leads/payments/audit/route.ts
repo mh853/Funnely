@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 // GET /api/leads/payments/audit?lead_id=xxx - 결제 내역 감사 로그 조회 (관리자 전용)
 export async function GET(request: NextRequest) {
@@ -24,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Get user's company and role
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, simple_role')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -32,8 +33,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: { message: 'User not associated with a company' } }, { status: 403 })
     }
 
-    // Check admin role (simple_role: admin)
-    if (userProfile.simple_role !== 'admin') {
+    // 관리자 권한 체크 - simple_role='admin'만으로는 레거시 role
+    // (company_owner/company_admin/hospital_owner/hospital_admin) 계정과
+    // simple_role='manager' 계정이 실제 관리자인데도 차단된다
+    if (!isAdminUser(userProfile)) {
       return NextResponse.json({ error: { message: 'Admin access required' } }, { status: 403 })
     }
 

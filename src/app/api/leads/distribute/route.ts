@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 /**
  * POST /api/leads/distribute - 미배정 리드 수동 분배
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
     // ========================================================================
     const { data: userProfile, error: profileError } = await supabase
       .from('users')
-      .select('company_id, simple_role')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -72,8 +73,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // 관리자 권한 체크
-    if (userProfile.simple_role !== 'admin') {
+    // 관리자 권한 체크 - simple_role='admin'만으로는 레거시 role
+    // (company_owner/company_admin/hospital_owner/hospital_admin) 계정과
+    // simple_role='manager' 계정이 실제 관리자인데도 차단된다
+    if (!isAdminUser(userProfile)) {
       return NextResponse.json(
         { error: { message: '관리자만 리드 분배가 가능합니다.' } },
         { status: 403 }
