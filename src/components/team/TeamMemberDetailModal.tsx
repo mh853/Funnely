@@ -56,7 +56,12 @@ export default function TeamMemberDetailModal({
   const [showDepartmentSuggestions, setShowDepartmentSuggestions] = useState(false)
 
   const isCurrentUser = member.id === currentUserId
-  const canEdit = canManage && !isCurrentUser
+  // 관리자/레거시 owner 대상은 서버(트리거)에서도 이 경로로 role/상태 변경을 막고
+  // 있으므로, 시도했다가 실패하는 상황을 피하기 위해 UI에서도 동일하게 막는다.
+  const isProtectedTarget =
+    member.simple_role === 'admin' ||
+    ['company_owner', 'hospital_owner'].includes(member.role)
+  const canEdit = canManage && !isCurrentUser && !isProtectedTarget
 
   // Filter departments for autocomplete
   const filteredDepartments = existingDepartments.filter(
@@ -118,8 +123,12 @@ export default function TeamMemberDetailModal({
     }
   }
 
+  // 실제 로그인 계정(auth.users) 삭제는 서비스 롤 권한이 필요해 브라우저에서
+  // 직접 할 수 없다 - 대신 is_active=false로 비활성화한다(미들웨어가 이미
+  // is_active=false 사용자의 로그인/대시보드 접근을 즉시 차단하므로 접근 차단
+  // 효과는 동일하고, leads.assigned_to 등 참조가 남아있어도 FK 위반이 없다).
   const handleDelete = async () => {
-    if (!confirm('정말 이 팀원을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) return
+    if (!confirm('정말 이 팀원을 비활성화하시겠습니까? 비활성화된 팀원은 더 이상 로그인할 수 없습니다.')) return
 
     setLoading(true)
     setMessage(null)
@@ -128,20 +137,20 @@ export default function TeamMemberDetailModal({
       const supabase = createClient()
       const { error, count } = await supabase
         .from('users')
-        .delete()
+        .update({ is_active: false })
         .eq('id', member.id)
         .select('id', { count: 'exact', head: true })
 
       if (error) throw error
-      if (count === 0) throw new Error('삭제 권한이 없거나 대상을 찾을 수 없습니다.')
+      if (count === 0) throw new Error('비활성화 권한이 없거나 대상을 찾을 수 없습니다.')
 
-      setMessage({ type: 'success', text: '팀원이 삭제되었습니다.' })
+      setMessage({ type: 'success', text: '팀원이 비활성화되었습니다.' })
       setTimeout(() => {
         onUpdate()
         onClose()
       }, 1000)
     } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '삭제에 실패했습니다.' })
+      setMessage({ type: 'error', text: error.message || '비활성화에 실패했습니다.' })
     } finally {
       setLoading(false)
     }
@@ -320,14 +329,14 @@ export default function TeamMemberDetailModal({
           <div className="flex items-center justify-between border-t border-gray-200 px-6 py-4">
             {/* Delete Button - Only for non-self, non-admin users */}
             <div>
-              {canEdit && member.simple_role !== 'admin' && (
+              {canEdit && (
                 <button
                   onClick={handleDelete}
                   disabled={loading}
                   className="inline-flex items-center px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md disabled:opacity-50"
                 >
                   <TrashIcon className="h-4 w-4 mr-1" />
-                  팀원 삭제
+                  팀원 비활성화
                 </button>
               )}
             </div>
