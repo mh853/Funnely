@@ -23,7 +23,9 @@ export async function GET(
     }
 
     // Check permission
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_EMAIL_TEMPLATES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_EMAIL_TEMPLATES)
+    }
 
     const supabase = await createClient()
 
@@ -61,7 +63,9 @@ export async function PUT(
     }
 
     // Check permission
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    }
 
     const supabase = await createClient()
 
@@ -141,7 +145,9 @@ export async function DELETE(
     }
 
     // Check permission
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    }
 
     const supabase = await createClient()
 

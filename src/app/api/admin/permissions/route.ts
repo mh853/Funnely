@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    }
 
     // 모든 권한 정보를 배열로 변환
     const permissions = Object.values(PERMISSION_INFO)

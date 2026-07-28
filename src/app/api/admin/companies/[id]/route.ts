@@ -22,7 +22,9 @@ export async function GET(
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    }
 
     // 3. Supabase 쿼리
     const supabase = createClient(
@@ -182,7 +184,9 @@ export async function PUT(
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    }
 
     // 3. 요청 바디 파싱
     const body = await request.json()
@@ -296,7 +300,9 @@ export async function PATCH(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    }
 
     const body = await request.json()
     const { is_active } = body
@@ -379,7 +385,9 @@ export async function DELETE(
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_COMPANIES)
+    }
 
     // 3. 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url)

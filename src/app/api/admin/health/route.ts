@@ -18,7 +18,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_HEALTH_SCORES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_HEALTH_SCORES)
+    }
 
     // 3. 쿼리 파라미터 파싱
     const { searchParams } = new URL(request.url)

@@ -18,7 +18,9 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    }
 
     // 3. 요청 본문 파싱
     const body = await request.json()

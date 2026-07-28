@@ -22,7 +22,9 @@ export async function GET(request: NextRequest) {
 
     // manage_roles 또는 view_roles 권한 필요
     // (현재는 manage_roles만 정의되어 있으므로 이를 사용)
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -94,7 +96,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_ROLES)
+    }
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,

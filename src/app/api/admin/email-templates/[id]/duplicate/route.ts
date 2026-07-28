@@ -19,7 +19,9 @@ export async function POST(
     }
 
     // Check permission
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_EMAIL_TEMPLATES)
+    }
 
     const supabase = await createClient()
 

@@ -21,10 +21,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. 권한 체크
-    await requirePermission(
-      adminUser.user.id,
-      PERMISSIONS.CALCULATE_HEALTH_SCORES
-    )
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(
+        adminUser.user.id,
+        PERMISSIONS.CALCULATE_HEALTH_SCORES
+      )
+    }
 
     // 3. 요청 바디 파싱
     const body = await request.json()

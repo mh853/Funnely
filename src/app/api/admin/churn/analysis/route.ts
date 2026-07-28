@@ -28,7 +28,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    }
 
     // 3. 쿼리 파라미터
     const { searchParams } = new URL(request.url)

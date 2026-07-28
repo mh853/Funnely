@@ -13,7 +13,9 @@ export async function GET(request: NextRequest) {
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.VIEW_COMPANIES)
+    }
 
     // 3. Supabase 클라이언트 생성
     const supabase = createClient(

@@ -132,7 +132,9 @@ export async function PUT(
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_USERS)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_USERS)
+    }
 
     // 3. 요청 바디 파싱
     const body = await request.json()
@@ -310,7 +312,9 @@ export async function DELETE(
     }
 
     // 2. 권한 체크
-    await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_USERS)
+    if (!adminUser.profile.is_super_admin) {
+      await requirePermission(adminUser.user.id, PERMISSIONS.MANAGE_USERS)
+    }
 
     // 3. 제약 조건 확인
     // 자기 자신 삭제 방지
