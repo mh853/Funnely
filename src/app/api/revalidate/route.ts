@@ -15,8 +15,12 @@ export async function POST(request: NextRequest) {
     }
 
     // 두 가지 인증 방식 허용:
-    // 1. Secret 토큰 (외부/서버 사이드 호출)
-    // 2. Supabase 세션 (대시보드 내부 호출 - secret 불필요)
+    // 1. Secret 토큰 (외부/서버 사이드 호출 - 서버 간 신뢰된 호출이라 회사 소유권
+    //    확인 없이 통과)
+    // 2. Supabase 세션 (대시보드 내부 호출 - secret 불필요, 단 로그인만으로는
+    //    부족하고 요청한 slug가 실제로 호출자 회사 소유인지 확인해야 한다 -
+    //    그렇지 않으면 다른 회사의 slug를 알아내 그 회사 캐시를 임의로
+    //    무효화시킬 수 있다)
     const isSecretValid = secret && secret === process.env.REVALIDATION_SECRET
 
     if (!isSecretValid) {
@@ -27,6 +31,26 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: 'Unauthorized' },
           { status: 401 }
+        )
+      }
+
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('company_id')
+        .eq('id', user.id)
+        .single()
+
+      const { data: landingPage } = await supabase
+        .from('landing_pages')
+        .select('id')
+        .eq('slug', slug)
+        .eq('company_id', userProfile?.company_id ?? '')
+        .maybeSingle()
+
+      if (!landingPage) {
+        return NextResponse.json(
+          { error: 'Forbidden' },
+          { status: 403 }
         )
       }
     }
