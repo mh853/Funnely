@@ -134,7 +134,7 @@ export async function POST(
         company_id: ticket.company_id,
         title: '문의하신 내용에 답변이 등록되었습니다',
         message: `"${ticket.subject}" 문의에 새로운 답변이 등록되었습니다.`,
-        type: 'support_ticket_replied',
+        type: 'support_reply',
         metadata: { ticket_id: params.id },
       }).then(({ error }) => {
         if (error) console.error('[Support Reply API] 인앱 알림 생성 실패:', error)

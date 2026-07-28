@@ -87,9 +87,12 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
         },
         (payload) => {
           fetchNotifications()
-          // 초기 로드 이후에만 토스트 표시
-          if (!isInitialLoad.current) {
-            showToast(payload.new as Notification)
+          // 다른 사용자 대상 알림(user_id 지정)은 RLS 때문에 payload.new가 빈
+          // 객체로 올 수 있다(company_id 필터는 통과하지만 행 자체는 안 보임) -
+          // 이 경우 제목/본문이 undefined인 빈 토스트가 뜨는 걸 막는다.
+          const newRecord = payload.new as Partial<Notification>
+          if (!isInitialLoad.current && newRecord?.id && newRecord?.title) {
+            showToast(newRecord as Notification)
           }
         }
       )
