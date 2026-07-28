@@ -57,9 +57,11 @@ export async function GET(
 
     const companyUserCount = userCount || 1
 
-    // 6. 기능 사용 데이터 조회
+    // 6. 기능 사용 데이터 조회 (실제 테이블명은 feature_usage가 아니라
+    // feature_usage_tracking이다 - src/lib/health/calculateHealthScore.ts에서
+    // 이미 같은 실수를 겪고 고친 바 있음)
     const { data: featureUsageData, error: usageError } = await supabase
-      .from('feature_usage')
+      .from('feature_usage_tracking')
       .select('*')
       .eq('company_id', companyId)
 
@@ -80,6 +82,9 @@ export async function GET(
     const features: FeatureAnalysis[] = Object.values(TRACKED_FEATURES).map(
       (featureInfo) => {
         const usage = usageMap.get(featureInfo.key)
+        // feature_usage_tracking은 company_id+feature_name당 1행(집계 카운터)만
+        // 저장하고 사용자별 구분은 저장하지 않아, unique_users_count는 실제로
+        // 존재하는 컬럼이 아니다 - 항상 0으로 남는다(adoption_rate도 마찬가지)
         const uniqueUsers = usage?.unique_users_count || 0
         return {
           feature_name: featureInfo.key,
