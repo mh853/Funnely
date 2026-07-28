@@ -55,6 +55,8 @@ async function fetchLandingPage(slug: string): Promise<any> {
       companies!inner(
         id,
         short_id,
+        is_active,
+        withdrawn_at,
         tracking_pixels(*)
       )
     `)
@@ -64,6 +66,11 @@ async function fetchLandingPage(slug: string): Promise<any> {
     .single()
 
   if (error || !data) return null
+
+  // 비활성화/탈퇴 처리된 회사는 대시보드는 미들웨어가 이미 차단하지만, 이 경로
+  // (커스텀 도메인/직접 slug 접근)는 이 검사가 없어 계속 노출될 수 있었다.
+  if (data.companies?.is_active === false || data.companies?.withdrawn_at) return null
+
   return data
 }
 

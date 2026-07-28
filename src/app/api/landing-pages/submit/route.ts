@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
 
     const { data: landingPage, error: lpError } = await supabase
       .from('landing_pages')
-      .select('company_id, title, status, is_active, collect_fields, timer_enabled, timer_deadline, timer_auto_update, require_privacy_consent')
+      .select('company_id, title, status, is_active, collect_fields, timer_enabled, timer_deadline, timer_auto_update, require_privacy_consent, companies!inner(is_active, withdrawn_at)')
       .eq('id', landing_page_id)
       .single()
 
@@ -146,6 +146,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (landingPage.status !== 'published' || !landingPage.is_active) {
+      return NextResponse.json(
+        { error: { message: '게시되지 않은 페이지입니다' } },
+        { status: 403 }
+      )
+    }
+
+    // 회사가 비활성화/탈퇴 처리된 경우 - 대시보드는 미들웨어가 이미 차단하지만
+    // 공개 제출 API는 랜딩페이지 자체의 is_active만 봤을 뿐 소속 회사 상태는
+    // 확인하지 않아, 정지된 회사도 계속 리드(개인정보)를 수집할 수 있었다.
+    const company = Array.isArray(landingPage.companies) ? landingPage.companies[0] : landingPage.companies
+    if (!company || company.is_active === false || company.withdrawn_at) {
       return NextResponse.json(
         { error: { message: '게시되지 않은 페이지입니다' } },
         { status: 403 }
