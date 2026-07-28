@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
 import { normalizePhone } from '@/lib/encryption/phone'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -26,6 +27,17 @@ const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export async function POST(request: Request) {
   try {
+    // 회원가입 API가 admin.createUser()로 GoTrue의 공개 가입 레이트리밋을 우회하고
+    // 있어서, 이메일 존재 여부를 응답으로 노출하는 것과 합쳐지면 무제한으로
+    // 이메일 존재 여부를 스캔하거나 스팸 계정을 대량 생성할 수 있었다.
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`signup:${ip}`, 5, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { email, password, fullName, companyName, businessNumber, phone } = body
 

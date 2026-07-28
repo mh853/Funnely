@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { normalizePhone } from '@/lib/encryption/phone'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 function maskEmail(email: string): string {
   const atIndex = email.indexOf('@')
@@ -13,6 +14,16 @@ function maskEmail(email: string): string {
 
 export async function POST(request: Request) {
   try {
+    // 이름 고정 + 전화번호를 바꿔가며 계정 존재 여부와 마스킹된 이메일을 알아낼
+    // 수 있는 브루트포스 경로라 요청 제한이 없으면 실질적인 개인정보 노출 위험이 있다.
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`find-email:${ip}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
     const { fullName, phone } = body
 
