@@ -7,7 +7,51 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getBaseDomain } from '@/lib/utils/landing-page-url'
-import { pickCurrentSubscription } from '@/lib/subscription-current'
+import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
+
+/**
+ * 회사가 현재 구독 플랜에서 custom_domain 기능을 실제로 쓸 수 있는지 확인.
+ * canUseCustomDomain()(src/lib/subscription-access.ts)과 동일한 로직이지만,
+ * 그쪽은 next/headers(cookies())에 의존하는 서버 클라이언트를 쓰기 때문에
+ * 미들웨어의 raw fetch 방식과 맞지 않아 여기서 별도로 재현한다. 도메인 생성
+ * 시점에만 이 기능 접근을 검증하고 이후로는 재검증하지 않아서, 다운그레이드
+ * 후에도 커스텀 도메인이 계속 동작하던 문제를 막는다.
+ */
+async function hasCustomDomainFeatureAccess(companyId: string): Promise<boolean> {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseServiceKey) return false
+
+  try {
+    // company_subscriptions -> subscription_plans FK가 plan_id/pending_plan_id
+    // 둘이라 명시적으로 지정해야 한다(안 하면 PostgREST가 모호하다며 에러 반환).
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/company_subscriptions?company_id=eq.${encodeURIComponent(companyId)}&select=status,current_period_end,trial_end_date,cancelled_at,subscription_plans!plan_id(features)&order=created_at.desc&limit=10`,
+      {
+        headers: {
+          apikey: supabaseServiceKey,
+          Authorization: `Bearer ${supabaseServiceKey}`,
+          Accept: 'application/json',
+        },
+        next: { revalidate: 60 },
+      }
+    )
+
+    if (!res.ok) return false
+
+    const subs = await res.json()
+    if (!Array.isArray(subs) || subs.length === 0) return false
+
+    const subscription = pickCurrentSubscription(subs)
+    if (!subscription || !hasValidPlanAccess(subscription)) return false
+
+    const features = (subscription as any).subscription_plans?.features || {}
+    return features.custom_domain === true
+  } catch {
+    return false
+  }
+}
 
 /**
  * 커스텀 도메인으로 회사 정보 조회
@@ -41,7 +85,13 @@ async function lookupCustomDomain(domain: string): Promise<string | null> {
     // companies가 조인된 경우
     const record = data[0]
     const shortId = record?.companies?.short_id
-    return shortId || null
+    const companyId = record?.company_id
+    if (!shortId || !companyId) return null
+
+    // 도메인 생성 시점에만 검증했던 custom_domain 기능 접근을 요청마다 재검증
+    if (!(await hasCustomDomainFeatureAccess(companyId))) return null
+
+    return shortId
   } catch {
     return null
   }
