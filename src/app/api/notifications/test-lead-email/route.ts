@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     // Get user profile
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, role, full_name')
+      .select('company_id, role, simple_role, full_name')
       .eq('id', user.id)
       .single()
 
@@ -26,8 +26,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
-    // Check permission
-    if (!['company_owner', 'company_admin'].includes(userProfile.role)) {
+    // Check permission - 원래 의도(회사 관리자 전용, manager 제외)는 유지하되
+    // 레거시 role(hospital_owner/hospital_admin)과 simple_role='admin' 폴백
+    // 누락만 보완 (dashboard/settings/page.tsx canEdit과 동일 기준)
+    const isCompanyAdmin =
+      userProfile.simple_role === 'admin' ||
+      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
+    if (!isCompanyAdmin) {
       return NextResponse.json(
         { error: '권한이 없습니다. 회사 관리자만 실행할 수 있습니다.' },
         { status: 403 }

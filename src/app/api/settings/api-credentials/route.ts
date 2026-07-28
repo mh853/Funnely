@@ -21,7 +21,7 @@ export async function GET() {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, role')
+      .select('company_id, role, simple_role')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -30,7 +30,10 @@ export async function GET() {
     }
 
     // 저장된 시크릿은 회사 관리자만 열람할 수 있다 (viewer 등 일반 구성원 제외).
-    if (!['company_owner', 'company_admin'].includes(userProfile.role)) {
+    if (
+      userProfile.simple_role !== 'admin' &&
+      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
+    ) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -71,7 +74,7 @@ export async function PUT(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id, role')
+      .select('company_id, role, simple_role')
       .eq('id', user.id)
       .maybeSingle()
 
@@ -79,7 +82,10 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    if (!['company_owner', 'company_admin'].includes(userProfile.role)) {
+    if (
+      userProfile.simple_role !== 'admin' &&
+      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
+    ) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

@@ -49,9 +49,11 @@ export default async function NotificationSettingsPage() {
   }
 
   // Check permissions
-  // 백엔드(/api/settings/notification-emails, /api/notifications/test-lead-email)는
-  // role이 company_owner/company_admin인 경우만 허용하므로 동일한 기준으로 맞춘다.
-  const canEdit = ['company_owner', 'company_admin'].includes(userProfile.role)
+  // 백엔드(/api/settings/notification-emails, /api/notifications/test-lead-email)와
+  // 동일한 기준(레거시 role 4종 + simple_role='admin' 폴백)으로 맞춘다.
+  const canEdit =
+    userProfile.simple_role === 'admin' ||
+    ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
 
   return (
     <div className="px-4 space-y-6">
