@@ -11,6 +11,8 @@ export async function GET(request: Request) {
   const code = requestUrl.searchParams.get('code')
   const origin = requestUrl.origin
 
+  const next = requestUrl.searchParams.get('next')
+
   if (code) {
     const supabase = await createClient()
     const { error } = await supabase.auth.exchangeCodeForSession(code)
@@ -24,9 +26,25 @@ export async function GET(request: Request) {
         : 'auth_failed'
       return NextResponse.redirect(`${origin}/auth/login?error=${errorCode}`)
     }
+
+    if (next === '/auth/reset-password') {
+      // 로그인만 한 세션으로 /auth/reset-password에 직접 접근해도 현재 비밀번호 확인 없이
+      // 비밀번호를 바꿀 수 있는 문제(세션 존재 여부만으로 "복구 링크를 거쳐왔다"고 오판)를
+      // 막기 위해, 복구 코드 교환이 실제로 성공했다는 증거를 단명 httpOnly 쿠키로 남긴다.
+      // reset-password 페이지는 이 쿠키가 있을 때만 폼을 보여준다.
+      const redirectTo = `${origin}${next}`
+      const response = NextResponse.redirect(redirectTo)
+      response.cookies.set('pwreset_verified', '1', {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 300,
+        path: '/auth/reset-password',
+      })
+      return response
+    }
   }
 
-  const next = requestUrl.searchParams.get('next')
   const redirectTo = next && next.startsWith('/') ? `${origin}${next}` : `${origin}/dashboard`
   return NextResponse.redirect(redirectTo)
 }
