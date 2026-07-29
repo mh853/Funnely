@@ -47,12 +47,20 @@ export default async function CompletedPage({ params }: Props) {
       id,
       short_id,
       name,
+      is_active,
+      withdrawn_at,
       tracking_pixels(*)
     `)
     .eq('short_id', companyShortId)
     .single()
 
   if (!company) {
+    notFound()
+  }
+
+  // 비활성화/탈퇴 처리된 회사는 대시보드는 미들웨어가 이미 차단하지만, 완결
+  // 페이지는 이 검사가 없어 계속 노출되고 마케팅 픽셀도 계속 발화할 수 있었다.
+  if (company.is_active === false || company.withdrawn_at) {
     notFound()
   }
 
