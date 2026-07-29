@@ -45,19 +45,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ skipped: true, reason: 'timer not yet expired' })
     }
 
-    // Guard: already inactive — avoid duplicate notifications
-    if (!page.is_active) {
-      return NextResponse.json({ skipped: true, reason: 'already inactive' })
-    }
-
-    // Disable the landing page
-    const { error: updateError } = await supabase
+    // Atomically disable the landing page — the `is_active=true` condition makes this
+    // a single conditional UPDATE, so under concurrent requests only one row-locks and
+    // wins; the rest see an empty result and skip below. Prevents TOCTOU duplicate
+    // notifications from concurrent visitor tabs hitting timer expiry simultaneously.
+    const { data: updatedPages, error: updateError } = await supabase
       .from('landing_pages')
       .update({ is_active: false, status: 'draft' })
       .eq('id', landing_page_id)
+      .eq('is_active', true)
+      .select()
 
     if (updateError) {
       throw new Error(`Failed to disable landing page: ${updateError.message}`)
+    }
+
+    // Another concurrent request already won the race and disabled it — skip notification.
+    if (!updatedPages || updatedPages.length === 0) {
+      return NextResponse.json({ success: true, skipped: true, reason: 'already inactive' })
     }
 
     // Create real-time notification for the company dashboard
