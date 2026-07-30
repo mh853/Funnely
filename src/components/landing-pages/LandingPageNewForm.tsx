@@ -1449,8 +1449,34 @@ export default function LandingPageNewForm({
     }
   }
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
+    const imageUrl = images[index]
+
+    // UI 즉시 반응을 위해 로컬 state 먼저 제거
     setImages(images.filter((_, i) => i !== index))
+
+    // Storage 파일 삭제는 백그라운드로 처리 (실패해도 사용자 작업 흐름을 막지 않음)
+    try {
+      // Extract file path from public URL
+      const url = new URL(imageUrl)
+      const pathParts = url.pathname.split('/')
+      const bucketIndex = pathParts.findIndex(p => p === 'public-assets')
+      if (bucketIndex === -1) {
+        throw new Error('Invalid image URL format')
+      }
+      const filePath = pathParts.slice(bucketIndex + 1).join('/')
+
+      // Delete from storage
+      const { error: deleteError } = await supabase.storage
+        .from('public-assets')
+        .remove([filePath])
+
+      if (deleteError) {
+        console.error('Delete error:', deleteError)
+      }
+    } catch (error) {
+      console.error('Error removing image from storage:', error)
+    }
   }
 
   // Completion background image upload
@@ -1829,7 +1855,7 @@ export default function LandingPageNewForm({
         <div className="bg-white rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6">
           <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-              이미지/영상 등록
+              이미지 등록
             </h2>
             <label className="inline-flex items-center px-4 sm:px-5 py-2 sm:py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors cursor-pointer gap-2 text-sm sm:text-base">
               <PhotoIcon className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -1837,7 +1863,7 @@ export default function LandingPageNewForm({
               <input
                 type="file"
                 multiple
-                accept="image/*,video/*"
+                accept="image/*"
                 onChange={handleFileUpload}
                 className="hidden"
               />
