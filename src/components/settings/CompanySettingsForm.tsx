@@ -73,7 +73,15 @@ export default function CompanySettingsForm({ company, canEdit }: CompanySetting
       toast.success('변경사항이 저장되었습니다.')
       router.refresh()
     } catch (err: any) {
-      toast.error(err.message || '저장에 실패했습니다.')
+      console.error('Company update failed:', err)
+      if (err?.code === '23505' && err?.message?.includes('business_number')) {
+        toast.error('이미 등록된 사업자등록번호입니다. 확인 후 다시 입력해주세요.')
+      } else if (err?.code) {
+        // DB 에러 코드가 있는 경우 원본 메시지 대신 일반 메시지로 감싸서 노출
+        toast.error('저장에 실패했습니다. 잠시 후 다시 시도해주세요.')
+      } else {
+        toast.error(err.message || '저장에 실패했습니다.')
+      }
     } finally {
       setLoading(false)
     }
