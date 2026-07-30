@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { config } from '@/lib/config'
 
 type NavItem = { name: string; href: string | null }
 
@@ -91,7 +92,19 @@ export default function MarketingFooter() {
           </div>
         </div>
         <div className="mt-16 border-t border-gray-800 pt-8 sm:mt-20 lg:mt-24">
-          <p className="text-xs leading-5 text-gray-400">
+          <p className="text-xs leading-5 text-gray-500">
+            {config.business.name} | 대표: {config.business.ceo} | 사업자등록번호: {config.business.registrationNumber}
+            {config.business.mailOrderSalesNumber && (
+              <> | 통신판매업신고번호: {config.business.mailOrderSalesNumber}</>
+            )}
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> | </span>
+            사업장 소재지: {config.business.address}
+            <br className="sm:hidden" />
+            <span className="hidden sm:inline"> | </span>
+            고객센터: {config.business.phone} | 이메일: {config.business.email}
+          </p>
+          <p className="mt-4 text-xs leading-5 text-gray-400">
             &copy; {new Date().getFullYear()} Funnely. All rights reserved.
           </p>
         </div>

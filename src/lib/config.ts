@@ -11,6 +11,18 @@ export const config = {
   features: {
     analytics: Boolean(process.env.NEXT_PUBLIC_GA_ID),
   },
+  // 전자상거래법 제10조 표시의무 + 결제대행사(PG) 가맹점 심사 요건 충족용 사업자 정보.
+  // 사업자등록증 기준(2024-03-14 발급) - 변경 시 실제 등록증과 반드시 대조할 것.
+  business: {
+    name: '트리플채널(3CH)',
+    ceo: '최문호',
+    registrationNumber: '809-24-00626',
+    address: '경기도 화성시 남양읍 고향의봄길 36, 104동 303호',
+    phone: '02-3436-1020',
+    email: 'support@funnely.com',
+    // 통신판매업 신고번호는 사업장 주소 변경(화성시 이전) 신고가 완료되면 추가 예정
+    mailOrderSalesNumber: null as string | null,
+  },
 } as const
 
 /**
