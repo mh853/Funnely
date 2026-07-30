@@ -102,7 +102,8 @@ export default function MarketingFooter() {
             사업장 소재지: {config.business.address}
             <br className="sm:hidden" />
             <span className="hidden sm:inline"> | </span>
-            고객센터: {config.business.phone} | 이메일: {config.business.email}
+            고객센터: {config.business.phone}
+            {config.business.email && <> | 이메일: {config.business.email}</>}
           </p>
           <p className="mt-4 text-xs leading-5 text-gray-400">
             &copy; {new Date().getFullYear()} Funnely. All rights reserved.
