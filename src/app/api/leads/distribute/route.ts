@@ -86,16 +86,32 @@ export async function POST(request: NextRequest) {
     // ========================================================================
     // 3. 미배정 리드 조회 (call_assigned_to가 NULL)
     // ========================================================================
-    const { data: unassignedLeads, error: leadsError } = await supabase
-      .from('leads')
-      .select('id, created_at')
-      .eq('company_id', companyId)
-      .is('call_assigned_to', null)
-      .order('created_at', { ascending: true }) // 오래된 순서대로 배정
+    // range() 없이 조회하면 supabase의 암묵적 max_rows(1000)에 걸려 미배정
+    // 리드가 1000건을 넘는 순간부터 오래된 1000건만 조회되고 나머지는 조용히
+    // 누락된다(api/leads/export 등에서 이미 겪은 것과 동일한 원인).
+    // 1000건씩 배치로 반복 조회해 전체를 가져온다.
+    const unassignedLeads: { id: string; created_at: string }[] = []
+    {
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('leads')
+          .select('id, created_at')
+          .eq('company_id', companyId)
+          .is('call_assigned_to', null)
+          .order('created_at', { ascending: true }) // 오래된 순서대로 배정
+          .range(offset, offset + BATCH_SIZE - 1)
 
-    if (leadsError) {
-      console.error('Unassigned leads query error:', leadsError)
-      throw new Error('미배정 리드 조회 실패')
+        if (error) {
+          console.error('Unassigned leads query error:', error)
+          throw new Error('미배정 리드 조회 실패')
+        }
+        if (!data || data.length === 0) break
+        unassignedLeads.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
     }
 
     // 미배정 리드가 없는 경우
@@ -114,17 +130,32 @@ export async function POST(request: NextRequest) {
     // ========================================================================
     // 4. 일반 사용자 목록 조회 (simple_role = 'user')
     // ========================================================================
-    const { data: regularUsers, error: usersError } = await supabase
-      .from('users')
-      .select('id, full_name')
-      .eq('company_id', companyId)
-      .eq('simple_role', 'user')
-      .eq('is_active', true)
-      .order('created_at', { ascending: true }) // 먼저 가입한 순서대로
+    // 마찬가지로 range() 없이 조회하면 max_rows(1000)에 걸려 배정 대상
+    // 사용자가 1000명을 넘으면 뒤쪽 사용자가 조용히 배정 대상에서 빠진다.
+    // 1000건씩 배치로 반복 조회해 전체를 가져온다.
+    const regularUsers: { id: string; full_name: string }[] = []
+    {
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .eq('company_id', companyId)
+          .eq('simple_role', 'user')
+          .eq('is_active', true)
+          .order('created_at', { ascending: true }) // 먼저 가입한 순서대로
+          .range(offset, offset + BATCH_SIZE - 1)
 
-    if (usersError) {
-      console.error('Regular users query error:', usersError)
-      throw new Error('일반 사용자 조회 실패')
+        if (error) {
+          console.error('Regular users query error:', error)
+          throw new Error('일반 사용자 조회 실패')
+        }
+        if (!data || data.length === 0) break
+        regularUsers.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
     }
 
     if (!regularUsers || regularUsers.length === 0) {
