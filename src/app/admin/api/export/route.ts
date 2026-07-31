@@ -48,7 +48,8 @@ export async function GET(request: Request) {
         )
     }
 
-    return new NextResponse(csvData, {
+    // BOM 없이 반환하면 엑셀이 로케일 기반으로 잘못 디코딩해 한글이 깨진다
+    return new NextResponse('﻿' + csvData, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
         'Content-Disposition': `attachment; filename="${type}_export_${new Date().toISOString().split('T')[0]}.csv"`,
@@ -64,13 +65,15 @@ export async function GET(request: Request) {
 }
 
 async function exportCompanies(supabase: any) {
-  const { data: companies } = await supabase
+  // companies 테이블에는 slug 컬럼이 없다(src/app/api/admin/leads/[id]/route.ts,
+  // src/app/api/admin/health/[companyId]/route.ts에도 동일하게 문서화됨) - select에
+  // 넣으면 매번 42703 에러가 나서 error를 체크 안 하면 항상 빈 CSV가 조용히 반환된다.
+  const { data: companies, error } = await supabase
     .from('companies')
     .select(
       `
       id,
       name,
-      slug,
       is_active,
       created_at,
       updated_at
@@ -78,17 +81,21 @@ async function exportCompanies(supabase: any) {
     )
     .order('created_at', { ascending: false })
 
-  if (!companies || companies.length === 0) {
-    return 'ID,이름,슬러그,활성 상태,생성일,수정일\n'
+  if (error) {
+    console.error('[Admin Export] companies 조회 실패:', error)
+    throw new Error('회사 목록 조회에 실패했습니다.')
   }
 
-  const header = 'ID,이름,슬러그,활성 상태,생성일,수정일\n'
+  if (!companies || companies.length === 0) {
+    return 'ID,이름,활성 상태,생성일,수정일\n'
+  }
+
+  const header = 'ID,이름,활성 상태,생성일,수정일\n'
   const rows = companies
     .map((c: any) =>
       [
         c.id,
         c.name,
-        c.slug,
         c.is_active ? '활성' : '비활성',
         formatKST(c.created_at),
         formatKST(c.updated_at),
@@ -102,7 +109,7 @@ async function exportCompanies(supabase: any) {
 }
 
 async function exportUsers(supabase: any) {
-  const { data: users } = await supabase
+  const { data: users, error } = await supabase
     .from('users')
     .select(
       `
@@ -117,6 +124,11 @@ async function exportUsers(supabase: any) {
     `
     )
     .order('created_at', { ascending: false })
+
+  if (error) {
+    console.error('[Admin Export] users 조회 실패:', error)
+    throw new Error('사용자 목록 조회에 실패했습니다.')
+  }
 
   if (!users || users.length === 0) {
     return 'ID,이름,이메일,역할,활성 상태,회사,생성일,마지막 로그인\n'
@@ -145,7 +157,9 @@ async function exportUsers(supabase: any) {
 }
 
 async function exportLeads(supabase: any) {
-  const { data: leads } = await supabase
+  // leads는 companies를 company_id/referrer_company_id 두 FK로 참조해 companies!inner만
+  // 쓰면 PostgREST가 어느 쪽인지 몰라 PGRST201로 항상 실패한다 - FK 이름을 명시해야 한다.
+  const { data: leads, error } = await supabase
     .from('leads')
     .select(
       `
@@ -155,12 +169,17 @@ async function exportLeads(supabase: any) {
       email,
       status,
       created_at,
-      companies!inner(name),
+      companies!leads_company_id_fkey(name),
       landing_pages(title)
     `
     )
     .order('created_at', { ascending: false })
     .limit(1000) // 최대 1000개로 제한
+
+  if (error) {
+    console.error('[Admin Export] leads 조회 실패:', error)
+    throw new Error('리드 목록 조회에 실패했습니다.')
+  }
 
   if (!leads || leads.length === 0) {
     return 'ID,이름,전화번호,이메일,상태,회사,랜딩페이지,생성일\n'
