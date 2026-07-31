@@ -1422,31 +1422,22 @@ export default function LandingPageNewForm({
           // Compress image before upload
           const compressedBlob = await compressImage(file)
 
-          // Generate unique filename
-          const fileExt = 'jpg' // Always use jpg after compression
-          const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-          const filePath = `landing-pages/${companyId}/${fileName}`
+          // 서버 프록시로 업로드 - 실제 파일 바이트를 매직넘버로 검증한 뒤에만
+          // Storage에 올린다(48차 QA: Content-Type 위장으로 임의 콘텐츠가 그대로
+          // 공개 서빙되던 문제 대응)
+          const formData = new FormData()
+          formData.append('file', compressedBlob, 'image.jpg')
+          formData.append('kind', 'landing-page-image')
 
-          // Upload to Supabase Storage
-          const { error: uploadError } = await supabase.storage
-            .from('public-assets')
-            .upload(filePath, compressedBlob, {
-              cacheControl: '3600',
-              upsert: false,
-              contentType: 'image/jpeg'
-            })
+          const res = await fetch('/api/storage/upload', { method: 'POST', body: formData })
+          const result = await res.json()
 
-          if (uploadError) {
-            console.error('Upload error:', uploadError)
-            throw uploadError
+          if (!res.ok) {
+            console.error('Upload error:', result.error)
+            throw new Error(result.error || '업로드 실패')
           }
 
-          // Get public URL
-          const { data: { publicUrl } } = supabase.storage
-            .from('public-assets')
-            .getPublicUrl(filePath)
-
-          return publicUrl
+          return result.publicUrl as string
         } catch (error) {
           console.error('Error processing file:', file.name, error)
           return null
@@ -1526,31 +1517,21 @@ export default function LandingPageNewForm({
       // Compress image before upload
       const compressedBlob = await compressImage(file, 1200, 0.85)
 
-      // Generate unique filename
-      const fileExt = file.type.split('/')[1]
-      const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`
-      const filePath = `completion-backgrounds/${companyId}/${fileName}`
+      // 서버 프록시로 업로드 - compressImage는 canvas로 항상 image/jpeg로 재인코딩하므로
+      // 원본 형식과 무관하게 실제 바이트는 항상 jpeg (48차 QA 매직넘버 검증 대응)
+      const formData = new FormData()
+      formData.append('file', compressedBlob, 'image.jpg')
+      formData.append('kind', 'completion-background')
 
-      // Upload to Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('landing-page-images')
-        .upload(filePath, compressedBlob, {
-          cacheControl: '3600',
-          upsert: false,
-          contentType: file.type
-        })
+      const res = await fetch('/api/storage/upload', { method: 'POST', body: formData })
+      const result = await res.json()
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError)
-        throw uploadError
+      if (!res.ok) {
+        console.error('Upload error:', result.error)
+        throw new Error(result.error || '업로드 실패')
       }
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('landing-page-images')
-        .getPublicUrl(filePath)
-
-      setCompletionBgImage(publicUrl)
+      setCompletionBgImage(result.publicUrl)
     } catch (error) {
       console.error('Error uploading completion background:', error)
       toast.error('이미지 업로드 중 오류가 발생했습니다: ' + (error as Error).message)

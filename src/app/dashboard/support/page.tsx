@@ -220,27 +220,23 @@ export default function SupportPage() {
     const uploadedUrls: string[] = []
 
     for (const { file } of attachedFiles) {
-      // Sanitize filename: remove special chars, replace spaces with underscores
-      const sanitizedName = file.name
-        .replace(/[^\w\s.-]/g, '') // Remove special characters except word chars, spaces, dots, hyphens
-        .replace(/\s+/g, '_') // Replace spaces with underscores
-        .replace(/_{2,}/g, '_') // Replace multiple underscores with single underscore
+      // 서버 프록시로 업로드 - 실제 파일 바이트를 매직넘버(또는 텍스트형식은 HTML위장
+      // 여부)로 검증한 뒤에만 Storage에 올린다(48차 QA 대응)
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('kind', 'support-attachment')
+      formData.append('ticketId', ticketId)
 
-      const fileExt = sanitizedName.split('.').pop()
-      const timestamp = Date.now()
-      const filePath = `${ticketId}/${timestamp}_${sanitizedName}`
+      const res = await fetch('/api/storage/upload', { method: 'POST', body: formData })
+      const result = await res.json()
 
-      const { data, error } = await supabase.storage
-        .from('support-attachments')
-        .upload(filePath, file)
-
-      if (error) {
-        console.error('File upload error:', error)
+      if (!res.ok) {
+        console.error('File upload error:', result.error)
         throw new Error(`파일 업로드 실패: ${file.name}`)
       }
 
       // Store file path (not URL) for later signed URL generation
-      uploadedUrls.push(filePath)
+      uploadedUrls.push(result.path)
     }
 
     return uploadedUrls
