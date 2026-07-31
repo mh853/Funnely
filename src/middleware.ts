@@ -528,8 +528,14 @@ export async function middleware(request: NextRequest) {
             subscription.status === 'cancelled' &&
             (subscription.current_period_end === null || subscription.current_period_end < now)
 
-          const isActiveAndExpired =
-            subscription.status === 'active' &&
+          // active와 past_due(결제 실패했지만 유예기간 중)는 동일한 규칙을 따른다:
+          // 결제기간이 남아있거나 유예기간이 남아있으면 접근 허용, 둘 다 지났으면 차단.
+          // (예전에는 이 분기가 status === 'active'만 검사해서 past_due는 어떤
+          // 분기에도 해당하지 않아 그대로 통과되었다 — 결제 실패 후 유예기간까지
+          // 지난 회사도 daily-tasks 크론이 다음날 status를 'expired'로 바꿔주기
+          // 전까지(최대 24시간) 대시보드에 계속 접근할 수 있었다.)
+          const isActiveOrPastDueAndExpired =
+            ['active', 'past_due'].includes(subscription.status) &&
             subscription.current_period_end !== null &&
             subscription.current_period_end < now &&
             (!subscription.grace_period_end || subscription.grace_period_end < now)
@@ -538,7 +544,7 @@ export async function middleware(request: NextRequest) {
             isTrialExpired ||
             ['expired', 'suspended'].includes(subscription.status) ||
             isCancelledAndExpired ||
-            isActiveAndExpired
+            isActiveOrPastDueAndExpired
 
           if (isBlocked) {
             const redirectUrl = request.nextUrl.clone()
