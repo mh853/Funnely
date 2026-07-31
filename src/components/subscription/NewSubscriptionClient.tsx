@@ -598,6 +598,7 @@ export default function NewSubscriptionClient({
       setCardChanging(false)
     } catch (err) {
       console.error('Card change error:', err)
+      toast.error('카드 등록에 실패했습니다. 잠시 후 다시 시도해주세요.')
       setCardChanging(false)
     }
   }
