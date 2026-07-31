@@ -266,33 +266,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Extract custom fields from form_data based on collect_fields configuration
-    // form_data contains keys like "질문명": "답변값" for custom fields
+    // form_data는 fieldKey(각 필드의 고유 id, 없으면 collect_fields 내 위치 기반
+    // field_N)를 키로 답변을 담고 있다 - PublicLandingPage.tsx와 동일한 규칙이다.
+    // 과거에는 질문 텍스트(자유입력, 중복 가능) 자체를 키로 매칭해서, 두 질문의
+    // 텍스트가 같으면 한쪽 답변이 사라지고 다른 쪽 값이 같은 라벨로 중복 저장됐다.
     const customFields: Array<{ label: string; value: string }> = []
     const reservedKeys = ['name', '이름', 'phone', '전화번호', 'email', '이메일', 'message', '메시지',
                           'privacy_consent', 'marketing_consent', 'consultation_items',
                           'preferred_date', 'preferred_time']
 
-    // Get custom field questions from landing page's collect_fields
+    // Get custom field definitions from landing page's collect_fields
     const collectFields = landingPage.collect_fields as Array<{
+      id?: string
       type: string
       question?: string
       options?: string[]
     }> | null
 
-    if (collectFields && Array.isArray(collectFields)) {
-      // Extract questions for short_answer and multiple_choice types
-      const customFieldQuestions = collectFields
-        .filter(field => field.type === 'short_answer' || field.type === 'multiple_choice')
-        .map(field => field.question)
-        .filter((q): q is string => !!q)
+    // 아래 catch-all 루프가 이미 fieldKey로 소비된 값을 라벨 'field_0' 등으로
+    // 다시 중복 저장하지 않도록 소비한 키를 추적한다.
+    const consumedFormDataKeys = new Set<string>()
 
-      // Match form_data keys with custom field questions
-      customFieldQuestions.forEach(question => {
-        if (form_data[question]) {
+    if (collectFields && Array.isArray(collectFields)) {
+      // short_answer/multiple_choice 필드만 추출하고, 클라이언트와 동일한 규칙
+      // (id 우선, 없으면 필터링된 배열 내 위치)으로 fieldKey를 계산한다.
+      const customFieldDefs = collectFields
+        .filter(field => field.type === 'short_answer' || field.type === 'multiple_choice')
+        .map((field, index) => ({
+          key: field.id || `field_${index}`,
+          label: field.question,
+        }))
+        .filter((f): f is { key: string; label: string } => !!f.label)
+
+      // Match form_data keys with custom field keys
+      customFieldDefs.forEach(({ key, label }) => {
+        if (form_data[key]) {
           customFields.push({
-            label: question,
-            value: String(form_data[question])
+            label,
+            value: String(form_data[key])
           })
+          consumedFormDataKeys.add(key)
         }
       })
     }
@@ -300,10 +313,14 @@ export async function POST(request: NextRequest) {
     // Also capture any non-reserved fields that might be custom
     // (개수·길이 제한이 없어 form_data에 임의의 키를 수백 개, 각각 수백KB 문자열로
     // 채워 보내면 그대로 저장되고 있었다 — 리드 목록/내보내기 성능 저하 위험)
+    // 외부 연동/구버전 클라이언트가 fieldKey 대신 임의의 키(과거 방식대로 질문
+    // 텍스트를 그대로 키로 사용하는 경우 포함)를 보내는 경우를 위한 폴백이다 -
+    // 위에서 이미 fieldKey로 소비한 값은 다시 잡지 않는다.
     const MAX_CUSTOM_FIELDS = 50
     const MAX_FIELD_VALUE_LENGTH = 2000
     Object.entries(form_data).forEach(([key, value]) => {
       if (customFields.length >= MAX_CUSTOM_FIELDS) return
+      if (consumedFormDataKeys.has(key)) return
       if (!reservedKeys.includes(key) &&
           typeof value === 'string' &&
           value.trim() !== '' &&
