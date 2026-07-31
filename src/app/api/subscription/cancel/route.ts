@@ -51,9 +51,11 @@ export async function POST() {
 
   const now = new Date().toISOString()
 
+  // 예약된 다운그레이드가 남아있으면 이후 결제(갱신/체험전환)가 취소된 구독의
+  // 예전 예약 플랜 가격으로 청구되는 것을 막기 위해 함께 비운다.
   const { data: updatedRows, error: updateError } = await db
     .from('company_subscriptions')
-    .update({ status: 'cancelled', cancelled_at: now })
+    .update({ status: 'cancelled', cancelled_at: now, pending_plan_id: null, pending_billing_cycle: null })
     .eq('id', subscription.id)
     .select('id')
 
