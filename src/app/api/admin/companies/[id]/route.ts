@@ -337,6 +337,24 @@ export async function PATCH(
       )
     }
 
+    // 회사를 비활성화할 때 구독은 그대로 두면, 접근은 미들웨어가 즉시 막아도
+    // daily-tasks 크론의 정기결제 갱신 대상 조회(status='active' 기준)에는 여전히
+    // 걸려 실제 카드 청구가 계속 시도된다 - 접근 차단과 결제 중단이 따로 놀던 문제.
+    // 비활성화 시점에 활성 구독을 suspended로 함께 내려 크론 대상에서 제외한다.
+    // (재활성화 시 구독을 자동으로 되살리진 않는다 - 결제 재개는 관리자가 구독관리
+    // 화면에서 별도로 판단할 사안이다.)
+    if (is_active === false) {
+      const { error: subError } = await supabase
+        .from('company_subscriptions')
+        .update({ status: 'suspended', updated_at: new Date().toISOString() })
+        .eq('company_id', params.id)
+        .eq('status', 'active')
+
+      if (subError) {
+        console.error('[Companies API] Failed to suspend subscriptions on deactivation:', subError)
+      }
+    }
+
     await createAuditLog(request, {
       userId: adminUser.user.id,
       action: is_active ? AUDIT_ACTIONS.COMPANY_ACTIVATE : AUDIT_ACTIONS.COMPANY_DEACTIVATE,

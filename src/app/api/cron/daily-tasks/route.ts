@@ -656,12 +656,18 @@ async function syncGoogleSheets(supabase: any) {
 async function processSubscriptionRenewals(supabase: any) {
   const now = new Date().toISOString()
 
+  // 관리자가 회사를 비활성화/탈퇴 처리하면 PATCH /api/admin/companies/[id]가
+  // 해당 회사의 company_subscriptions도 함께 suspended로 바꿔주므로 원래는 이
+  // 쿼리에 걸리지 않는다. 그래도 데이터 드리프트(과거 데이터, 수동 DB 편집 등)에
+  // 대비해 companies.is_active까지 한 번 더 확인하는 방어선을 둔다.
   const { data: dueSubs, error } = await supabase
     .from('company_subscriptions')
-    .select('id')
+    .select('id, companies!inner(is_active, withdrawn_at)')
     .eq('status', 'active')
     .not('billing_key', 'is', null)
     .lte('current_period_end', now)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
 
   if (error) {
     console.error('[Renewal] 갱신 대상 구독 조회 실패:', error)
