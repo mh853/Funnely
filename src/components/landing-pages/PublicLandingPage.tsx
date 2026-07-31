@@ -5,7 +5,6 @@ import { ClockIcon } from '@heroicons/react/24/outline'
 import { useState, useEffect, useMemo, memo, Suspense, useRef, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Script from 'next/script'
-import { createClient } from '@/lib/supabase/client'
 import { getContrastTextColor } from '@/lib/utils/color'
 import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 
@@ -91,7 +90,6 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
   // Realtime leads state
   const [realtimeLeads, setRealtimeLeads] = useState<Array<{ name: string; device: string }>>([])
-  const supabase = useMemo(() => createClient(), [])
 
   // Track page view on mount (bypasses ISR caching issue)
   // Session-based deduplication to prevent multiple counts from component remounts
@@ -213,55 +211,39 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     return () => clearInterval(timer)
   }, [landingPage.timer_enabled, landingPage.timer_deadline, landingPage.timer_auto_update, landingPage.timer_auto_update_days, landingPage.id])
 
-  // Fetch actual leads from Supabase with Realtime subscription
+  // 최근 리드 조회 - 익명 방문자는 leads RLS(전부 TO authenticated)를 통과할 수
+  // 없어 직접 조회/Realtime 구독 둘 다 항상 빈 결과였다(49차 QA 라이브 재현). leads에
+  // anon SELECT 정책을 추가하면 phone/email 등 PII까지 anon에 노출되므로, 서버가
+  // 이름/기기/시각 3개 컬럼만 골라 내려주는 공개 API를 폴링하는 방식으로 대체한다.
   useEffect(() => {
     if (!landingPage.realtime_enabled || !landingPage.collect_data || !landingPage.id) return
 
-    // Initial fetch of recent leads
-    const fetchRecentLeads = async () => {
-      const { data } = await supabase
-        .from('leads')
-        .select('name, device_type, created_at')
-        .eq('landing_page_id', landingPage.id)
-        .order('created_at', { ascending: false })
-        .limit(landingPage.realtime_count || 10)
+    let cancelled = false
 
-      if (data && data.length > 0) {
-        setRealtimeLeads(data.map(lead => ({
-          name: lead.name || '익명',
-          device: lead.device_type === 'pc' ? 'PC' : lead.device_type === 'mobile' ? '모바일' : lead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
-        })))
+    const fetchRecentLeads = async () => {
+      try {
+        const res = await fetch(`/api/landing-pages/${landingPage.id}/recent-leads`)
+        if (!res.ok || cancelled) return
+        const { leads } = await res.json()
+        if (leads && leads.length > 0) {
+          setRealtimeLeads(leads.map((lead: { name: string | null; device_type: string }) => ({
+            name: lead.name || '익명',
+            device: lead.device_type === 'pc' ? 'PC' : lead.device_type === 'mobile' ? '모바일' : lead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
+          })))
+        }
+      } catch {
+        // 위젯 갱신 실패는 페이지 이용을 막지 않으므로 조용히 무시
       }
     }
 
     fetchRecentLeads()
-
-    // Set up Realtime subscription for new leads
-    const channel = supabase
-      .channel(`landing_page_leads_${landingPage.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'leads',
-          filter: `landing_page_id=eq.${landingPage.id}`
-        },
-        (payload) => {
-          const newLead = payload.new as any
-          const device = newLead.device_type === 'pc' ? 'PC' : newLead.device_type === 'mobile' ? '모바일' : newLead.device_type === 'tablet' ? '태블릿' : '알 수 없음'
-          setRealtimeLeads(prev => [
-            { name: newLead.name || '익명', device },
-            ...prev.slice(0, (landingPage.realtime_count || 10) - 1)
-          ])
-        }
-      )
-      .subscribe()
+    const interval = setInterval(fetchRecentLeads, 15000)
 
     return () => {
-      supabase.removeChannel(channel)
+      cancelled = true
+      clearInterval(interval)
     }
-  }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.id, landingPage.realtime_count, supabase])
+  }, [landingPage.realtime_enabled, landingPage.collect_data, landingPage.id, landingPage.realtime_count])
 
   // Realtime status rolling animation
   useEffect(() => {
