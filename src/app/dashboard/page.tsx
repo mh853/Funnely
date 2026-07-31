@@ -57,6 +57,10 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const yesterday = getKSTStartOfDay(-1)
   const thisWeekStart = getKSTStartOfDay(-nowKST.getUTCDay())
   const thisMonthStart = getKSTMonthStart(nowKST.getUTCFullYear(), nowKST.getUTCMonth() + 1)
+  // today는 "KST 자정"을 나타내는 실제 UTC 인스턴트라 getFullYear/getMonth/getDate 같은
+  // 로컬 게터로 읽으면(Vercel=UTC) 항상 하루 전 날짜가 나온다 - toKSTDateStr로 보정해야 함
+  const [todayKSTYear, todayKSTMonth, todayKSTDate] = toKSTDateStr(today).split('-').map(Number)
+  const todayMonthDayStr = `${todayKSTMonth}/${todayKSTDate}`
 
   // 선택된 월의 데이터를 가져오기 위한 쿼리 범위 (KST 기준 월 경계)
   const queryStart = getKSTMonthStart(selectedYear, selectedMonth).toISOString()
@@ -293,11 +297,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* Stats Cards - 4 Cards in a row (현재 월일 때만 표시) */}
       {isCurrentMonth && (() => {
-        // 통계 카드 링크용 날짜 문자열 생성 (KST 기준 — now는 UTC라 자정 근처엔 하루 밀림)
-        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-        const yesterdayStr = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, '0')}-${String(yesterday.getDate()).padStart(2, '0')}`
-        const thisWeekStartStr = `${thisWeekStart.getFullYear()}-${String(thisWeekStart.getMonth() + 1).padStart(2, '0')}-${String(thisWeekStart.getDate()).padStart(2, '0')}`
-        const thisMonthStartStr = `${thisMonthStart.getFullYear()}-${String(thisMonthStart.getMonth() + 1).padStart(2, '0')}-${String(thisMonthStart.getDate()).padStart(2, '0')}`
+        // 통계 카드 링크용 날짜 문자열 생성 (KST 기준)
+        const todayStr = toKSTDateStr(today)
+        const yesterdayStr = toKSTDateStr(yesterday)
+        const thisWeekStartStr = toKSTDateStr(thisWeekStart)
+        const thisMonthStartStr = toKSTDateStr(thisMonthStart)
 
         return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -433,7 +437,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="absolute left-12 right-0 top-0 bottom-8 flex items-end gap-[2px]">
                   {sortedDailyStats.map(({ date, count }, index) => {
                     const heightPercent = adjustedMax > 0 ? (count / adjustedMax) * 100 : 0
-                    const isToday = isCurrentMonth && date === `${today.getMonth() + 1}/${today.getDate()}`
+                    const isToday = isCurrentMonth && date === todayMonthDayStr
                     const showLabel = index === 0 || (index + 1) % 5 === 0 || index === sortedDailyStats.length - 1
                     // 날짜를 YYYY-MM-DD 형식으로 변환
                     const day = parseInt(date.split('/')[1])
@@ -486,7 +490,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 {/* X-axis labels */}
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
                   {sortedDailyStats.map(({ date }, index) => {
-                    const isToday = isCurrentMonth && date === `${today.getMonth() + 1}/${today.getDate()}`
+                    const isToday = isCurrentMonth && date === todayMonthDayStr
 
                     return (
                       <div key={`label-${date}`} className="flex-1 min-w-[8px] flex justify-center">
@@ -675,7 +679,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 <div className="absolute left-12 right-0 top-0 bottom-8 flex items-end gap-[2px]">
                   {sortedPageViewStats.map(({ date, count }) => {
                     const heightPercent = adjustedMax > 0 ? (count / adjustedMax) * 100 : 0
-                    const isToday = isCurrentMonth && date === `${today.getMonth() + 1}/${today.getDate()}`
+                    const isToday = isCurrentMonth && date === todayMonthDayStr
                     const hasData = count > 0
 
                     return (
@@ -719,7 +723,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
                 {/* X-axis labels */}
                 <div className="absolute left-12 right-0 bottom-0 h-6 flex">
                   {sortedPageViewStats.map(({ date }, index) => {
-                    const isToday = isCurrentMonth && date === `${today.getMonth() + 1}/${today.getDate()}`
+                    const isToday = isCurrentMonth && date === todayMonthDayStr
 
                     return (
                       <div key={`traffic-label-${date}`} className="flex-1 min-w-[8px] flex justify-center">
