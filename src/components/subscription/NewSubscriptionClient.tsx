@@ -502,7 +502,7 @@ export default function NewSubscriptionClient({
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
 
-          toast.success('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
         } else {
           // 신규 사용자 + 기타 유료 플랜 → 카드 등록 후 즉시 결제
@@ -544,7 +544,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          toast.success('7일 무료 체험이 시작되었습니다!\n체험 종료 후 자동으로 Free 플랜으로 전환됩니다.')
+          toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
         } else {
           // 기타 유료 플랜: 구독 생성 후 카드 등록
@@ -1098,7 +1098,7 @@ export default function NewSubscriptionClient({
       {/* 안내 문구 */}
       <div className="text-center text-sm text-gray-500 space-y-1 mt-8">
         {!isExistingUser && (
-          <p>* 프로 플랜 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 종료 후 자동으로 Free 플랜으로 전환됩니다.</p>
+          <p>* 프로 플랜 7일 무료 체험은 카드 등록 없이 시작할 수 있습니다. 체험 기간이 끝나면 서비스 접근이 제한되며, 계속 이용하려면 플랜을 선택해야 합니다.</p>
         )}
         <p>* 모든 가격은 VAT 별도입니다.</p>
       </div>
