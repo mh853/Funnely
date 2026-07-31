@@ -101,18 +101,27 @@ export async function PATCH(
     const body = await request.json()
     const { attachments } = body
 
-    // 티켓 소유자 확인
+    // 생성자 본인만 허용하던 체크가 support_tickets에 애초에 UPDATE RLS 정책이
+    // 없었던 것과 겹쳐, 티켓 생성자여도 RLS가 조용히 0건 갱신으로 막고 있었다
+    // (48차 QA로 라이브 재현 확인). 신규 마이그레이션으로 같은 회사 범위 UPDATE
+    // 정책을 추가하고, 앱 체크도 메시지 라우트와 동일하게 같은 회사 기준으로 맞춘다.
     const { data: ticket } = await supabase
       .from('support_tickets')
-      .select('created_by_user_id')
+      .select('company_id')
       .eq('id', params.id)
       .single()
 
-    if (!ticket || ticket.created_by_user_id !== user.id) {
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!ticket || !userProfile || ticket.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
-    // 첨부파일 업데이트 (소유자 필터로 TOCTOU 방지)
+    // 첨부파일 업데이트
     const { data: updatedTicket, error } = await supabase
       .from('support_tickets')
       .update({
@@ -120,7 +129,6 @@ export async function PATCH(
         updated_at: new Date().toISOString(),
       })
       .eq('id', params.id)
-      .eq('created_by_user_id', user.id)
       .select()
       .maybeSingle()
 

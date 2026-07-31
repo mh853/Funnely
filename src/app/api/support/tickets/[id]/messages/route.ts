@@ -19,14 +19,23 @@ export async function POST(
 
     const body = await request.json()
 
-    // 티켓 소유권 검증 (티켓 생성자만 메시지 추가 가능)
+    // 티켓 생성자만 허용하던 체크(2026-07-01 임시 보안패치, 당시 RLS가 완전개방이라
+    // API가 유일한 방어선이었음)가, 이후 RLS 자체가 "같은 회사+본인 명의"로 정상적으로
+    // 좁혀진 뒤에도 그대로 남아 같은 회사의 다른 팀원은 티켓을 보고도 답글을 못
+    // 남기고 있었다. RLS와 동일한 범위(같은 회사)로 맞춘다.
     const { data: ticket } = await supabase
       .from('support_tickets')
-      .select('created_by_user_id')
+      .select('company_id')
       .eq('id', params.id)
       .maybeSingle()
 
-    if (!ticket || ticket.created_by_user_id !== user.id) {
+    const { data: userProfile } = await supabase
+      .from('users')
+      .select('company_id')
+      .eq('id', user.id)
+      .maybeSingle()
+
+    if (!ticket || !userProfile || ticket.company_id !== userProfile.company_id) {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
     }
 
