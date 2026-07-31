@@ -272,43 +272,25 @@ export class BulkProcessor {
       case 'assign_cs_manager': {
         // companies에는 cs_manager_id 컬럼이 없다(실제 FK 컬럼이 존재하지 않아
         // 담당자 배정을 관계형으로 저장할 방법이 없다 — settings jsonb에 보관한다).
-        const { data: companyForCsManager } = await this.supabase
-          .from('companies')
-          .select('settings')
-          .eq('id', companyId)
-          .single()
-
-        const csManagerSettings = (companyForCsManager?.settings as Record<string, any>) || {}
-
-        const { error } = await this.supabase
-          .from('companies')
-          .update({ settings: { ...csManagerSettings, cs_manager_id: parameters.cs_manager_id } })
-          .eq('id', companyId)
+        // SELECT-병합-UPDATE는 동시 편집 시 lost-update 레이스가 있어(45차 QA
+        // 확인) 원자적 RPC(assign_company_cs_manager)로 처리한다.
+        const { error } = await this.supabase.rpc('assign_company_cs_manager', {
+          p_company_id: companyId,
+          p_cs_manager_id: parameters.cs_manager_id,
+        })
         if (error) throw error
         break
       }
 
       case 'add_note': {
         // companies에는 metadata 컬럼이 없다(실제: settings jsonb). settings.notes에 저장한다.
-        const { data: companyForNote } = await this.supabase
-          .from('companies')
-          .select('settings')
-          .eq('id', companyId)
-          .single()
-
-        const settings = (companyForNote?.settings as Record<string, any>) || {}
-        const notes = (settings.notes as any[]) || []
-
-        notes.push({
-          note: parameters.note,
-          created_by: parameters.created_by || 'system',
-          created_at: new Date().toISOString(),
+        // SELECT-병합-UPDATE는 동시 편집 시 lost-update 레이스가 있어(45차 QA
+        // 확인) 원자적 RPC(add_company_note)로 처리한다.
+        const { error } = await this.supabase.rpc('add_company_note', {
+          p_company_id: companyId,
+          p_note: parameters.note,
+          p_created_by: parameters.created_by || 'system',
         })
-
-        const { error } = await this.supabase
-          .from('companies')
-          .update({ settings: { ...settings, notes } })
-          .eq('id', companyId)
         if (error) throw error
         break
       }
