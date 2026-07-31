@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 function createAdminClient() {
   return createClient(
@@ -11,6 +12,13 @@ function createAdminClient() {
 
 export async function POST(request: Request) {
   try {
+    // 레이트리밋 없이 회사명 존재 여부를 무제한 조회할 수 있어 전체 고객사명을
+    // 스캔당할 수 있었다. signup 라우트와 동일한 패턴으로 IP당 제한한다.
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`check-company-name:${ip}`, 20, 5 * 60 * 1000)) {
+      return NextResponse.json({ exists: false }, { status: 429 })
+    }
+
     const { name } = await request.json()
 
     if (!name || name.trim().length < 1) {

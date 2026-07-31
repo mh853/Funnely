@@ -74,9 +74,9 @@ export async function POST(request: NextRequest) {
             { status: 400 }
           )
         }
-        if (!['monthly', 'annual'].includes(parameters.billing_cycle)) {
+        if (!['monthly', 'yearly'].includes(parameters.billing_cycle)) {
           return NextResponse.json(
-            { error: 'billing_cycle must be "monthly" or "annual"' },
+            { error: 'billing_cycle must be "monthly" or "yearly"' },
             { status: 400 }
           )
         }

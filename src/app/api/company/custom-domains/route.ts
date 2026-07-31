@@ -137,7 +137,13 @@ export async function POST(request: NextRequest) {
 
     if (insertError) {
       console.error('[Custom Domain] 도메인 등록 실패:', insertError)
-      return NextResponse.json({ error: insertError.message }, { status: 500 })
+      // 사전 조회와 실제 등록 사이에 다른 요청이 먼저 같은 도메인을 등록하는
+      // 레이스가 있을 수 있어, unique 제약(23505) 위반은 DB를 최종 판정 기준으로
+      // 삼아 별도로 안내한다. 그 외 에러는 원본 메시지를 그대로 노출하지 않는다.
+      if (insertError.code === '23505') {
+        return NextResponse.json({ error: '이미 등록된 도메인입니다.' }, { status: 409 })
+      }
+      return NextResponse.json({ error: '도메인 등록에 실패했습니다.' }, { status: 500 })
     }
 
     return NextResponse.json({ domain: newDomain }, { status: 201 })

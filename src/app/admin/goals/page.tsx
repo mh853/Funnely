@@ -5,10 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
   Target,
-  Plus,
   Calendar,
   Building2,
-  TrendingUp,
   CheckCircle,
   XCircle,
   Clock,
@@ -114,13 +112,9 @@ export default function GoalsPage() {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">성과 목표 관리</h2>
           <p className="text-sm text-gray-500 mt-1">
-            비즈니스 목표를 설정하고 진행 상황을 추적합니다
+            등록된 목표의 진행 상황을 조회합니다 (조회 전용)
           </p>
         </div>
-        <Button>
-          <Plus className="h-4 w-4 mr-2" />
-          새 목표 추가
-        </Button>
       </div>
 
       {/* 통계 */}
@@ -251,24 +245,13 @@ export default function GoalsPage() {
                     </div>
                   </div>
 
-                  {/* 상태 및 액션 */}
+                  {/* 상태 */}
                   <div className="flex items-center justify-between pt-4 border-t border-gray-200">
                     <span
                       className={`inline-flex px-3 py-1 text-xs font-medium rounded-full ${colorClass}`}
                     >
                       {STATUS_LABELS[goal.status] || goal.status}
                     </span>
-                    <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm">
-                        상세보기
-                      </Button>
-                      {goal.status === 'active' && (
-                        <Button size="sm">
-                          <TrendingUp className="h-4 w-4 mr-1" />
-                          업데이트
-                        </Button>
-                      )}
-                    </div>
                   </div>
                 </div>
               </CardContent>
