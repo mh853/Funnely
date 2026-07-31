@@ -99,7 +99,7 @@ const nextConfig = {
 
 module.exports = withSentryConfig(nextConfig, {
   org: 'mhc-ae',
-  project: 'javascript-nextjs-zm',
+  project: 'funnely',
   // SENTRY_AUTH_TOKEN이 없으면(현재 미설정) 소스맵 업로드만 건너뛰고 빌드는 정상 진행됨
   silent: !process.env.CI,
 });
