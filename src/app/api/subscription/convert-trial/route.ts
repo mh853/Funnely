@@ -78,7 +78,13 @@ export async function POST(request: Request) {
     card_info: cardInfo,
     status: 'active',
   }
-  if (planId) updateData.plan_id = planId
+  if (planId) {
+    updateData.plan_id = planId
+    // 예약된 다운그레이드가 남아있으면 아래 mode 없는 결제 호출이 방금 선택한
+    // planId가 아니라 예전 예약 플랜 가격으로 청구하므로 함께 비운다.
+    updateData.pending_plan_id = null
+    updateData.pending_billing_cycle = null
+  }
   if (billingCycle) updateData.billing_cycle = billingCycle
 
   const { error: updateError } = await svc

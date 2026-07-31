@@ -392,6 +392,10 @@ export default function NewSubscriptionClient({
               current_period_end: null,
               trial_start_date: null,
               trial_end_date: null,
+              // 예약된 다운그레이드가 남아있으면 이후 결제(갱신/체험전환)가
+              // 방금 선택한 Free가 아니라 예전 예약 플랜 가격으로 청구되므로 함께 비운다.
+              pending_plan_id: null,
+              pending_billing_cycle: null,
             })
             .eq('id', currentSubscription.id)
 
@@ -459,9 +463,16 @@ export default function NewSubscriptionClient({
         } else if (isExistingUser) {
           // 기존 사용자 (빌링키 없음 또는 trial/만료): 카드 등록 후 즉시 결제
           // 선택한 플랜/주기를 구독에 미리 저장
+          // 예약된 다운그레이드가 남아있으면 곧이어 진행되는 결제(billing-success의
+          // mode 없는 분기)가 방금 고른 플랜이 아니라 예전 예약 플랜 가격으로 청구되므로 함께 비운다.
           const { error: updateError } = await supabase
             .from('company_subscriptions')
-            .update({ plan_id: plan.id, billing_cycle: billingCycle })
+            .update({
+              plan_id: plan.id,
+              billing_cycle: billingCycle,
+              pending_plan_id: null,
+              pending_billing_cycle: null,
+            })
             .eq('id', currentSubscription.id)
 
           if (updateError) throw new Error(updateError.message)
@@ -715,8 +726,11 @@ export default function NewSubscriptionClient({
               )}
             </div>
           </div>
-          {/* 다운그레이드 예약 안내 */}
-          {currentSubscription.pending_plan_id && currentSubscription.current_period_end && (
+          {/* 다운그레이드 예약 안내 - 취소/만료된 구독은 예약이 실현될 수 없으므로 제외.
+              (status==='active'|'past_due'가 아니면 예약 취소 API도 대상 구독을 찾지 못해 에러난다) */}
+          {currentSubscription.pending_plan_id &&
+            currentSubscription.current_period_end &&
+            (currentSubscription.status === 'active' || currentSubscription.status === 'past_due') && (
             <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between gap-3 flex-wrap">
               <p className="text-sm opacity-90">
                 다음 결제일({formatDate(currentSubscription.current_period_end)})에
@@ -779,7 +793,7 @@ export default function NewSubscriptionClient({
                       {currentSubscription.current_period_end && (
                         <li>• <span className="font-medium">{formatDate(currentSubscription.current_period_end)}</span>까지 서비스 이용 가능</li>
                       )}
-                      <li>• 이후 Free 플랜으로 자동 전환됩니다.</li>
+                      <li>• 이후에는 서비스 접근이 제한되며, 다시 이용하려면 플랜을 새로 선택해야 합니다.</li>
                       <li>• 취소 후 기간 내 재구독이 가능합니다.</li>
                     </ul>
                   </div>
