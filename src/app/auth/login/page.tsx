@@ -1,7 +1,7 @@
 'use client'
 
 // 이메일/비밀번호 로그인 페이지 (Supabase Auth)
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
@@ -88,6 +88,17 @@ function LoginForm() {
   )
   const [success, setSuccess] = useState(false)
   const [loading, setLoading] = useState(false)
+
+  // 로그인 성공 후 미들웨어가 다시 /auth/login으로 되돌려보내는 경우
+  // (예: account_deactivated) 클라이언트 사이드 네비게이션이라 컴포넌트가
+  // 리마운트되지 않으므로, urlError 변화에 맞춰 success/loading을 재동기화한다.
+  useEffect(() => {
+    if (urlError) {
+      setSuccess(false)
+      setLoading(false)
+      setError(URL_ERRORS[urlError] ?? '인증에 실패했습니다.')
+    }
+  }, [urlError])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
