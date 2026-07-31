@@ -370,6 +370,11 @@ export class BulkProcessor {
             .eq('id', subscriptionId)
             .single()
 
+          // active로 전환하는 모든 경우에 cancelled_at을 지운다 - 단건 관리자
+          // API(20260731 수정)와 동일하게, 기간 리셋 여부와 무관하게 취소일이
+          // 남아있으면 안 된다(49차 QA: 상태는 active인데 취소일이 그대로 남는 버그).
+          updateData.cancelled_at = null
+
           // 재활성화 시 기간을 리셋해야 하는 조건은 "현재 결제 기간이 이미 지났다" 또는
           // "애초에 결제 기간이 없었다" 뿐이다. 이전 status만으로 리셋하면, 아직 결제
           // 기간이 남은 채로 정지/취소된 구독을 재활성화할 때 남은 기간이 통째로
@@ -387,7 +392,6 @@ export class BulkProcessor {
             updateData.current_period_start = now.toISOString()
             updateData.current_period_end = periodEnd.toISOString()
             updateData.grace_period_end = null
-            updateData.cancelled_at = null
           }
         }
 
