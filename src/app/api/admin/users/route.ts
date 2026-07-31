@@ -4,6 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { createAuditLog, AUDIT_ACTIONS } from '@/lib/admin/audit-middleware'
+import { escapeIlike } from '@/lib/utils/search'
 
 /**
  * GET /api/admin/users
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     // 'profiles' 테이블은 존재하지 않는다 (full_name은 users 테이블에 직접 있음).
     // 존재하지 않는 관계를 참조하는 or() 필터는 PostgREST 에러를 유발해, 검색어를
     // 입력할 때마다 목록 조회 자체가 500으로 실패하고 있었다.
-    const safeSearch = search ? search.replace(/[,()]/g, '') : null
+    const safeSearch = search ? escapeIlike(search.replace(/[,()]/g, '')) : null
 
     // 프론트엔드는 필터 미선택 시 'all'을 보낸다.
     const hasCompanyFilter = !!companyId && companyId !== 'all'

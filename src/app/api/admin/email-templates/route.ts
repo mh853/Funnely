@@ -9,6 +9,7 @@ import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import type { EmailTemplateCreateInput, EmailTemplateFilter } from '@/types/email'
 import { extractVariables } from '@/lib/email/template-renderer'
+import { escapeIlike } from '@/lib/utils/search'
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,7 +52,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const safeSearch = search.replace(/[,()]/g, '')
+      const safeSearch = escapeIlike(search.replace(/[,()]/g, ''))
       query = query.or(`name.ilike.%${safeSearch}%,subject.ilike.%${safeSearch}%`)
     }
 

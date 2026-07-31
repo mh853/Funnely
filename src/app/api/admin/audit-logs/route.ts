@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { escapeIlike } from '@/lib/utils/search'
 
 /**
  * GET /api/admin/audit-logs
@@ -53,7 +54,7 @@ export async function GET(request: NextRequest) {
     if (startDate) query = query.gte('created_at', startDate)
     if (endDate) query = query.lte('created_at', endDate)
     if (search) {
-      const safeSearch = search.replace(/[,()]/g, '')
+      const safeSearch = escapeIlike(search.replace(/[,()]/g, ''))
       query = query.or(`ip_address.ilike.%${safeSearch}%,user_agent.ilike.%${safeSearch}%`)
     }
 

@@ -5,6 +5,7 @@ import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { getLeadStatusCategoryMapForAdmin } from '@/lib/leadStatusCategory'
+import { escapeIlike } from '@/lib/utils/search'
 
 /**
  * GET /api/admin/leads
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
       )
 
     if (search) {
-      const safeSearch = search.replace(/[,()]/g, '')
+      const safeSearch = escapeIlike(search.replace(/[,()]/g, ''))
       query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`)
     }
 

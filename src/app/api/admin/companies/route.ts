@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
+import { escapeIlike } from '@/lib/utils/search'
 
 function getServiceClient() {
   return createClient(
@@ -36,7 +37,7 @@ export async function GET(request: NextRequest) {
 
     let baseQuery = supabase.from('companies').select('id, name, short_id, is_active, created_at, withdrawn_at', { count: 'exact' })
 
-    if (search) baseQuery = baseQuery.ilike('name', `%${search}%`)
+    if (search) baseQuery = baseQuery.ilike('name', `%${escapeIlike(search)}%`)
     if (status === 'active') baseQuery = baseQuery.eq('is_active', true).is('withdrawn_at', null)
     else if (status === 'inactive') baseQuery = baseQuery.eq('is_active', false)
     else if (status === 'withdrawn') baseQuery = baseQuery.not('withdrawn_at', 'is', null)

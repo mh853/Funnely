@@ -4,6 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import type { WorkflowPayload, WorkflowFilters } from '@/types/automation'
+import { escapeIlike } from '@/lib/utils/search'
 
 /**
  * GET /api/admin/workflows
@@ -44,7 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      const safeSearch = search.replace(/[,()]/g, '')
+      const safeSearch = escapeIlike(search.replace(/[,()]/g, ''))
       query = query.or(`name.ilike.%${safeSearch}%,description.ilike.%${safeSearch}%`)
     }
 

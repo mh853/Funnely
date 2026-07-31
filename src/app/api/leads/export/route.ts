@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { getKSTDayRange } from '@/lib/utils/date'
 import { getLeadStatusCategoryMap, getCodesForCategory, isValidLeadStatusCategory } from '@/lib/leadStatusCategory'
+import { escapeIlike } from '@/lib/utils/search'
 
 export async function GET(request: Request) {
   try {
@@ -135,7 +136,7 @@ export async function GET(request: Request) {
       }
 
       if (search) {
-        query = query.ilike('name', `%${search}%`)
+        query = query.ilike('name', `%${escapeIlike(search)}%`)
       }
 
       if (assignedTo) {
