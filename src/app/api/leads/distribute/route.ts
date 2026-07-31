@@ -158,11 +158,37 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // 'user' 역할 인원이 아예 없는 회사(대표 1인 운영 등)는 미배정 리드가 있어도
+    // 여기서 항상 실패했다 - 실제 상담 인력(admin/manager)이 있으면 그들을
+    // 배정 대상에 포함하는 폴백을 둔다(48차 QA로 라이브 재현 확인).
+    if (regularUsers.length === 0) {
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .eq('company_id', companyId)
+          .eq('is_active', true)
+          .order('created_at', { ascending: true })
+          .range(offset, offset + BATCH_SIZE - 1)
+
+        if (error) {
+          console.error('Fallback users query error:', error)
+          throw new Error('사용자 조회 실패')
+        }
+        if (!data || data.length === 0) break
+        regularUsers.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
+    }
+
     if (!regularUsers || regularUsers.length === 0) {
       return NextResponse.json(
         {
           success: false,
-          error: { message: '배정 가능한 일반 사용자가 없습니다.' },
+          error: { message: '배정 가능한 사용자가 없습니다.' },
         },
         { status: 400 }
       )

@@ -1206,6 +1206,15 @@ export default function LandingPageNewForm({
   }
 
   const handleSave = async () => {
+    // 질문 텍스트가 빈 문자열이면 서버(submit/route.ts)가 해당 필드 정의를 통째로
+    // 버려, 리드가 실제로 제출한 답변이 질문 라벨 대신 내부 랜덤 field id로 리드
+    // 목록/엑셀에 그대로 노출된다(48차 QA로 코드경로 확인) - 저장 자체를 막는다.
+    const emptyQuestionField = customFields.find(field => field.question.trim() === '')
+    if (emptyQuestionField) {
+      toast.error('커스텀 질문 내용을 입력해주세요.')
+      return
+    }
+
     // 커스텀 질문 텍스트가 서로 겹치면 제출 시 답변이 어느 질문에 속하는지
     // 구분할 수 없어 리드 목록에 같은 라벨로 중복 표시된다. 저장 자체를 막는다.
     const trimmedQuestions = customFields.map(field => field.question.trim()).filter(q => q !== '')
