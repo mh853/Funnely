@@ -254,9 +254,11 @@ export default function AnalyticsClient({
       const trafficTabletPct = trafficTotal > 0 ? ((lp.traffic.tablet / trafficTotal) * 100).toFixed(1) : '0.0'
 
       const conversionTotal = lp.conversion.total
-      const conversionPcPct = conversionTotal > 0 ? ((lp.conversion.pc / conversionTotal) * 100).toFixed(1) : '0.0'
-      const conversionMobilePct = conversionTotal > 0 ? ((lp.conversion.mobile / conversionTotal) * 100).toFixed(1) : '0.0'
-      const conversionTabletPct = conversionTotal > 0 ? ((lp.conversion.tablet / conversionTotal) * 100).toFixed(1) : '0.0'
+      // 헤더(전환율%)/날짜별 테이블과 같은 의미로 맞춤 - 전환 구성비가 아니라
+      // 기기별 전환율(해당 기기 전환수÷해당 기기 트래픽)이어야 한다
+      const conversionPcPct = lp.traffic.pc > 0 ? ((lp.conversion.pc / lp.traffic.pc) * 100).toFixed(1) : '0.0'
+      const conversionMobilePct = lp.traffic.mobile > 0 ? ((lp.conversion.mobile / lp.traffic.mobile) * 100).toFixed(1) : '0.0'
+      const conversionTabletPct = lp.traffic.tablet > 0 ? ((lp.conversion.tablet / lp.traffic.tablet) * 100).toFixed(1) : '0.0'
 
       const conversionRate = trafficTotal > 0 ? ((conversionTotal / trafficTotal) * 100).toFixed(1) : '0.0'
 
@@ -793,11 +795,12 @@ export default function AnalyticsClient({
                 const trafficMobilePct = trafficTotal > 0 ? Math.round((lp.traffic.mobile / trafficTotal) * 100) : 0
                 const trafficTabletPct = trafficTotal > 0 ? Math.round((lp.traffic.tablet / trafficTotal) * 100) : 0
 
-                // Calculate percentages for conversion (device breakdown)
+                // 기기별 전환율(해당 기기 전환수÷해당 기기 트래픽) - 헤더(전환율%)와
+                // 날짜별 테이블 산식에 맞춤. 전환 구성비(÷전체 전환수)가 아님
                 const conversionTotal = lp.conversion.total
-                const conversionPcPct = conversionTotal > 0 ? Math.round((lp.conversion.pc / conversionTotal) * 100) : 0
-                const conversionMobilePct = conversionTotal > 0 ? Math.round((lp.conversion.mobile / conversionTotal) * 100) : 0
-                const conversionTabletPct = conversionTotal > 0 ? Math.round((lp.conversion.tablet / conversionTotal) * 100) : 0
+                const conversionPcPct = lp.traffic.pc > 0 ? Math.round((lp.conversion.pc / lp.traffic.pc) * 100) : 0
+                const conversionMobilePct = lp.traffic.mobile > 0 ? Math.round((lp.conversion.mobile / lp.traffic.mobile) * 100) : 0
+                const conversionTabletPct = lp.traffic.tablet > 0 ? Math.round((lp.conversion.tablet / lp.traffic.tablet) * 100) : 0
 
                 // Calculate conversion rate (conversions / traffic)
                 const conversionRate = trafficTotal > 0 ? ((conversionTotal / trafficTotal) * 100).toFixed(1) : '0.0'
@@ -884,9 +887,9 @@ export default function AnalyticsClient({
               const totalTrafficMobilePct = totalTraffic > 0 ? Math.round((totalTrafficMobile / totalTraffic) * 100) : 0
               const totalTrafficTabletPct = totalTraffic > 0 ? Math.round((totalTrafficTablet / totalTraffic) * 100) : 0
 
-              const totalConversionPcPct = totalConversion > 0 ? Math.round((totalConversionPc / totalConversion) * 100) : 0
-              const totalConversionMobilePct = totalConversion > 0 ? Math.round((totalConversionMobile / totalConversion) * 100) : 0
-              const totalConversionTabletPct = totalConversion > 0 ? Math.round((totalConversionTablet / totalConversion) * 100) : 0
+              const totalConversionPcPct = totalTrafficPc > 0 ? Math.round((totalConversionPc / totalTrafficPc) * 100) : 0
+              const totalConversionMobilePct = totalTrafficMobile > 0 ? Math.round((totalConversionMobile / totalTrafficMobile) * 100) : 0
+              const totalConversionTabletPct = totalTrafficTablet > 0 ? Math.round((totalConversionTablet / totalTrafficTablet) * 100) : 0
 
               const totalConversionRate = totalTraffic > 0 ? ((totalConversion / totalTraffic) * 100).toFixed(1) : '0.0'
 
