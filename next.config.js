@@ -1,3 +1,5 @@
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
@@ -95,4 +97,9 @@ const nextConfig = {
   },
 };
 
-module.exports = nextConfig;
+module.exports = withSentryConfig(nextConfig, {
+  org: 'mhc-ae',
+  project: 'javascript-nextjs-zm',
+  // SENTRY_AUTH_TOKEN이 없으면(현재 미설정) 소스맵 업로드만 건너뛰고 빌드는 정상 진행됨
+  silent: !process.env.CI,
+});

@@ -4,6 +4,7 @@
 // globals.css를 import해도 프로덕션에서 CSS 청크 링크가 누락되어 Tailwind가 전혀
 // 적용되지 않는 문제가 있어, 외부 CSS에 의존하지 않는 인라인 style로 직접 지정한다
 import { useEffect, useState, type CSSProperties } from 'react'
+import * as Sentry from '@sentry/nextjs'
 
 const containerStyle: CSSProperties = {
   minHeight: '100vh',
@@ -65,6 +66,7 @@ export default function GlobalError({
 
   useEffect(() => {
     console.error(error)
+    Sentry.captureException(error)
   }, [error])
 
   return (

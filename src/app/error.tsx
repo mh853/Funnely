@@ -5,6 +5,7 @@
 // Tailwind 클래스 대신 인라인 style로 직접 지정한다 (CSS 미로드 상태에서도 정상 표시)
 import { useEffect, useState, type CSSProperties } from 'react'
 import Link from 'next/link'
+import * as Sentry from '@sentry/nextjs'
 
 const containerStyle: CSSProperties = {
   minHeight: '100vh',
@@ -90,6 +91,7 @@ export default function Error({
 
   useEffect(() => {
     console.error(error)
+    Sentry.captureException(error)
   }, [error])
 
   return (
