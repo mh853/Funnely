@@ -628,6 +628,43 @@ async function syncGoogleSheets(supabase: any) {
         console.error('Failed to write sheet_sync_logs error entry:', logError)
       }
 
+      // sheet_sync_logs에만 실패가 쌓이고 회사 관리자에게는 아무 알림도 가지 않아
+      // 실패가 몇 달씩 방치되는 경우가 있었다(checkSubscriptionExpiry/disableExpiredTimers는
+      // 이미 notifications에 남기는데 이 작업만 빠져 있었음) - 같은 패턴으로 알림을 남긴다.
+      // 같은 회사가 매일(또는 하루에 여러 config가) 연속 실패해도 스팸이 되지 않도록,
+      // 오늘 같은 유형의 알림이 이미 있으면 스킵한다.
+      try {
+        const todayStart = getKSTStartOfDay(0)
+        const { data: alreadyNotified } = await supabase
+          .from('notifications')
+          .select('id')
+          .eq('company_id', config.company_id)
+          .eq('type', 'sheet_sync_failed')
+          .gte('created_at', todayStart.toISOString())
+          .limit(1)
+          .maybeSingle()
+
+        if (!alreadyNotified) {
+          // syncError.message가 마침표로 끝나는 경우(Google API 에러 메시지 등)
+          // 마침표가 겹쳐 보이지 않도록 정리한다.
+          const cleanErrorMessage = String(syncError.message).replace(/\.+$/, '')
+          await supabase.from('notifications').insert({
+            company_id: config.company_id,
+            title: '구글 시트 동기화 실패',
+            message: `"${config.sheet_name || 'Sheet1'}" 시트 동기화에 실패했습니다: ${cleanErrorMessage}. 시트 연동 설정을 확인해주세요.`,
+            type: 'sheet_sync_failed',
+            metadata: {
+              sheet_sync_config_id: config.id,
+              spreadsheet_id: config.spreadsheet_id,
+              sheet_name: config.sheet_name,
+              error_message: syncError.message,
+            },
+          })
+        }
+      } catch (notifError) {
+        console.error('Failed to create sheet sync failure notification:', notifError)
+      }
+
       results.push({
         spreadsheetId: config.spreadsheet_id,
         status: 'error',

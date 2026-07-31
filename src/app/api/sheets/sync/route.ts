@@ -10,12 +10,54 @@ import {
   ColumnMapping,
   DEFAULT_META_MAPPING,
 } from '@/lib/google-sheets'
+import { getKSTStartOfDay } from '@/lib/utils/date'
 
 // Service role client for admin operations
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// 동기화 실패 시 회사 관리자에게 알림 생성 (daily-tasks 크론의 동일 패턴과 맞춤).
+// try 블록의 logFailure와 catch 블록 양쪽에서 호출되므로 모듈 레벨 함수로 둔다.
+// 같은 회사에 오늘 이미 같은 유형 알림이 있으면 스킵해 스팸을 방지한다.
+async function notifySheetSyncFailure(
+  companyId: string,
+  spreadsheetId: string,
+  sheetName: string,
+  errorMessage: string
+) {
+  try {
+    const todayStart = getKSTStartOfDay(0)
+    const { data: alreadyNotified } = await supabaseAdmin
+      .from('notifications')
+      .select('id')
+      .eq('company_id', companyId)
+      .eq('type', 'sheet_sync_failed')
+      .gte('created_at', todayStart.toISOString())
+      .limit(1)
+      .maybeSingle()
+
+    if (!alreadyNotified) {
+      // errorMessage가 마침표로 끝나는 경우(Google API 에러 메시지 등) 마침표가
+      // 겹쳐 보이지 않도록 정리한다.
+      const cleanErrorMessage = errorMessage.replace(/\.+$/, '')
+      await supabaseAdmin.from('notifications').insert({
+        company_id: companyId,
+        title: '구글 시트 동기화 실패',
+        message: `"${sheetName}" 시트 동기화에 실패했습니다: ${cleanErrorMessage}. 시트 연동 설정을 확인해주세요.`,
+        type: 'sheet_sync_failed',
+        metadata: {
+          spreadsheet_id: spreadsheetId,
+          sheet_name: sheetName,
+          error_message: errorMessage,
+        },
+      })
+    }
+  } catch (notifError) {
+    console.error('Failed to create sheet sync failure notification:', notifError)
+  }
+}
 
 export async function POST(request: NextRequest) {
   // catch 블록에서도 실패 로그를 남기려면 이 변수들이 필요한데, try 블록
@@ -118,6 +160,8 @@ export async function POST(request: NextRequest) {
       } catch (logError) {
         console.error('Failed to write sheet_sync_logs error entry:', logError)
       }
+
+      await notifySheetSyncFailure(companyId!, spreadsheetId!, sheetName, message)
     }
 
     // 먼저 사용 가능한 시트 목록 확인
@@ -307,6 +351,8 @@ export async function POST(request: NextRequest) {
       } catch (logError) {
         console.error('Failed to write sheet_sync_logs error entry:', logError)
       }
+
+      await notifySheetSyncFailure(companyId, spreadsheetId, sheetName, error.message || '동기화 실패')
     }
     return NextResponse.json(
       { error: error.message || '동기화 실패' },
