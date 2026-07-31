@@ -127,7 +127,7 @@ export default function AccountDeletionSection({
                   )}
                   <li className="flex items-start gap-2">
                     <span className="mt-0.5 flex-shrink-0 w-4 h-4 rounded-full bg-amber-200 text-amber-800 text-xs flex items-center justify-center font-bold">!</span>
-                    데이터는 <span className="font-semibold">30일간 보존</span>된 후 영구 삭제됩니다.
+                    회사 데이터는 <span className="font-semibold">비활성화 상태로 보존</span>되며, 자동으로 영구 삭제되지 않습니다.
                   </li>
                 </ul>
               </div>
