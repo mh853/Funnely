@@ -25,14 +25,19 @@ export async function POST(request: Request) {
     // 소유권 확인: 서비스 롤로 RLS를 우회하므로, subscriptionId/companyId가 호출자
     // 소속 회사의 것인지 애플리케이션 레벨에서 직접 검증해야 한다. 이 검증이 없으면
     // 로그인만 되어 있으면 body에 임의의 다른 회사 id를 넣어 그 회사의 구독을
-    // trial로 조작할 수 있다.
+    // trial로 조작할 수 있다. 회사 소속만으로는 부족 - company_subscriptions RLS
+    // (admin/owner만 허용, manager 제외)와 일치하는 역할 검증도 함께 해야 한다.
     const { data: profile } = await serviceSupabase
       .from('users')
-      .select('company_id')
+      .select('company_id, role, simple_role')
       .eq('id', user.id)
-      .maybeSingle()
+      .maybeSingle() as { data: { company_id: string; role: string | null; simple_role: string | null } | null }
 
-    if (!profile) {
+    if (
+      !profile ||
+      (profile.simple_role !== 'admin' &&
+        !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(profile.role || ''))
+    ) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

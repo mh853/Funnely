@@ -31,14 +31,21 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '구독 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  // 사용자 권한 확인
+  // 사용자 권한 확인 - company_subscriptions RLS(company_subscriptions_admin, admin/owner만
+  // 허용, manager 제외)와 서비스 롤 우회 경로의 인가 기준을 반드시 일치시켜야 한다.
+  // company_id만 확인하면 marketing_staff 등 최하위 권한도 카드 등록/결제를 트리거할 수 있었다.
   const { data: profile } = await svc
     .from('users')
-    .select('company_id')
+    .select('company_id, role, simple_role')
     .eq('id', user.id)
     .maybeSingle()
 
-  if (!profile || profile.company_id !== currentSub.company_id) {
+  if (
+    !profile ||
+    profile.company_id !== currentSub.company_id ||
+    (profile.simple_role !== 'admin' &&
+      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(profile.role))
+  ) {
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
   }
 
