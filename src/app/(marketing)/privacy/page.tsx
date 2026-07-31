@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
+import { config } from '@/lib/config'
 
 export const metadata = {
   title: '개인정보처리방침 | 퍼널리',
@@ -78,6 +79,8 @@ export default function PrivacyPage() {
               <ul className="mt-3 list-disc pl-6 space-y-1">
                 <li>Supabase Inc.: 데이터베이스 및 인증 서비스</li>
                 <li>결제 대행사: 결제 처리 (계약 체결 시 명시)</li>
+                <li>Resend: 이메일 발송 (리드 알림, 문의 답변 등)</li>
+                <li>Google LLC: 구글시트 연동 시 시트 데이터 조회(읽기 전용)</li>
               </ul>
             </section>
 
@@ -91,11 +94,7 @@ export default function PrivacyPage() {
                 <li>처리 정지 요청</li>
               </ul>
               <p className="mt-3">
-                위 권리 행사는 서비스 내 계정 설정 또는{' '}
-                <a href="mailto:support@funnely.com" className="text-blue-600 hover:underline">
-                  support@funnely.com
-                </a>
-                으로 요청하실 수 있습니다.
+                위 권리 행사는 서비스 내 계정 설정 또는 {config.business.phone}으로 요청하실 수 있습니다.
               </p>
             </section>
 
@@ -114,7 +113,7 @@ export default function PrivacyPage() {
               </p>
               <ul className="mt-3 list-disc pl-6 space-y-1">
                 <li>개인정보 보호책임자: 퍼널리 개인정보보호팀</li>
-                <li>이메일: <a href="mailto:privacy@funnely.com" className="text-blue-600 hover:underline">privacy@funnely.com</a></li>
+                <li>연락처: {config.business.phone}</li>
               </ul>
             </section>
 
