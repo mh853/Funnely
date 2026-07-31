@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 // Service role client for bypassing RLS
 function getServiceRoleClient() {
@@ -52,6 +53,13 @@ function getTodayDateKST(): string {
 // POST /api/landing-pages/view - Increment page view count
 export async function POST(request: NextRequest) {
   try {
+    // 인증도 요청 제한도 없어 pageId만 알면 무제한 호출로 views_count/전환율 지표를
+    // 조작할 수 있었다 - 형제 엔드포인트(submit)와 동일한 IP 기반 제한을 적용한다.
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`landing-page-view:${ip}`, 60, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     const { pageId } = await request.json()
 
     if (!pageId) {
@@ -73,63 +81,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to increment views' }, { status: 500 })
     }
 
-    // 2. Upsert daily analytics data
-    // First, check if a record exists for today
-    const { data: existingRecord, error: selectError } = await supabase
-      .from('landing_page_analytics')
-      .select('id, page_views, desktop_views, mobile_views, tablet_views')
-      .eq('landing_page_id', pageId)
-      .eq('date', today)
-      .maybeSingle()
+    // 2. Upsert daily analytics data - SELECT 후 별도 INSERT/UPDATE로 나누면 동시요청 시
+    // INSERT 충돌로 조회가 누락되거나 UPDATE끼리 서로 덮어써 조용히 유실된다(46차 QA로
+    // 라이브 재현 확인) - ON CONFLICT DO UPDATE 원자적 RPC로 처리한다.
+    const { error: analyticsError } = await supabase.rpc('increment_landing_page_analytics', {
+      p_landing_page_id: pageId,
+      p_date: today,
+      p_device_type: deviceType,
+    })
 
-    if (selectError) {
-      console.error('Failed to check existing analytics:', selectError)
-      // Continue anyway - the main view count was already incremented
-    }
-
-    if (existingRecord) {
-      // Update existing record
-      const updateData: Record<string, number> = {
-        page_views: (existingRecord.page_views || 0) + 1,
-      }
-
-      // Increment the appropriate device column
-      if (deviceType === 'desktop') {
-        updateData.desktop_views = (existingRecord.desktop_views || 0) + 1
-      } else if (deviceType === 'mobile') {
-        updateData.mobile_views = (existingRecord.mobile_views || 0) + 1
-      } else {
-        updateData.tablet_views = (existingRecord.tablet_views || 0) + 1
-      }
-
-      const { error: updateError } = await supabase
-        .from('landing_page_analytics')
-        .update(updateData)
-        .eq('id', existingRecord.id)
-
-      if (updateError) {
-        console.error('Failed to update analytics:', updateError)
-      }
-    } else {
-      // Insert new record for today
-      const insertData: Record<string, unknown> = {
-        landing_page_id: pageId,
-        date: today,
-        page_views: 1,
-        desktop_views: deviceType === 'desktop' ? 1 : 0,
-        mobile_views: deviceType === 'mobile' ? 1 : 0,
-        tablet_views: deviceType === 'tablet' ? 1 : 0,
-        unique_visitors: 1,
-        form_submissions: 0,
-      }
-
-      const { error: insertError } = await supabase
-        .from('landing_page_analytics')
-        .insert(insertData)
-
-      if (insertError) {
-        console.error('Failed to insert analytics:', insertError)
-      }
+    if (analyticsError) {
+      console.error('Failed to upsert analytics:', analyticsError)
     }
 
     return NextResponse.json({ success: true })
