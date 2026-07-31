@@ -133,7 +133,9 @@ export default function LandingPageNewForm({
     return collectFields
       .filter((field: any) => field.type === 'short_answer' || field.type === 'multiple_choice')
       .map((field: any, index: number) => ({
-        id: `field-${index}-${Date.now()}`,
+        // DB에 저장된 고유 id가 있으면 그대로 재사용 - 없으면(과거 저장분) 임시 id를 생성한다.
+        // 질문 텍스트는 자유입력이라 중복될 수 있어 절대 식별자로 쓰면 안 된다.
+        id: field.id || `field-${index}-${Date.now()}`,
         type: field.type,
         question: field.question || '',
         options: field.options || (field.type === 'multiple_choice' ? [''] : undefined),
@@ -496,7 +498,8 @@ export default function LandingPageNewForm({
   // Add new custom field
   const addCustomField = (type: 'short_answer' | 'multiple_choice') => {
     const newField: CustomField = {
-      id: Date.now().toString(),
+      // Date.now()만 쓰면 같은 밀리초에 필드를 연속 추가할 때 id가 충돌할 수 있어 랜덤값을 더한다.
+      id: `${Math.random().toString(36).substring(2)}_${Date.now()}`,
       type,
       question: '',
       options: type === 'multiple_choice' ? [''] : undefined,
@@ -1203,6 +1206,15 @@ export default function LandingPageNewForm({
   }
 
   const handleSave = async () => {
+    // 커스텀 질문 텍스트가 서로 겹치면 제출 시 답변이 어느 질문에 속하는지
+    // 구분할 수 없어 리드 목록에 같은 라벨로 중복 표시된다. 저장 자체를 막는다.
+    const trimmedQuestions = customFields.map(field => field.question.trim()).filter(q => q !== '')
+    const duplicateQuestion = trimmedQuestions.find((q, idx) => trimmedQuestions.indexOf(q) !== idx)
+    if (duplicateQuestion) {
+      toast.error(`"${duplicateQuestion}" 질문이 중복되었습니다. 커스텀 질문은 서로 다른 텍스트여야 합니다.`)
+      return
+    }
+
     setSaving(true)
 
     try {
@@ -1212,8 +1224,12 @@ export default function LandingPageNewForm({
       if (collectPhone) collectFields.push({ type: 'phone', required: true })
 
       // Add custom fields
+      // id를 함께 저장해야 제출 시 질문 텍스트(중복 가능)가 아니라 고유 id로 답변을
+      // 매칭할 수 있다 - id가 없으면 동일한 질문 텍스트를 가진 두 필드의 답변이
+      // 제출 시 서로 덮어써 하나가 유실되는 문제가 있었다.
       customFields.forEach(field => {
         collectFields.push({
+          id: field.id,
           type: field.type,
           question: field.question,
           options: field.options,

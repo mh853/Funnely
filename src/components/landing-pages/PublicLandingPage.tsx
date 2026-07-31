@@ -356,10 +356,14 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       }
 
       // 커스텀 필드 추가
+      // formData의 키는 반드시 fieldKey(고유 id, 없으면 위치 기반 field_N)여야 한다 -
+      // 질문 텍스트를 키로 쓰면 두 질문의 텍스트가 같을 때 하나가 다른 하나를 덮어써
+      // 값이 조용히 사라진다. 서버(submit/route.ts)도 동일한 fieldKey 규칙으로
+      // 역매핑하여 라벨(question)을 복원한다.
       customFields.forEach((field: { id: string; type: string; question: string; options?: string[]; required?: boolean }) => {
         const fieldKey = field.id || field.question
         if (customFieldValues[fieldKey]) {
-          formData[field.question || fieldKey] = customFieldValues[fieldKey]
+          formData[fieldKey] = customFieldValues[fieldKey]
         }
       })
 

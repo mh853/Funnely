@@ -175,6 +175,7 @@ export interface LandingPage {
   collect_name?: boolean;
   collect_phone?: boolean;
   collect_fields?: Array<{
+    id?: string; // short_answer/multiple_choice 필드의 고유 식별자 (질문 텍스트 중복 시 매칭용, question은 표시용 라벨일 뿐)
     type: 'name' | 'phone' | 'short_answer' | 'multiple_choice';
     question?: string;
     options?: string[];
