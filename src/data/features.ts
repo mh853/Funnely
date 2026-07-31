@@ -216,10 +216,6 @@ export const features: Feature[] = [
         description: '모든 변경 사항과 상담 내역을 타임라인으로 확인',
       },
       {
-        title: '이메일/SMS 통합',
-        description: 'DB에서 바로 이메일 및 SMS 발송 (PRO)',
-      },
-      {
         title: 'Excel/CSV 가져오기/내보내기',
         description: '기존 데이터 마이그레이션 및 백업',
       },
@@ -495,16 +491,6 @@ export const features: Feature[] = [
         description: '팀원 가용 시간을 고려한 스마트 일정 배정',
         icon: 'UserPlusIcon',
       },
-      {
-        title: '알림 및 리마인더',
-        description: '이메일, SMS, 앱 푸시로 일정 전 자동 알림',
-        icon: 'BellIcon',
-      },
-      {
-        title: 'Google/Outlook 동기화',
-        description: '기존 사용 중인 캘린더와 양방향 동기화',
-        icon: 'ArrowPathIcon',
-      },
     ],
 
     howItWorks: [
@@ -517,8 +503,8 @@ export const features: Feature[] = [
         description: '가용 시간 기반 자동 배정 또는 수동 선택',
       },
       {
-        title: '알림 발송',
-        description: '담당자와 고객에게 일정 전 자동 알림',
+        title: '일정 확인',
+        description: '캘린더 뷰에서 담당자와 고객 상담 일정 확인',
       },
       {
         title: '완료 및 기록',
@@ -534,14 +520,6 @@ export const features: Feature[] = [
       {
         title: '가용 시간 자동 감지',
         description: '팀원 캘린더 확인하여 빈 시간에만 일정 배정',
-      },
-      {
-        title: '반복 일정',
-        description: '주간 회의, 월간 리뷰 등 반복 일정 자동 생성',
-      },
-      {
-        title: '타임존 지원',
-        description: '해외 고객 상담 시 타임존 자동 변환',
       },
       {
         title: '일정 템플릿',
