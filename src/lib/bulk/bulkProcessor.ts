@@ -309,11 +309,17 @@ export class BulkProcessor {
   ): Promise<void> {
     switch (operation) {
       case 'change_plan': {
+        // 이 벌크 작업은 결제/프로레이션 처리 없이 plan_id만 즉시 갱신하는,
+        // 관리자 전용 무료 승격 도구로 의도된 동작이다(CS 보상, 테스트 계정
+        // 설정 등에 사용 - 45차 QA에서 사용자가 이 방향을 직접 확인함).
+        // 일반 고객의 셀프서비스 업그레이드/다운그레이드는 toss-billing-payment의
+        // upgrade_prorate/downgrade_defer 플로우를 거쳐야 하며, 이 경로는 그
+        // 대체 수단이 아니다 - 여기서 effective_date/proration을 처리하지
+        // 않는 것은 버그가 아니라 의도된 설계다.
         const { error } = await this.supabase
           .from('company_subscriptions')
           .update({
             plan_id: parameters.plan_id,
-            // TODO: Handle effective_date and proration
           })
           .eq('id', subscriptionId)
         if (error) throw error

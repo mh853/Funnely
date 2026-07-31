@@ -227,7 +227,9 @@ export const SUBSCRIPTION_BULK_OPERATIONS: BulkOperationOption[] = [
   {
     value: 'change_plan',
     label: '플랜 변경',
-    description: '구독 플랜을 일괄 변경합니다',
+    description:
+      '⚠️ 이 작업은 결제 없이 플랜을 즉시 변경합니다. 정상적인 유료 전환/변경이 아닌 경우(CS 보상, 테스트 등)에만 사용하세요.',
+    requiresConfirmation: true,
   },
   {
     value: 'change_billing_cycle',
@@ -264,5 +266,9 @@ export function getOperationsForEntityType(
 }
 
 export function requiresConfirmation(operation: string): boolean {
-  return operation === 'delete'
+  // 'delete': 되돌릴 수 없는 삭제
+  // 'change_plan': 결제 없이 즉시 플랜을 변경하는 관리자 전용 도구 - 일반
+  // 고객 셀프서비스 업그레이드/다운그레이드 플로우(toss-billing-payment)의
+  // 대체 수단이 아니므로 오용 방지를 위해 실행 전 확인이 필요하다.
+  return operation === 'delete' || operation === 'change_plan'
 }
