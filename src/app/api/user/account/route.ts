@@ -49,19 +49,18 @@ export async function DELETE(request: Request) {
       .eq('company_id', profile.company_id)
       .in('status', ['active', 'trial'])
 
-    // 팀원 전체 소프트 삭제
-    const { data: teamMembers } = await adminDb
+    // 팀원 전체 소프트 삭제 - 이 주석대로 소프트 삭제를 의도했으나 실제로는
+    // auth.admin.deleteUser(하드삭제)를 호출하고 있었다. 팀원이 담당 리드를 갖고
+    // 있으면(assigned_to 등이 users.id를 ON DELETE NO ACTION으로 참조) 하드삭제가
+    // FK 제약으로 항상 실패하는데 반환값을 확인하지 않아 실패가 조용히 은폐되고
+    // 팀원 로그인 자격증명이 그대로 살아남았다(49차 QA 라이브 재현). UI가 실제로
+    // 약속하는 "비활성화"에 맞춰 소프트 삭제로 바꾼다.
+    await adminDb
       .from('users')
-      .select('id')
+      .update({ is_active: false, deactivated_at: now })
       .eq('company_id', profile.company_id)
       .eq('is_active', true)
       .neq('id', user.id)
-
-    if (teamMembers && teamMembers.length > 0) {
-      for (const member of teamMembers as { id: string }[]) {
-        await adminClient.auth.admin.deleteUser(member.id)
-      }
-    }
 
     // 회사 비활성화
     await adminDb
