@@ -281,12 +281,14 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     : `/landing/${landingPage.slug}/completed`
 
   // 완료 페이지로 이동 (pathname 기반으로 서브도메인 중복 shortId 방지)
-  const navigateToCompleted = useCallback(() => {
+  // isDuplicate: 409(중복 제출)로 인한 이동이면 true를 전달해 완료 페이지가 전환
+  // 추적 픽셀을 재발화하지 않도록 표시한다 (중복 재방문을 신규 전환으로 잘못 집계하는 것 방지)
+  const navigateToCompleted = useCallback((isDuplicate = false) => {
     const currentPath = window.location.pathname
     const completedPath = currentPath.endsWith('/')
       ? `${currentPath}completed`
       : `${currentPath}/completed`
-    window.location.replace(completedPath)
+    window.location.replace(isDuplicate ? `${completedPath}?duplicate=1` : completedPath)
   }, [])
 
   useEffect(() => {
@@ -389,8 +391,8 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       })
 
       if (response.status === 409) {
-        // 이미 신청한 번호 → 완료 페이지로 이동
-        navigateToCompleted()
+        // 이미 신청한 번호 → 완료 페이지로 이동 (단, 중복 표시하여 픽셀 재발화 방지)
+        navigateToCompleted(true)
         return
       }
 
