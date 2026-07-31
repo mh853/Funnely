@@ -27,6 +27,20 @@ export default function MetaAdsSetupGuide() {
           </p>
         </div>
 
+        {/* 준비 중 안내 */}
+        <div className="bg-amber-50 border-l-4 border-amber-500 p-4 mb-6">
+          <div className="flex">
+            <ExclamationTriangleIcon className="h-6 w-6 text-amber-600 flex-shrink-0" />
+            <div className="ml-3">
+              <h2 className="text-sm font-medium text-amber-900">현재 준비 중인 기능입니다</h2>
+              <p className="mt-1 text-sm text-amber-800">
+                아래 설정을 완료해도 실제 광고 계정 연동은 아직 활성화되지 않았습니다.
+                가이드는 준비 과정 안내용으로 미리 제공되고 있으며, 연동 기능이 열리면 별도로 안내드립니다.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Prerequisites */}
         <div className="bg-blue-50 border-l-4 border-blue-600 p-4 mb-6">
           <div className="flex">

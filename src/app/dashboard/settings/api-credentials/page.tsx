@@ -205,6 +205,11 @@ export default function ApiCredentialsPage() {
         </div>
       )}
 
+      {/* 준비 중 안내 - 자격증명 저장은 되지만 실제 광고 계정 연동 기능은 아직 비활성화 상태 */}
+      <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
+        아래 정보를 저장해도 실제 광고 계정 연동 기능은 아직 준비 중입니다. 연동 기능이 열리면 별도로 안내드립니다.
+      </div>
+
       {/* Meta Ads */}
       <PlatformCard
         platform="meta"
@@ -256,7 +261,7 @@ export default function ApiCredentialsPage() {
         <ul className="text-sm text-blue-800 space-y-2">
           <li>• API 인증 정보는 암호화되어 안전하게 저장됩니다.</li>
           <li>• 각 플랫폼의 개발자 콘솔에서 앱을 생성하고 API 키를 발급받아야 합니다.</li>
-          <li>• 저장 후 광고 계정 연동 페이지에서 계정 연동을 진행할 수 있습니다.</li>
+          <li>• 광고 계정 연동 기능은 현재 준비 중이며, 저장한 정보는 연동 기능이 열리면 사용됩니다.</li>
           <li>• 문제가 발생하면 각 플랫폼의 상세 가이드 (<Link href="/guides/meta-ads" className="underline">Meta</Link>, <Link href="/guides/kakao-moment" className="underline">Kakao</Link>, <Link href="/guides/google-ads" className="underline">Google</Link>)를 참고하세요.</li>
         </ul>
       </div>
