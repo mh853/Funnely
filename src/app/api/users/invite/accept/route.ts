@@ -114,6 +114,7 @@ export async function POST(request: Request) {
         .from('users')
         .select('id', { count: 'exact', head: true })
         .eq('company_id', invitation.company_id)
+        .eq('is_active', true)
 
       if ((activeUserCount || 0) >= maxUsers) {
         return NextResponse.json(

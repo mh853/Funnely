@@ -376,7 +376,8 @@ export async function canInviteUser(companyId: string): Promise<{
       supabase
         .from('users')
         .select('id', { count: 'exact', head: true })
-        .eq('company_id', companyId),
+        .eq('company_id', companyId)
+        .eq('is_active', true),
       supabase
         .from('company_invitations')
         .select('id', { count: 'exact', head: true })
