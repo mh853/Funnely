@@ -382,13 +382,15 @@ export class BulkProcessor {
             .eq('id', subscriptionId)
             .single()
 
-          const reactivatingFromExpired =
-            current && ['expired', 'cancelled', 'suspended'].includes(current.status)
+          // 재활성화 시 기간을 리셋해야 하는 조건은 "현재 결제 기간이 이미 지났다" 또는
+          // "애초에 결제 기간이 없었다" 뿐이다. 이전 status만으로 리셋하면, 아직 결제
+          // 기간이 남은 채로 정지/취소된 구독을 재활성화할 때 남은 기간이 통째로
+          // 사라지고 오늘부터 새 기간으로 강제 리셋되는 버그가 생긴다.
           const periodEndInPast =
             current?.current_period_end && current.current_period_end < new Date().toISOString()
           const neverHadPeriod = current && !current.current_period_end
 
-          if (reactivatingFromExpired || periodEndInPast || neverHadPeriod) {
+          if (periodEndInPast || neverHadPeriod) {
             const now = new Date()
             const periodEnd =
               current?.billing_cycle === 'yearly'

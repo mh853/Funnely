@@ -73,10 +73,10 @@ export async function PATCH(
         .eq('id', subscriptionId)
         .single()
 
-      const reactivatingFromExpired =
-        current &&
-        ['expired', 'cancelled', 'suspended'].includes(current.status)
-
+      // 재활성화 시 기간을 리셋해야 하는 조건은 "현재 결제 기간이 이미 지났다" 또는
+      // "애초에 결제 기간이 없었다" 뿐이다. 이전 status(expired/cancelled/suspended)
+      // 만으로 리셋하면, 아직 결제 기간이 남은 채로 정지/취소된 구독을 재활성화할 때
+      // 남은 기간이 통째로 사라지고 오늘부터 새 기간으로 강제 리셋되는 버그가 생긴다.
       const periodEndInPast =
         current?.current_period_end &&
         current.current_period_end < new Date().toISOString()
@@ -87,7 +87,7 @@ export async function PATCH(
       // 상태가 되어, 결제 기록도 카드도 없이 영구 무료 이용이 가능해진다.
       const neverHadPeriod = current && !current.current_period_end
 
-      if (reactivatingFromExpired || periodEndInPast || neverHadPeriod) {
+      if (periodEndInPast || neverHadPeriod) {
         const now = new Date()
         const cycle = current?.billing_cycle
         const periodStart = now.toISOString()
