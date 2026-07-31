@@ -100,8 +100,8 @@ export default function PaymentsClient({
   }
 
   const handleRequestTaxInvoice = async (transactionId: string) => {
-    // 세금계산서 발행 요청 로직 (추후 구현)
-    toast.success('세금계산서 발행 요청이 접수되었습니다. 영업일 기준 1-2일 내에 이메일로 발송됩니다.')
+    // 세금계산서 발행 기능은 아직 구현되지 않음 (백엔드 미구현)
+    toast.error('세금계산서 발행 기능은 준비 중입니다. 필요하시면 고객센터(support@funnely.com)로 문의해주세요.')
   }
 
   const handleChangeCard = async () => {
