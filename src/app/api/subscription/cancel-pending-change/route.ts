@@ -30,7 +30,7 @@ export async function POST() {
     .from('company_subscriptions')
     .select('id, pending_plan_id, status, current_period_end, trial_end_date, cancelled_at')
     .eq('company_id', profile.company_id)
-    .in('status', ['active', 'trial'])
+    .in('status', ['active', 'trial', 'past_due'])
     .order('created_at', { ascending: false })
     .limit(10)
 
