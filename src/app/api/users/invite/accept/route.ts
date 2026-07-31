@@ -76,11 +76,20 @@ export async function POST(request: Request) {
     // Check if email already exists
     const { data: existingUser } = await supabase
       .from('users')
-      .select('id')
+      .select('id, is_active')
       .eq('email', email)
       .maybeSingle()
 
     if (existingUser) {
+      if (existingUser.is_active === false) {
+        return NextResponse.json(
+          {
+            error:
+              '이 이메일은 비활성화된 계정으로 등록되어 있습니다. 계정 소유자이거나 재활성화가 필요하면 관리자(support@funnely.com)에게 문의해주세요.',
+          },
+          { status: 400 }
+        )
+      }
       return NextResponse.json({ error: '이미 등록된 이메일입니다.' }, { status: 400 })
     }
 

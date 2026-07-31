@@ -14,6 +14,7 @@ interface TeamMember {
   short_id?: string
   department?: string
   created_at: string
+  is_active?: boolean
 }
 
 interface TeamMembersListProps {
@@ -96,12 +97,15 @@ export default function TeamMembersList({
           <tbody className="divide-y divide-gray-200 bg-white">
             {members.map((member) => {
               const isCurrentUser = member.id === currentUserId
+              const isInactive = member.is_active === false
 
               return (
                 <tr
                   key={member.id}
                   onClick={() => handleRowClick(member)}
-                  className="cursor-pointer hover:bg-gray-50 transition-colors"
+                  className={`cursor-pointer hover:bg-gray-50 transition-colors ${
+                    isInactive ? 'opacity-60' : ''
+                  }`}
                 >
                   <td className="whitespace-nowrap py-4 pl-6 pr-4 sm:pl-8">
                     <div className="flex items-center">
@@ -111,6 +115,11 @@ export default function TeamMembersList({
                           {member.full_name}
                           {isCurrentUser && (
                             <span className="ml-2 text-xs text-gray-500">(나)</span>
+                          )}
+                          {isInactive && (
+                            <span className="ml-2 inline-flex rounded-full px-2 text-xs font-semibold leading-5 bg-gray-100 text-gray-500">
+                              비활성화됨
+                            </span>
                           )}
                         </div>
                         <div className="text-gray-500">{member.email}</div>
