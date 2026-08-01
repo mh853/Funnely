@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useToast } from '@/components/shared/Toast'
 
+// 사업자등록번호 형식(XXX-XX-XXXXX) 검증 - 지금까지 클라이언트/서버/DB 어디에도
+// 검증이 없어 임의 문자열이 그대로 저장되고 있었다(51차 QA 라이브 확인)
+const BUSINESS_NUMBER_PATTERN = /^\d{3}-\d{2}-\d{5}$/
+
 interface Company {
   id: string
   name: string
@@ -58,7 +62,13 @@ export default function CompanySettingsForm({ company, canEdit }: CompanySetting
 
       // business_number가 입력된 경우에만 업데이트
       if (formData.business_number.trim()) {
-        updateData.business_number = formData.business_number.trim()
+        const trimmed = formData.business_number.trim()
+        if (!BUSINESS_NUMBER_PATTERN.test(trimmed)) {
+          toast.error('사업자등록번호 형식이 올바르지 않습니다. (예: 123-45-67890)')
+          setLoading(false)
+          return
+        }
+        updateData.business_number = trimmed
       }
 
       const { error: updateError, count } = await supabase
