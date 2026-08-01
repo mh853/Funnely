@@ -1,28 +1,24 @@
 // Email Sender Service
-// Handles email sending via SMTP with nodemailer
+// 이전에는 nodemailer+SMTP_HOST/USER/PASSWORD로 발송했는데, 이 환경변수들이
+// .env.local/.env.example 어디에도 설정된 적이 없어 "테스트 발송" 버튼이 항상
+// 인증 실패로 죽어있었다(52차 QA 확인). 실제 운영 발송 경로(리드 알림, 티켓 답변
+// 알림)가 전부 Resend를 쓰고 있으므로 동일하게 맞춘다.
 
-import nodemailer from 'nodemailer'
-import type { Transporter } from 'nodemailer'
+import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 import type { EmailTemplate, EmailLog } from '@/types/email'
 import { renderTemplate } from './template-renderer'
 
-export class EmailSender {
-  private transporter: Transporter
+let resendClient: Resend | null = null
 
-  constructor() {
-    // Initialize nodemailer transporter with SMTP settings
-    // These should be configured via environment variables
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASSWORD,
-      },
-    })
+function getResendClient(): Resend | null {
+  if (!resendClient && process.env.RESEND_API_KEY) {
+    resendClient = new Resend(process.env.RESEND_API_KEY)
   }
+  return resendClient
+}
+
+export class EmailSender {
 
   /**
    * Sends an email using a template
@@ -55,22 +51,24 @@ export class EmailSender {
         ? renderTemplate(template.text_body, variables)
         : undefined
 
-      // Prepare email options
-      const mailOptions = {
-        from: `"${template.settings.fromName}" <${template.settings.fromEmail}>`,
-        to,
+      const client = getResendClient()
+      if (!client) {
+        throw new Error('Resend API key is not configured')
+      }
+
+      // Send email
+      const { data: info, error: sendError } = await client.emails.send({
+        from: `${template.settings.fromName} <${template.settings.fromEmail}>`,
+        to: [to],
         subject,
         html,
         text,
         replyTo: template.settings.replyTo,
         cc: options?.cc || template.settings.cc,
         bcc: options?.bcc || template.settings.bcc,
-        attachments: options?.attachments,
-        priority: template.settings.priority || 'normal',
-      }
+      })
 
-      // Send email
-      const info = await this.transporter.sendMail(mailOptions)
+      if (sendError) throw sendError
 
       // Log email
       const logId = await this.logEmail(
@@ -80,8 +78,7 @@ export class EmailSender {
         html,
         'sent',
         {
-          messageId: info.messageId,
-          response: info.response,
+          messageId: info?.id,
         }
       )
 
@@ -124,13 +121,20 @@ export class EmailSender {
       ? renderTemplate(template.text_body, variables)
       : undefined
 
-    await this.transporter.sendMail({
-      from: `"${template.settings.fromName}" <${template.settings.fromEmail}>`,
-      to,
+    const client = getResendClient()
+    if (!client) {
+      throw new Error('Resend API key is not configured')
+    }
+
+    const { error: sendError } = await client.emails.send({
+      from: `${template.settings.fromName} <${template.settings.fromEmail}>`,
+      to: [to],
       subject,
       html,
       text,
     })
+
+    if (sendError) throw sendError
   }
 
   /**
@@ -261,18 +265,12 @@ export class EmailSender {
   }
 
   /**
-   * Verifies SMTP connection
+   * Resend API 키가 설정되어 있는지 확인
    *
    * @returns Promise resolving to connection status
    */
   async verifyConnection(): Promise<boolean> {
-    try {
-      await this.transporter.verify()
-      return true
-    } catch (error) {
-      console.error('SMTP connection verification failed:', error)
-      return false
-    }
+    return getResendClient() !== null
   }
 }
 
