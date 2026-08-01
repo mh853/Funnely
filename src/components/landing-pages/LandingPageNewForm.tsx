@@ -750,7 +750,10 @@ export default function LandingPageNewForm({
         )
 
       case 'call_button':
-        if (!callButtonEnabled) return null
+        // 공개 페이지(PublicLandingPage)는 전화번호가 비어있으면 버튼 자체를 숨긴다 -
+        // 에디터 미리보기는 활성화 여부만 보고 "전화 상담 받기" 버튼을 항상 보여줘서
+        // 번호를 안 채워도 정상 동작하는 것처럼 보였다(54차 QA 확인)
+        if (!callButtonEnabled || !callButtonPhone) return null
         return (
           <div className="flex justify-center">
             <button
@@ -760,7 +763,7 @@ export default function LandingPageNewForm({
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
+              {`전화: ${callButtonPhone}`}
             </button>
           </div>
         )
@@ -943,7 +946,10 @@ export default function LandingPageNewForm({
         )
 
       case 'call_button':
-        if (!callButtonEnabled) return null
+        // 공개 페이지(PublicLandingPage)는 전화번호가 비어있으면 버튼 자체를 숨긴다 -
+        // 에디터 미리보기는 활성화 여부만 보고 "전화 상담 받기" 버튼을 항상 보여줘서
+        // 번호를 안 채워도 정상 동작하는 것처럼 보였다(54차 QA 확인)
+        if (!callButtonEnabled || !callButtonPhone) return null
         return (
           <div className="flex justify-center">
             <button
@@ -953,7 +959,7 @@ export default function LandingPageNewForm({
               <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
               </svg>
-              {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
+              {`전화: ${callButtonPhone}`}
             </button>
           </div>
         )
@@ -1044,8 +1050,8 @@ export default function LandingPageNewForm({
       )
     }
 
-    // Call Button (both modes)
-    if (callButtonEnabled && callButtonStickyPosition === position) {
+    // Call Button (both modes) - 전화번호가 비어있으면 공개 페이지처럼 버튼을 숨긴다
+    if (callButtonEnabled && callButtonPhone && callButtonStickyPosition === position) {
       buttons.push(
         <button
           key="call"
@@ -1055,7 +1061,7 @@ export default function LandingPageNewForm({
           <svg className={`${isDesktop ? 'h-5 w-5' : 'h-4 w-4'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
           </svg>
-          {callButtonPhone ? `전화: ${callButtonPhone}` : '전화 상담 받기'}
+          {`전화: ${callButtonPhone}`}
         </button>
       )
     }
