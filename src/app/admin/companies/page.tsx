@@ -326,6 +326,8 @@ export default function CompaniesPage() {
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
 
   const DB_SORT_COLS: SortColumn[] = ['name', 'created_at', 'withdrawn_at']
+  const PAGE_SIZE = 20
+  const isClientSort = !DB_SORT_COLS.includes(sortBy)
 
   const fetchCompanies = useCallback(async () => {
     try {
@@ -333,6 +335,9 @@ export default function CompaniesPage() {
       const apiSortBy = DB_SORT_COLS.includes(sortBy) ? sortBy : 'created_at'
       const apiSortOrder = DB_SORT_COLS.includes(sortBy) ? sortOrder : 'desc'
       const params = new URLSearchParams({ search, status, page: page.toString(), limit: '20', sortBy: apiSortBy, sortOrder: apiSortOrder })
+      // 구독/결제 등 계산된 컬럼으로 정렬할 때는 현재 페이지 20건만 받아 그 안에서만
+      // 재정렬하면 전체 목록 기준 정렬이 아니게 된다 - 전체를 받아와야 한다.
+      if (isClientSort) params.set('all', 'true')
       const res = await fetch(`/api/admin/companies?${params}`)
       if (!res.ok) throw new Error('Failed')
       const result = await res.json()
@@ -371,8 +376,21 @@ export default function CompaniesPage() {
   function handleSort(col: SortColumn) {
     if (sortBy === col) setSortOrder((o) => (o === 'asc' ? 'desc' : 'asc'))
     else { setSortBy(col); setSortOrder('desc') }
-    if (DB_SORT_COLS.includes(col)) setPage(1)
+    setPage(1)
   }
+
+  // 계산된 컬럼 정렬 시 companies는 전체 매칭 목록이므로 클라이언트에서 20건씩 잘라 보여준다.
+  const pageCompanies = isClientSort ? companies.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) : companies
+  const displayPagination = isClientSort
+    ? {
+        total: companies.length,
+        page,
+        limit: PAGE_SIZE,
+        totalPages: Math.max(1, Math.ceil(companies.length / PAGE_SIZE)),
+        hasNext: page * PAGE_SIZE < companies.length,
+        hasPrev: page > 1,
+      }
+    : pagination
 
   // 값에 큰따옴표가 포함되면 CSV 구조가 깨지므로 ""로 이스케이프한다(RFC 4180).
   // 회사명/담당자명은 자유 입력값이라 쉼표·따옴표가 들어올 수 있다.
@@ -383,7 +401,7 @@ export default function CompaniesPage() {
 
   function handleExportCSV() {
     const headers = ['회사명','담당자','이메일','사용자수','구독플랜','구독상태','월결제금액','결제회차','누적결제금액','최초결제일','마지막결제일','상태','가입일','탈퇴일']
-    const rows = companies.map((c) => [
+    const rows = pageCompanies.map((c) => [
       c.name, c.admin_user?.full_name||'', c.admin_user?.email||'', c.stats.total_users,
       c.subscription?.plan_name||'', c.subscription?.status||'', c.subscription?.monthly_price||0,
       c.payment_stats.payment_count, c.payment_stats.total_paid,
@@ -493,7 +511,7 @@ export default function CompaniesPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {companies.map((company) => (
+                  {pageCompanies.map((company) => (
                     <tr
                       key={company.id}
                       className="hover:bg-indigo-50/30 cursor-pointer transition-colors"
@@ -549,15 +567,15 @@ export default function CompaniesPage() {
               </table>
             </div>
 
-            {pagination && (
+            {displayPagination && (
               <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
                 <div className="text-sm text-gray-500">
-                  총 {pagination.total}개 중 {(pagination.page - 1) * pagination.limit + 1}–
-                  {Math.min(pagination.page * pagination.limit, pagination.total)}개
+                  총 {displayPagination.total}개 중 {(displayPagination.page - 1) * displayPagination.limit + 1}–
+                  {Math.min(displayPagination.page * displayPagination.limit, displayPagination.total)}개
                 </div>
                 <Pagination
-                  currentPage={pagination.page}
-                  totalPages={pagination.totalPages}
+                  currentPage={displayPagination.page}
+                  totalPages={displayPagination.totalPages}
                   onPageChange={setPage}
                 />
               </div>

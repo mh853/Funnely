@@ -29,6 +29,9 @@ export async function GET(request: NextRequest) {
     const status = searchParams.get('status') || 'all'
     const sortBy = searchParams.get('sortBy') || 'created_at'
     const sortOrder = searchParams.get('sortOrder') || 'desc'
+    // 구독/결제 등 join으로 계산되는 컬럼으로 정렬할 때는 프론트엔드가 전체 목록을
+    // 받아 직접 정렬해야 하므로(DB 레벨 정렬 불가) 페이지 단위가 아닌 전체를 반환한다.
+    const fetchAll = searchParams.get('all') === 'true'
 
     const supabase = getServiceClient()
 
@@ -44,7 +47,7 @@ export async function GET(request: NextRequest) {
 
     const { data: companies, count, error } = await baseQuery
       .order(sortColumn, { ascending: sortOrder === 'asc' })
-      .range(offset, offset + limit - 1)
+      .range(fetchAll ? 0 : offset, fetchAll ? 999 : offset + limit - 1)
 
     if (error) {
       console.error('[Companies API] Query error:', error)
@@ -178,17 +181,17 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const totalPages = Math.ceil((count || 0) / limit)
+    const totalPages = fetchAll ? 1 : Math.ceil((count || 0) / limit)
 
     return NextResponse.json({
       companies: result,
       pagination: {
         total: count || 0,
-        page,
-        limit,
+        page: fetchAll ? 1 : page,
+        limit: fetchAll ? result.length : limit,
         totalPages,
-        hasNext: page < totalPages,
-        hasPrev: page > 1,
+        hasNext: fetchAll ? false : page < totalPages,
+        hasPrev: fetchAll ? false : page > 1,
       },
     })
   } catch (error) {
