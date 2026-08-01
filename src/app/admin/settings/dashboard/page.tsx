@@ -20,63 +20,22 @@ interface Widget {
   order: number
 }
 
+// 위젯 id는 실제 /admin 대시보드(src/app/admin/page.tsx)의 STAT_CONFIG 키와
+// 정확히 일치해야 한다 - 이전에는 이 목록이 conversion_chart/top_companies/
+// utm_performance/goal_progress/notifications_summary처럼 실제 대시보드에
+// 존재조차 하지 않는 위젯을 나열하고 있어(localStorage에만 저장, 대시보드는
+// 전혀 참조 안 함) 설정을 저장해도 100% 아무 효과가 없는 placebo UI였다(53차
+// QA 확인). 실제로 존재하는 8개 통계 카드 + 최신 현황 블록으로 맞춘다.
 const DEFAULT_WIDGETS: Widget[] = [
-  {
-    id: 'stats_overview',
-    name: '통계 개요',
-    description: '전체 통계 요약 (회사, 사용자, 리드, 전환)',
-    enabled: true,
-    order: 1,
-  },
-  {
-    id: 'recent_leads',
-    name: '최근 리드',
-    description: '최근 생성된 리드 목록',
-    enabled: true,
-    order: 2,
-  },
-  {
-    id: 'conversion_chart',
-    name: '전환율 차트',
-    description: '시간별 전환율 추이',
-    enabled: true,
-    order: 3,
-  },
-  {
-    id: 'top_companies',
-    name: '상위 회사',
-    description: '리드 수 기준 상위 회사',
-    enabled: true,
-    order: 4,
-  },
-  {
-    id: 'utm_performance',
-    name: 'UTM 성과',
-    description: 'UTM 소스별 성과 분석',
-    enabled: true,
-    order: 5,
-  },
-  {
-    id: 'recent_activities',
-    name: '최근 활동',
-    description: '시스템 내 최근 활동 로그',
-    enabled: true,
-    order: 6,
-  },
-  {
-    id: 'goal_progress',
-    name: '목표 진행률',
-    description: '진행 중인 성과 목표 현황',
-    enabled: false,
-    order: 7,
-  },
-  {
-    id: 'notifications_summary',
-    name: '알림 요약',
-    description: '읽지 않은 알림 요약',
-    enabled: false,
-    order: 8,
-  },
+  { id: 'leads', name: '유입', description: '이번달 유입 건수', enabled: true, order: 1 },
+  { id: 'signups', name: '회원가입', description: '이번달 회원가입 건수', enabled: true, order: 2 },
+  { id: 'trials', name: '무료체험', description: '이번달 무료체험 시작 건수', enabled: true, order: 3 },
+  { id: 'payments', name: '결제', description: '이번달 결제 건수', enabled: true, order: 4 },
+  { id: 'revenue', name: '매출', description: '이번달 매출', enabled: true, order: 5 },
+  { id: 'withdrawals', name: '탈퇴', description: '이번달 탈퇴 건수', enabled: true, order: 6 },
+  { id: 'cancellations', name: '구독취소', description: '이번달 구독취소 건수', enabled: true, order: 7 },
+  { id: 'tickets', name: '문의', description: '이번달 문의 건수', enabled: true, order: 8 },
+  { id: 'recent_activities', name: '최신 현황', description: '회원가입/결제/탈퇴/구독취소/문의 최근 내역 (전체 블록)', enabled: true, order: 9 },
 ]
 
 export default function DashboardSettingsPage() {

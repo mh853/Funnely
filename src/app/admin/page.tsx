@@ -1,11 +1,5 @@
-import { format } from 'date-fns'
-import { ko } from 'date-fns/locale'
-import {
-  Users, TrendingUp, CreditCard, DollarSign,
-  LogOut, XCircle, MessageSquare, MousePointerClick,
-  ArrowUpRight, ArrowDownRight, Minus,
-} from 'lucide-react'
 import { getAdminDashboardStats } from '@/lib/admin/dashboard-stats'
+import DashboardWidgets from './DashboardWidgets'
 
 interface MonthStats {
   signups: number
@@ -30,131 +24,9 @@ interface DashboardData {
   }
 }
 
-const STAT_CONFIG = [
-  { key: 'leads',         label: '유입',    unit: '건', icon: MousePointerClick, color: 'text-violet-500',  bg: 'bg-violet-50' },
-  { key: 'signups',       label: '회원가입', unit: '건', icon: Users,             color: 'text-indigo-500',  bg: 'bg-indigo-50' },
-  { key: 'trials',        label: '무료체험', unit: '건', icon: TrendingUp,        color: 'text-blue-500',    bg: 'bg-blue-50' },
-  { key: 'payments',      label: '결제',    unit: '건', icon: CreditCard,        color: 'text-emerald-500', bg: 'bg-emerald-50' },
-  { key: 'revenue',       label: '매출',    unit: '원', icon: DollarSign,        color: 'text-green-500',   bg: 'bg-green-50' },
-  { key: 'withdrawals',   label: '탈퇴',    unit: '건', icon: LogOut,            color: 'text-rose-500',    bg: 'bg-rose-50' },
-  { key: 'cancellations', label: '구독취소', unit: '건', icon: XCircle,           color: 'text-orange-500',  bg: 'bg-orange-50' },
-  { key: 'tickets',       label: '문의',    unit: '건', icon: MessageSquare,     color: 'text-sky-500',     bg: 'bg-sky-50' },
-] as const
-
-// 증감률 계산 (소수점 1자리)
-function calcDelta(current: number, prev: number) {
-  if (prev === 0) return current > 0 ? 100 : 0
-  return Math.round(((current - prev) / prev) * 1000) / 10
-}
-
-function DeltaBadge({ current, prev, invert = false }: { current: number; prev: number; invert?: boolean }) {
-  const delta = calcDelta(current, prev)
-  if (delta === 0 && current === 0 && prev === 0) return null
-
-  // invert: 탈퇴/취소는 증가가 나쁜 것
-  const isGood = invert ? delta <= 0 : delta >= 0
-  const isZero = delta === 0
-
-  if (isZero) {
-    return (
-      <span className="inline-flex items-center gap-0.5 text-xs font-medium text-gray-400">
-        <Minus className="w-3 h-3" />
-        전월 동일
-      </span>
-    )
-  }
-
-  return (
-    <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${isGood ? 'text-emerald-600' : 'text-rose-500'}`}>
-      {delta > 0
-        ? <ArrowUpRight className="w-3 h-3" />
-        : <ArrowDownRight className="w-3 h-3" />}
-      {Math.abs(delta)}%
-    </span>
-  )
-}
-
-function StatBox({
-  label, value, prevValue, unit, icon: Icon, color, bg, invert = false,
-}: {
-  label: string; value: number; prevValue: number; unit: string
-  icon: React.ComponentType<{ className?: string }>
-  color: string; bg: string; invert?: boolean
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-start justify-between hover:shadow-md transition-shadow">
-      <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">{label}</p>
-        <p className="text-2xl font-bold text-gray-900 leading-none">
-          {value.toLocaleString()}
-          <span className="text-xs font-normal text-gray-400 ml-1">{unit}</span>
-        </p>
-        <div className="mt-1.5">
-          <DeltaBadge current={value} prev={prevValue} invert={invert} />
-        </div>
-      </div>
-      <div className={`w-9 h-9 rounded-lg ${bg} flex items-center justify-center flex-shrink-0`}>
-        <Icon className={`w-4.5 h-4.5 ${color}`} />
-      </div>
-    </div>
-  )
-}
-
-function RecentList({
-  title,
-  items,
-  accent,
-}: {
-  title: string
-  items: Array<{ label: string; sub?: string; date: string }>
-  accent: string
-}) {
-  return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-      <div className={`px-5 py-3.5 border-b border-gray-100 flex items-center gap-2`}>
-        <div className={`w-1.5 h-4 rounded-full ${accent}`} />
-        <h3 className="text-xs font-bold text-gray-700 uppercase tracking-wide">{title}</h3>
-      </div>
-      {items.length === 0 ? (
-        <p className="text-xs text-gray-400 text-center py-6">없음</p>
-      ) : (
-        <div className="divide-y divide-gray-50">
-          {items.map((item, i) => (
-            <div key={i} className="flex items-start justify-between gap-2 px-5 py-3 hover:bg-gray-50 transition-colors">
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-gray-800 truncate">{item.label}</p>
-                {item.sub && <p className="text-xs text-indigo-600 font-medium truncate mt-0.5">{item.sub}</p>}
-              </div>
-              <p className="text-[11px] text-gray-400 whitespace-nowrap flex-shrink-0 mt-0.5">
-                {format(new Date(item.date), 'MM-dd', { locale: ko })}
-              </p>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
-
-const RECENT_ACCENTS = [
-  'bg-indigo-400',
-  'bg-emerald-400',
-  'bg-rose-400',
-  'bg-orange-400',
-  'bg-sky-400',
-]
-
 export default async function AdminDashboard() {
   const data: DashboardData = await getAdminDashboardStats()
   const now = new Date()
-
-  const recentColumns = [
-    { title: '회원가입', items: data.recent.signups.map((s) => ({ label: s.name, date: s.date })) },
-    { title: '결제', items: data.recent.payments.map((p) => ({ label: p.companyName, sub: `${p.amount.toLocaleString()}원`, date: p.date })) },
-    { title: '탈퇴', items: data.recent.withdrawals.map((w) => ({ label: w.name, date: w.date })) },
-    { title: '구독취소', items: data.recent.cancellations.map((c) => ({ label: c.companyName, date: c.date })) },
-    { title: '문의', items: data.recent.tickets.map((t) => ({ label: t.companyName, sub: t.subject, date: t.date })) },
-  ]
 
   return (
     <div className="space-y-8">
@@ -167,35 +39,9 @@ export default async function AdminDashboard() {
         </p>
       </div>
 
-      {/* 이번달 통계 */}
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">이번달</p>
-        <div className="grid grid-cols-4 gap-4">
-          {STAT_CONFIG.map((cfg) => (
-            <StatBox
-              key={cfg.key}
-              label={cfg.label}
-              unit={cfg.unit}
-              value={(data.thisMonth as any)[cfg.key]}
-              prevValue={(data.lastMonth as any)?.[cfg.key] ?? 0}
-              icon={cfg.icon}
-              color={cfg.color}
-              bg={cfg.bg}
-              invert={cfg.key === 'withdrawals' || cfg.key === 'cancellations'}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* 최신 현황 */}
-      <div>
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-3">최신 현황 (각 최대 3건)</p>
-        <div className="grid grid-cols-5 gap-4">
-          {recentColumns.map((col, i) => (
-            <RecentList key={col.title} title={col.title} items={col.items} accent={RECENT_ACCENTS[i]} />
-          ))}
-        </div>
-      </div>
+      {/* 통계/최신현황 위젯 - /admin/settings/dashboard에서 저장한 표시·순서 설정을
+          반영한다(53차 QA: 이전엔 완전히 무관했음) */}
+      <DashboardWidgets data={data} />
     </div>
   )
 }
