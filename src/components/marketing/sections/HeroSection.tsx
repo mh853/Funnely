@@ -62,8 +62,11 @@ export default function HeroSection() {
           >
             DB 마케팅은
             <br />
+            {/* 모바일 좁은 화면에서 "한 번에!"가 자연 줄바꿈으로 "한"/"번에!"로
+                쪼개지는 것을 막기 위한 의도된 줄바꿈 - sm 이상에서는 숨겨 기존
+                2줄 레이아웃 유지 */}
             <span className="bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
-              퍼널리에서 한 번에!
+              퍼널리에서<br className="sm:hidden" /> 한 번에!
             </span>
           </motion.h1>
 
