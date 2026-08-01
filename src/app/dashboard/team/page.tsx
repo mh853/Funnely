@@ -2,6 +2,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TeamMembersList from '@/components/team/TeamMembersList'
 import InviteUserButton from '@/components/users/InviteUserButton'
+import PendingInvitations from '@/components/team/PendingInvitations'
 
 export default async function TeamPage() {
   const supabase = await createClient()
@@ -40,6 +41,17 @@ export default async function TeamPage() {
     .select('*')
     .eq('company_id', userProfile.company_id)
     .order('created_at', { ascending: false })
+
+  // 대기중인 초대 - 관리자가 볼/취소할 방법이 지금까지 없어 실수로 만든 초대가
+  // 만료(48시간)될 때까지 좌석을 잠그고 있어도 풀 수 없었다(51차 QA)
+  const { data: pendingInvitations } = canManage
+    ? await supabase
+        .from('company_invitations')
+        .select('id, email, role, department, invitation_code, expires_at, created_at')
+        .eq('company_id', userProfile.company_id)
+        .eq('status', 'pending')
+        .order('created_at', { ascending: false })
+    : { data: null }
 
   // Get unique departments for autocomplete
   const existingDepartments = Array.from(
@@ -97,6 +109,11 @@ export default async function TeamPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Pending Invitations */}
+      {canManage && pendingInvitations && pendingInvitations.length > 0 && (
+        <PendingInvitations invitations={pendingInvitations} canManage={canManage} />
       )}
 
       {/* Team Members List */}
