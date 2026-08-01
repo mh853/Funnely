@@ -188,6 +188,12 @@ export default function NewSubscriptionClient({
     currentSubscription?.current_period_end !== null &&
     currentSubscription.current_period_end > new Date().toISOString()
 
+  // 결제 실패로 유예기간(past_due) 중인 상태 - trial/cancelled와 동일하게 자신의 현재
+  // 플랜 버튼이 disabled로 잠겨 있으면 카드 문제를 해결한 뒤에도 스스로 재결제를 시도할
+  // 방법이 없다(56차 QA 확인: handleSelectPlan의 재결제 분기는 이미 구현돼 있었으나
+  // 정작 그 분기로 가는 버튼만 막혀 있었음)
+  const isPastDue = currentSubscription?.status === 'past_due'
+
   // 빌링키 등록 여부: 현재 구독 또는 회사 다른 구독에 빌링키가 있으면 재사용 가능
   const hasBillingKey = !!currentSubscription?.billing_key || !!companyBillingKeySubscriptionId
 
@@ -590,9 +596,16 @@ export default function NewSubscriptionClient({
     setCardChanging(true)
     try {
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+      // 연체(past_due) 상태에서 mode=update로 카드만 바꾸면 billing-success 페이지가
+      // 즉시 결제(Step 2)를 건너뛰어, 새 카드를 등록해도 구독은 여전히 past_due로
+      // 남고 그대로 유예기간 만료까지 흘러갔다(56차 QA 확인) - 연체 중일 때는
+      // mode를 생략해 카드 등록 직후 밀린 결제를 즉시 재시도하도록 한다.
+      const successUrl = isPastDue
+        ? `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`
+        : `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}&mode=update`
       await tossPayments.requestBillingAuth('카드', {
         customerKey: companyId,
-        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}&mode=update`,
+        successUrl,
         failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
       })
       setCardChanging(false)
@@ -648,6 +661,8 @@ export default function NewSubscriptionClient({
     if (isCurrentPlan && isCurrentlyOnTrial) return hasBillingKey ? '지금 결제하기' : '결제하여 구독 시작'
     // 취소했지만 기간이 남은 플랜: 재구독 허용 (disabled 아님)
     if (isCurrentPlan && isCancelledWithValidAccess) return '재구독하기'
+    // 결제 실패로 유예기간 중인 플랜: 재결제 허용 (disabled 아님)
+    if (isCurrentPlan && isPastDue) return hasBillingKey ? '결제 재시도' : '결제 정보 등록'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
@@ -935,7 +950,7 @@ export default function NewSubscriptionClient({
           // 이미 선택(가입)한 플랜이 있으면 "추천" 강조는 의미가 없으므로, 현재 플랜
           // 강조만 남기고 추천 배지는 신규 사용자(구독이 아예 없는 경우)에게만 보여준다.
           const isRecommended = !currentSubscription && plan.sort_order === 3
-          const canReactivate = isCurrentPlan && isCancelledWithValidAccess
+          const canReactivate = isCurrentPlan && (isCancelledWithValidAccess || isPastDue)
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
           const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
