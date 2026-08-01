@@ -17,6 +17,31 @@ interface ReportsPageProps {
   }>
 }
 
+// "전체" 기간 조회는 날짜 범위로 제한되지 않아 PostgREST의 암묵적 max_rows(1000) 캡에
+// 걸리면 오래된 데이터가 조용히 누락된다(leads/export/route.ts와 동일한 패턴, 54차 QA
+// 확인). 월별 조회는 이미 날짜 범위로 좁혀져 있어 그대로 단건 조회하고, "전체"일 때만
+// range()로 배치 반복 조회해 진짜 전체 데이터를 가져온다.
+async function fetchAllIfNeeded(query: any, batchAll: boolean): Promise<any[]> {
+  if (!batchAll) {
+    const { data } = await query
+    return data || []
+  }
+
+  const BATCH_SIZE = 1000 // PostgREST max_rows와 동일하게 맞춤
+  const MAX_TOTAL_ROWS = 20000 // 메모리/응답시간 보호용 상한
+
+  const all: any[] = []
+  let offset = 0
+  while (true) {
+    const { data: batch } = await query.range(offset, offset + BATCH_SIZE - 1)
+    if (!batch || batch.length === 0) break
+    all.push(...batch)
+    if (batch.length < BATCH_SIZE || all.length >= MAX_TOTAL_ROWS) break
+    offset += BATCH_SIZE
+  }
+  return all
+}
+
 export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const supabase = await createClient()
   const params = await searchParams
@@ -110,16 +135,19 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     paymentQuery = paymentQuery.gte('leads.created_at', queryStart).lt('leads.created_at', queryEnd)
   }
 
+  // range() 배치 조회가 안정적으로 겹치거나 빠지는 행 없이 나뉘려면 정렬 기준이 있어야 한다
+  paymentQuery = paymentQuery.order('id', { ascending: true })
+
   // 팀원/리드/결제/상태분류 조회는 서로 무관하므로 병렬로 실행
-  const [{ data: teamMembers }, { data: allLeads }, { data: paymentData }, leadStatusCategoryMap] = await Promise.all([
+  const [{ data: teamMembers }, allLeads, paymentData, leadStatusCategoryMap] = await Promise.all([
     supabase
       .from('users')
       .select('id, full_name, department')
       .eq('company_id', userProfile.company_id)
       .eq('is_active', true)
       .order('full_name'),
-    leadsQuery,
-    paymentQuery,
+    fetchAllIfNeeded(leadsQuery, isAllMonths),
+    fetchAllIfNeeded(paymentQuery, isAllMonths),
     getLeadStatusCategoryMap(supabase, userProfile.company_id),
   ])
 
