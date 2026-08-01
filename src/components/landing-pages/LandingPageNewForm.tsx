@@ -2644,7 +2644,7 @@ export default function LandingPageNewForm({
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
-              동의 내용 수정
+              기본 문구 설정
             </Link>
           </div>
 
@@ -2668,7 +2668,7 @@ export default function LandingPageNewForm({
                 onClick={() => setShowPrivacyModal(true)}
                 className="text-sm text-indigo-600 underline ml-8 sm:ml-0"
               >
-                내용 미리보기
+                내용 확인/수정
               </button>
             </div>
 
@@ -2691,7 +2691,7 @@ export default function LandingPageNewForm({
                 onClick={() => setShowMarketingModal(true)}
                 className="text-sm text-indigo-600 underline ml-8 sm:ml-0"
               >
-                내용 미리보기
+                내용 확인/수정
               </button>
             </div>
           </div>
@@ -3318,18 +3318,26 @@ export default function LandingPageNewForm({
               </button>
             </div>
             <div className="p-6">
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
-                  {privacyContent || '개인정보 수집·이용 동의 내용이 설정되지 않았습니다.\n설정 페이지에서 내용을 입력해주세요.'}
-                </pre>
-              </div>
+              {/* 이전엔 읽기전용 <pre>였고 회사 기본 문구를 고쳐도 이미 저장된
+                  랜딩페이지에는 반영할 UI 수단이 전혀 없었다(53차 QA) - 직접 편집
+                  가능하게 하고, 이 페이지의 "저장" 버튼을 눌러야 실제로 반영된다 */}
+              <textarea
+                value={privacyContent}
+                onChange={(e) => setPrivacyContent(e.target.value)}
+                rows={12}
+                placeholder="개인정보 수집·이용 동의 내용을 입력해주세요."
+                className="w-full text-sm text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                여기서 수정한 내용은 이 랜딩페이지에만 적용되며, 페이지 하단 &quot;저장&quot;을 눌러야 반영됩니다.
+              </p>
             </div>
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end">
               <button
                 onClick={() => setShowPrivacyModal(false)}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
               >
-                확인
+                완료
               </button>
             </div>
           </div>
@@ -3352,18 +3360,23 @@ export default function LandingPageNewForm({
               </button>
             </div>
             <div className="p-6">
-              <div className="prose prose-sm max-w-none">
-                <pre className="whitespace-pre-wrap font-sans text-sm text-gray-700 leading-relaxed">
-                  {marketingContent || '마케팅 활용 동의 내용이 설정되지 않았습니다.\n설정 페이지에서 내용을 입력해주세요.'}
-                </pre>
-              </div>
+              <textarea
+                value={marketingContent}
+                onChange={(e) => setMarketingContent(e.target.value)}
+                rows={12}
+                placeholder="마케팅 활용 동의 내용을 입력해주세요."
+                className="w-full text-sm text-gray-700 leading-relaxed border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              />
+              <p className="mt-2 text-xs text-gray-500">
+                여기서 수정한 내용은 이 랜딩페이지에만 적용되며, 페이지 하단 &quot;저장&quot;을 눌러야 반영됩니다.
+              </p>
             </div>
             <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex justify-end">
               <button
                 onClick={() => setShowMarketingModal(false)}
                 className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
               >
-                확인
+                완료
               </button>
             </div>
           </div>
