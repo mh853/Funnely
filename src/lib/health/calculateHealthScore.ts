@@ -207,11 +207,15 @@ export async function calculateProductUsageScore(
     .select('*', { count: 'exact', head: true })
     .eq('company_id', companyId)
 
+  // status='published'만으로는 타이머 만료로 자동 비활성화된(is_active=false)
+  // 페이지까지 "활성"으로 오집계한다 - 실제 "라이브" 판정은 앱 전역(middleware.ts,
+  // landing-pages/route.ts)에서 항상 두 컬럼을 함께 확인한다(54차 QA 라이브 확인)
   const { count: activeLandingPages } = await supabase
     .from('landing_pages')
     .select('*', { count: 'exact', head: true })
     .eq('company_id', companyId)
     .eq('status', 'published')
+    .eq('is_active', true)
 
   // Get leads count
   const { count: totalLeads } = await supabase
@@ -335,15 +339,66 @@ export async function calculateSupportScore(
   const riskFactors: RiskFactor[] = []
   const recommendations: Recommendation[] = []
 
-  // Note: Support ticket system not implemented yet
-  // For now, return perfect score with note
-  const score = 100
+  // 이 함수가 "고객지원 시스템 미구현"이라며 무조건 100점을 반환하고 있었으나
+  // support_tickets는 실제로 정식 운영 중인 테이블이다(54차 QA: 미해결 티켓
+  // 223일 방치 사례에도 support_score=100 고정으로 산출되던 것을 라이브로 확인).
+  const { data: openTickets } = await supabase
+    .from('support_tickets')
+    .select('id, priority, created_at')
+    .eq('company_id', companyId)
+    .in('status', ['open', 'in_progress'])
 
-  // When support system is implemented, check:
-  // - Open ticket count
-  // - Average resolution time
-  // - Critical issue count
-  // - Customer satisfaction scores
+  let score = 100
+  const openCount = openTickets?.length ?? 0
+
+  if (openCount > 0) {
+    score -= Math.min(40, openCount * 10)
+
+    const now = Date.now()
+    const oldestOpenDays = Math.max(
+      ...(openTickets as any[]).map((t) =>
+        Math.floor((now - new Date(t.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      )
+    )
+
+    if (oldestOpenDays >= 14) {
+      score -= 20
+      riskFactors.push({
+        type: 'support_ticket_stale',
+        severity: 'high',
+        description: `${oldestOpenDays}일간 미해결된 문의가 있음`,
+        impact: '고객 불만 누적 및 이탈 위험',
+      })
+      recommendations.push({
+        priority: 'high',
+        action: '장기 미해결 문의 우선 처리',
+        rationale: '오래 방치된 문의는 이탈 위험을 높임',
+        expected_impact: '고객 만족도 회복',
+      })
+    }
+
+    const urgentCount = (openTickets as any[]).filter((t) => t.priority === 'urgent').length
+    if (urgentCount > 0) {
+      score -= 15
+      riskFactors.push({
+        type: 'support_ticket_urgent',
+        severity: 'critical',
+        description: `긴급 문의 ${urgentCount}건 미해결`,
+        impact: '즉각 대응 필요',
+      })
+    }
+
+    if (openCount >= 3) {
+      riskFactors.push({
+        type: 'support_ticket_backlog',
+        severity: 'medium',
+        description: `미해결 문의 ${openCount}건`,
+        impact: '고객 만족도 저하 위험',
+      })
+    }
+  }
+
+  score = Math.max(0, Math.min(100, score))
 
   return {
     score,
