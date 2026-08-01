@@ -45,13 +45,42 @@ export async function GET(request: NextRequest) {
     else if (status === 'inactive') baseQuery = baseQuery.eq('is_active', false)
     else if (status === 'withdrawn') baseQuery = baseQuery.not('withdrawn_at', 'is', null)
 
-    const { data: companies, count, error } = await baseQuery
-      .order(sortColumn, { ascending: sortOrder === 'asc' })
-      .range(fetchAll ? 0 : offset, fetchAll ? 999 : offset + limit - 1)
+    const orderedQuery = baseQuery.order(sortColumn, { ascending: sortOrder === 'asc' })
 
-    if (error) {
-      console.error('[Companies API] Query error:', error)
-      return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
+    let companies: any[] | null
+    let count: number | null
+
+    if (fetchAll) {
+      // range(0,999) 상한 하나로는 필터에 맞는 회사가 1000개를 넘으면 조용히 잘린다
+      // (leads/export, DB리포트 등과 동일한 PostgREST max_rows 캡 패턴, 55차 QA 확인) -
+      // 배치 반복으로 진짜 전체를 가져온다.
+      const BATCH_SIZE = 1000
+      const MAX_TOTAL_ROWS = 20000 // 메모리/응답시간 보호용 상한
+      const all: any[] = []
+      let fetchOffset = 0
+      let totalCount = 0
+      while (true) {
+        const { data: batch, count: batchCount, error: batchError } = await orderedQuery.range(fetchOffset, fetchOffset + BATCH_SIZE - 1)
+        if (batchError) {
+          console.error('[Companies API] Query error:', batchError)
+          return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
+        }
+        totalCount = batchCount ?? totalCount
+        if (!batch || batch.length === 0) break
+        all.push(...batch)
+        if (batch.length < BATCH_SIZE || all.length >= MAX_TOTAL_ROWS) break
+        fetchOffset += BATCH_SIZE
+      }
+      companies = all
+      count = totalCount
+    } else {
+      const { data, count: singleCount, error } = await orderedQuery.range(offset, offset + limit - 1)
+      if (error) {
+        console.error('[Companies API] Query error:', error)
+        return NextResponse.json({ error: 'Failed to fetch companies' }, { status: 500 })
+      }
+      companies = data
+      count = singleCount
     }
 
     if (!companies || companies.length === 0) {
