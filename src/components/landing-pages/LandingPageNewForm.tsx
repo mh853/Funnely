@@ -46,12 +46,30 @@ import {
 } from '@heroicons/react/24/outline'
 import type { CompanyCustomDomain } from '@/types/custom-domain.types'
 
+// PublicLandingPage의 getEffectiveDeadlineMs와 동일한 로직 - "자동 마감일 업데이트"가
+// 켜져 있으면 지난 마감일을 autoUpdateDays 간격으로 계속 미래까지 이월시켜 계산해야
+// 공개 페이지와 같은 만료 판정이 된다. 이 계산 없이는 에디터가 "이미 지난" 원래
+// 마감일만 보고 자동갱신 페이지를 실수로 자동 비활성화하거나 만료 배너를 잘못 띄웠다.
+const getEffectiveDeadlineMs = (deadline: string, autoUpdate: boolean, autoUpdateDays: number): number => {
+  const original = new Date(deadline).getTime()
+  if (!autoUpdate) return original
+
+  const intervalMs = (autoUpdateDays || 1) * 24 * 60 * 60 * 1000
+  if (intervalMs <= 0) return original
+
+  const now = Date.now()
+  if (original > now) return original
+
+  const cyclesPassed = Math.floor((now - original) / intervalMs) + 1
+  return original + cyclesPassed * intervalMs
+}
+
 // Timer calculation utility
-const calculateTimeRemaining = (deadline: string): string => {
+const calculateTimeRemaining = (deadline: string, autoUpdate = false, autoUpdateDays = 1): string => {
   if (!deadline) return 'D-0일 00:00:00'
 
   const now = new Date().getTime()
-  const target = new Date(deadline).getTime()
+  const target = getEffectiveDeadlineMs(deadline, autoUpdate, autoUpdateDays)
   const diff = target - now
 
   if (diff <= 0) return 'D-0일 00:00:00'
@@ -65,8 +83,10 @@ const calculateTimeRemaining = (deadline: string): string => {
 }
 
 // Check if timer has expired
-const isTimerExpired = (deadline: string | null): boolean => {
+const isTimerExpired = (deadline: string | null, autoUpdate = false, autoUpdateDays = 1): boolean => {
   if (!deadline) return false
+  // 자동 갱신이 켜져 있으면 유효 마감일이 항상 미래로 이월되므로 절대 "만료"로 취급하지 않는다
+  if (autoUpdate) return false
 
   const now = new Date().getTime()
   const target = new Date(deadline).getTime()
@@ -398,15 +418,15 @@ export default function LandingPageNewForm({
     }
 
     // Update immediately
-    setTimerCountdown(calculateTimeRemaining(timerDeadline))
+    setTimerCountdown(calculateTimeRemaining(timerDeadline, timerAutoUpdate, timerAutoUpdateDays))
 
     // Then update every second
     const interval = setInterval(() => {
-      setTimerCountdown(calculateTimeRemaining(timerDeadline))
+      setTimerCountdown(calculateTimeRemaining(timerDeadline, timerAutoUpdate, timerAutoUpdateDays))
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [timerEnabled, timerDeadline])
+  }, [timerEnabled, timerDeadline, timerAutoUpdate, timerAutoUpdateDays])
 
   // Auto-disable landing page when timer expires
   useEffect(() => {
@@ -414,7 +434,7 @@ export default function LandingPageNewForm({
     if (!timerEnabled || !timerDeadline || !isActive || !landingPage?.id) return
 
     // Check if timer has expired
-    if (isTimerExpired(timerDeadline)) {
+    if (isTimerExpired(timerDeadline, timerAutoUpdate, timerAutoUpdateDays)) {
       // Auto-disable the landing page
       const autoDisable = async () => {
         try {
@@ -443,7 +463,7 @@ export default function LandingPageNewForm({
 
       autoDisable()
     }
-  }, [landingPage?.id, timerEnabled, timerDeadline, isActive])
+  }, [landingPage?.id, timerEnabled, timerDeadline, isActive, timerAutoUpdate, timerAutoUpdateDays])
 
   // Load privacy policy content
   useEffect(() => {
@@ -1632,7 +1652,7 @@ export default function LandingPageNewForm({
             <button
               onClick={() => {
                 // Prevent activation if timer is expired
-                if (!isActive && timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
+                if (!isActive && timerEnabled && timerDeadline && isTimerExpired(timerDeadline, timerAutoUpdate, timerAutoUpdateDays)) {
                   toast.error('타이머가 마감되었습니다. 먼저 타이머 설정을 변경해주세요.')
                   return
                 }
@@ -2344,7 +2364,7 @@ export default function LandingPageNewForm({
                   type="radio"
                   checked={timerEnabled}
                   onChange={() => {
-                    if (!timerEnabled && timerDeadline && isTimerExpired(timerDeadline)) {
+                    if (!timerEnabled && timerDeadline && isTimerExpired(timerDeadline, timerAutoUpdate, timerAutoUpdateDays)) {
                       toast.error('마감된 날짜입니다. 새로운 마감 날짜를 설정해주세요.')
                     }
                     setTimerEnabled(true)
@@ -2386,7 +2406,7 @@ export default function LandingPageNewForm({
           )}
 
           {/* 타이머 만료 알림 */}
-          {timerEnabled && timerDeadline && isTimerExpired(timerDeadline) && (
+          {timerEnabled && timerDeadline && isTimerExpired(timerDeadline, timerAutoUpdate, timerAutoUpdateDays) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <div className="flex items-center gap-2 text-red-600">
                 <svg className="w-5 h-5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
