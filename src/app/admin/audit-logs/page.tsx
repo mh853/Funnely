@@ -214,7 +214,7 @@ export default function AuditLogsPage() {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* 검색 */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -252,6 +252,29 @@ export default function AuditLogsPage() {
               <option value="user.update">사용자 수정</option>
               <option value="lead.export">리드 내보내기</option>
               <option value="admin.login">관리자 로그인</option>
+            </select>
+          </div>
+
+          {/* 대상 타입 - state/API 연동은 있었지만 이 입력 UI 자체가 없어 절대 동작
+              안 하던 죽은 필터였다(51차 QA) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Building2 className="w-4 h-4 inline mr-1" />
+              대상 타입
+            </label>
+            <select
+              value={filters.entityType}
+              onChange={(e) =>
+                setFilters({ ...filters, entityType: e.target.value })
+              }
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">전체</option>
+              <option value="company">회사</option>
+              <option value="user">사용자</option>
+              <option value="subscription">구독</option>
+              <option value="admin_role">관리자 권한</option>
+              <option value="health_score">헬스 스코어</option>
             </select>
           </div>
 
