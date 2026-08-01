@@ -378,13 +378,20 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         return
       }
 
+      const data = await response.json()
+
       if (!response.ok) {
-        const data = await response.json()
         throw new Error(data.error?.message || '제출에 실패했습니다')
       }
 
+      // 블랙리스트로 조용히 차단된 제출(사용자에게는 정상 성공처럼 200+lead_id:null로
+      // 응답 - 우회 시도 방지를 위해 이 사실을 절대 알리지 않음)도 실제 리드가 생성된
+      // 것처럼 완료 페이지에서 전환 픽셀이 발화되고 있었다(52차 QA 라이브 확인).
+      // 중복 제출과 동일하게 pixel 발화만 억제하고 화면은 동일하게 보여준다.
+      const isBlocked = data?.data?.lead_id === null
+
       // 신청 성공: 완료 페이지로 이동
-      navigateToCompleted()
+      navigateToCompleted(isBlocked)
       return
     } catch (err: any) {
       setSubmitError(err.message)
