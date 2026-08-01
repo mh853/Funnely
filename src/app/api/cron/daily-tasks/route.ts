@@ -418,10 +418,16 @@ async function calculateHealthScores(supabase: any) {
  */
 async function syncGoogleSheets(supabase: any) {
   // Get active sync configs
+  // processSubscriptionRenewals와 동일하게 회사가 비활성화(is_active=false)되거나
+  // 탈퇴(withdrawn_at)했으면 그 회사 시트에서는 더 이상 동기화하면 안 된다 - 이 필터가
+  // 없으면 대시보드 접근이 완전히 막힌 회사라도 시트에 새 행이 있는 한 매일 자동으로
+  // 리드가 계속 생성되고 있었다(56차 QA 라이브 확인).
   const { data: configs, error: configError } = await supabase
     .from('sheet_sync_configs')
-    .select('*')
+    .select('*, companies!inner(is_active, withdrawn_at)')
     .eq('is_active', true)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
 
   if (configError) {
     throw new Error(`Failed to fetch sync configs: ${configError.message}`)
@@ -697,19 +703,37 @@ async function processSubscriptionRenewals(supabase: any) {
   // 해당 회사의 company_subscriptions도 함께 suspended로 바꿔주므로 원래는 이
   // 쿼리에 걸리지 않는다. 그래도 데이터 드리프트(과거 데이터, 수동 DB 편집 등)에
   // 대비해 companies.is_active까지 한 번 더 확인하는 방어선을 둔다.
-  const { data: dueSubs, error } = await supabase
-    .from('company_subscriptions')
-    .select('id, companies!inner(is_active, withdrawn_at)')
-    .eq('status', 'active')
-    .not('billing_key', 'is', null)
-    .lte('current_period_end', now)
-    .eq('companies.is_active', true)
-    .is('companies.withdrawn_at', null)
+  const [activeDueRes, pastDueInGraceRes] = await Promise.all([
+    supabase
+      .from('company_subscriptions')
+      .select('id, companies!inner(is_active, withdrawn_at)')
+      .eq('status', 'active')
+      .not('billing_key', 'is', null)
+      .lte('current_period_end', now)
+      .eq('companies.is_active', true)
+      .is('companies.withdrawn_at', null),
+    // past_due(유예기간) 구독은 최초 결제 실패로 current_period_end가 이미 과거로
+    // 고정된 채 status만 바뀐 것이라 위 쿼리(status='active')에는 절대 걸리지 않는다 -
+    // 그 결과 유예기간 7일 내내 재청구 시도가 단 한 번도 없었다(56차 QA 라이브 확인).
+    // grace_period_end가 아직 지나지 않은 것만 재시도 대상에 포함한다.
+    supabase
+      .from('company_subscriptions')
+      .select('id, companies!inner(is_active, withdrawn_at)')
+      .eq('status', 'past_due')
+      .not('billing_key', 'is', null)
+      .gt('grace_period_end', now)
+      .eq('companies.is_active', true)
+      .is('companies.withdrawn_at', null),
+  ])
 
-  if (error) {
-    console.error('[Renewal] 갱신 대상 구독 조회 실패:', error)
-    return { attempted: 0, succeeded: 0, failed: 0 }
+  if (activeDueRes.error) {
+    console.error('[Renewal] 갱신 대상(active) 구독 조회 실패:', activeDueRes.error)
   }
+  if (pastDueInGraceRes.error) {
+    console.error('[Renewal] 갱신 대상(past_due) 구독 조회 실패:', pastDueInGraceRes.error)
+  }
+
+  const dueSubs = [...(activeDueRes.data || []), ...(pastDueInGraceRes.data || [])]
 
   let succeeded = 0
   let failed = 0
