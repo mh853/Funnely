@@ -159,9 +159,14 @@ export class BulkProcessor {
       }
 
       case 'assign': {
+        // leads.assigned_to는 폐기된 레거시 컬럼 - 단건 배정(/api/leads/update)을
+        // 포함해 이 컬럼에 쓰는 코드 경로가 이거 하나뿐이었고, 정작 대시보드
+        // 표시/필터/자동분배 대상 판정은 전부 call_assigned_to를 기준으로 해서
+        // 이 벌크 작업으로 배정해도 실제 업무 흐름에는 아무 효과가 없었다(52차 QA
+        // 라이브 확인). 실제로 쓰이는 컬럼으로 맞춘다.
         const { error } = await this.supabase
           .from('leads')
-          .update({ assigned_to: parameters.assignee_id })
+          .update({ call_assigned_to: parameters.assignee_id })
           .eq('id', leadId)
         if (error) throw error
         break
