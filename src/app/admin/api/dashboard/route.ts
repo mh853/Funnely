@@ -218,13 +218,17 @@ async function getTopCompanies(supabase: any, thirtyDaysAgo: Date) {
 }
 
 async function getRecentActivities(supabase: any) {
-  const { data: activities } = await supabase
+  // action/description 컬럼은 이 테이블에 존재하지 않는다(실제 컬럼명은
+  // activity_type/activity_description - src/lib/admin/activity-logger.ts가
+  // 실제로 insert하는 컬럼과 일치시킴). error를 확인 안 해 42703 에러가 조용히
+  // 무시되고 항상 빈 목록만 표시되고 있었다(53차 QA 라이브 확인).
+  const { data: activities, error } = await supabase
     .from('company_activity_logs')
     .select(
       `
       id,
-      action,
-      description,
+      activity_type,
+      activity_description,
       created_at,
       companies!inner(name)
     `
@@ -232,12 +236,16 @@ async function getRecentActivities(supabase: any) {
     .order('created_at', { ascending: false })
     .limit(10)
 
+  if (error) {
+    console.error('[Dashboard API] getRecentActivities 조회 실패:', error)
+    return []
+  }
   if (!activities) return []
 
   return activities.map((activity: any) => ({
     id: activity.id,
-    activityType: activity.action,
-    description: activity.description,
+    activityType: activity.activity_type,
+    description: activity.activity_description,
     companyName: activity.companies.name,
     createdAt: activity.created_at,
   }))
