@@ -56,18 +56,38 @@ interface Subscription {
 interface PaymentsClientProps {
   subscription: Subscription | null
   transactions: Transaction[]
+  totalCount: number
   companyId: string
 }
 
 export default function PaymentsClient({
   subscription,
-  transactions,
+  transactions: initialTransactions,
+  totalCount,
   companyId,
 }: PaymentsClientProps) {
   const toast = useToast()
+  const [transactions, setTransactions] = useState(initialTransactions)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null)
   const [showReceiptModal, setShowReceiptModal] = useState(false)
   const [cardChanging, setCardChanging] = useState(false)
+
+  const hasMore = transactions.length < totalCount
+
+  const handleLoadMore = async () => {
+    setLoadingMore(true)
+    try {
+      const res = await fetch(`/api/payments?offset=${transactions.length}`)
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '결제 내역을 더 불러오지 못했습니다.')
+      setTransactions((prev) => [...prev, ...result.transactions])
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : '결제 내역을 더 불러오지 못했습니다.')
+    } finally {
+      setLoadingMore(false)
+    }
+  }
 
   const getStatusBadge = (status: string) => {
     const badges = {
@@ -310,6 +330,17 @@ export default function PaymentsClient({
                 ))}
               </tbody>
             </table>
+          </div>
+        )}
+        {hasMore && (
+          <div className="px-6 py-4 border-t border-gray-200 text-center">
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="text-sm font-medium text-blue-600 hover:text-blue-900 disabled:opacity-50"
+            >
+              {loadingMore ? '불러오는 중...' : `더보기 (전체 ${totalCount}건 중 ${transactions.length}건 표시)`}
+            </button>
           </div>
         )}
       </div>
