@@ -72,6 +72,13 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
 
+  // landing_pages 테이블에 collect_name/collect_phone 컬럼은 실제로 존재하지 않는다 -
+  // 이름/연락처 수집 여부는 collect_fields 배열 안에 type:'name'/'phone' 항목이
+  // 있는지로 판단해야 한다(에디터의 LandingPageNewForm도 동일하게 판단함). 이 값이
+  // 없는 채로 랜딩페이지가 항상 이름/전화번호를 강제로 요구하고 있었다(54차 QA 확인).
+  const collectName = landingPage.collect_fields?.some((f: any) => f.type === 'name') ?? true
+  const collectPhone = landingPage.collect_fields?.some((f: any) => f.type === 'phone') ?? true
+
   // collect_fields에서 커스텀 필드 추출 (short_answer, multiple_choice 타입만)
   const customFields = useMemo(() => {
     if (!landingPage.collect_fields || !Array.isArray(landingPage.collect_fields)) {
@@ -292,11 +299,11 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     setSubmitError(null)
 
     // 필수 필드 검증
-    if (landingPage.collect_name !== false && !nameInput.trim()) {
+    if (collectName && !nameInput.trim()) {
       setSubmitError('이름을 입력해주세요')
       return
     }
-    if (landingPage.collect_phone !== false) {
+    if (collectPhone) {
       const phoneDigits = phoneInput.replace(/[^0-9]/g, '')
       if (!phoneDigits) {
         setSubmitError('전화번호를 입력해주세요')
@@ -513,7 +520,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             </div>
             <div className="p-6 space-y-4">
               {/* Name Field */}
-              {landingPage.collect_name !== false && (
+              {collectName && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     이름 <span className="text-red-500">*</span>
@@ -529,7 +536,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 </div>
               )}
               {/* Phone Field */}
-              {landingPage.collect_phone !== false && (
+              {collectPhone && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     전화번호 <span className="text-red-500">*</span>
@@ -1010,7 +1017,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
             {/* Form Content */}
             <div className="p-6 space-y-4">
               {/* Basic Fields */}
-              {landingPage.collect_name !== false && (
+              {collectName && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     이름 <span className="text-red-500">*</span>
@@ -1026,7 +1033,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
                 </div>
               )}
 
-              {landingPage.collect_phone !== false && (
+              {collectPhone && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     전화번호 <span className="text-red-500">*</span>
