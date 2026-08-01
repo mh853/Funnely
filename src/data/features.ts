@@ -101,10 +101,6 @@ export const features: Feature[] = [
         description: '문의, 상담 신청, 뉴스레터 등 다양한 폼 자동 생성',
       },
       {
-        title: 'A/B 테스팅 (PRO)',
-        description: '여러 버전 테스트로 최고 성과 페이지 발견',
-      },
-      {
         title: 'SEO 최적화',
         description: '메타 태그, Open Graph 설정',
       },
@@ -131,7 +127,7 @@ export const features: Feature[] = [
 
     pricingCallout: {
       message: '이 기능은 베이직 플랜과 프로 플랜 모두에서 사용 가능합니다',
-      note: '프로 플랜에서는 A/B 테스팅 및 무제한 페이지 생성이 가능합니다',
+      note: '프로 플랜에서는 무제한 페이지 생성이 가능합니다',
     },
 
     relatedFeatures: [
@@ -201,7 +197,7 @@ export const features: Feature[] = [
     featuresDetail: [
       {
         title: '커스텀 필드',
-        description: '업종에 맞는 커스텀 필드 추가 (텍스트, 숫자, 날짜, 선택 등)',
+        description: '업종에 맞는 커스텀 필드 추가 (텍스트, 선택 등)',
       },
       {
         title: '필터 및 검색',
@@ -325,7 +321,7 @@ export const features: Feature[] = [
       },
       {
         title: '커스텀 리포트',
-        description: '원하는 메트릭을 조합하여 커스텀 대시보드 생성',
+        description: '필요한 지표를 선택해 CSV로 내보내기',
       },
     ],
 
@@ -424,16 +420,8 @@ export const features: Feature[] = [
         description: '어떤 마케팅 채널이 가장 좋은 리드를 가져오는지 분석',
       },
       {
-        title: '예측 분석',
-        description: '과거 데이터 기반으로 다음 달 리드 수 예측',
-      },
-      {
-        title: '커스텀 대시보드',
-        description: '원하는 메트릭을 조합하여 맞춤 대시보드 생성',
-      },
-      {
-        title: 'Excel/PDF 내보내기',
-        description: '리포트를 Excel, PDF로 내보내기 및 공유',
+        title: 'CSV 내보내기',
+        description: '리포트를 CSV로 내보내기 및 공유',
       },
     ],
 
@@ -524,10 +512,6 @@ export const features: Feature[] = [
       {
         title: '일정 템플릿',
         description: '상담 유형별 템플릿으로 빠른 일정 생성',
-      },
-      {
-        title: '모바일 앱',
-        description: 'iOS/Android 앱으로 이동 중에도 일정 확인',
       },
     ],
 
@@ -637,10 +621,6 @@ export const features: Feature[] = [
         title: '팀 대시보드',
         description: '팀 성과, 리드 현황, 목표 달성률 한눈에 확인',
       },
-      {
-        title: '감사 로그',
-        description: '모든 변경 사항과 접근 기록 추적 (PRO)',
-      },
     ],
 
     useCases: [
@@ -656,7 +636,7 @@ export const features: Feature[] = [
 
     pricingCallout: {
       message: '이 기능은 베이직 플랜과 프로 플랜 모두에서 사용 가능합니다',
-      note: '프로 플랜에서는 감사 로그 및 고급 권한 관리 기능을 제공합니다',
+      note: '프로 플랜에서는 고급 권한 관리 기능을 제공합니다',
     },
 
     relatedFeatures: [
