@@ -141,7 +141,7 @@ export default function PricingSection() {
               </span>
             </p>
             <p className="mt-6 text-lg leading-8 text-gray-600">
-              언제든 취소 가능 • 취소 후 결제 기간 만료까지 이용 • 만료 후 무료 플랜 전환
+              언제든 취소 가능 • 취소 후 결제 기간 만료까지 이용 • 만료 후 서비스 접근 제한
             </p>
           </div>
 
@@ -270,7 +270,7 @@ export default function PricingSection() {
 
           {/* Footer note */}
           <p className="mt-6 text-center text-sm text-gray-400">
-            취소 시 결제 기간 만료까지 이용 가능 · 만료 후 자동 무료 플랜 전환 • 7일 무료체험은 신용카드 등록 불필요
+            취소 시 결제 기간 만료까지 이용 가능 · 만료 후 서비스 접근 제한 • 7일 무료체험은 신용카드 등록 불필요
           </p>
         </div>
       </section>
