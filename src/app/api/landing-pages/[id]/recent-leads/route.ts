@@ -7,6 +7,7 @@
 // 처리한다.
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 
 function createServiceClient() {
   return createClient(
@@ -20,6 +21,14 @@ export async function GET(
   { params }: { params: { id: string } }
 ) {
   try {
+    // 인증도 요청 제한도 없어 landing page id만 알면 무제한 호출로 서비스 롤 쿼리를
+    // 유발할 수 있었다(56차 QA 라이브 재현) - 형제 엔드포인트(view)와 동일한 IP 기반
+    // 제한을 적용한다.
+    const ip = getClientIp(request)
+    if (!checkRateLimit(`recent-leads:${ip}`, 60, 60 * 60 * 1000)) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
+    }
+
     const supabase = createServiceClient()
 
     const { data: landingPage } = await supabase
