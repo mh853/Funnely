@@ -36,7 +36,9 @@ export function renderTemplate(
  * @returns Array of unique variable names found in the template
  */
 export function extractVariables(template: string): string[] {
-  const regex = /{{\\s*([^}\\s]+)\\s*}}/g
+  // \\s는 정규식 리터럴에서 "리터럴 백슬래시 뒤에 오는 s"를 뜻해 공백 메타문자
+  // \s와 다르다 - 이 오타로 어떤 템플릿을 넣어도 항상 빈 배열을 반환했다(52차 QA)
+  const regex = /{{\s*([^}\s]+)\s*}}/g
   const variables: string[] = []
   let match
 
