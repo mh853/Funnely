@@ -1,5 +1,6 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Script from 'next/script'
 import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 
@@ -14,9 +15,34 @@ interface CompletionTrackerProps {
     karrot_pixel_id?: string
     is_active?: boolean
   }
+  completionToken?: string
 }
 
-export default function CompletionTracker({ trackingPixels }: CompletionTrackerProps) {
+export default function CompletionTracker({ trackingPixels, completionToken }: CompletionTrackerProps) {
+  // 완료 페이지는 제출 성공 시 이동하는 화면이라 새로고침/뒤로가기-앞으로가기/재방문
+  // 시마다 이 컴포넌트가 다시 마운트되고, 그때마다 전환 픽셀이 다시 발화되고 있었다
+  // (54차 QA 라이브 확인). 제출 1건당 고유한 completionToken 단위로 localStorage에
+  // 발화 여부를 남겨, 같은 제출 건에 대한 재방문/새로고침은 재발화하지 않는다.
+  // 토큰이 없는 경우(구버전 링크 등)는 기존과 동일하게 매번 발화한다.
+  const [shouldFire, setShouldFire] = useState(false)
+
+  useEffect(() => {
+    if (!completionToken) {
+      setShouldFire(true)
+      return
+    }
+    try {
+      const key = `funnely_completion_fired_${completionToken}`
+      if (window.localStorage.getItem(key)) return
+      window.localStorage.setItem(key, '1')
+    } catch {
+      // 시크릿 모드 등 localStorage 접근 불가 환경 - dedup 없이 발화(기존 동작과 동일)
+    }
+    setShouldFire(true)
+  }, [completionToken])
+
+  if (!shouldFire) return null
+
   // 회사 소유자가 설정 화면에서 자유 입력한 픽셀 ID를 아래에서 <script> 안에
   // 그대로 문자열 보간하므로, 검증되지 않은 값은 여기서 전부 걸러낸다
   // (저장형 XSS 방지 - DB에는 형식 제약이 없어 여기가 사실상 유일한 방어선이다).

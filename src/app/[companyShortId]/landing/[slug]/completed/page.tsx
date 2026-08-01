@@ -38,10 +38,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CompletedPage({ params, searchParams }: Props) {
   const { companyShortId, slug } = await params
-  const { duplicate } = await searchParams
+  const { duplicate, ct } = await searchParams
   // 409(중복 제출)로 인한 완료 페이지 이동이면 전환 추적 픽셀을 재발화하지 않는다
   // (실제로 존재하지 않는 두 번째 전환이 광고 플랫폼에 집계되는 것 방지)
   const isDuplicate = duplicate === '1'
+  const completionToken = typeof ct === 'string' ? ct : undefined
   const supabase = getServiceRoleClient()
 
   // Fetch company by short_id with tracking_pixels
@@ -95,7 +96,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   return (
     <>
       {/* Tracking Pixels for Completion */}
-      {!isDuplicate && <CompletionTracker trackingPixels={trackingPixels} />}
+      {!isDuplicate && <CompletionTracker trackingPixels={trackingPixels} completionToken={completionToken} />}
 
       <div
         className="min-h-screen flex items-center justify-center px-4"

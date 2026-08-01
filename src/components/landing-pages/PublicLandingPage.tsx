@@ -270,7 +270,14 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
     const completedPath = currentPath.endsWith('/')
       ? `${currentPath}completed`
       : `${currentPath}/completed`
-    window.location.replace(isDuplicate ? `${completedPath}?duplicate=1` : completedPath)
+    if (isDuplicate) {
+      window.location.replace(`${completedPath}?duplicate=1`)
+      return
+    }
+    // 제출 성공마다 고유 토큰을 붙여 완료 페이지가 새로고침/재방문 시 픽셀을
+    // 재발화하지 않도록 한다(54차 QA 라이브 확인: 이 토큰이 없으면 완료 페이지를
+    // 새로고침할 때마다 전환 픽셀이 매번 다시 발화되고 있었음)
+    window.location.replace(`${completedPath}?ct=${crypto.randomUUID()}`)
   }, [])
 
   useEffect(() => {
