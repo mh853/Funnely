@@ -176,7 +176,10 @@ export default function NewSubscriptionClient({
   // 기존 사용자 여부: 체험 이력, trial 중, 만료/취소, 또는 현재 유료 플랜 이용 중
   const hasUsedTrial = currentSubscription?.has_used_trial === true
   const isCurrentlyOnTrial = currentSubscription?.status === 'trial'
-  const hasPreviousSubscription = ['expired', 'cancelled', 'canceled', 'past_due'].includes(
+  // suspended(관리자 정지)도 포함 - 안 그러면 정지 해제된 회사가 기존 빌링키로
+  // 재구독하는 경로가 없어 hasBillingKey여도 아래쪽 "구독 자체가 새로 생기는" 분기로
+  // 잘못 빠진다(59차 QA 확인, High)
+  const hasPreviousSubscription = ['expired', 'cancelled', 'canceled', 'past_due', 'suspended'].includes(
     currentSubscription?.status ?? ''
   )
   const isExistingUser = hasUsedTrial || isCurrentlyOnTrial || hasPreviousSubscription || isActivePaidUser
@@ -185,6 +188,15 @@ export default function NewSubscriptionClient({
   // 되돌리는 "재구독"이 가능하다 (다른 플랜으로 바꾸는 것과는 다른 흐름)
   const isCancelledWithValidAccess =
     currentSubscription?.status === 'cancelled' &&
+    currentSubscription?.current_period_end !== null &&
+    currentSubscription.current_period_end > new Date().toISOString()
+
+  // 관리자가 정지(suspended)했지만 이미 결제한 기간이 아직 남아있는 상태 - suspended를
+  // hasPreviousSubscription에 포함시키면서(59차 QA) 아무 조건 없이 두면 같은 플랜을
+  // 다시 고를 때 convert-trial 경로(즉시 실제 결제)로 빠져 이미 결제한 기간을 이중
+  // 청구하게 된다 - cancelled와 동일하게 새로 결제하지 않는 별도 흐름이 필요하다.
+  const isSuspendedWithValidAccess =
+    currentSubscription?.status === 'suspended' &&
     currentSubscription?.current_period_end !== null &&
     currentSubscription.current_period_end > new Date().toISOString()
 
@@ -324,8 +336,11 @@ export default function NewSubscriptionClient({
           currentSubscription.subscription_plans.id === plan.id &&
           currentSubscription.billing_cycle === billingCycle
 
-        if (currentSubscription.status === 'cancelled' && isCancelledWithValidAccess && isSamePlanAndCycle) {
-          // 재구독: 이미 결제한 기간이 남아있으므로 새로 결제하지 않고 취소만 되돌린다
+        if (
+          (isCancelledWithValidAccess || isSuspendedWithValidAccess) &&
+          isSamePlanAndCycle
+        ) {
+          // 재구독: 이미 결제한 기간이 남아있으므로 새로 결제하지 않고 취소/정지만 되돌린다
           const res = await fetch('/api/subscription/reactivate', { method: 'POST' })
           if (!res.ok) {
             const err = await res.json()
@@ -690,8 +705,8 @@ export default function NewSubscriptionClient({
     if (loading && selectedPlan?.id === plan.id) return '처리 중...'
     // 체험 중 플랜: 결제 전환 허용 (disabled 아님)
     if (isCurrentPlan && isCurrentlyOnTrial) return hasBillingKey ? '지금 결제하기' : '결제하여 구독 시작'
-    // 취소했지만 기간이 남은 플랜: 재구독 허용 (disabled 아님)
-    if (isCurrentPlan && isCancelledWithValidAccess) return '재구독하기'
+    // 취소/정지됐지만 기간이 남은 플랜: 재구독 허용 (disabled 아님)
+    if (isCurrentPlan && (isCancelledWithValidAccess || isSuspendedWithValidAccess)) return '재구독하기'
     // 결제 실패로 유예기간 중인 플랜: 재결제 허용 (disabled 아님)
     if (isCurrentPlan && isPastDue) return hasBillingKey ? '결제 재시도' : '결제 정보 등록'
     if (isCurrentPlan) return '현재 사용 중'
@@ -981,7 +996,8 @@ export default function NewSubscriptionClient({
           // 이미 선택(가입)한 플랜이 있으면 "추천" 강조는 의미가 없으므로, 현재 플랜
           // 강조만 남기고 추천 배지는 신규 사용자(구독이 아예 없는 경우)에게만 보여준다.
           const isRecommended = !currentSubscription && plan.sort_order === 3
-          const canReactivate = isCurrentPlan && (isCancelledWithValidAccess || isPastDue)
+          const canReactivate =
+            isCurrentPlan && (isCancelledWithValidAccess || isSuspendedWithValidAccess || isPastDue)
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
           const isFree = plan.name === 'Free' && plan.price_monthly === 0
 

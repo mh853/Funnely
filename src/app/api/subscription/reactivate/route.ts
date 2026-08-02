@@ -1,5 +1,5 @@
-// 구독 재개 API - 취소했지만 이미 결제한 기간이 남아있는 구독을 다시 active로 되돌린다.
-// (새로 결제하지 않는다 - 이미 그 기간만큼 결제되어 있기 때문)
+// 구독 재개 API - 취소했거나 관리자가 정지했지만 이미 결제한 기간이 남아있는 구독을
+// 다시 active로 되돌린다. (새로 결제하지 않는다 - 이미 그 기간만큼 결제되어 있기 때문)
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { pickCurrentSubscription } from '@/lib/subscription-current'
@@ -37,8 +37,8 @@ export async function POST() {
   const candidates: any[] = candidateSubs ?? []
   const subscription = pickCurrentSubscription(candidates)
 
-  if (!subscription || subscription.status !== 'cancelled') {
-    return NextResponse.json({ error: '재구독할 취소된 구독이 없습니다.' }, { status: 400 })
+  if (!subscription || (subscription.status !== 'cancelled' && subscription.status !== 'suspended')) {
+    return NextResponse.json({ error: '재구독할 취소/정지된 구독이 없습니다.' }, { status: 400 })
   }
 
   const now = new Date().toISOString()
@@ -48,6 +48,8 @@ export async function POST() {
       { status: 400 }
     )
   }
+
+  const wasSuspended = subscription.status === 'suspended'
 
   const { error: updateError } = await db
     .from('company_subscriptions')
@@ -62,7 +64,7 @@ export async function POST() {
     company_id: profile.company_id,
     user_id: user.id,
     activity_type: 'subscription_reactivated',
-    activity_description: '취소된 구독 재개',
+    activity_description: wasSuspended ? '정지된 구독 재개' : '취소된 구독 재개',
     metadata: { subscription_id: subscription.id },
   })
 
