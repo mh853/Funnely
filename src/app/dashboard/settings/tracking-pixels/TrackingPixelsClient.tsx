@@ -10,11 +10,13 @@ import { isValidPixelId } from '@/lib/utils/tracking-pixels'
 interface TrackingPixelsClientProps {
   companyId: string
   initialData: TrackingPixels | null
+  canEdit: boolean
 }
 
 export default function TrackingPixelsClient({
   companyId,
   initialData,
+  canEdit,
 }: TrackingPixelsClientProps) {
   const supabase = createClient()
   const toast = useToast()
@@ -32,6 +34,8 @@ export default function TrackingPixelsClient({
   const [isActive, setIsActive] = useState(initialData?.is_active ?? true)
 
   const handleSave = async () => {
+    if (!canEdit) return
+
     // 픽셀 ID는 랜딩페이지에서 <script> 안에 그대로 문자열 보간되므로, 저장 시점에
     // 형식을 검증해 따옴표/꺾쇠괄호 등 안전하지 않은 문자가 섞이지 않도록 막는다
     // (렌더링 쪽에도 동일한 화이트리스트 검증이 있지만, 잘못된 값을 애초에 저장하지
@@ -97,6 +101,15 @@ export default function TrackingPixelsClient({
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-100">
+      {/* Permission Warning */}
+      {!canEdit && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mx-6 mt-6 rounded">
+          <p className="text-sm text-yellow-700">
+            픽셀 설정을 수정하려면 관리자 권한이 필요합니다.
+          </p>
+        </div>
+      )}
+
       {/* Info Box */}
       <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mx-6 mt-6 rounded">
         <div className="flex">
@@ -134,7 +147,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setFacebookPixelId(e.target.value)}
             placeholder="예: 123456789012345"
             maxLength={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Meta 이벤트 관리자 {'>'} 데이터 소스 {'>'} 픽셀에서 확인
@@ -160,7 +174,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setGoogleAnalyticsId(e.target.value)}
             placeholder="예: G-XXXXXXXXXX"
             maxLength={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Google Analytics {'>'} 관리 {'>'} 데이터 스트림에서 확인
@@ -183,7 +198,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setGoogleAdsId(e.target.value)}
             placeholder="예: AW-123456789"
             maxLength={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Google Ads {'>'} 도구 및 설정 {'>'} 전환에서 확인
@@ -206,7 +222,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setKakaoPixelId(e.target.value)}
             placeholder="예: 1234567890"
             maxLength={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Kakao Moment {'>'} 픽셀 관리에서 확인
@@ -229,7 +246,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setNaverPixelId(e.target.value)}
             placeholder="예: s_123abc"
             maxLength={20}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             네이버 검색광고 {'>'} 도구 {'>'} 전환추적에서 확인
@@ -252,7 +270,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setTiktokPixelId(e.target.value)}
             placeholder="예: C1234ABCD5EFGH67IJKL"
             maxLength={30}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             TikTok Ads Manager {'>'} Assets {'>'} Events에서 확인
@@ -275,7 +294,8 @@ export default function TrackingPixelsClient({
             onChange={(e) => setKarrotPixelId(e.target.value)}
             placeholder="예: karrot_12345"
             maxLength={30}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             당근마켓 비즈니스 {'>'} 광고 관리 {'>'} 전환 추적에서 확인
@@ -293,7 +313,8 @@ export default function TrackingPixelsClient({
           <button
             type="button"
             onClick={() => setIsActive(!isActive)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+            disabled={!canEdit}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
               isActive ? 'bg-indigo-600' : 'bg-gray-200'
             }`}
           >
@@ -310,7 +331,7 @@ export default function TrackingPixelsClient({
       <div className="px-6 pb-6">
         <button
           onClick={handleSave}
-          disabled={saving}
+          disabled={saving || !canEdit}
           className="w-full px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-600 hover:to-purple-700 transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {saving ? (

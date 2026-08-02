@@ -2,6 +2,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import TrackingPixelsClient from './TrackingPixelsClient'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 export default async function TrackingPixelsPage() {
   const supabase = await createClient()
@@ -51,6 +52,7 @@ export default async function TrackingPixelsPage() {
       <TrackingPixelsClient
         companyId={userProfile.company_id}
         initialData={trackingPixels}
+        canEdit={isAdminUser(userProfile)}
       />
     </div>
   )
