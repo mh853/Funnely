@@ -38,6 +38,7 @@ interface CardInfo {
 
 interface Subscription {
   id: string
+  plan_id: string
   status: string
   billing_cycle: string
   trial_end_date: string | null
@@ -45,6 +46,9 @@ interface Subscription {
   billing_key: string | null
   customer_key: string | null
   card_info: CardInfo | null
+  locked_plan_id: string | null
+  locked_price_monthly: number | null
+  locked_price_yearly: number | null
   subscription_plans: {
     name: string
     description: string
@@ -195,9 +199,24 @@ export default function PaymentsClient({
             </div>
             <div className="text-right">
               <p className="text-3xl font-bold">
-                {subscription.billing_cycle === 'monthly'
-                  ? subscription.subscription_plans.price_monthly?.toLocaleString() || '0'
-                  : subscription.subscription_plans.price_yearly?.toLocaleString() || '0'}
+                {(() => {
+                  // 그랜드파더링(61차): locked_plan_id가 현재 plan_id와 일치하면
+                  // 카탈로그 최신가가 아니라 이 값으로 실제 청구된다 - 여기서 항상
+                  // 카탈로그가만 보여주면 같은 앱의 /dashboard/subscription과
+                  // 서로 다른 "내 요금"을 보여주게 된다(65차 QA 확인).
+                  const lockValid =
+                    subscription.locked_plan_id === subscription.plan_id &&
+                    subscription.locked_price_monthly !== null &&
+                    subscription.locked_price_yearly !== null
+                  const price = lockValid
+                    ? subscription.billing_cycle === 'monthly'
+                      ? subscription.locked_price_monthly
+                      : subscription.locked_price_yearly
+                    : subscription.billing_cycle === 'monthly'
+                      ? subscription.subscription_plans.price_monthly
+                      : subscription.subscription_plans.price_yearly
+                  return price?.toLocaleString() || '0'
+                })()}
                 원
               </p>
               <p className="text-sm opacity-90 mt-1">
