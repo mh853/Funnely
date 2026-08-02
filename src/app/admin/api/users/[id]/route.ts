@@ -200,6 +200,56 @@ export async function PATCH(
       )
     }
 
+    // 비활성 사용자를 다시 활성화하는 경우, 좌석 한도(max_users)를 넘기지 않는지
+    // 먼저 확인한다. 초대 수락(company_invitations→users INSERT) 시점엔 이미
+    // advisory-lock 트리거로 보호되지만, "비활성화된 팀원 재활성화"는 INSERT가
+    // 아니라 UPDATE라 그 트리거가 아예 발동하지 않아 전혀 검사되지 않고 있었다
+    // (66차 QA 확인, 실제로 한도 초과 재현됨) - DB 트리거(다른 우회 경로까지
+    // 막는 최후 방어선)를 별도로 추가했지만, 여기서도 미리 확인해 더 친절한
+    // 에러 메시지를 준다.
+    if (is_active === true) {
+      const { data: targetUser } = await supabase
+        .from('users')
+        .select('company_id, is_active')
+        .eq('id', userId)
+        .single()
+
+      if (targetUser && targetUser.is_active === false) {
+        const { data: sub } = await supabase
+          .from('company_subscriptions')
+          .select('status, current_period_end, subscription_plans!plan_id(max_users)')
+          .eq('company_id', targetUser.company_id)
+          .order('created_at', { ascending: false })
+          .limit(10)
+          .then((res: any) => {
+            const rows = (res.data ?? []) as any[]
+            const now = new Date().toISOString()
+            const valid = rows.find(
+              (r) =>
+                ['active', 'trial', 'past_due'].includes(r.status) ||
+                (r.status === 'cancelled' && r.current_period_end > now)
+            )
+            return { data: valid }
+          })
+
+        const maxUsers = sub?.subscription_plans?.max_users ?? 1
+        if (maxUsers !== null) {
+          const { count: activeCount } = await supabase
+            .from('users')
+            .select('id', { count: 'exact', head: true })
+            .eq('company_id', targetUser.company_id)
+            .eq('is_active', true)
+
+          if ((activeCount ?? 0) + 1 > maxUsers) {
+            return NextResponse.json(
+              { error: `좌석 한도(${maxUsers}명)를 초과합니다. 다른 팀원을 먼저 비활성화하거나 플랜을 업그레이드해주세요.` },
+              { status: 409 }
+            )
+          }
+        }
+      }
+    }
+
     // 사용자 상태 업데이트
     const { data, error } = await supabase
       .from('users')
