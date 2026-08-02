@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     // 한도를 기준으로 다시 막아야 한다.
     const { data: subsForSeatCheck } = await supabase
       .from('company_subscriptions')
-      .select('status, current_period_end, trial_end_date, cancelled_at, subscription_plans!plan_id(max_users)')
+      .select('status, current_period_end, trial_end_date, cancelled_at, grace_period_end, subscription_plans!plan_id(max_users)')
       .eq('company_id', invitation.company_id)
       .order('created_at', { ascending: false })
       .limit(10)

@@ -27,7 +27,7 @@ async function hasCustomDomainFeatureAccess(companyId: string): Promise<boolean>
     // company_subscriptions -> subscription_plans FK가 plan_id/pending_plan_id
     // 둘이라 명시적으로 지정해야 한다(안 하면 PostgREST가 모호하다며 에러 반환).
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/company_subscriptions?company_id=eq.${encodeURIComponent(companyId)}&select=status,current_period_end,trial_end_date,cancelled_at,subscription_plans!plan_id(features)&order=created_at.desc&limit=10`,
+      `${supabaseUrl}/rest/v1/company_subscriptions?company_id=eq.${encodeURIComponent(companyId)}&select=status,current_period_end,trial_end_date,cancelled_at,grace_period_end,subscription_plans!plan_id(features)&order=created_at.desc&limit=10`,
       {
         headers: {
           apikey: supabaseServiceKey,

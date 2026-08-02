@@ -10,6 +10,7 @@ export interface SubscriptionCandidate {
   current_period_end: string | null
   trial_end_date: string | null
   cancelled_at: string | null
+  grace_period_end?: string | null
 }
 
 /**
@@ -53,16 +54,27 @@ export function pickCurrentSubscription<T extends SubscriptionCandidate>(
 /**
  * 이 구독이 지금 플랜 기능/한도에 대한 접근 권한을 부여하는지 판단한다.
  *
- * active/trial/past_due는 그대로 인정하고, cancelled는 결제 기간이 아직 남아있는 동안만
- * 인정한다 — 구독 취소는 "다음 결제를 하지 않겠다"는 의미일 뿐, 이미 결제한 기간의
- * 이용 권리를 즉시 박탈하는 것이 아니기 때문이다 (취소 확인 모달에서도 그렇게 안내한다).
+ * active/trial/past_due는 상태값만으로 무조건 인정하고 cancelled만 기간을 봤었는데,
+ * 이러면 trial_end_date/current_period_end가 이미 지났지만 daily-tasks 크론(하루
+ * 1회)이 아직 status를 expired로 안 바꾼 최대 24시간 구간 동안, 대시보드 페이지는
+ * middleware.ts의 별도 인라인 체크(isTrialExpired/isActiveOrPastDueAndExpired)로
+ * 정상 차단되는 반면 이 함수를 쓰는 API 경로(랜딩페이지 생성/팀원 초대/커스텀 도메인
+ * 기능 확인 등)와 미들웨어의 커스텀 도메인 공개 서빙 체크는 여전히 통과시켰다(60차
+ * QA 확인). middleware.ts의 이미 검증된 판정 기준과 동일하게 맞춘다.
  */
 export function hasValidPlanAccess(
   sub: SubscriptionCandidate | null | undefined,
   now: string = new Date().toISOString()
 ): boolean {
   if (!sub) return false
-  if (sub.status === 'active' || sub.status === 'trial' || sub.status === 'past_due') return true
+
+  if (sub.status === 'trial') {
+    return !sub.trial_end_date || !(sub.trial_end_date < now)
+  }
+  if (sub.status === 'active' || sub.status === 'past_due') {
+    if (sub.current_period_end === null || !(sub.current_period_end < now)) return true
+    return !!sub.grace_period_end && !(sub.grace_period_end < now)
+  }
   if (sub.status === 'cancelled') {
     return sub.current_period_end !== null && sub.current_period_end > now
   }
