@@ -126,10 +126,20 @@ export async function POST(request: Request) {
     })
 
     if (!payRes.ok) {
-      // 결제 실패 시 원래 상태로 롤백
+      // 결제 실패 시 원래 상태로 롤백. 단, 위에서 이미 grace_period_end를 지운 채로
+      // active를 시도했다면(rollbackStatus가 past_due가 아니었던 경우) 에지 함수 내부의
+      // markPastDueBeforeTossCall이 이번 실패를 처리하며 grace_period_end를 새로 채워
+      // 넣었을 수 있다 - status만 원복하고 이 값을 그대로 두면, trial/expired/cancelled/
+      // suspended인데 grace_period_end만 남아있는 상태가 되어, 나중에 실제로 past_due에
+      // 진입할 때 isFirstFailure가 "이미 실패한 적 있음"으로 잘못 판정돼 유예기간이
+      // 새로 시작되지 않고 이 stale한 값을 그대로 재사용하게 된다.
+      const rollbackData: Record<string, unknown> = { status: rollbackStatus }
+      if (rollbackStatus !== 'past_due') {
+        rollbackData.grace_period_end = null
+      }
       await svc
         .from('company_subscriptions')
-        .update({ status: rollbackStatus })
+        .update(rollbackData)
         .eq('id', subscriptionId)
 
       // 에지 함수가 JSON이 아닌 응답(게이트웨이 502/504 등)을 줄 수도 있으므로
@@ -147,10 +157,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ success: true })
   } catch (fetchError) {
     // fetch 자체가 실패한 경우(네트워크 오류, 타임아웃 등): best-effort로 원래 상태 롤백
+    // (grace_period_end 처리는 위 !payRes.ok 분기와 동일한 이유로 필요)
     try {
+      const rollbackData: Record<string, unknown> = { status: rollbackStatus }
+      if (rollbackStatus !== 'past_due') {
+        rollbackData.grace_period_end = null
+      }
       await svc
         .from('company_subscriptions')
-        .update({ status: rollbackStatus })
+        .update(rollbackData)
         .eq('id', subscriptionId)
     } catch (rollbackError) {
       // 롤백 실패가 원래 오류를 가리지 않도록 무시
