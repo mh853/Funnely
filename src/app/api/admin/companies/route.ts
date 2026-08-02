@@ -124,6 +124,7 @@ export async function GET(request: NextRequest) {
           .select(`
             id, plan_id, status, billing_cycle, trial_end_date,
             current_period_end, created_at, cancelled_at, company_id,
+            locked_plan_id, locked_price_monthly, locked_price_yearly,
             subscription_plans!plan_id(id, name, price_monthly, price_yearly)
           `)
           .in('company_id', companyIds)
@@ -189,17 +190,28 @@ export async function GET(request: NextRequest) {
           total_users: userCountMap[company.id] || 0,
         },
         subscription: sub
-          ? {
-              plan_name: plan?.name || null,
-              monthly_price: plan?.price_monthly || 0,
-              yearly_price: plan?.price_yearly || 0,
-              billing_cycle: sub.billing_cycle,
-              status: sub.status,
-              trial_end_date: sub.trial_end_date,
-              current_period_end: sub.current_period_end,
-              subscribed_at: sub.created_at,
-              canceled_at: sub.cancelled_at,
-            }
+          ? (() => {
+              // 그랜드파더링(61차): locked_plan_id가 현재 plan_id와 일치하면
+              // 카탈로그 최신가가 아니라 이 값으로 실제 청구된다 - 여기서 항상
+              // 카탈로그가만 반환하면 관리자가 고객에게 실제와 다른 요금을 안내할
+              // 수 있다(63차 QA 확인).
+              const lockValid =
+                sub.locked_plan_id === sub.plan_id &&
+                sub.locked_price_monthly !== null &&
+                sub.locked_price_yearly !== null
+              return {
+                plan_name: plan?.name || null,
+                monthly_price: (lockValid ? sub.locked_price_monthly : plan?.price_monthly) || 0,
+                yearly_price: (lockValid ? sub.locked_price_yearly : plan?.price_yearly) || 0,
+                is_grandfathered: lockValid,
+                billing_cycle: sub.billing_cycle,
+                status: sub.status,
+                trial_end_date: sub.trial_end_date,
+                current_period_end: sub.current_period_end,
+                subscribed_at: sub.created_at,
+                canceled_at: sub.cancelled_at,
+              }
+            })()
           : null,
         payment_stats: {
           total_paid: pm.total_paid,

@@ -25,12 +25,16 @@ function fmtDate(d: string | null | undefined, fmt = 'yyyy-MM-dd') {
 
 interface Subscription {
   id: string
+  plan_id: string
   status: string
   billing_cycle: string
   current_period_start: string
   current_period_end: string
   trial_end: string | null
   cancelled_at: string | null
+  locked_plan_id: string | null
+  locked_price_monthly: number | null
+  locked_price_yearly: number | null
   company: {
     id: string
     name: string
@@ -307,9 +311,37 @@ export default function SubscriptionsPage() {
                         <div>
                           <div className="text-gray-500">요금</div>
                           <div className="font-medium text-gray-900">
-                            {subscription.billing_cycle === 'monthly'
-                              ? `₩${subscription.plan.price_monthly.toLocaleString()}/월`
-                              : `₩${subscription.plan.price_yearly.toLocaleString()}/년`}
+                            {(() => {
+                              // 그랜드파더링(61차): locked_plan_id가 현재 plan_id와
+                              // 일치하면 카탈로그 최신가가 아니라 이 값으로 실제
+                              // 청구된다. 여기서 항상 카탈로그가만 보여주면 관리자가
+                              // 고객에게 실제와 다른 요금을 안내할 수 있다(63차 QA 확인).
+                              const lockValid =
+                                subscription.locked_plan_id === subscription.plan_id &&
+                                subscription.locked_price_monthly !== null &&
+                                subscription.locked_price_yearly !== null
+                              const price = lockValid
+                                ? subscription.billing_cycle === 'monthly'
+                                  ? subscription.locked_price_monthly!
+                                  : subscription.locked_price_yearly!
+                                : subscription.billing_cycle === 'monthly'
+                                  ? subscription.plan.price_monthly
+                                  : subscription.plan.price_yearly
+                              const label = subscription.billing_cycle === 'monthly' ? '/월' : '/년'
+                              return (
+                                <>
+                                  ₩{price.toLocaleString()}{label}
+                                  {lockValid && (
+                                    <span
+                                      className="ml-1 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-xs font-normal text-blue-700"
+                                      title="현재 카탈로그 가격과 다를 수 있는 그랜드파더링(계약 당시 가격) 적용 중"
+                                    >
+                                      계약가
+                                    </span>
+                                  )}
+                                </>
+                              )
+                            })()}
                           </div>
                         </div>
                         <div>

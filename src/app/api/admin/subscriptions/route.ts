@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
       .select(
         `
         id,
+        plan_id,
         status,
         billing_cycle,
         current_period_start,
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
         trial_end_date,
         cancelled_at,
         created_at,
+        locked_plan_id,
+        locked_price_monthly,
+        locked_price_yearly,
         company:companies(id, name, business_number, phone),
         plan:subscription_plans!plan_id(id, name, plan_type, price_monthly, price_yearly, max_users, max_leads)
       `

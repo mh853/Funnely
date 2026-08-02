@@ -19,6 +19,7 @@ interface Company {
     plan_name: string | null
     monthly_price: number
     yearly_price: number
+    is_grandfathered: boolean
     billing_cycle: string
     status: string
     trial_end_date: string | null
@@ -548,7 +549,21 @@ export default function CompaniesPage() {
                         ) : <span className="text-gray-400">-</span>}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-700">
-                        {company.subscription ? `${company.subscription.monthly_price.toLocaleString()}원` : '-'}
+                        {company.subscription ? (
+                          <>
+                            {company.subscription.monthly_price.toLocaleString()}원
+                            {company.subscription.is_grandfathered && (
+                              <span
+                                className="ml-1 inline-block rounded bg-blue-100 px-1.5 py-0.5 text-xs font-normal text-blue-700"
+                                title="현재 카탈로그 가격과 다를 수 있는 그랜드파더링(계약 당시 가격) 적용 중"
+                              >
+                                계약가
+                              </span>
+                            )}
+                          </>
+                        ) : (
+                          '-'
+                        )}
                       </td>
                       <td className="px-4 py-3 text-right text-gray-700">{company.payment_stats.payment_count}회</td>
                       <td className="px-4 py-3 text-right text-gray-700">{company.payment_stats.total_paid.toLocaleString()}원</td>
