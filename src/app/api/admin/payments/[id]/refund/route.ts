@@ -120,20 +120,28 @@ export async function POST(
         .single()
 
       if (currentSub?.plan_id === transaction.plan_id) {
+        // 가격 그랜드파더링 잠금(locked_plan_id/locked_price_*)도 함께 정리해야
+        // 한다 - plan_id만 되돌리고 이 값들을 그대로 두면, 되돌린 이전 플랜과
+        // 잠금이 가리키는 plan_id(업그레이드했던 플랜)가 어긋나 다음 결제 때
+        // 엉뚱한 가격을 참조할 수 있다(62차 QA 확인). company_subscription_price_locks
+        // 이력에 이전 플랜의 원래 잠긴 가격이 기록돼 있으면 그 값으로 정확히
+        // 복원하고, 기록이 없으면(63차 이전에 잠겼던 경우 등) null로 비워 다음
+        // 청구 때 카탈로그 가격으로 새로 잠기도록 한다(과거 가격을 부정확하게
+        // 지어내지 않음, 63차 QA로 이력 테이블 도입해 대부분의 경우 정확히 복원됨).
+        const { data: priceHistory } = await supabase
+          .from('company_subscription_price_locks')
+          .select('price_monthly, price_yearly')
+          .eq('subscription_id', transaction.subscription_id)
+          .eq('plan_id', transaction.previous_plan_id)
+          .maybeSingle()
+
         const { error: revertError } = await supabase
           .from('company_subscriptions')
           .update({
             plan_id: transaction.previous_plan_id,
-            // 가격 그랜드파더링 잠금(locked_plan_id/locked_price_*)도 함께 정리해야
-            // 한다 - plan_id만 되돌리고 이 값들을 그대로 두면, 되돌린 이전 플랜과
-            // 잠금이 가리키는 plan_id(업그레이드했던 플랜)가 어긋나 다음 결제 때
-            // 엉뚱한 가격을 참조하거나 예상과 다르게 재계산될 수 있다(62차 QA 확인).
-            // 환불 시점 이전에 정확히 어떤 가격이 잠겨 있었는지는 별도로 기록해두지
-            // 않아 정확한 복원이 불가능하므로, null로 비워 다음 청구 때 그 시점의
-            // 카탈로그 가격으로 새로 잠기도록 한다(과거 가격을 부정확하게 지어내지 않음).
-            locked_plan_id: null,
-            locked_price_monthly: null,
-            locked_price_yearly: null,
+            locked_plan_id: priceHistory ? transaction.previous_plan_id : null,
+            locked_price_monthly: priceHistory?.price_monthly ?? null,
+            locked_price_yearly: priceHistory?.price_yearly ?? null,
             updated_at: new Date().toISOString(),
           })
           .eq('id', transaction.subscription_id)
