@@ -40,11 +40,16 @@ const STATUS_LABELS: Record<string, string> = {
   free: '무료',
 }
 
+// payment_transactions.status의 실제 값은 'canceled'(홑L, DB 컬럼 코멘트/
+// PaymentsClient.tsx 고객화면 기준)인데 기존엔 'cancelled'(겹L)만 키로 있어
+// 그 값이 오면 한글 라벨 없이 영문 원본이 그대로 노출되고 있었다(57차 QA
+// 라이브 확인 - 아직 이 상태값을 실제로 기록하는 코드 경로는 없어 잠재 결함이었음).
 const TX_STATUS_LABELS: Record<string, string> = {
   success: '성공',
   failed: '실패',
   pending: '대기',
   cancelled: '취소',
+  canceled: '취소',
   refunded: '환불',
 }
 
@@ -53,6 +58,7 @@ const TX_STATUS_COLORS: Record<string, string> = {
   failed: 'bg-red-100 text-red-700',
   pending: 'bg-amber-100 text-amber-700',
   cancelled: 'bg-gray-100 text-gray-600',
+  canceled: 'bg-gray-100 text-gray-600',
   refunded: 'bg-purple-100 text-purple-700',
 }
 
