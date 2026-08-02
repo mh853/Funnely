@@ -380,6 +380,12 @@ export class BulkProcessor {
           // 남아있으면 안 된다(49차 QA: 상태는 active인데 취소일이 그대로 남는 버그).
           updateData.cancelled_at = null
 
+          // pending_plan_id도 함께 비운다 - 안 비우면 예전에 예약해둔 다운그레이드가
+          // 이 재활성화와 무관한 미래의 정기갱신 시점에 고객 모르게 조용히 적용된다
+          // (단건 관리자 API와 동일하게 맞춤, 58차 QA 확인).
+          updateData.pending_plan_id = null
+          updateData.pending_billing_cycle = null
+
           // 재활성화 시 기간을 리셋해야 하는 조건은 "현재 결제 기간이 이미 지났다" 또는
           // "애초에 결제 기간이 없었다" 뿐이다. 이전 status만으로 리셋하면, 아직 결제
           // 기간이 남은 채로 정지/취소된 구독을 재활성화할 때 남은 기간이 통째로

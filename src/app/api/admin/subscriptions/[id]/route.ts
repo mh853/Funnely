@@ -80,6 +80,15 @@ export async function PATCH(
       // 화면(고객 셀프서비스 reactivate 라우트는 이미 이렇게 처리 중)을 없앤다.
       updateData.cancelled_at = null
 
+      // pending_plan_id도 함께 비워야 한다 - 안 비우면 몇 주~몇 달 전에 예약해뒀던
+      // 다운그레이드가, 이 재활성화와는 전혀 무관한 미래의 정기갱신 시점에 고객이
+      // 인지하지 못한 채 조용히 적용된다(toss-billing-payment의 갱신 분기는 이
+      // 컬럼이 있으면 무조건 그 플랜/가격으로 청구함). cancel/convert-trial 라우트는
+      // 이미 각자의 전환 시점에 이 컬럼을 비우는데 admin 재활성화만 빠져 있었다
+      // (58차 QA 확인).
+      updateData.pending_plan_id = null
+      updateData.pending_billing_cycle = null
+
       // 재활성화 시 기간을 리셋해야 하는 조건은 "현재 결제 기간이 이미 지났다" 또는
       // "애초에 결제 기간이 없었다" 뿐이다. 이전 status(expired/cancelled/suspended)
       // 만으로 리셋하면, 아직 결제 기간이 남은 채로 정지/취소된 구독을 재활성화할 때
