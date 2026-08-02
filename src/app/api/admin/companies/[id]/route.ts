@@ -338,17 +338,29 @@ export async function PATCH(
     }
 
     // 회사를 비활성화할 때 구독은 그대로 두면, 접근은 미들웨어가 즉시 막아도
-    // daily-tasks 크론의 정기결제 갱신 대상 조회(status='active' 기준)에는 여전히
-    // 걸려 실제 카드 청구가 계속 시도된다 - 접근 차단과 결제 중단이 따로 놀던 문제.
-    // 비활성화 시점에 활성 구독을 suspended로 함께 내려 크론 대상에서 제외한다.
+    // daily-tasks 크론의 정기결제 갱신 대상 조회에는 여전히 걸려 실제 카드 청구가
+    // 계속 시도된다 - 접근 차단과 결제 중단이 따로 놀던 문제. 비활성화 시점에 구독을
+    // suspended로 함께 내려 크론 대상에서 제외한다.
     // (재활성화 시 구독을 자동으로 되살리진 않는다 - 결제 재개는 관리자가 구독관리
     // 화면에서 별도로 판단할 사안이다.)
+    //
+    // status='active'만 대상으로 하면, 결제 유예기간 중인 past_due 구독은 daily-tasks의
+    // 재청구 대상 쿼리(status='active' 조회와 별도로 past_due도 조회함, 56차 QA)에
+    // 여전히 걸려 비활성화된 회사에 실제 카드 청구가 계속 시도된다(60차 QA 확인).
+    // trial도 함께 포함해 상태 일관성을 맞춘다. suspended로 전환할 때는 단건/벌크
+    // 관리자 API(60차 QA)와 동일하게 pending_plan_id/grace_period_end도 비운다.
     if (is_active === false) {
       const { error: subError } = await supabase
         .from('company_subscriptions')
-        .update({ status: 'suspended', updated_at: new Date().toISOString() })
+        .update({
+          status: 'suspended',
+          pending_plan_id: null,
+          pending_billing_cycle: null,
+          grace_period_end: null,
+          updated_at: new Date().toISOString(),
+        })
         .eq('company_id', params.id)
-        .eq('status', 'active')
+        .in('status', ['active', 'trial', 'past_due'])
 
       if (subError) {
         console.error('[Companies API] Failed to suspend subscriptions on deactivation:', subError)
@@ -444,12 +456,16 @@ export async function DELETE(
       )
     }
 
-    // 제약 조건 확인: 활성 구독 (subscriptions 테이블은 존재하지 않으며 실제 테이블은 company_subscriptions)
+    // 제약 조건 확인: 아직 유효한 구독 (subscriptions 테이블은 존재하지 않으며 실제 테이블은
+    // company_subscriptions). status='active'만 확인하면 trial/past_due인 회사는 이
+    // 가드를 그냥 통과해 삭제되고, 삭제 로직 자체도 company_subscriptions를 건드리지
+    // 않아 탈퇴 처리 후에도 "살아있는" 상태의 구독 행이 그대로 남는다(60차 QA 확인 -
+    // 현재는 이 엔드포인트를 호출하는 UI가 없어 도달 불가능하지만, 직접 호출 시 재현됨).
     const { data: activeSubscription } = await supabase
       .from('company_subscriptions')
       .select('id, status')
       .eq('company_id', params.id)
-      .eq('status', 'active')
+      .in('status', ['active', 'trial', 'past_due'])
       .limit(1)
       .single()
 
@@ -457,7 +473,7 @@ export async function DELETE(
       return NextResponse.json(
         {
           error:
-            'Cannot delete company with active subscription. Cancel subscription first.',
+            'Cannot delete company with an active, trial, or past-due subscription. Cancel subscription first.',
         },
         { status: 409 }
       )
