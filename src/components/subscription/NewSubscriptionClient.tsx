@@ -252,7 +252,27 @@ export default function NewSubscriptionClient({
   // 업그레이드 차액 예상 금액 계산 (UI 표시용 — 실제 청구는 서버에서 계산)
   const estimateUpgradeAmount = (plan: Plan) => {
     const isCycleChange = billingCycle !== (currentSubscription?.billing_cycle ?? billingCycle)
-    const newPrice = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
+    // 그랜드파더링: 서버(toss-billing-payment)는 locked_plan_id가 현재 plan_id와
+    // 일치하면 subscription_plans의 최신 카탈로그 가격 대신 그 잠긴 가격으로
+    // 청구한다(61차) - 이 미리보기가 항상 카탈로그 가격만 쓰면, 그랜드파더링
+    // 적용 중인 고객에게 실제 청구액과 다른 예상 금액이 표시된다(62차 QA 확인).
+    const lockValid =
+      !!currentSubscription &&
+      (currentSubscription as any).locked_plan_id === (currentSubscription as any).plan_id &&
+      (currentSubscription as any).locked_price_monthly !== null &&
+      (currentSubscription as any).locked_price_yearly !== null
+    const samePlanId = currentSubscription?.subscription_plans?.id === plan.id
+
+    // 같은 플랜을 유지한 채 주기만 바꾸는 경우(월↔연 전환)는 새 플랜이 아니라 같은
+    // 플랜이므로, 잠금이 유효하면 카탈로그가 아니라 잠긴 가격을 그대로 쓴다.
+    const newPrice =
+      samePlanId && lockValid
+        ? billingCycle === 'monthly'
+          ? (currentSubscription as any).locked_price_monthly
+          : (currentSubscription as any).locked_price_yearly
+        : billingCycle === 'monthly'
+          ? plan.price_monthly
+          : plan.price_yearly
 
     if (
       !isCycleChange &&
@@ -267,8 +287,11 @@ export default function NewSubscriptionClient({
       )
       const remainingMs = Math.max(0, periodEnd.getTime() - now.getTime())
       const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
-      const oldPrice =
-        currentSubscription.billing_cycle === 'monthly'
+      const oldPrice = lockValid
+        ? currentSubscription.billing_cycle === 'monthly'
+          ? (currentSubscription as any).locked_price_monthly
+          : (currentSubscription as any).locked_price_yearly
+        : currentSubscription.billing_cycle === 'monthly'
           ? currentSubscription.subscription_plans.price_monthly
           : currentSubscription.subscription_plans.price_yearly
       const proratedNet = Math.max(
