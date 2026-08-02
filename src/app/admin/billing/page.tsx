@@ -7,6 +7,7 @@ import { DollarSign, TrendingUp, CreditCard, Users, ChevronLeft, ChevronRight } 
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
+import { useToast } from '@/components/shared/Toast'
 
 interface BillingMetrics {
   mrr: number
@@ -21,6 +22,7 @@ interface Transaction {
   id: string
   total_amount: number
   status: string
+  payment_key: string | null
   approved_at: string | null
   created_at: string
   company: { id: string; name: string } | null
@@ -60,12 +62,14 @@ function fmtDate(d: string | null | undefined) {
 }
 
 export default function BillingPage() {
+  const toast = useToast()
   const [metrics, setMetrics] = useState<BillingMetrics | null>(null)
   const [loading, setLoading] = useState(true)
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [txPage, setTxPage] = useState(1)
   const [txTotalPages, setTxTotalPages] = useState(1)
   const [txLoading, setTxLoading] = useState(false)
+  const [refundingId, setRefundingId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchMetrics()
@@ -103,6 +107,32 @@ export default function BillingPage() {
       console.error('Error fetching transactions:', error)
     } finally {
       setTxLoading(false)
+    }
+  }
+
+  async function handleRefund(tx: Transaction) {
+    const reason = window.prompt(
+      `${tx.company?.name ?? '알 수 없는 회사'}의 ₩${tx.total_amount.toLocaleString()} 결제를 환불합니다.\n환불 사유를 입력해주세요.`,
+      '고객 요청에 의한 환불'
+    )
+    if (reason === null) return // 취소
+
+    setRefundingId(tx.id)
+    try {
+      const res = await fetch(`/api/admin/payments/${tx.id}/refund`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      })
+      const result = await res.json()
+      if (!res.ok) throw new Error(result.error || '환불 처리에 실패했습니다.')
+
+      toast.success('환불이 완료되었습니다.')
+      fetchTransactions()
+    } catch (error: any) {
+      toast.error(error.message || '환불 처리 중 오류가 발생했습니다.')
+    } finally {
+      setRefundingId(null)
     }
   }
 
@@ -364,6 +394,7 @@ export default function BillingPage() {
                       <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">금액</th>
                       <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">상태</th>
                       <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">결제일</th>
+                      <th className="text-left py-2 px-3 text-xs font-medium text-gray-500 whitespace-nowrap">작업</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
@@ -382,6 +413,18 @@ export default function BillingPage() {
                         </td>
                         <td className="py-2.5 px-3 text-gray-500">
                           {fmtDate(tx.approved_at ?? tx.created_at)}
+                        </td>
+                        <td className="py-2.5 px-3">
+                          {tx.status === 'success' && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRefund(tx)}
+                              disabled={refundingId === tx.id}
+                            >
+                              {refundingId === tx.id ? '처리 중...' : '환불'}
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     ))}
