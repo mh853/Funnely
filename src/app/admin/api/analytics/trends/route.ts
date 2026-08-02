@@ -25,24 +25,44 @@ export async function GET(request: Request) {
     const queryStart = getKSTDayRange(startDate).start
     const queryEnd = getKSTDayRange(endDate).end // 배타적 상한(다음날 KST 시작)
 
-    // 시계열 데이터 조회
-    let query = supabase
-      .from('leads')
-      .select('created_at, status, company_id')
-      .gte('created_at', queryStart.toISOString())
-      .lt('created_at', queryEnd.toISOString())
-      .order('created_at', { ascending: true })
+    // 시계열 데이터 조회 - range() 없이 조회하면 Supabase 암묵적 max_rows(1000)에
+    // 걸려 리드가 1000건을 넘는 순간부터 오래된 1000건만 집계되고 나머지는 조용히
+    // 누락된다. 1000건씩 배치로 반복 조회해 전체를 가져온다.
+    const fetchLeads = async () => {
+      const result: Array<{ created_at: string; status: string; company_id: string }> = []
+      const BATCH_SIZE = 1000
+      let offset = 0
+      while (true) {
+        let query = supabase
+          .from('leads')
+          .select('created_at, status, company_id')
+          .gte('created_at', queryStart.toISOString())
+          .lt('created_at', queryEnd.toISOString())
+          .order('created_at', { ascending: true })
+          .range(offset, offset + BATCH_SIZE - 1)
 
-    if (companyId) {
-      query = query.eq('company_id', companyId)
+        if (companyId) {
+          query = query.eq('company_id', companyId)
+        }
+
+        const { data, error } = await query
+        if (error) throw error
+        if (!data || data.length === 0) break
+        result.push(...data)
+        if (data.length < BATCH_SIZE) break
+        offset += BATCH_SIZE
+      }
+      return result
     }
 
-    const [{ data: leads, error }, statusCategoryMap] = await Promise.all([
-      query,
-      getLeadStatusCategoryMapForAdmin(supabase, companyId),
-    ])
-
-    if (error) {
+    let leads: Array<{ created_at: string; status: string; company_id: string }>
+    let statusCategoryMap: Awaited<ReturnType<typeof getLeadStatusCategoryMapForAdmin>>
+    try {
+      ;[leads, statusCategoryMap] = await Promise.all([
+        fetchLeads(),
+        getLeadStatusCategoryMapForAdmin(supabase, companyId),
+      ])
+    } catch (error: any) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 

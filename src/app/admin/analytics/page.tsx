@@ -84,6 +84,7 @@ const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6']
 export default function AnalyticsPage() {
   const [dateRange, setDateRange] = useState('30')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(false)
   const [conversionData, setConversionData] = useState<ConversionData | null>(null)
   const [channelData, setChannelData] = useState<ChannelData | null>(null)
   const [trendData, setTrendData] = useState<TrendData | null>(null)
@@ -95,6 +96,7 @@ export default function AnalyticsPage() {
   async function fetchAnalytics() {
     try {
       setLoading(true)
+      setError(false)
       const endDate = format(new Date(), 'yyyy-MM-dd')
       const startDate = format(subDays(new Date(), parseInt(dateRange)), 'yyyy-MM-dd')
 
@@ -123,17 +125,32 @@ export default function AnalyticsPage() {
       setConversionData(conversion)
       setChannelData(channel)
       setTrendData(trend)
-    } catch (error) {
-      console.error('Error fetching analytics:', error)
+    } catch (err) {
+      console.error('Error fetching analytics:', err)
+      setError(true)
     } finally {
       setLoading(false)
     }
   }
 
-  if (loading || !conversionData || !channelData || !trendData) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">로딩 중...</div>
+      </div>
+    )
+  }
+
+  // API 실패 시에도 conversionData 등이 null인 채 loading만 false가 되던 이전
+  // 코드는 아래 렌더에서 계속 "로딩 중..."을 보여줘 사실상 무한로딩처럼 보였다
+  // (67차 QA 확인) - 실패를 명시적으로 구분해서 재시도 버튼을 보여준다.
+  if (error || !conversionData || !channelData || !trendData) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3">
+        <div className="text-gray-500">데이터를 불러오지 못했습니다.</div>
+        <Button variant="outline" onClick={fetchAnalytics}>
+          다시 시도
+        </Button>
       </div>
     )
   }
