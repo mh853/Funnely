@@ -204,6 +204,29 @@ export async function POST(request: NextRequest) {
     // 5. Round Robin 분배 알고리즘
     // ========================================================================
     const userCount = regularUsers.length
+
+    // 매번 index 0부터 시작하면, 배분이 여러 번(예: 매일 소량씩)에 걸쳐 실행될 때
+    // 담당자 수로 나눠떨어지지 않는 나머지 몫이 항상 앞쪽(목록 순서상 먼저인)
+    // 담당자에게만 쏠린다(66차 QA 확인 - 시뮬레이션상 뚜렷한 편중 재현됨). 직전에
+    // 가장 최근 배정된 리드가 어느 담당자에게 갔는지 찾아서 그 다음 사람부터
+    // 이어가도록 한다 - 처음 배분하는 회사는 이 조회 결과가 없어 자연히 0부터 시작한다.
+    let startIndex = 0
+    const { data: lastAssigned } = await supabase
+      .from('leads')
+      .select('call_assigned_to')
+      .eq('company_id', companyId)
+      .not('call_assigned_to', 'is', null)
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle()
+
+    if (lastAssigned?.call_assigned_to) {
+      const lastIndex = regularUsers.findIndex((u) => u.id === lastAssigned.call_assigned_to)
+      if (lastIndex !== -1) {
+        startIndex = (lastIndex + 1) % userCount
+      }
+    }
+
     const assignments: Array<{
       leadId: string
       userId: string
@@ -212,7 +235,7 @@ export async function POST(request: NextRequest) {
 
     for (let i = 0; i < unassignedLeads.length; i++) {
       const lead = unassignedLeads[i]
-      const userIndex = i % userCount // Round Robin: 0, 1, 2, ..., 0, 1, 2, ...
+      const userIndex = (startIndex + i) % userCount // Round Robin: 직전 배분 이후부터 이어감
       const user = regularUsers[userIndex]
 
       // userId 유효성 검증
