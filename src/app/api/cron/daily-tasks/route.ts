@@ -695,6 +695,11 @@ async function syncGoogleSheets(supabase: any) {
  * 처리해버렸다. 유일하게 실제로 매일 실행되는 이 크론에 합쳐서 확실히 동작하게 한다.
  * checkSubscriptionExpiry보다 먼저 실행해야, 갱신에 성공한 구독이 새 기간으로
  * 늘어난 뒤에 곧바로 만료 처리되지 않는다.
+ *
+ * subscription-cron 자체는 "죽은 코드라 무해하다"는 판단과 달리 verify_jwt=true가
+ * anon/service_role을 구분하지 않아 공개 anon key만으로 누구나 실행 가능한 상태였고,
+ * 여기(daily-tasks)와 다른 상태값('expired' 대신 'cancelled')으로 만료 처리를 하고
+ * 있어 실제 보안 위험이었다(57차 QA 확인) - Supabase 프로젝트에서 완전히 삭제 완료.
  */
 async function processSubscriptionRenewals(supabase: any) {
   const now = new Date().toISOString()
@@ -1180,7 +1185,7 @@ async function sendLeadDigestEmails(supabase: any) {
 /**
  * 결제 관련 알림(결제완료/결제실패/구독취소/체험종료임박) 발송
  *
- * toss-billing-payment/subscription-cron 두 곳이 payment_notifications에
+ * toss-billing-payment가 payment_notifications에
  * status:'pending'으로 insert만 하고, 이를 다시 읽어 실제 이메일로 보내는 코드가 프로젝트
  * 어디에도 없었다(신규 발견). subject/body_text는 이미 생성 시점에 채워져 있으므로 여기서는
  * 그대로 발송만 한다. body_html은 생성부에서 채우지 않으므로(항상 null) HTML 없이 텍스트
