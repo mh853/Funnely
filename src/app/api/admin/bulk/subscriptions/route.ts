@@ -82,14 +82,22 @@ export async function POST(request: NextRequest) {
         }
         break
 
-      case 'change_status':
-        if (!parameters?.status) {
+      case 'change_status': {
+        // 단건 관리자 API(/api/admin/subscriptions/[id])와 동일한 화이트리스트.
+        // past_due는 의도적으로 제외한다 - past_due는 grace_period_end가 함께
+        // 설정되어야 정상 동작하는데(재청구 대상 포함 여부, 유예기간 만료 판정
+        // 전부 이 값에 의존) 벌크 change_status는 status 필드만 갱신해 past_due로
+        // 바꾸면 grace_period_end가 null로 남아 유예기간 없이 즉시 만료 대상이
+        // 되어버린다(58차 QA 확인).
+        const validStatuses = ['active', 'trial', 'expired', 'cancelled', 'suspended']
+        if (!parameters?.status || !validStatuses.includes(parameters.status)) {
           return NextResponse.json(
-            { error: 'Missing required parameter: status' },
+            { error: `status must be one of: ${validStatuses.join(', ')}` },
             { status: 400 }
           )
         }
         break
+      }
 
       case 'extend_next_billing':
         if (!parameters?.days || typeof parameters.days !== 'number') {
