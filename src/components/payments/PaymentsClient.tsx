@@ -129,9 +129,17 @@ export default function PaymentsClient({
     setCardChanging(true)
     try {
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
+      // 연체(past_due) 상태에서 mode=update로 카드만 바꾸면 billing-success 페이지가
+      // 즉시 결제(Step 2)를 건너뛰어 밀린 결제가 재시도되지 않는다 - NewSubscriptionClient.tsx는
+      // 56차에 이렇게 고쳤는데 이 컴포넌트(결제내역 페이지)는 그대로 남아있었다(58차 QA 확인).
+      // 연체 중일 때는 mode를 생략해 카드 등록 직후 밀린 결제를 즉시 재시도하도록 한다.
+      const isPastDue = subscription.status === 'past_due'
+      const successUrl = isPastDue
+        ? `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${subscription.id}`
+        : `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${subscription.id}&mode=update`
       await tossPayments.requestBillingAuth('카드', {
         customerKey: companyId,
-        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${subscription.id}&mode=update`,
+        successUrl,
         failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
       })
       // SDK가 리다이렉트 없이 resolve된 경우 상태 초기화
