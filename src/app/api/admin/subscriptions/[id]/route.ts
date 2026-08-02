@@ -117,6 +117,19 @@ export async function PATCH(
       }
     }
 
+    // suspended로 전환 시에도 active와 동일하게 pending_plan_id/pending_billing_cycle을
+    // 비워야 한다 - 안 비우면 나중에 셀프서비스 reactivate로 재구독할 때 예약된
+    // 다운그레이드가 그대로 남아있다가 다음 정기갱신에서 조용히 적용된다(60차 QA
+    // 확인). grace_period_end도 함께 비운다 - past_due였던 구독을 관리자가 곧바로
+    // suspended로 정지시킨 경우, 이 값이 남아있으면 이후 재구독한 뒤 결제가 다시
+    // 실패할 때 isFirstFailure가 "이미 실패한 적 있음"으로 오판해 새 유예기간이
+    // 시작되지 않는다.
+    if (status === 'suspended') {
+      updateData.pending_plan_id = null
+      updateData.pending_billing_cycle = null
+      updateData.grace_period_end = null
+    }
+
     const { data, error } = await supabase
       .from('company_subscriptions')
       .update(updateData)

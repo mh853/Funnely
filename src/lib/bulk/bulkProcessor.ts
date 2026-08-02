@@ -406,6 +406,15 @@ export class BulkProcessor {
           }
         }
 
+        // suspended 전환도 active와 동일하게 정리한다 (단건 관리자 API와 동일하게
+        // 맞춤, 60차 QA 확인) - 안 그러면 셀프서비스 reactivate 재구독 시 예약된
+        // 다운그레이드/stale grace_period_end가 그대로 남는다.
+        if (parameters.status === 'suspended') {
+          updateData.pending_plan_id = null
+          updateData.pending_billing_cycle = null
+          updateData.grace_period_end = null
+        }
+
         const { error } = await this.supabase
           .from('company_subscriptions')
           .update(updateData)
