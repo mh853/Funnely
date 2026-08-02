@@ -514,14 +514,40 @@ async function syncGoogleSheets(supabase: any) {
         existingLeads?.map((l: any) => l.phone_hash) || []
       )
 
+      // 블랙리스트 체크 - 공개 제출 API(landing-pages/submit)에만 있고 이 자동 크론
+      // 동기화 경로엔 없어서, 블랙리스트에 등록된 번호가 시트에 남아있으면 매일
+      // 자동으로 계속 리드가 재생성될 수 있었다(66차 QA 확인 - 수동 동기화
+      // api/sheets/sync도 동일 문제였음, 함께 수정).
+      const blacklistedNumbers = new Set<string>()
+      {
+        const BATCH_SIZE = 1000
+        let offset = 0
+        while (true) {
+          const { data } = await supabase
+            .from('phone_blacklist')
+            .select('phone_number')
+            .eq('company_id', config.company_id)
+            .range(offset, offset + BATCH_SIZE - 1)
+
+          if (!data || data.length === 0) break
+          data.forEach((row: any) => blacklistedNumbers.add(row.phone_number))
+          if (data.length < BATCH_SIZE) break
+          offset += BATCH_SIZE
+        }
+      }
+
       // 시트 안에서 같은 전화번호가 여러 행에 있으면 기존 DB 대조만으로는 못 걸러진다
       // (existingHashes는 DB에 이미 있는 것만 담고 있음) - 같은 배치 안에서도 먼저
       // 나온 행만 남기고 중복 제거해야 한 번의 동기화로 같은 리드가 여러 건 생기지 않는다.
       const seenPhoneHashesInBatch = new Set<string>()
       const newLeads = sheetLeads.filter((lead) => {
+        const cleanPhone = lead.phone.replace(/\D/g, '')
+        if (blacklistedNumbers.has(cleanPhone)) {
+          return false
+        }
         const phoneHash = crypto
           .createHash('sha256')
-          .update(lead.phone.replace(/\D/g, ''))
+          .update(cleanPhone)
           .digest('hex')
         if (existingHashes.has(phoneHash) || seenPhoneHashesInBatch.has(phoneHash)) {
           return false

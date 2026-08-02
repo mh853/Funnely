@@ -67,6 +67,25 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // 블랙리스트 체크 - 공개 제출 API(landing-pages/submit)에만 있고 이 DB 수동추가
+    // 경로엔 없어서, 회사가 블랙리스트에 등록해둔 번호를 담당자가 수동으로 그대로
+    // 다시 추가할 수 있었다(66차 QA 확인). 이 경로는 로그인한 내부 직원이 쓰는
+    // 화면이라 공개 제출과 달리 우회 방지 목적의 침묵 처리가 필요 없어, 왜
+    // 막혔는지 명확히 알려준다.
+    const { data: blacklistedPhone } = await supabase
+      .from('phone_blacklist')
+      .select('id')
+      .eq('phone_number', cleanPhone)
+      .eq('company_id', userProfile.company_id)
+      .maybeSingle()
+
+    if (blacklistedPhone) {
+      return NextResponse.json(
+        { error: { message: '블랙리스트에 등록된 전화번호입니다.' } },
+        { status: 409 }
+      )
+    }
+
     // 회사가 설정한 기본 리드 상태 조회 — status:'new' 하드코딩 시 "DB 상태 관리"의
     // "기본값으로 설정" 기능이 실제로는 아무 효과가 없었다.
     const { data: defaultStatus } = await supabase
