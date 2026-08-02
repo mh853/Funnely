@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     if (companyId) query = query.eq('company_id', companyId)
 
     // 정렬
-    query = query.order('created_at', { ascending: false })
+    query = query.order('updated_at', { ascending: false })
 
     // 검색 구현 (제목과 내용만 검색)
     let filteredTickets: any[] = []
@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
         `subject.ilike.${searchTerm},description.ilike.${searchTerm}`
       )
       searchQuery = searchQuery
-        .order('created_at', { ascending: false })
+        .order('updated_at', { ascending: false })
         .range(offset, offset + perPage - 1)
 
       const { data: allTickets, error: searchError, count: totalCount } = await searchQuery
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
           `
           )
           .in('id', ticketIds)
-          .order('created_at', { ascending: false })
+          .order('updated_at', { ascending: false })
 
         if (joinError) {
           console.error('[Support Tickets API] Join error:', joinError)
