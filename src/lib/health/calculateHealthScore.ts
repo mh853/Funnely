@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 /**
  * Health Score Calculation System
@@ -422,13 +423,19 @@ export async function calculatePaymentScore(
   // 이 앱의 실제 테이블은 'subscriptions'가 아니라 'company_subscriptions'다.
   // 존재하지 않는 테이블을 조회하면 매번 에러와 함께 빈 결과가 돌아와, 아래
   // "구독 없음" 분기가 실제 결제 상태와 무관하게 모든 회사에 대해 항상 실행됐다.
-  const { data: subscription } = await supabase
+  //
+  // company_subscriptions는 플랜변경/재구독마다 새 행이 쌓이는 이력 테이블이라,
+  // created_at 기준 최신 행 1건만 가져오면(과거 방식) 실제 유효한 구독이 아니라
+  // 그보다 나중에 생성된 만료/취소 행이 뽑혀 헬스스코어가 실제와 다르게 계산될 수
+  // 있다(60차 QA 확인). pickCurrentSubscription과 동일한 우선순위로 골라야 한다.
+  const { data: candidateSubs } = await supabase
     .from('company_subscriptions')
     .select('*')
     .eq('company_id', companyId)
     .order('created_at', { ascending: false })
-    .limit(1)
-    .single()
+    .limit(10)
+
+  const subscription = pickCurrentSubscription((candidateSubs as any[]) ?? [])
 
   let score = 100
 

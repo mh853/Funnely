@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 export async function GET(request: NextRequest) {
   try {
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
           current_period_start,
           current_period_end,
           trial_end_date,
+          cancelled_at,
           created_at,
           subscription_plans!plan_id (
             id,
@@ -75,16 +77,22 @@ export async function GET(request: NextRequest) {
     }
 
     // company_subscriptions는 회사가 플랜을 바꾸거나 재구독할 때마다 새 행이 쌓이는
-    // 이력 테이블이다. 회사당 가장 최근 구독 1건만 집계 대상으로 삼아야 한다.
-    // 그렇지 않으면 예전에 쓰다가 그만둔 플랜의 오래된 구독 행이 계속 남아서
-    // "플랜별 구독 분포"에 이미 쓰지 않는 플랜이 영구히 표시된다.
-    const latestSubByCompany = new Map<string, (typeof subscriptions)[number]>()
+    // 이력 테이블이다. 회사당 "진짜 현재 구독" 1건만 집계 대상으로 삼아야 한다.
+    // 단순히 created_at 기준 최신 행을 고르면(과거 방식), 플랜 변경/재구독 이력이
+    // 쌓인 회사는 실제 유효한 구독이 아니라 그보다 나중에 생성된 만료/취소 행이
+    // 뽑혀 MRR·상태분포·플랜분포가 실제와 다르게 집계될 수 있다(60차 QA 확인) -
+    // pickCurrentSubscription과 동일한 우선순위(유효한 active > 유효한 trial >
+    // past_due > 최근 취소 > 나머지 최신)로 골라야 middleware/대시보드가 인정하는
+    // "현재 구독"과 일치한다.
+    const subsByCompany = new Map<string, NonNullable<typeof subscriptions>>()
     for (const sub of subscriptions || []) {
-      if (!latestSubByCompany.has(sub.company_id)) {
-        latestSubByCompany.set(sub.company_id, sub)
-      }
+      const list = subsByCompany.get(sub.company_id)
+      if (list) list.push(sub)
+      else subsByCompany.set(sub.company_id, [sub])
     }
-    const latestSubscriptions = Array.from(latestSubByCompany.values())
+    const latestSubscriptions = Array.from(subsByCompany.values())
+      .map(subs => pickCurrentSubscription(subs))
+      .filter((sub): sub is NonNullable<typeof sub> => sub !== null)
 
     // 5. 활성 구독 필터링 (active, trial, past_due)
     const activeStatuses = ['active', 'trial', 'past_due']
