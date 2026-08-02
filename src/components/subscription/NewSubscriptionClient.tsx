@@ -250,7 +250,30 @@ export default function NewSubscriptionClient({
   }, [companyId, router])
 
   // 업그레이드 차액 예상 금액 계산 (UI 표시용 — 실제 청구는 서버에서 계산)
-  const estimateUpgradeAmount = (plan: Plan) => {
+  // estimateUpgradeAmount에 넘길 대상 플랜의 그랜드파더링 이력을 조회한다 -
+  // 실패해도 카탈로그가 폴백으로 진행되면 되므로 에러를 삼킨다.
+  const fetchPlanPriceLock = async (
+    planId: string
+  ): Promise<{ price_monthly: number; price_yearly: number } | null> => {
+    try {
+      const res = await fetch(`/api/subscription/price-preview?planId=${planId}`)
+      if (!res.ok) return null
+      const data = await res.json()
+      return { price_monthly: data.price_monthly, price_yearly: data.price_yearly }
+    } catch {
+      return null
+    }
+  }
+
+  // targetPlanLock: 전환하려는 플랜이 이 구독에게 과거에 그랜드파더링된 이력이
+  // 있는 경우 그 가격(price-preview API 조회 결과) - 없으면 카탈로그가를 그대로 쓴다.
+  // 서버(company_subscription_price_locks, 63차)는 plan_id가 다르면 이 이력을
+  // 조회해 재사용하는데, 이 미리보기가 항상 카탈로그가만 쓰면 과거에 보유했던
+  // 플랜으로 복귀할 때 모달 예상금액과 실제 청구액이 달라진다(65차 QA 확인).
+  const estimateUpgradeAmount = (
+    plan: Plan,
+    targetPlanLock?: { price_monthly: number; price_yearly: number } | null
+  ) => {
     const isCycleChange = billingCycle !== (currentSubscription?.billing_cycle ?? billingCycle)
     // 그랜드파더링: 서버(toss-billing-payment)는 locked_plan_id가 현재 plan_id와
     // 일치하면 subscription_plans의 최신 카탈로그 가격 대신 그 잠긴 가격으로
@@ -265,14 +288,16 @@ export default function NewSubscriptionClient({
 
     // 같은 플랜을 유지한 채 주기만 바꾸는 경우(월↔연 전환)는 새 플랜이 아니라 같은
     // 플랜이므로, 잠금이 유효하면 카탈로그가 아니라 잠긴 가격을 그대로 쓴다.
+    // 다른 플랜으로 전환하는 경우엔 targetPlanLock(그 플랜에 대한 이력)이 있으면
+    // 그 값을, 없으면 카탈로그가를 쓴다.
     const newPrice =
       samePlanId && lockValid
         ? billingCycle === 'monthly'
           ? (currentSubscription as any).locked_price_monthly
           : (currentSubscription as any).locked_price_yearly
         : billingCycle === 'monthly'
-          ? plan.price_monthly
-          : plan.price_yearly
+          ? (targetPlanLock?.price_monthly ?? plan.price_monthly)
+          : (targetPlanLock?.price_yearly ?? plan.price_yearly)
 
     if (
       !isCycleChange &&
@@ -463,10 +488,26 @@ export default function NewSubscriptionClient({
         } else if (isActivePaidUser && hasBillingKey) {
           // 유료 구독 중 + 빌링키 있음: 업그레이드/다운그레이드 분기
           // 월 단가로 정규화하여 비교 (연간 주기도 올바르게 처리)
+          //
+          // 그랜드파더링(61차): 현재 플랜의 카탈로그 가격이 잠긴(locked) 가격보다
+          // 오른 상태라면, 카탈로그가로 비교했을 때 실제로는 업그레이드(더 비싼
+          // 신규 플랜으로 전환)인데도 "다운그레이드"로 잘못 판정돼 즉시결제 대신
+          // 예약처리로 잘못 빠질 수 있다(65차 QA 확인) - 실제로 지금 내고 있는
+          // 잠긴 가격 기준으로 비교해야 한다.
+          const currentLockValid =
+            (currentSubscription as any).locked_plan_id === (currentSubscription as any).plan_id &&
+            (currentSubscription as any).locked_price_monthly !== null &&
+            (currentSubscription as any).locked_price_yearly !== null
           const currentMonthlyEquiv =
             currentSubscription.billing_cycle === 'monthly'
-              ? currentSubscription.subscription_plans.price_monthly
-              : Math.round(currentSubscription.subscription_plans.price_yearly / 12)
+              ? currentLockValid
+                ? (currentSubscription as any).locked_price_monthly
+                : currentSubscription.subscription_plans.price_monthly
+              : Math.round(
+                  (currentLockValid
+                    ? (currentSubscription as any).locked_price_yearly
+                    : currentSubscription.subscription_plans.price_yearly) / 12
+                )
           const newMonthlyEquiv =
             billingCycle === 'monthly'
               ? plan.price_monthly
@@ -474,7 +515,8 @@ export default function NewSubscriptionClient({
 
           if (newMonthlyEquiv > currentMonthlyEquiv) {
             // 업그레이드: 차액 즉시 청구 → 모달에서 확인 후 결제
-            const estimate = estimateUpgradeAmount(plan)
+            const targetLock = await fetchPlanPriceLock(plan.id)
+            const estimate = estimateUpgradeAmount(plan, targetLock)
             setUpgradeModal({ plan, ...estimate })
             return
           } else if (newMonthlyEquiv < currentMonthlyEquiv) {
@@ -513,7 +555,8 @@ export default function NewSubscriptionClient({
             router.refresh()
           } else {
             // 같은 가격 티어 (주기 변경 등): 업그레이드와 동일하게 처리
-            const estimate = estimateUpgradeAmount(plan)
+            const targetLock = await fetchPlanPriceLock(plan.id)
+            const estimate = estimateUpgradeAmount(plan, targetLock)
             setUpgradeModal({ plan, ...estimate })
             return
           }
