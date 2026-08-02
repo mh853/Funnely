@@ -1,14 +1,9 @@
 'use client'
 
 import { LightBulbIcon } from '@heroicons/react/24/outline'
+import type { Recommendation } from '@/lib/health/calculateHealthScore'
 
-export interface Recommendation {
-  category: string
-  priority: 'high' | 'medium' | 'low'
-  title: string
-  description: string
-  action_items?: string[]
-}
+export type { Recommendation }
 
 interface RecommendationListProps {
   recommendations: Recommendation[]
@@ -62,25 +57,18 @@ export function RecommendationList({
                 >
                   {rec.priority.toUpperCase()}
                 </span>
-                <span className="text-xs text-gray-600">{rec.category}</span>
               </div>
             </div>
             <h4 className="text-sm font-semibold text-gray-900 mb-1">
-              {rec.title}
+              {rec.action}
             </h4>
-            <p className="text-sm text-gray-700 mb-2">{rec.description}</p>
-            {rec.action_items && rec.action_items.length > 0 && (
+            <p className="text-sm text-gray-700 mb-2">{rec.rationale}</p>
+            {rec.expected_impact && (
               <div className="mt-3 pl-4 border-l-2 border-blue-200">
                 <p className="text-xs font-medium text-gray-700 mb-1">
-                  실행 항목:
+                  예상 효과:
                 </p>
-                <ul className="list-disc list-inside space-y-1">
-                  {rec.action_items.map((item, i) => (
-                    <li key={i} className="text-xs text-gray-600">
-                      {item}
-                    </li>
-                  ))}
-                </ul>
+                <p className="text-xs text-gray-600">{rec.expected_impact}</p>
               </div>
             )}
           </div>

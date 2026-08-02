@@ -1,15 +1,9 @@
 'use client'
 
 import { ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import type { RiskFactor } from '@/lib/health/calculateHealthScore'
 
-export interface RiskFactor {
-  type: string
-  severity: 'high' | 'medium' | 'low'
-  description: string
-  metric?: string
-  threshold?: string
-  current_value?: string
-}
+export type { RiskFactor }
 
 interface RiskFactorListProps {
   riskFactors: RiskFactor[]
@@ -29,6 +23,8 @@ export function RiskFactorList({ riskFactors }: RiskFactorListProps) {
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
+      case 'critical':
+        return 'bg-red-200 text-red-900 border-red-300'
       case 'high':
         return 'bg-red-100 text-red-800 border-red-200'
       case 'medium':
@@ -67,19 +63,10 @@ export function RiskFactorList({ riskFactors }: RiskFactorListProps) {
                   </span>
                 </div>
                 <p className="text-sm text-gray-700">{risk.description}</p>
-                {risk.metric && (
-                  <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
-                    {risk.current_value && (
-                      <span>
-                        현재값: <strong>{risk.current_value}</strong>
-                      </span>
-                    )}
-                    {risk.threshold && (
-                      <span>
-                        기준값: <strong>{risk.threshold}</strong>
-                      </span>
-                    )}
-                  </div>
+                {risk.impact && (
+                  <p className="mt-2 text-xs text-gray-600">
+                    영향: <strong>{risk.impact}</strong>
+                  </p>
                 )}
               </div>
             </div>
