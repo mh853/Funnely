@@ -1211,6 +1211,21 @@ export default function LeadsClient({
           }
         }
 
+        // 랜딩페이지 작성자가 커스텀 질문 라벨을 우연히(또는 의도적으로)
+        // "이름"/"전화번호" 등 고정 컬럼명과 똑같이 지으면, 아래 스프레드가
+        // 고정 필드를 조용히 덮어써 실제 고객 이름/전화번호가 무관한 답변으로
+        // 바뀌어 보이던 문제가 있었다(66차 QA 확인). 고정 컬럼명과 겹치는
+        // 커스텀 필드는 엑셀에서 제외해 절대 덮어쓸 수 없게 한다.
+        const RESERVED_COLUMNS = new Set([
+          '번호', 'DB 신청일', '랜딩페이지', '이름', '전화번호', '기기', '결과',
+          '예약일', '결제금액', '비고', '콜 담당자', '상담 담당자',
+          'UTM_Source', 'UTM_Medium', 'UTM_Campaign', 'utm_content', 'utm_term',
+          'Referrer', 'IP 주소', 'User Agent',
+        ])
+        for (const key of Object.keys(customFieldsData)) {
+          if (RESERVED_COLUMNS.has(key)) delete customFieldsData[key]
+        }
+
         return {
           '번호': index + 1,
           'DB 신청일': formatDateTime(lead.created_at),
@@ -1241,7 +1256,7 @@ export default function LeadsClient({
           'Referrer': lead.referrer || '-',
           'IP 주소': lead.ip_address || '-',
           'User Agent': lead.user_agent || '-',
-          // 커스텀 필드들 (동적으로 추가)
+          // 커스텀 필드들 (동적으로 추가, 위에서 고정 컬럼명과 겹치는 키는 제외됨)
           ...customFieldsData,
         }
       })

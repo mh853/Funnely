@@ -1250,6 +1250,21 @@ export default function LandingPageNewForm({
       return
     }
 
+    // 질문 텍스트가 "이름"/"전화번호" 등 리드 목록·엑셀 내보내기의 고정 컬럼명과
+    // 똑같으면, 그 답변이 실제 고객 이름/전화번호를 조용히 덮어써 보이는
+    // 문제가 있었다(66차 QA 확인) - 저장 자체를 막아 원천 차단한다.
+    const RESERVED_QUESTION_LABELS = new Set([
+      '번호', 'DB 신청일', '랜딩페이지', '이름', '전화번호', '기기', '결과',
+      '예약일', '결제금액', '비고', '콜 담당자', '상담 담당자',
+      'UTM_Source', 'UTM_Medium', 'UTM_Campaign', 'utm_content', 'utm_term',
+      'Referrer', 'IP 주소', 'User Agent',
+    ])
+    const reservedQuestion = trimmedQuestions.find((q) => RESERVED_QUESTION_LABELS.has(q))
+    if (reservedQuestion) {
+      toast.error(`"${reservedQuestion}"은(는) 이미 리드 목록에서 사용 중인 이름입니다. 다른 질문 텍스트를 입력해주세요.`)
+      return
+    }
+
     setSaving(true)
 
     try {
