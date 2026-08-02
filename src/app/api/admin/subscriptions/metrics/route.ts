@@ -42,6 +42,7 @@ export async function GET(request: NextRequest) {
         .select(`
           id,
           company_id,
+          plan_id,
           status,
           billing_cycle,
           current_period_start,
@@ -49,6 +50,9 @@ export async function GET(request: NextRequest) {
           trial_end_date,
           cancelled_at,
           created_at,
+          locked_plan_id,
+          locked_price_monthly,
+          locked_price_yearly,
           subscription_plans!plan_id (
             id,
             name,
@@ -101,13 +105,24 @@ export async function GET(request: NextRequest) {
     )
 
     // 6. MRR 계산 (Monthly Recurring Revenue)
+    // 그랜드파더링(61차) 중인 구독은 실제로 카탈로그 최신가가 아니라 locked_price_*로
+    // 청구된다 - 여기서 카탈로그가만 쓰면 관리자가 보는 MRR/ARR이 실제 매출과
+    // 어긋나고, daily-tasks가 매일 이 값을 revenue_metrics에 그대로 저장해 추이
+    // 차트까지 소급 오염된다(63차 QA 확인).
     let mrr = 0
     activeSubscriptions.forEach(sub => {
-      const plan = (sub as any).subscription_plans
-      if (sub.billing_cycle === 'monthly' && plan?.price_monthly) {
-        mrr += Number(plan.price_monthly)
-      } else if (sub.billing_cycle === 'yearly' && plan?.price_yearly) {
-        mrr += Number(plan.price_yearly) / 12 // 연간 금액을 월 단위로 환산
+      const s = sub as any
+      const plan = s.subscription_plans
+      const priceLockValid =
+        s.locked_plan_id === s.plan_id &&
+        s.locked_price_monthly !== null &&
+        s.locked_price_yearly !== null
+      const monthlyPrice = priceLockValid ? s.locked_price_monthly : plan?.price_monthly
+      const yearlyPrice = priceLockValid ? s.locked_price_yearly : plan?.price_yearly
+      if (sub.billing_cycle === 'monthly' && monthlyPrice) {
+        mrr += Number(monthlyPrice)
+      } else if (sub.billing_cycle === 'yearly' && yearlyPrice) {
+        mrr += Number(yearlyPrice) / 12 // 연간 금액을 월 단위로 환산
       }
     })
 
