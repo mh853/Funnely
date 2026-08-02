@@ -76,14 +76,24 @@ export async function GET(request: NextRequest) {
     }
 
     // 4. 응답 데이터 정규화
+    // plan_id/locked_plan_id/locked_price_monthly/locked_price_yearly를 DB에서
+    // select는 하면서도 여기서 응답 객체에 옮겨담지 않아 전부 undefined로
+    // 나갔다 - 프론트(63차, 그랜드파더링가 표시)의 lockValid 판정이
+    // "undefined === undefined"로 항상 true가 돼 locked_price_monthly(역시
+    // undefined)를 그대로 .toLocaleString() 호출해 관리자/구독 페이지 전체가
+    // 매번 크래시했다(67차 QA 확인 - 브라우저 실접속으로 재현).
     const subscriptionsWithDetails = (subscriptions || []).map((sub: any) => ({
       id: sub.id,
+      plan_id: sub.plan_id,
       status: sub.status,
       billing_cycle: sub.billing_cycle,
       current_period_start: sub.current_period_start,
       current_period_end: sub.current_period_end,
       trial_end: sub.trial_end_date,
       cancelled_at: sub.cancelled_at,
+      locked_plan_id: sub.locked_plan_id,
+      locked_price_monthly: sub.locked_price_monthly,
+      locked_price_yearly: sub.locked_price_yearly,
       company: sub.company || { id: '', name: '알 수 없음', business_number: '', phone: '' },
       plan: sub.plan || { id: '', name: '알 수 없음', plan_type: 'business', price_monthly: 0, price_yearly: 0, max_users: null, max_leads: null },
       created_at: sub.created_at,
