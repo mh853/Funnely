@@ -133,7 +133,11 @@ export default function BillingPage() {
       const result = await res.json()
       if (!res.ok) throw new Error(result.error || '환불 처리에 실패했습니다.')
 
-      toast.success('환불이 완료되었습니다.')
+      toast.success(
+        result.planReverted
+          ? '환불이 완료되었고, 업그레이드했던 플랜도 이전 플랜으로 되돌렸습니다.'
+          : '환불이 완료되었습니다.'
+      )
       fetchTransactions()
     } catch (error: any) {
       toast.error(error.message || '환불 처리 중 오류가 발생했습니다.')

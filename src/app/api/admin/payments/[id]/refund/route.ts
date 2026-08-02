@@ -36,7 +36,7 @@ export async function POST(
 
     const { data: transaction, error: fetchError } = await supabase
       .from('payment_transactions')
-      .select('id, company_id, status, payment_key, total_amount')
+      .select('id, company_id, status, payment_key, total_amount, subscription_id, plan_id, previous_plan_id')
       .eq('id', transactionId)
       .single()
 
@@ -106,16 +106,48 @@ export async function POST(
       )
     }
 
+    // 업그레이드 차액 결제였다면(previous_plan_id 기록됨) 플랜을 원래대로 되돌린다 -
+    // 안 그러면 환불을 받고도 상위 플랜을 계속 이용하고 다음 갱신부터 그 가격으로
+    // 다시 청구된다(58차 QA 확인). 이 거래 이후 플랜이 또 바뀐 적이 없을 때만
+    // 되돌린다 - 그 사이 다른 변경이 있었다면 되돌릴 "원래" 상태가 더 이상 아니므로
+    // 잘못 덮어쓰지 않도록 건너뛴다(감사로그에 기록해 수동 확인 가능하게 함).
+    let planReverted = false
+    if (transaction.previous_plan_id && transaction.subscription_id) {
+      const { data: currentSub } = await supabase
+        .from('company_subscriptions')
+        .select('plan_id')
+        .eq('id', transaction.subscription_id)
+        .single()
+
+      if (currentSub?.plan_id === transaction.plan_id) {
+        const { error: revertError } = await supabase
+          .from('company_subscriptions')
+          .update({ plan_id: transaction.previous_plan_id, updated_at: new Date().toISOString() })
+          .eq('id', transaction.subscription_id)
+
+        if (revertError) {
+          console.error('[Refund] 플랜 자동 복원 실패:', revertError)
+        } else {
+          planReverted = true
+        }
+      }
+    }
+
     await createAuditLog(request, {
       userId: adminUser.user.id,
       action: AUDIT_ACTIONS.PAYMENT_REFUND,
       entityType: 'payment_transaction',
       entityId: transactionId,
       companyId: transaction.company_id,
-      metadata: { amount: transaction.total_amount, reason: cancelReason },
+      metadata: {
+        amount: transaction.total_amount,
+        reason: cancelReason,
+        planReverted,
+        previousPlanId: transaction.previous_plan_id,
+      },
     })
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, planReverted })
   } catch (error) {
     console.error('[Refund] Unexpected error:', error)
     return NextResponse.json({ error: '환불 처리 중 오류가 발생했습니다.' }, { status: 500 })
