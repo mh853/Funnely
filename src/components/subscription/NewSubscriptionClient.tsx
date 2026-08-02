@@ -471,6 +471,15 @@ export default function NewSubscriptionClient({
           // 선택한 플랜/주기를 구독에 미리 저장
           // 예약된 다운그레이드가 남아있으면 곧이어 진행되는 결제(billing-success의
           // mode 없는 분기)가 방금 고른 플랜이 아니라 예전 예약 플랜 가격으로 청구되므로 함께 비운다.
+          //
+          // 카드 등록 팝업(requestBillingAuth) 호출 전에 plan_id를 먼저 커밋하는데,
+          // 사용자가 팝업을 닫거나 카드가 거절되면(billing-fail로 이동) 이 커밋을
+          // 되돌리는 코드가 없어 결제 이력 없이 유료 플랜만 영구 활성화됐다(59차 QA
+          // 확인, Critical). failUrl에 원래 값을 실어 보내 billing-fail 페이지가
+          // 되돌릴 수 있게 한다.
+          const originalPlanId = currentSubscription.subscription_plans.id
+          const originalBillingCycle = currentSubscription.billing_cycle
+
           const { error: updateError } = await supabase
             .from('company_subscriptions')
             .update({
@@ -487,10 +496,15 @@ export default function NewSubscriptionClient({
           const tossPayments = await loadTossPayments(
             process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
           )
+          const failParams = new URLSearchParams({
+            subscriptionId: currentSubscription.id,
+            originalPlanId,
+            originalBillingCycle,
+          })
           await tossPayments.requestBillingAuth('카드', {
             customerKey: companyId,
             successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`,
-            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
           })
           // requestBillingAuth는 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음
           return
@@ -512,6 +526,11 @@ export default function NewSubscriptionClient({
           router.refresh()
         } else {
           // 신규 사용자 + 기타 유료 플랜 → 카드 등록 후 즉시 결제
+          // 카드 등록 실패/취소 시 되돌릴 수 있도록 원래 값을 failUrl에 실어 보낸다
+          // (59차 QA 확인, Critical - 위 isExistingUser 분기와 동일한 이유)
+          const originalPlanId = currentSubscription.subscription_plans.id
+          const originalBillingCycle = currentSubscription.billing_cycle
+
           const { error: updateError } = await supabase
             .from('company_subscriptions')
             .update({ plan_id: plan.id, billing_cycle: billingCycle })
@@ -522,10 +541,15 @@ export default function NewSubscriptionClient({
           const tossPayments = await loadTossPayments(
             process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
           )
+          const failParams = new URLSearchParams({
+            subscriptionId: currentSubscription.id,
+            originalPlanId,
+            originalBillingCycle,
+          })
           await tossPayments.requestBillingAuth('카드', {
             customerKey: companyId,
             successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`,
-            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
           })
         }
       } else {
@@ -554,6 +578,9 @@ export default function NewSubscriptionClient({
           router.refresh()
         } else {
           // 기타 유료 플랜: 구독 생성 후 카드 등록
+          // 카드 등록 실패/취소 시 이 행 자체를 되돌릴(삭제할) 수 있도록 표시해서
+          // failUrl에 실어 보낸다(59차 QA 확인, Critical - 위 두 분기와 동일한 이유,
+          // 이 경우는 되돌릴 "원래 플랜"이 없고 이번에 새로 만든 행 자체가 문제이므로 삭제)
           const { data: newSub, error } = await supabase
             .from('company_subscriptions')
             .insert({
@@ -569,10 +596,14 @@ export default function NewSubscriptionClient({
           const tossPayments = await loadTossPayments(
             process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
           )
+          const failParams = new URLSearchParams({
+            subscriptionId: newSub.id,
+            wasNewlyCreated: 'true',
+          })
           await tossPayments.requestBillingAuth('카드', {
             customerKey: companyId,
             successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${newSub.id}`,
-            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
           })
         }
       }

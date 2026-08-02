@@ -1,7 +1,7 @@
 'use client'
 
 // 토스 빌링키 발급 실패 시 리다이렉트되는 페이지 (에러 코드 표시)
-import { Suspense } from 'react'
+import { Suspense, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 function BillingFailContent() {
@@ -9,6 +9,34 @@ function BillingFailContent() {
   const searchParams = useSearchParams()
   const code = searchParams.get('code')
   const message = searchParams.get('message')
+  const hasRolledBack = useRef(false)
+
+  // 카드 등록을 실제로 시도하기 전에 NewSubscriptionClient.tsx가 낙관적으로
+  // plan_id를 먼저 커밋해뒀을 수 있다 - 사용자가 여기(등록 실패/취소)로 왔다면
+  // 결제 이력 없이 유료 플랜만 영구 활성화된 상태이므로 원래대로 되돌린다
+  // (59차 QA 확인, Critical).
+  useEffect(() => {
+    if (hasRolledBack.current) return
+    hasRolledBack.current = true
+
+    const subscriptionId = searchParams.get('subscriptionId')
+    if (!subscriptionId) return
+
+    const originalPlanId = searchParams.get('originalPlanId')
+    const originalBillingCycle = searchParams.get('originalBillingCycle')
+    const wasNewlyCreated = searchParams.get('wasNewlyCreated') === 'true'
+
+    fetch('/api/subscription/rollback-plan-change', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        subscriptionId,
+        originalPlanId,
+        originalBillingCycle,
+        wasNewlyCreated,
+      }),
+    }).catch((err) => console.error('Failed to rollback plan change:', err))
+  }, [searchParams])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
