@@ -85,6 +85,16 @@ export async function POST(request: Request) {
     card_info: cardInfo,
     status: 'active',
   }
+  // rollbackStatus가 past_due면 지금 유예기간이 실제로 진행 중인 것이므로(대시보드
+  // "결제 재시도" 버튼) grace_period_end를 건드리면 안 된다 - toss-billing-payment의
+  // isFirstFailure 판정이 이 값의 존재 여부로 "최초 실패"를 가리므로(57차 QA), 여기서
+  // 지우면 이어지는 재시도가 매번 "최초 실패"로 오판되어 유예기간이 계속 리셋된다.
+  // 그 외(trial/expired/cancelled에서 재구독)는 과거 past_due를 거쳤을 때 남은 stale한
+  // 값일 수 있어 비운다 - 안 비우면 재구독 후 결제가 다시 실패할 때 오래된 값을 그대로
+  // 재사용해 유예기간이 사실상 0일로 붕괴한다(58차 QA 확인).
+  if (rollbackStatus !== 'past_due') {
+    updateData.grace_period_end = null
+  }
   if (planId) {
     updateData.plan_id = planId
     // 예약된 다운그레이드가 남아있으면 아래 mode 없는 결제 호출이 방금 선택한

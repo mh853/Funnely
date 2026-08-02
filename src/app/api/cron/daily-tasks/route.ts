@@ -950,10 +950,13 @@ async function checkSubscriptionExpiry(supabase: any) {
         console.log(`[Subscription] Grace period 진입: ${sub.id}`)
       }
     } else {
-      // Grace period 없거나 종료 → 'expired'로 변경
+      // Grace period 없거나 종료 → 'expired'로 변경. grace_period_end도 함께 비운다 -
+      // 안 비우면 이 구독이 나중에 재구독될 때 오래된 값이 그대로 남아 toss-billing-payment의
+      // isFirstFailure 판정(값 존재 여부로 "최초 실패"를 가림)을 오판시켜 다음 결제
+      // 실패 시 유예기간이 사실상 0일로 붕괴한다(58차 QA 확인).
       const { error: updateError } = await supabase
         .from('company_subscriptions')
-        .update({ status: 'expired' })
+        .update({ status: 'expired', grace_period_end: null })
         .eq('id', sub.id)
 
       if (updateError) {
