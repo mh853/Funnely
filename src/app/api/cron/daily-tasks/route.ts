@@ -1180,7 +1180,7 @@ async function sendLeadDigestEmails(supabase: any) {
 /**
  * 결제 관련 알림(결제완료/결제실패/구독취소/체험종료임박) 발송
  *
- * toss-payment-webhook/toss-billing-payment/subscription-cron 세 곳이 payment_notifications에
+ * toss-billing-payment/subscription-cron 두 곳이 payment_notifications에
  * status:'pending'으로 insert만 하고, 이를 다시 읽어 실제 이메일로 보내는 코드가 프로젝트
  * 어디에도 없었다(신규 발견). subject/body_text는 이미 생성 시점에 채워져 있으므로 여기서는
  * 그대로 발송만 한다. body_html은 생성부에서 채우지 않으므로(항상 null) HTML 없이 텍스트
