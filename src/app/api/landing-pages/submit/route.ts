@@ -281,6 +281,7 @@ export async function POST(request: NextRequest) {
       type: string
       question?: string
       options?: string[]
+      required?: boolean
     }> | null
 
     // 아래 catch-all 루프가 이미 fieldKey로 소비된 값을 라벨 'field_0' 등으로
@@ -295,8 +296,22 @@ export async function POST(request: NextRequest) {
         .map((field, index) => ({
           key: field.id || `field_${index}`,
           label: field.question,
+          required: field.required ?? false,
         }))
-        .filter((f): f is { key: string; label: string } => !!f.label)
+        .filter((f): f is { key: string; label: string; required: boolean } => !!f.label)
+
+      // 필수 항목 여부는 클라이언트(PublicLandingPage.tsx)에서만 검증하고 있어,
+      // 공개 제출 API를 브라우저 없이 직접 호출하면 필수로 지정한 커스텀 질문을
+      // 그냥 건너뛸 수 있었다(66차 QA 확인) - 서버에서도 동일하게 강제한다.
+      const missingRequiredField = customFieldDefs.find(
+        (f) => f.required && !form_data[f.key]
+      )
+      if (missingRequiredField) {
+        return NextResponse.json(
+          { error: { message: `"${missingRequiredField.label}" 항목은 필수입니다` } },
+          { status: 400 }
+        )
+      }
 
       // Match form_data keys with custom field keys
       customFieldDefs.forEach(({ key, label }) => {
