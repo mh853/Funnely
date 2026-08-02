@@ -8,6 +8,7 @@ import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils/date'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { useToast } from '@/components/shared/Toast'
+import { hasValidPlanAccess } from '@/lib/subscription-current'
 
 interface Plan {
   id: string
@@ -205,6 +206,18 @@ export default function NewSubscriptionClient({
   // 방법이 없다(56차 QA 확인: handleSelectPlan의 재결제 분기는 이미 구현돼 있었으나
   // 정작 그 분기로 가는 버튼만 막혀 있었음)
   const isPastDue = currentSubscription?.status === 'past_due'
+
+  // isCurrentPlan은 plan_id가 이 플랜과 같기만 하면 true가 되는데, "카드 등록 후 즉시
+  // 결제"(isExistingUser 분기)가 plan_id를 낙관적으로 먼저 커밋한 뒤 카드등록(Step1)만
+  // 성공하고 즉시결제(Step2)가 중단되면 - 실제로는 만료(expired)/기간이 이미 지난
+  // 취소·정지 상태라 아무 접근권한이 없는데도 isCancelledWithValidAccess/
+  // isSuspendedWithValidAccess/isPastDue 중 어느 조건에도 안 걸려 canReactivate가
+  // 전부 false가 되고, 버튼이 "현재 사용 중"으로 영구 비활성화되는 데드엔드가
+  // 생겼다(61차 QA 확인, High). 개별 상태값을 하나씩 열거하는 대신 hasValidPlanAccess로
+  // "지금 실제로 이 플랜을 쓸 권한이 있는가"를 직접 물어, 위 세 조건이 놓친 조합
+  // (expired, 또는 기간이 지난 cancelled/suspended)까지 전부 포괄한다.
+  const isCurrentPlanUnpaid =
+    !!currentSubscription && !isCurrentlyOnTrial && !hasValidPlanAccess(currentSubscription)
 
   // 빌링키 등록 여부: 현재 구독 또는 회사 다른 구독에 빌링키가 있으면 재사용 가능
   const hasBillingKey = !!currentSubscription?.billing_key || !!companyBillingKeySubscriptionId
@@ -596,6 +609,16 @@ export default function NewSubscriptionClient({
           // 카드 등록 실패/취소 시 이 행 자체를 되돌릴(삭제할) 수 있도록 표시해서
           // failUrl에 실어 보낸다(59차 QA 확인, Critical - 위 두 분기와 동일한 이유,
           // 이 경우는 되돌릴 "원래 플랜"이 없고 이번에 새로 만든 행 자체가 문제이므로 삭제)
+          //
+          // current_period_end를 비워두면(=null) 이 뒤에 이어지는 카드등록 팝업+
+          // billing-success 페이지의 2단계 결제(Step1 카드등록/Step2 실결제) 중 Step2가
+          // 브라우저 강제종료·네트워크 단절 등으로 아예 실행되지 못했을 때, status가
+          // 이미 'active'인 이 행을 daily-tasks의 만료 쿼리(current_period_end 부등식
+          // 비교)가 null과는 절대 매치하지 못해 결제 한 번 없이 영구 무제한 접근이
+          // 가능해진다(61차 QA 확인, Critical). 지금 시각으로 채워두면 Step2가 실제로
+          // 성공할 때 정상적인 결제 주기로 덮어써지고(에지 함수가 성공 시 항상
+          // current_period_end를 다시 계산해 씀), 실패해 방치되면 다음 크론 실행 때
+          // 자연히 만료 처리된다.
           const { data: newSub, error } = await supabase
             .from('company_subscriptions')
             .insert({
@@ -603,6 +626,7 @@ export default function NewSubscriptionClient({
               plan_id: plan.id,
               status: 'active',
               billing_cycle: billingCycle,
+              current_period_end: new Date().toISOString(),
             })
             .select('id')
             .single()
@@ -709,6 +733,9 @@ export default function NewSubscriptionClient({
     if (isCurrentPlan && (isCancelledWithValidAccess || isSuspendedWithValidAccess)) return '재구독하기'
     // 결제 실패로 유예기간 중인 플랜: 재결제 허용 (disabled 아님)
     if (isCurrentPlan && isPastDue) return hasBillingKey ? '결제 재시도' : '결제 정보 등록'
+    // 만료됐거나 기간이 지난 취소/정지 플랜(카드등록 후 즉시결제가 중단된 경우 등):
+    // 재결제 허용 (disabled 아님)
+    if (isCurrentPlan && isCurrentPlanUnpaid) return hasBillingKey ? '결제 재시도' : '결제 정보 등록'
     if (isCurrentPlan) return '현재 사용 중'
     if (plan.price_monthly === 0 && plan.price_yearly === 0) return '문의하기'
     if (plan.name === 'Free' && plan.price_monthly === 0) return '무료로 전환'
@@ -997,7 +1024,8 @@ export default function NewSubscriptionClient({
           // 강조만 남기고 추천 배지는 신규 사용자(구독이 아예 없는 경우)에게만 보여준다.
           const isRecommended = !currentSubscription && plan.sort_order === 3
           const canReactivate =
-            isCurrentPlan && (isCancelledWithValidAccess || isSuspendedWithValidAccess || isPastDue)
+            isCurrentPlan &&
+            (isCancelledWithValidAccess || isSuspendedWithValidAccess || isPastDue || isCurrentPlanUnpaid)
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
           const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
