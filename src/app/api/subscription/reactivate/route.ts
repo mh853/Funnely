@@ -51,9 +51,20 @@ export async function POST() {
 
   const wasSuspended = subscription.status === 'suspended'
 
+  // cancel 라우트는 취소 시점에 이미 pending_plan_id/pending_billing_cycle을 비우지만,
+  // suspended는 관리자의 회사 비활성화 경로를 거치며 이 컬럼을 전혀 건드리지 않는다 -
+  // 안 비우면 정지 전에 예약해둔 다운그레이드가, 이 재구독과 무관한 미래의 정기갱신
+  // 시점에 고객이 인지하지 못한 채 조용히 적용된다(admin 재활성화 API는 이미 동일하게
+  // 비움, 60차 QA 확인).
   const { error: updateError } = await db
     .from('company_subscriptions')
-    .update({ status: 'active', cancelled_at: null, cancel_reason: null })
+    .update({
+      status: 'active',
+      cancelled_at: null,
+      cancel_reason: null,
+      pending_plan_id: null,
+      pending_billing_cycle: null,
+    })
     .eq('id', subscription.id)
 
   if (updateError) {
