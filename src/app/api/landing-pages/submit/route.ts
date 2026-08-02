@@ -270,7 +270,11 @@ export async function POST(request: NextRequest) {
     // field_N)를 키로 답변을 담고 있다 - PublicLandingPage.tsx와 동일한 규칙이다.
     // 과거에는 질문 텍스트(자유입력, 중복 가능) 자체를 키로 매칭해서, 두 질문의
     // 텍스트가 같으면 한쪽 답변이 사라지고 다른 쪽 값이 같은 라벨로 중복 저장됐다.
-    const customFields: Array<{ label: string; value: string }> = []
+    // id: 질문의 안정적 식별자(collect_fields의 field.id 또는 field_N) - 나중에
+    // 랜딩페이지 작성자가 질문 텍스트를 수정(rename)해도, 이 id로 "같은 질문"임을
+    // 계속 알아볼 수 있게 저장해둔다. label만 저장하면 텍스트가 바뀔 때마다 리드
+    // 목록/엑셀에서 별개 컬럼으로 영구 분리(fork)되는 문제가 있었다(66차 QA 확인).
+    const customFields: Array<{ id?: string; label: string; value: string }> = []
     const reservedKeys = ['name', '이름', 'phone', '전화번호', 'email', '이메일', 'message', '메시지',
                           'privacy_consent', 'marketing_consent', 'consultation_items',
                           'preferred_date', 'preferred_time']
@@ -317,6 +321,7 @@ export async function POST(request: NextRequest) {
       customFieldDefs.forEach(({ key, label }) => {
         if (form_data[key]) {
           customFields.push({
+            id: key,
             label,
             value: String(form_data[key])
           })

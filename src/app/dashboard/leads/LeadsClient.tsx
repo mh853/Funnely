@@ -1188,6 +1188,22 @@ export default function LeadsClient({
         // 상담 담당자 이름 가져오기
         const counselorAssignedUserName = lead.counselor_assigned_user?.full_name || '-'
 
+        // 커스텀 질문의 안정적 id → 랜딩페이지의 "지금" 질문 텍스트 매핑을 만든다.
+        // 리드 제출 당시 저장된 label은 그 시점의 질문 텍스트 스냅샷이라, 작성자가
+        // 나중에 질문을 rename하면 옛/새 라벨이 엑셀에서 별개 컬럼으로 영구
+        // 분리(fork)되는 문제가 있었다(66차 QA 확인). id가 있으면(66차 이후 제출분)
+        // 항상 "지금" 질문 텍스트로 통일해 컬럼이 하나로 유지되게 한다 - id가 없는
+        // 과거 제출분이나, 질문 자체가 이후 삭제된 경우는 저장된 라벨 그대로 쓴다.
+        const currentLabelById = new Map<string, string>()
+        const collectFields = lead.landing_pages?.collect_fields
+        if (Array.isArray(collectFields)) {
+          collectFields
+            .filter((f: any) => f.type === 'short_answer' || f.type === 'multiple_choice')
+            .forEach((f: any, idx: number) => {
+              if (f.question) currentLabelById.set(f.id || `field_${idx}`, f.question)
+            })
+        }
+
         // custom_fields 데이터 파싱
         let customFieldsData: { [key: string]: string } = {}
         if (lead.custom_fields) {
@@ -1198,7 +1214,8 @@ export default function LeadsClient({
             if (Array.isArray(fields)) {
               fields.forEach((field: any) => {
                 if (field.label && field.value !== undefined) {
-                  customFieldsData[field.label] = String(field.value)
+                  const resolvedLabel = (field.id && currentLabelById.get(field.id)) || field.label
+                  customFieldsData[resolvedLabel] = String(field.value)
                 }
               })
             } else if (typeof fields === 'object') {
