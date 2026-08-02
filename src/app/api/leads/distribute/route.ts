@@ -295,6 +295,23 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // 배분 알림 - 담당자에게 새 배정을 알릴 수단이 전혀 없어 대시보드를 수동으로
+    // 확인해야만 알 수 있었다(66차 QA 확인). 리드 1건마다 알림을 만들면 대량배분 시
+    // 스팸이 되므로, 이번 배분 전체를 요약한 알림 1건만 남긴다(fire-and-forget).
+    const statsSummary = distributionStats
+      .filter((s) => s.assignedCount > 0)
+      .map((s) => `${s.userName} ${s.assignedCount}건`)
+      .join(', ')
+    supabase.from('notifications').insert({
+      company_id: companyId,
+      title: 'DB 배분 완료',
+      message: `${unassignedLeads.length}건의 DB가 배분되었습니다: ${statsSummary}`,
+      type: 'lead_assigned',
+      metadata: { distributed: unassignedLeads.length, stats: distributionStats },
+    }).then(({ error }: any) => {
+      if (error) console.error('Failed to create distribution notification:', error)
+    })
+
     // ========================================================================
     // 8. 성공 응답
     // ========================================================================

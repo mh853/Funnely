@@ -3,6 +3,37 @@ import { NextRequest, NextResponse } from 'next/server'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { getLeadStatusCategoryMap } from '@/lib/leadStatusCategory'
 
+// 리드 배정 알림 - 콜/상담 담당자를 지정해도 담당자에게 알릴 수단이 전혀 없어
+// 대시보드를 수동으로 확인해야만 새 배정을 알 수 있었다(66차 QA 확인). notifications
+// 테이블이 특정 사용자가 아니라 회사 전체 단위로만 구성돼 있어(다른 알림들과 동일한
+// 제약), 회사 전체에 노출하되 누구에게 배정됐는지 메시지에 명시한다. fire-and-forget이라
+// 실패해도 메인 배정 처리에는 영향 없다.
+async function notifyAssignment(
+  supabase: any,
+  companyId: string,
+  leadName: string,
+  assignedUserId: string,
+  roleLabel: string
+) {
+  try {
+    const { data: assignedUser } = await supabase
+      .from('users')
+      .select('full_name')
+      .eq('id', assignedUserId)
+      .maybeSingle()
+
+    await supabase.from('notifications').insert({
+      company_id: companyId,
+      title: `${roleLabel} 담당자 배정`,
+      message: `${leadName || '리드'}님이 ${assignedUser?.full_name || '담당자'}님에게 ${roleLabel} 담당으로 배정되었습니다.`,
+      type: 'lead_assigned',
+      metadata: { assigned_user_id: assignedUserId, role: roleLabel },
+    })
+  } catch (error) {
+    console.error('Failed to create assignment notification:', error)
+  }
+}
+
 // PUT /api/leads/update - Update lead status, priority, and assignment
 export async function PUT(request: NextRequest) {
   try {
@@ -194,6 +225,13 @@ export async function PUT(request: NextRequest) {
       } catch (logError) {
         console.error('Failed to log call_assigned_to change:', logError)
       }
+      // 배정 알림 - 지금까지 담당자에게 새 배정을 알리는 수단이 전혀 없어 대시보드를
+      // 수동으로 확인해야만 알 수 있었다(66차 QA 확인). notifications 테이블이
+      // 회사 단위로만 구성돼 있어(특정 사용자 지정 불가) 다른 알림들과 동일하게
+      // 회사 전체에 표시하되, 누구에게 배정됐는지 메시지에 명시한다.
+      if (newCallAssignedTo) {
+        notifyAssignment(supabase, userProfile.company_id, updatedLead.name, newCallAssignedTo, '콜')
+      }
     }
 
     // 상담 담당자 변경 로그 기록
@@ -211,6 +249,9 @@ export async function PUT(request: NextRequest) {
         })
       } catch (logError) {
         console.error('Failed to log counselor_assigned_to change:', logError)
+      }
+      if (newCounselorAssignedTo) {
+        notifyAssignment(supabase, userProfile.company_id, updatedLead.name, newCounselorAssignedTo, '상담')
       }
     }
 
