@@ -1140,6 +1140,7 @@ async function sendLeadDigestEmails(supabase: any) {
     })
 
     // Send digest email to each recipient
+    let anyRecipientSucceeded = false
     for (const recipientEmail of recipientEmails) {
       try {
         const htmlContent = generateDigestEmailHTML(companyName, leadItems, dashboardUrl)
@@ -1161,6 +1162,7 @@ async function sendLeadDigestEmails(supabase: any) {
           `[Lead Digest] Email sent to ${recipientEmail} for company ${companyId} (${leadItems.length} leads)`
         )
         totalEmailsSent++
+        anyRecipientSucceeded = true
 
         // Log successful send for each lead
         for (const notification of notifications) {
@@ -1194,12 +1196,29 @@ async function sendLeadDigestEmails(supabase: any) {
       }
     }
 
-    // Mark all notifications as sent
-    const notificationIds = notifications.map((n) => n.id)
-    await supabase
-      .from('lead_notification_queue')
-      .update({ sent: true, sent_at: now })
-      .in('id', notificationIds)
+    if (anyRecipientSucceeded) {
+      // Mark all notifications as sent
+      const notificationIds = notifications.map((n) => n.id)
+      await supabase
+        .from('lead_notification_queue')
+        .update({ sent: true, sent_at: now })
+        .in('id', notificationIds)
+    } else {
+      // 수신자 전원 발송 실패(예: Resend 장애) - 이전에는 이 경우에도 무조건
+      // sent:true로 마킹해 재시도 없이 그날 알림이 영구 유실됐다. retry_count를
+      // 컬럼 존재값 그대로 개별 증가시켜, 다음 크론 실행이 위 쿼리의
+      // .lt('retry_count', 3) 조건에 따라 최대 3회까지 재시도하도록 한다
+      // (67차 QA 확인).
+      for (const notification of notifications) {
+        await supabase
+          .from('lead_notification_queue')
+          .update({ retry_count: (notification.retry_count || 0) + 1 })
+          .eq('id', notification.id)
+      }
+      console.error(
+        `[Lead Digest] All recipients failed for company ${companyId} - will retry next run (retry_count incremented)`
+      )
+    }
   }
 
   return {
