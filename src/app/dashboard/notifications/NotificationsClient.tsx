@@ -32,7 +32,36 @@ export default function NotificationsClient({
   const [notifications, setNotifications] = useState<Notification[]>(initialNotifications)
   // 브로드캐스트(user_id NULL) 알림에 대한 내 읽음 영수증 - notification_id 집합
   const [readReceiptIds, setReadReceiptIds] = useState<Set<string>>(new Set())
+  // new_lead 알림은 전화번호를 저장하지 않고 lead_id만 갖고 있어(68차 QA -
+  // notifications에 평문 전화번호를 영구 저장하면 leads.phone 암호화가 무력화됨),
+  // 화면에서 lead_id → 복호화된 전화번호로 그때그때 조회해 채운다.
+  const [decryptedPhones, setDecryptedPhones] = useState<Record<string, string>>({})
   const supabase = createClient()
+
+  useEffect(() => {
+    const leadIds = Array.from(
+      new Set(
+        notifications
+          .filter((n) => n.type === 'new_lead' && n.metadata?.lead_id && !decryptedPhones[n.metadata.lead_id])
+          .map((n) => n.metadata.lead_id as string)
+      )
+    )
+    if (leadIds.length === 0) return
+
+    fetch('/api/leads/decrypt-phones', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadIds }),
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((result) => {
+        if (result?.phones) {
+          setDecryptedPhones((prev) => ({ ...prev, ...result.phones }))
+        }
+      })
+      .catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notifications])
 
   // 특정 알림이 "나에게" 읽음 상태인지 계산 - 개인 알림은 is_read, 브로드캐스트는 읽음 영수증 존재 여부
   const isReadForMe = (notification: Notification) =>
@@ -283,7 +312,14 @@ export default function NotificationsClient({
             )}
           </div>
           <h3 className="text-sm font-medium text-gray-900">{notification.title}</h3>
-          <p className="mt-1 text-sm text-gray-600">{notification.message}</p>
+          <p className="mt-1 text-sm text-gray-600">
+            {notification.message}
+            {notification.type === 'new_lead' && decryptedPhones[notification.metadata?.lead_id] && (
+              <span className="ml-1 font-medium text-gray-800">
+                ({decryptedPhones[notification.metadata.lead_id]})
+              </span>
+            )}
+          </p>
           <p className="mt-2 text-xs text-gray-400">
             {formatDateTime(notification.created_at)}
           </p>

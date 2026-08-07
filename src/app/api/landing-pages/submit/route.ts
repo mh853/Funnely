@@ -393,16 +393,20 @@ export async function POST(request: NextRequest) {
     }
 
     // 상담신청 알림 생성 (fire and forget - non-blocking)
+    // leads.phone은 암호화 저장되는데, 여기서 평문 전화번호를 message/metadata에
+    // 그대로 박아 넣으면 notifications 테이블에 영구 평문 사본이 남아 암호화가
+    // 무력화된다(68차 QA 확인 - notifications는 삭제 기능이 없어 사실상 영구보존).
+    // 전화번호는 저장하지 않고 lead_id만 남겨, 화면에서 /api/leads/decrypt-phones로
+    // 그때그때 복호화해서 표시한다(캘린더/예약 스케줄과 동일한 기존 패턴).
     supabase.from('notifications').insert({
       company_id: landingPage.company_id,
       title: '새 상담 신청',
-      message: `"${landingPage.title}" 랜딩페이지에 ${name}님(${phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3')})이 상담을 신청했습니다.`,
+      message: `"${landingPage.title}" 랜딩페이지에 ${name}님이 상담을 신청했습니다.`,
       type: 'new_lead',
       metadata: {
         lead_id: lead.id,
         landing_page_id,
         name,
-        phone: phone.replace(/(\d{3})(\d{3,4})(\d{4})/, '$1-$2-$3'),
         email: email || null,
         device_type: detectDeviceType(metadata?.user_agent),
       },
