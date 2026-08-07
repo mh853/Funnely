@@ -10,6 +10,32 @@ function getServiceClient() {
   )
 }
 
+// company_id IN(...) 집계 쿼리 4곳(관리자/유저수/구독/결제) 모두 .range() 없이
+// 조회하고 있어, 대상 회사들의 users/company_subscriptions/payment_transactions
+// 행이 합쳐서 1000건을 넘으면 PostgREST의 기본 max_rows 캡에 조용히 잘렸다
+// (다른 라운드에서 반복 확인된 것과 동일한 패턴, 68차 QA 확인). 회사 목록
+// 자체는 위 fetchAll 분기처럼 이미 배치 반복을 쓰고 있으므로 동일한 방식을
+// 적용한다.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function fetchAllInBatches(
+  buildQuery: (from: number, to: number) => PromiseLike<{ data: any[] | null; error: any }>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+): Promise<any[]> {
+  const BATCH_SIZE = 1000
+  const MAX_TOTAL_ROWS = 50000
+  const all: any[] = []
+  let offset = 0
+  while (true) {
+    const { data, error } = await buildQuery(offset, offset + BATCH_SIZE - 1)
+    if (error) throw error
+    if (!data || data.length === 0) break
+    all.push(...data)
+    if (data.length < BATCH_SIZE || all.length >= MAX_TOTAL_ROWS) break
+    offset += BATCH_SIZE
+  }
+  return all
+}
+
 /**
  * GET /api/admin/companies
  * 회사 목록 조회 (배치 쿼리로 N+1 제거)
@@ -99,65 +125,78 @@ export async function GET(request: NextRequest) {
 
     const companyIds = companies.map((c) => c.id)
 
-    // Batch queries in parallel — no more N+1
-    const [adminUsersResult, userCountsResult, subscriptionsResult, paymentsResult] =
+    // Batch queries in parallel — no more N+1 (각 쿼리는 fetchAllInBatches로 내부적으로
+    // .range() 배치 반복하므로 1000행을 넘는 회사 목록에서도 조용히 잘리지 않는다)
+    const [adminUsersRows, userCountsRows, subscriptionsRows, paymentsRows] =
       await Promise.all([
         // Admin users (company_owner) for all companies
-        supabase
-          .from('users')
-          .select('id, full_name, email, company_id')
-          .in('company_id', companyIds)
-          .eq('role', 'company_owner'),
+        fetchAllInBatches((from, to) =>
+          supabase
+            .from('users')
+            .select('id, full_name, email, company_id')
+            .in('company_id', companyIds)
+            .eq('role', 'company_owner')
+            .range(from, to)
+        ),
 
         // User counts per company
-        supabase
-          .from('users')
-          .select('company_id')
-          .in('company_id', companyIds),
+        fetchAllInBatches((from, to) =>
+          supabase
+            .from('users')
+            .select('company_id')
+            .in('company_id', companyIds)
+            .range(from, to)
+        ),
 
         // Subscriptions for all companies
         // status 필터를 걸면 expired/cancelled/suspended만 있는 회사는 subscriptionMap에서
         // 아예 빠져 목록에 "구독 없음"으로 잘못 표시된다. 모든 상태를 가져와 회사별로
         // 가장 최근 레코드(생성일 desc + 최초 발견분 채택)만 사용한다.
-        supabase
-          .from('company_subscriptions')
-          .select(`
-            id, plan_id, status, billing_cycle, trial_end_date,
-            current_period_end, created_at, cancelled_at, company_id,
-            locked_plan_id, locked_price_monthly, locked_price_yearly,
-            subscription_plans!plan_id(id, name, price_monthly, price_yearly)
-          `)
-          .in('company_id', companyIds)
-          .order('created_at', { ascending: false }),
+        fetchAllInBatches((from, to) =>
+          supabase
+            .from('company_subscriptions')
+            .select(`
+              id, plan_id, status, billing_cycle, trial_end_date,
+              current_period_end, created_at, cancelled_at, company_id,
+              locked_plan_id, locked_price_monthly, locked_price_yearly,
+              subscription_plans!plan_id(id, name, price_monthly, price_yearly)
+            `)
+            .in('company_id', companyIds)
+            .order('created_at', { ascending: false })
+            .range(from, to)
+        ),
 
         // Payment transactions for all companies
-        supabase
-          .from('payment_transactions')
-          .select('total_amount, approved_at, company_id')
-          .in('company_id', companyIds)
-          .eq('status', 'success')
-          .order('approved_at', { ascending: false }),
+        fetchAllInBatches((from, to) =>
+          supabase
+            .from('payment_transactions')
+            .select('total_amount, approved_at, company_id')
+            .in('company_id', companyIds)
+            .eq('status', 'success')
+            .order('approved_at', { ascending: false })
+            .range(from, to)
+        ),
       ])
 
     // Build lookup maps
     const adminUserMap: Record<string, { id: string; full_name: string; email: string }> = {}
-    for (const u of adminUsersResult.data || []) {
+    for (const u of adminUsersRows) {
       if (!adminUserMap[u.company_id]) adminUserMap[u.company_id] = u
     }
 
     const userCountMap: Record<string, number> = {}
-    for (const u of userCountsResult.data || []) {
+    for (const u of userCountsRows) {
       userCountMap[u.company_id] = (userCountMap[u.company_id] || 0) + 1
     }
 
     const subscriptionMap: Record<string, any> = {}
-    for (const s of subscriptionsResult.data || []) {
+    for (const s of subscriptionsRows) {
       if (!subscriptionMap[s.company_id]) subscriptionMap[s.company_id] = s
     }
 
     // Payment stats per company
     const paymentMap: Record<string, { total_paid: number; payment_count: number; first_payment_date: string | null; last_payment_date: string | null }> = {}
-    for (const p of paymentsResult.data || []) {
+    for (const p of paymentsRows) {
       if (!paymentMap[p.company_id]) {
         paymentMap[p.company_id] = {
           total_paid: 0,
