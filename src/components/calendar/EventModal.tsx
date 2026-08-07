@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, Fragment } from 'react'
+import { useRouter } from 'next/navigation'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
 
@@ -35,6 +36,7 @@ export default function EventModal({
   onClose,
   onSave,
 }: EventModalProps) {
+  const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
@@ -110,11 +112,18 @@ export default function EventModal({
         body: JSON.stringify({
           id: event?.id,
           ...formData,
+          expected_updated_at: event?.updated_at,
         }),
       })
 
       if (!res.ok) {
         const data = await res.json()
+        // 낙관적 동시성 충돌(409) - 모달은 열어둔 채 오류만 보여주고, 백그라운드로
+        // router.refresh()를 호출해 두면 사용자가 모달을 닫고 다시 열었을 때는
+        // 최신 데이터를 보게 된다(list-level 핸들러와 동일한 패턴).
+        if (res.status === 409) {
+          router.refresh()
+        }
         throw new Error(data.error?.message || '일정 저장 실패')
       }
 

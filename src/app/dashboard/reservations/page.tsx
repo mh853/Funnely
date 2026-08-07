@@ -46,6 +46,7 @@ export default async function ReservationsPage() {
       notes,
       call_assigned_to,
       counselor_assigned_to,
+      updated_at,
       landing_pages (
         id,
         title,

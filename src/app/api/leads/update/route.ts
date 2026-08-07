@@ -48,7 +48,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount, preferred_date, preferred_time, cancel_reason } = body
+    const { id, status, priority, call_assigned_to, counselor_assigned_to, contract_completed_at, notes, payment_amount, preferred_date, preferred_time, cancel_reason, expected_updated_at } = body
 
     // Validate required fields
     if (!id) {
@@ -69,7 +69,7 @@ export async function PUT(request: NextRequest) {
     // Verify lead belongs to user's hospital
     const { data: lead } = await supabase
       .from('leads')
-      .select('id, company_id, status, contract_completed_at, call_assigned_to, counselor_assigned_to, notes, preferred_date, preferred_time')
+      .select('id, company_id, status, contract_completed_at, call_assigned_to, counselor_assigned_to, notes, preferred_date, preferred_time, updated_at')
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
       .single()
@@ -195,17 +195,38 @@ export async function PUT(request: NextRequest) {
     }
 
     // Update lead (must include company_id for RLS policies)
-    const { data: updatedLead, error: updateError } = await supabase
+    // 낙관적 동시성 제어: 클라이언트가 화면을 불러온 시점의 updated_at을 함께 보내면
+    // WHERE 절에 그대로 걸어, 그 사이 다른 사용자가 이미 수정했으면(값이 달라짐)
+    // 이 UPDATE가 0행에 매치되게 한다. 두 사람이 거의 동시에 같은 리드를 수정하면
+    // 나중에 저장한 쪽이 조용히 앞사람의 변경을 덮어쓰던 문제를 막는다(68차 QA 확인).
+    // 하위호환: expected_updated_at을 안 보내는 예전 클라이언트는 기존처럼 무조건 덮어씀.
+    let updateQuery = supabase
       .from('leads')
       .update(updateData)
       .eq('id', id)
       .eq('company_id', userProfile.company_id)
-      .select()
-      .maybeSingle()
+    if (expected_updated_at) {
+      updateQuery = updateQuery.eq('updated_at', expected_updated_at)
+    }
+    const { data: updatedLead, error: updateError } = await updateQuery.select().maybeSingle()
 
     if (updateError) throw updateError
 
     if (!updatedLead) {
+      if (expected_updated_at) {
+        const { data: stillExists } = await supabase
+          .from('leads')
+          .select('id')
+          .eq('id', id)
+          .eq('company_id', userProfile.company_id)
+          .maybeSingle()
+        if (stillExists) {
+          return NextResponse.json(
+            { success: false, error: { code: 'CONFLICT', message: '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.' } },
+            { status: 409 }
+          )
+        }
+      }
       return NextResponse.json(
         { success: false, error: { message: '리드를 찾을 수 없거나 권한이 없습니다.' } },
         { status: 404 }

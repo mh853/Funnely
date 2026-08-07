@@ -57,6 +57,7 @@ interface Lead {
   counselor_assigned_to?: string | null
   call_assigned_user?: User | null
   counselor_assigned_user?: User | null
+  updated_at?: string | null
 }
 
 interface TeamMember {
@@ -642,13 +643,30 @@ export default function ReservationsClient({
           id: draggedLead.id,
           status: 'contract_completed',
           contract_completed_at: newContractCompletedAt,
+          expected_updated_at: draggedLead.updated_at,
         }),
       })
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
-        throw new Error('스케줄 업데이트 실패')
+        // 롤백
+        setLeads(initialLeads)
+        if (response.status === 409) {
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+        } else {
+          toast.error('스케줄 변경에 실패했습니다.')
+        }
+        return
       }
 
+      // 서버가 반환한 최신 updated_at을 반영해 다음 수정이 스스로와 충돌하지 않게 한다
+      setLeads(prevLeads =>
+        prevLeads.map(l =>
+          l.id === draggedLead.id ? { ...l, updated_at: result?.data?.updated_at ?? l.updated_at } : l
+        )
+      )
       router.refresh()
     } catch (error) {
       console.error('Schedule update error:', error)
@@ -727,6 +745,7 @@ export default function ReservationsClient({
             name,
             phone,
             status,
+            updated_at,
             landing_pages (
               id,
               title
@@ -764,11 +783,13 @@ export default function ReservationsClient({
     try {
       // 날짜와 시간 결합하여 ISO 문자열 생성 (한국 시간대 명시)
       const contractCompletedAt = `${scheduleInputDate}T${scheduleInputTime}:00+09:00`
+      const currentLead = availableLeadsForSchedule.find(l => l.id === scheduleInputLeadId)
 
       const updateBody: any = {
         id: scheduleInputLeadId,
         status: 'contract_completed',
-        contract_completed_at: contractCompletedAt
+        contract_completed_at: contractCompletedAt,
+        expected_updated_at: currentLead?.updated_at,
       }
 
       // 상담담당자가 선택된 경우 추가
@@ -782,7 +803,15 @@ export default function ReservationsClient({
         body: JSON.stringify(updateBody)
       })
 
-      if (!response.ok) throw new Error('예약 스케줄 저장 실패')
+      if (!response.ok) {
+        if (response.status === 409) {
+          const result = await response.json().catch(() => null)
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
+        throw new Error('예약 스케줄 저장 실패')
+      }
 
       // 성공 시 해당 리드 정보 가져와서 로컬 상태 업데이트
       const { data: updatedLead } = await supabase
@@ -1443,7 +1472,7 @@ export default function ReservationsClient({
                               setScheduleSearchQuery('')
                               supabase
                                 .from('leads')
-                                .select(`id, name, phone, status, landing_pages (id, title)`)
+                                .select(`id, name, phone, status, updated_at, landing_pages (id, title)`)
                                 .eq('company_id', companyId)
                                 .neq('status', 'contract_completed')
                                 .neq('status', 'rejected')
@@ -1783,7 +1812,7 @@ export default function ReservationsClient({
                   // 예약 가능한 리드 조회 (contract_completed, rejected 제외)
                   const { data: availableLeads } = await supabase
                     .from('leads')
-                    .select(`id, name, phone, status, landing_pages (id, title)`)
+                    .select(`id, name, phone, status, updated_at, landing_pages (id, title)`)
                     .eq('company_id', companyId)
                     .neq('status', 'contract_completed')
                     .neq('status', 'rejected')

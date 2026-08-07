@@ -858,6 +858,7 @@ export default function LeadsClient({
     setUpdatingLeadId(contractModalLeadId)
     try {
       const contractCompletedAt = new Date(`${contractDate}T${contractTime}:00`).toISOString()
+      const currentLead = leads.find(l => l.id === contractModalLeadId)
 
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
@@ -868,14 +869,22 @@ export default function LeadsClient({
           id: contractModalLeadId,
           status: contractModalStatus,
           contract_completed_at: contractCompletedAt,
+          expected_updated_at: currentLead?.updated_at,
         }),
       })
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
+        if (response.status === 409) {
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
         throw new Error('상태 업데이트 실패')
       }
 
-      // 로컬 상태 업데이트 (기존 날짜를 previous로 이동)
+      // 로컬 상태 업데이트 (기존 날짜를 previous로 이동, 서버가 반환한 최신 updated_at 반영)
       setLeads(prevLeads =>
         prevLeads.map(lead =>
           lead.id === contractModalLeadId
@@ -883,7 +892,8 @@ export default function LeadsClient({
                 ...lead,
                 status: contractModalStatus,
                 previous_contract_completed_at: lead.contract_completed_at || null,
-                contract_completed_at: contractCompletedAt
+                contract_completed_at: contractCompletedAt,
+                updated_at: result?.data?.updated_at ?? lead.updated_at,
               }
             : lead
         )
@@ -907,6 +917,7 @@ export default function LeadsClient({
 
     setUpdatingLeadId(leadId)
     try {
+      const currentLead = leads.find(l => l.id === leadId)
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: {
@@ -915,17 +926,27 @@ export default function LeadsClient({
         body: JSON.stringify({
           id: leadId,
           status: newStatus,
+          expected_updated_at: currentLead?.updated_at,
         }),
       })
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
+        if (response.status === 409) {
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
         throw new Error('상태 업데이트 실패')
       }
 
-      // 로컬 상태 업데이트 (계약완료→다른 상태: 날짜 이동)
+      // 로컬 상태 업데이트 (계약완료→다른 상태: 날짜 이동, 서버가 반환한 최신 updated_at 반영)
       setLeads(prevLeads =>
         prevLeads.map(lead => {
           if (lead.id !== leadId) return lead
+
+          const updatedAt = result?.data?.updated_at ?? lead.updated_at
 
           // 계약완료에서 다른 상태로 변경 시 날짜 이동
           if (isContractCompletedCode(lead.status) && !isContractCompletedCode(newStatus)) {
@@ -933,11 +954,12 @@ export default function LeadsClient({
               ...lead,
               status: newStatus,
               previous_contract_completed_at: lead.contract_completed_at || null,
-              contract_completed_at: null
+              contract_completed_at: null,
+              updated_at: updatedAt,
             }
           }
 
-          return { ...lead, status: newStatus }
+          return { ...lead, status: newStatus, updated_at: updatedAt }
         })
       )
       setEditingLeadId(null)
@@ -954,6 +976,7 @@ export default function LeadsClient({
   const handleAssigneeChange = async (leadId: string, newAssigneeId: string) => {
     setUpdatingAssigneeLeadId(leadId)
     try {
+      const currentLead = leads.find(l => l.id === leadId)
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: {
@@ -962,10 +985,18 @@ export default function LeadsClient({
         body: JSON.stringify({
           id: leadId,
           call_assigned_to: newAssigneeId || null,
+          expected_updated_at: currentLead?.updated_at,
         }),
       })
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
+        if (response.status === 409) {
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
         throw new Error('담당자 업데이트 실패')
       }
 
@@ -977,7 +1008,8 @@ export default function LeadsClient({
             ? {
                 ...lead,
                 call_assigned_to: newAssigneeId || null,
-                call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null
+                call_assigned_user: newAssignee ? { id: newAssignee.id, full_name: newAssignee.full_name } : null,
+                updated_at: result?.data?.updated_at ?? lead.updated_at,
               }
             : lead
         )
@@ -995,6 +1027,7 @@ export default function LeadsClient({
   const handleCounselorChange = async (leadId: string, newCounselorId: string) => {
     setUpdatingCounselorLeadId(leadId)
     try {
+      const currentLead = leads.find(l => l.id === leadId)
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: {
@@ -1003,10 +1036,18 @@ export default function LeadsClient({
         body: JSON.stringify({
           id: leadId,
           counselor_assigned_to: newCounselorId || null,
+          expected_updated_at: currentLead?.updated_at,
         }),
       })
 
+      const result = await response.json().catch(() => null)
+
       if (!response.ok) {
+        if (response.status === 409) {
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
         throw new Error('상담 담당자 업데이트 실패')
       }
 
@@ -1018,7 +1059,8 @@ export default function LeadsClient({
             ? {
                 ...lead,
                 counselor_assigned_to: newCounselorId || null,
-                counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null
+                counselor_assigned_user: newCounselor ? { id: newCounselor.id, full_name: newCounselor.full_name } : null,
+                updated_at: result?.data?.updated_at ?? lead.updated_at,
               }
             : lead
         )

@@ -26,6 +26,7 @@ export async function PUT(request: NextRequest) {
       lead_id,
       location,
       is_all_day,
+      expected_updated_at,
     } = body
 
     // Validate required fields
@@ -83,17 +84,37 @@ export async function PUT(request: NextRequest) {
     if (is_all_day !== undefined) updateData.all_day = is_all_day
 
     // Update event (hospital_id 필터로 TOCTOU 방지)
-    const { data: updatedEvent, error: updateError } = await supabase
+    // 낙관적 동시성 제어: leads/update와 동일한 패턴 - 클라이언트가 화면을 불러온
+    // 시점의 updated_at을 함께 보내면 WHERE 절에 걸어, 그 사이 다른 사용자가 이미
+    // 수정했으면 이 UPDATE가 0행에 매치되게 한다(68차 QA 확인). expected_updated_at을
+    // 안 보내는 예전 클라이언트는 기존처럼 무조건 덮어씀(하위호환).
+    let updateQuery = supabase
       .from('calendar_events')
       .update(updateData)
       .eq('id', id)
       .eq('hospital_id', userProfile.company_id)
-      .select()
-      .maybeSingle()
+    if (expected_updated_at) {
+      updateQuery = updateQuery.eq('updated_at', expected_updated_at)
+    }
+    const { data: updatedEvent, error: updateError } = await updateQuery.select().maybeSingle()
 
     if (updateError) throw updateError
 
     if (!updatedEvent) {
+      if (expected_updated_at) {
+        const { data: stillExists } = await supabase
+          .from('calendar_events')
+          .select('id')
+          .eq('id', id)
+          .eq('hospital_id', userProfile.company_id)
+          .maybeSingle()
+        if (stillExists) {
+          return NextResponse.json(
+            { success: false, error: { code: 'CONFLICT', message: '다른 사용자가 이미 이 일정을 수정했습니다. 새로고침 후 다시 시도해주세요.' } },
+            { status: 409 }
+          )
+        }
+      }
       return NextResponse.json(
         { success: false, error: { message: '일정을 찾을 수 없거나 권한이 없습니다.' } },
         { status: 404 }

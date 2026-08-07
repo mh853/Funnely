@@ -31,6 +31,7 @@ interface Lead {
   landing_page_id?: string
   contract_completed_at?: string
   previous_contract_completed_at?: string
+  updated_at?: string
 }
 
 interface CalendarViewProps {
@@ -506,6 +507,7 @@ export default function CalendarView({
       // - 그 외 상태: preferred_date, preferred_time 업데이트 (contract_completed_at 없이)
       const updatePayload: any = {
         id: droppedLead.id,
+        expected_updated_at: droppedLead.updated_at,
       }
 
       if (droppedLead.status === 'contract_completed') {
@@ -524,6 +526,14 @@ export default function CalendarView({
       })
 
       if (!response.ok) {
+        if (response.status === 409) {
+          const result = await response.json().catch(() => null)
+          const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
+          setLocalLeads(filtered)
+          toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          router.refresh()
+          return
+        }
         throw new Error('스케줄 업데이트 실패')
       }
 

@@ -46,6 +46,7 @@ interface LeadData {
   utm_content?: string | null
   utm_term?: string | null
   referrer?: string | null
+  updated_at?: string | null
 }
 
 interface UnifiedDetailModalProps {
@@ -80,6 +81,13 @@ export default function UnifiedDetailModal({
   const [currentStatus, setCurrentStatus] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
+  // 낙관적 동시성 제어용 - lead가 바뀔 때 초기화되고, 이 모달 안에서 연속으로
+  // 여러 필드를 수정할 때마다(콜 담당자 변경 후 바로 상태 변경 등) 매 요청 성공
+  // 시 서버가 반환한 최신 값으로 갱신한다. lead prop 자체는 onUpdate?.()가
+  // 비동기로 router.refresh()를 트리거해야만 갱신되므로, 그걸 기다리면 같은
+  // 세션 안의 두 번째 수정이 자기 자신과 충돌(가짜 409)하게 된다.
+  const [expectedUpdatedAt, setExpectedUpdatedAt] = useState<string | null>(null)
+
   // 예약완료일정등록 모달
   const [showScheduleModal, setShowScheduleModal] = useState(false)
   const [reservationDate, setReservationDate] = useState<string | null>(null)
@@ -112,6 +120,7 @@ export default function UnifiedDetailModal({
       setCounselorAssignedTo(lead.counselor_assigned_to || '')
       setCurrentStatus(lead.status)
       setReservationDate(lead.contract_completed_at)
+      setExpectedUpdatedAt(lead.updated_at ?? null)
       setError(null)
 
       // 전화번호 복호화 (클라이언트에서만 실행)
@@ -237,17 +246,25 @@ export default function UnifiedDetailModal({
         body: JSON.stringify({
           id: lead.id,
           call_assigned_to: newAssigneeId || null,
+          expected_updated_at: expectedUpdatedAt,
         }),
       })
 
-      if (!response.ok) throw new Error('콜 담당자 업데이트 실패')
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(response.status === 409
+          ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          : '콜 담당자 업데이트 실패')
+      }
 
       setCallAssignedTo(newAssigneeId)
+      setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       fetchChangeLogs(lead.id)
       onUpdate?.()
     } catch (error) {
       console.error('Call assignee update error:', error)
-      setError('콜 담당자 변경에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '콜 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCallAssignee(false)
     }
@@ -265,17 +282,25 @@ export default function UnifiedDetailModal({
         body: JSON.stringify({
           id: lead.id,
           counselor_assigned_to: newCounselorId || null,
+          expected_updated_at: expectedUpdatedAt,
         }),
       })
 
-      if (!response.ok) throw new Error('상담 담당자 업데이트 실패')
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(response.status === 409
+          ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          : '상담 담당자 업데이트 실패')
+      }
 
       setCounselorAssignedTo(newCounselorId)
+      setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       fetchChangeLogs(lead.id)
       onUpdate?.()
     } catch (error) {
       console.error('Counselor update error:', error)
-      setError('상담 담당자 변경에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '상담 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselor(false)
     }
@@ -299,17 +324,25 @@ export default function UnifiedDetailModal({
         body: JSON.stringify({
           id: lead.id,
           status: newStatus,
+          expected_updated_at: expectedUpdatedAt,
         }),
       })
 
-      if (!response.ok) throw new Error('상태 업데이트 실패')
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(response.status === 409
+          ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          : '상태 업데이트 실패')
+      }
 
       setCurrentStatus(newStatus)
+      setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       fetchChangeLogs(lead.id)
       onUpdate?.()
     } catch (error) {
       console.error('Status update error:', error)
-      setError('상태 변경에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '상태 변경에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -330,19 +363,27 @@ export default function UnifiedDetailModal({
           id: lead.id,
           status: 'contract_completed',
           contract_completed_at: contractCompletedAt,
+          expected_updated_at: expectedUpdatedAt,
         }),
       })
 
-      if (!response.ok) throw new Error('예약 확정 실패')
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(response.status === 409
+          ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          : '예약 확정 실패')
+      }
 
       setCurrentStatus('contract_completed')
       setReservationDate(contractCompletedAt) // 즉시 업데이트
+      setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       setShowScheduleModal(false)
       fetchChangeLogs(lead.id)
       onUpdate?.()
     } catch (error) {
       console.error('Schedule confirm error:', error)
-      setError('예약 확정에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '예약 확정에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -364,18 +405,26 @@ export default function UnifiedDetailModal({
           status: 'needs_followup',
           contract_completed_at: null,
           cancel_reason: '예약취소(추가상담 필요)',
+          expected_updated_at: expectedUpdatedAt,
         }),
       })
 
-      if (!response.ok) throw new Error('예약 취소 실패')
+      const data = await response.json().catch(() => null)
+
+      if (!response.ok) {
+        throw new Error(response.status === 409
+          ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
+          : '예약 취소 실패')
+      }
 
       setCurrentStatus('needs_followup')
       setReservationDate(null) // 즉시 업데이트
+      setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       fetchChangeLogs(lead.id)
       onUpdate?.()
     } catch (error) {
       console.error('Cancel reservation error:', error)
-      setError('예약 취소에 실패했습니다.')
+      setError(error instanceof Error ? error.message : '예약 취소에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
