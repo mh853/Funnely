@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Pagination } from '@/components/ui/pagination'
+import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 interface Company {
   id: string
@@ -325,6 +326,7 @@ export default function CompaniesPage() {
   const [sortBy, setSortBy] = useState<SortColumn>('created_at')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selectedCompany, setSelectedCompany] = useState<Company | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const DB_SORT_COLS: SortColumn[] = ['name', 'created_at', 'withdrawn_at']
   const PAGE_SIZE = 20
@@ -394,29 +396,49 @@ export default function CompaniesPage() {
     : pagination
 
   // 값에 큰따옴표가 포함되면 CSV 구조가 깨지므로 ""로 이스케이프한다(RFC 4180).
-  // 회사명/담당자명은 자유 입력값이라 쉼표·따옴표가 들어올 수 있다.
+  // 회사명/담당자명은 자유 입력값이라 쉼표·따옴표가 들어올 수 있다. 값이 =, +, -, @로
+  // 시작하면 엑셀이 수식으로 해석해 실행할 수 있어(CSV Injection, 68차 QA 확인)
+  // sanitizeForSpreadsheet로 어퍼스트로피를 앞에 붙여 텍스트로 고정한다.
   function escapeCSV(value: unknown): string {
-    const str = String(value ?? '')
+    const str = String(sanitizeForSpreadsheet(value) ?? '')
     return `"${str.replace(/"/g, '""')}"`
   }
 
-  function handleExportCSV() {
-    const headers = ['회사명','담당자','이메일','사용자수','구독플랜','구독상태','월결제금액','결제회차','누적결제금액','최초결제일','마지막결제일','상태','가입일','탈퇴일']
-    const rows = pageCompanies.map((c) => [
-      c.name, c.admin_user?.full_name||'', c.admin_user?.email||'', c.stats.total_users,
-      c.subscription?.plan_name||'', c.subscription?.status||'', c.subscription?.monthly_price||0,
-      c.payment_stats.payment_count, c.payment_stats.total_paid,
-      c.payment_stats.first_payment_date||'', c.payment_stats.last_payment_date||'',
-      c.is_active?'활성':'비활성', c.created_at.split('T')[0], c.withdrawn_at?c.withdrawn_at.split('T')[0]:'',
-    ])
-    const csv = [headers, ...rows].map((r) => r.map(escapeCSV).join(',')).join('\n')
-    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `고객사_${new Date().toISOString().split('T')[0]}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+  async function handleExportCSV() {
+    setExporting(true)
+    try {
+      // pageCompanies는 현재 페이지 20건뿐이라 그대로 내보내면 검색·필터에 맞는
+      // 전체 목록이 아니라 화면에 보이는 페이지만 다운로드됐다(68차 QA 확인).
+      // 정렬 여부와 무관하게 all=true로 현재 검색/상태 필터에 맞는 전체를 받는다.
+      const apiSortBy = DB_SORT_COLS.includes(sortBy) ? sortBy : 'created_at'
+      const apiSortOrder = DB_SORT_COLS.includes(sortBy) ? sortOrder : 'desc'
+      const params = new URLSearchParams({ search, status, sortBy: apiSortBy, sortOrder: apiSortOrder, all: 'true' })
+      const res = await fetch(`/api/admin/companies?${params}`)
+      if (!res.ok) throw new Error('Failed')
+      const result = await res.json()
+      const exportCompanies: Company[] = result.companies || []
+
+      const headers = ['회사명','담당자','이메일','사용자수','구독플랜','구독상태','월결제금액','결제회차','누적결제금액','최초결제일','마지막결제일','상태','가입일','탈퇴일']
+      const rows = exportCompanies.map((c) => [
+        c.name, c.admin_user?.full_name||'', c.admin_user?.email||'', c.stats.total_users,
+        c.subscription?.plan_name||'', c.subscription?.status||'', c.subscription?.monthly_price||0,
+        c.payment_stats.payment_count, c.payment_stats.total_paid,
+        c.payment_stats.first_payment_date||'', c.payment_stats.last_payment_date||'',
+        c.is_active?'활성':'비활성', c.created_at.split('T')[0], c.withdrawn_at?c.withdrawn_at.split('T')[0]:'',
+      ])
+      const csv = [headers, ...rows].map((r) => r.map(escapeCSV).join(',')).join('\n')
+      const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `고객사_${new Date().toISOString().split('T')[0]}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setExporting(false)
+    }
   }
 
   const statusFilters = [
@@ -446,10 +468,11 @@ export default function CompaniesPage() {
         </div>
         <button
           onClick={handleExportCSV}
-          className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors backdrop-blur-sm border border-white/30"
+          disabled={exporting}
+          className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-lg transition-colors backdrop-blur-sm border border-white/30 disabled:opacity-60 disabled:cursor-not-allowed"
         >
           <Download className="h-4 w-4" />
-          CSV 다운로드
+          {exporting ? '다운로드 중...' : 'CSV 다운로드'}
         </button>
       </div>
 
