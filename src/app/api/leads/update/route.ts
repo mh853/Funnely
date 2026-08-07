@@ -145,6 +145,35 @@ export async function PUT(request: NextRequest) {
       updateData.notes = notes
     }
 
+    // call_assigned_to/counselor_assigned_to는 클라이언트가 보낸 user id를 검증 없이
+    // 그대로 저장했다 - FK는 users(id) 전체를 참조할 뿐 company_id/is_active를 보지
+    // 않아, 다른 회사 소속이거나 이미 비활성화된 사용자에게도 배정될 수 있었다(팀
+    // 관리 화면의 담당자 드롭다운도 is_active 필터가 없어 비활성 팀원이 계속
+    // 노출됐음, 68차 QA 확인). 배정 전에 대상이 같은 회사의 활성 사용자인지 확인한다.
+    if (call_assigned_to || counselor_assigned_to) {
+      const assigneeIds = [call_assigned_to, counselor_assigned_to].filter(Boolean)
+      const { data: assignees } = await supabase
+        .from('users')
+        .select('id')
+        .eq('company_id', userProfile.company_id)
+        .eq('is_active', true)
+        .in('id', assigneeIds)
+
+      const validIds = new Set((assignees || []).map((a: any) => a.id))
+      if (call_assigned_to && !validIds.has(call_assigned_to)) {
+        return NextResponse.json(
+          { error: { message: '담당자로 지정할 수 없는 사용자입니다.' } },
+          { status: 400 }
+        )
+      }
+      if (counselor_assigned_to && !validIds.has(counselor_assigned_to)) {
+        return NextResponse.json(
+          { error: { message: '담당자로 지정할 수 없는 사용자입니다.' } },
+          { status: 400 }
+        )
+      }
+    }
+
     if (call_assigned_to !== undefined) {
       updateData.call_assigned_to = call_assigned_to || null
     }

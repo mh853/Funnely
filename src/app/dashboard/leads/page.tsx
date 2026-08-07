@@ -201,10 +201,13 @@ export default async function LeadsPage({
       .select('id, title')
       .eq('company_id', userProfile.company_id)
       .order('title'),
+    // 담당자 배정 드롭다운에 is_active 필터가 없어 비활성화된 팀원도 계속
+    // 선택지로 노출되고 있었다(68차 QA 확인) - 활성 팀원만 보여준다.
     supabase
       .from('users')
       .select('id, full_name')
       .eq('company_id', userProfile.company_id)
+      .eq('is_active', true)
       .order('full_name'),
     supabase
       .from('lead_statuses')
