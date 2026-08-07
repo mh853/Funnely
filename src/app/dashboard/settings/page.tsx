@@ -100,6 +100,22 @@ export default async function SettingsPage() {
     .eq('is_active', true)
     .neq('id', user.id)
 
+  // 공동 owner가 있으면 본인 탈퇴로도 회사 전체가 정리되지 않는다(/api/user/account
+  // 참고 - 68차 QA). 탈퇴 확인 모달의 "구독 취소·팀원 비활성화" 경고 문구가 실제로는
+  // 일어나지 않을 일을 예고하지 않도록, 다른 owner 존재 여부를 함께 내려준다.
+  const isOwnerRoleForDeletion = ['company_owner', 'hospital_owner'].includes(userProfile.role)
+  let isLastOwner = false
+  if (isOwnerRoleForDeletion) {
+    const { count: otherOwnerCount } = await db
+      .from('users')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', userProfile.company_id)
+      .eq('is_active', true)
+      .in('role', ['company_owner', 'hospital_owner'])
+      .neq('id', user.id)
+    isLastOwner = !otherOwnerCount
+  }
+
   // 유료 구독 여부 확인 (cancelled라도 결제한 기간이 남아있으면 유료로 취급)
   // layout.tsx/canUseCustomDomain과 동일한 캐시된 조회를 재사용한다
   const subsForSettings = await getCachedCompanySubscriptions(userProfile.company_id)
@@ -432,6 +448,7 @@ export default async function SettingsPage() {
         teamMemberCount={teamMemberCount ?? 0}
         hasPaidSubscription={hasPaidSubscription}
         subscriptionPlanName={activePlan?.name}
+        isLastOwner={isLastOwner}
       />
     </div>
   )

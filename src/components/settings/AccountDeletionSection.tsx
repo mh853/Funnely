@@ -10,6 +10,7 @@ interface AccountDeletionSectionProps {
   teamMemberCount: number
   hasPaidSubscription: boolean
   subscriptionPlanName?: string
+  isLastOwner: boolean
 }
 
 export default function AccountDeletionSection({
@@ -18,6 +19,7 @@ export default function AccountDeletionSection({
   teamMemberCount,
   hasPaidSubscription,
   subscriptionPlanName,
+  isLastOwner,
 }: AccountDeletionSectionProps) {
   const router = useRouter()
   const [modalOpen, setModalOpen] = useState(false)
@@ -25,7 +27,9 @@ export default function AccountDeletionSection({
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const isOwner = userRole === 'company_owner' || userRole === 'hospital_owner'
+  // 공동 owner가 남아있으면 본인 탈퇴로도 회사 전체(구독·팀원)가 정리되지
+  // 않는다(/api/user/account 참고) - 그 경우에만 아래 경고 문구들을 노출한다.
+  const isOwner = (userRole === 'company_owner' || userRole === 'hospital_owner') && isLastOwner
 
   const handleDelete = async () => {
     setError(null)

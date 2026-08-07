@@ -42,31 +42,50 @@ export async function DELETE(request: Request) {
   const now = new Date().toISOString()
 
   if (profile.role === 'company_owner' || profile.role === 'hospital_owner') {
-    // 활성 구독 자동 취소
-    await adminDb
-      .from('company_subscriptions')
-      .update({ status: 'cancelled', cancelled_at: now })
-      .eq('company_id', profile.company_id)
-      .in('status', ['active', 'trial'])
-
-    // 팀원 전체 소프트 삭제 - 이 주석대로 소프트 삭제를 의도했으나 실제로는
-    // auth.admin.deleteUser(하드삭제)를 호출하고 있었다. 팀원이 담당 리드를 갖고
-    // 있으면(assigned_to 등이 users.id를 ON DELETE NO ACTION으로 참조) 하드삭제가
-    // FK 제약으로 항상 실패하는데 반환값을 확인하지 않아 실패가 조용히 은폐되고
-    // 팀원 로그인 자격증명이 그대로 살아남았다(49차 QA 라이브 재현). UI가 실제로
-    // 약속하는 "비활성화"에 맞춰 소프트 삭제로 바꾼다.
-    await adminDb
+    // 마지막 관리자 보호: 회사에 owner가 여러 명일 수 있다(기존 owner가 팀원을
+    // 공동 owner로 승격 가능 - /api/users/[id]route.ts 참고). 다른 owner가 남아있는데도
+    // 무조건 회사 전체를 정리하면, 공동 owner 중 한 명이 개인적으로 탈퇴한 것만으로
+    // 나머지 owner·팀원의 구독/데이터 접근이 동의 없이 전부 끊긴다(68차 QA 확인).
+    // 본인 탈퇴로 인한 회사 전체 정리는 "내가 마지막 owner일 때"로 한정한다.
+    const { count: otherOwnerCount, error: ownerCountError } = await db
       .from('users')
-      .update({ is_active: false, deactivated_at: now })
+      .select('id', { count: 'exact', head: true })
       .eq('company_id', profile.company_id)
       .eq('is_active', true)
+      .in('role', ['company_owner', 'hospital_owner'])
       .neq('id', user.id)
 
-    // 회사 비활성화
-    await adminDb
-      .from('companies')
-      .update({ is_active: false })
-      .eq('id', profile.company_id)
+    if (ownerCountError) {
+      return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+    }
+
+    if (!otherOwnerCount) {
+      // 활성 구독 자동 취소
+      await adminDb
+        .from('company_subscriptions')
+        .update({ status: 'cancelled', cancelled_at: now })
+        .eq('company_id', profile.company_id)
+        .in('status', ['active', 'trial'])
+
+      // 팀원 전체 소프트 삭제 - 이 주석대로 소프트 삭제를 의도했으나 실제로는
+      // auth.admin.deleteUser(하드삭제)를 호출하고 있었다. 팀원이 담당 리드를 갖고
+      // 있으면(assigned_to 등이 users.id를 ON DELETE NO ACTION으로 참조) 하드삭제가
+      // FK 제약으로 항상 실패하는데 반환값을 확인하지 않아 실패가 조용히 은폐되고
+      // 팀원 로그인 자격증명이 그대로 살아남았다(49차 QA 라이브 재현). UI가 실제로
+      // 약속하는 "비활성화"에 맞춰 소프트 삭제로 바꾼다.
+      await adminDb
+        .from('users')
+        .update({ is_active: false, deactivated_at: now })
+        .eq('company_id', profile.company_id)
+        .eq('is_active', true)
+        .neq('id', user.id)
+
+      // 회사 비활성화
+      await adminDb
+        .from('companies')
+        .update({ is_active: false })
+        .eq('id', profile.company_id)
+    }
   }
 
   // 활동 로그 기록 (삭제 전 보존)
