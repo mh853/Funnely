@@ -11,6 +11,7 @@ import {
   DEFAULT_META_MAPPING,
 } from '@/lib/google-sheets'
 import { getKSTStartOfDay } from '@/lib/utils/date'
+import { checkRateLimit } from '@/lib/rate-limit'
 
 // Service role client for admin operations
 const supabaseAdmin = createClient(
@@ -103,6 +104,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'spreadsheetId와 companyId는 필수입니다' },
         { status: 400 }
+      )
+    }
+
+    // 구글 시트 API는 전체 회사가 서비스 계정 하나의 쿼터를 공유하는데(위 주석 참고)
+    // 이 동기화 API 자체에는 요청 제한이 전혀 없어, 한 회사가 "동기화" 버튼을
+    // 연타하거나 API를 직접 반복호출하면 그 회사만이 아니라 다른 모든 회사의
+    // 동기화까지 쿼터 소진으로 지연·실패할 수 있었다(68차 QA 확인). cron 경로는
+    // 앱이 스스로 여러 회사를 순회하는 정상적인 대량 호출이라 제외한다.
+    if (!isAuthorizedCron && !checkRateLimit(`sheets-sync:${companyId}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: '동기화 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
       )
     }
 
