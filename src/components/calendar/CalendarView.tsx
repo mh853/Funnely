@@ -374,14 +374,9 @@ export default function CalendarView({
   }
 
   // Check if day is today
-  const isToday = (day: number) => {
-    const today = new Date()
-    return (
-      today.getFullYear() === year &&
-      today.getMonth() === month &&
-      today.getDate() === day
-    )
-  }
+  // 월간뷰만 실행환경 로컬타임존(new Date())으로 비교하고 있었다 - 같은 파일의
+  // 주간뷰(780,838)는 이미 isTodayKST로 하이드레이션 불일치를 막고 있음.
+  const isToday = (day: number) => isTodayKST(new Date(year, month, day))
 
   // Handle day click - open day detail modal to show all items
   const handleDayClick = (day: number) => {
