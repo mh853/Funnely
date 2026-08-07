@@ -33,7 +33,7 @@ export default async function ReservationsPage() {
   }
 
   // Get contract completed leads with scheduled dates
-  const { data: contractLeads, error } = await supabase
+  const { data: contractLeads } = await supabase
     .from('leads')
     .select(
       `
@@ -65,9 +65,6 @@ export default async function ReservationsPage() {
     .eq('company_id', userProfile.company_id)
     .eq('is_active', true)
     .order('full_name')
-
-  // 디버깅용 로그
-  console.log('Reservations query result:', { contractLeads, error, companyId: userProfile.company_id })
 
   // leads.phone은 암호화 저장되므로 클라이언트로 넘기기 전에 서버에서 복호화한다
   // (복호화 키는 서버 전용이라 클라이언트 컴포넌트에서 직접 복호화할 수 없음)
