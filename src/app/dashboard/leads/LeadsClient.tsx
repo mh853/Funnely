@@ -352,6 +352,14 @@ export default function LeadsClient({
   const [counselorDropdownPosition, setCounselorDropdownPosition] = useState<{ top: number; left: number } | null>(null)
   const counselorDropdownRef = useRef<HTMLDivElement>(null)
 
+  // 상태/콜담당자/상담담당자 세 드롭다운은 같은 리드의 expected_updated_at을
+  // 공유한다. 한 필드가 저장 중일 때 같은 행의 다른 드롭다운을 열어 값을
+  // 바꾸면, 두 요청이 같은(아직 갱신 전) updated_at을 보내 나중 요청이
+  // 가짜 409로 조용히 유실된다. 세 플래그 중 하나라도 이 리드를 가리키면
+  // 나머지 드롭다운 토글도 잠가 같은 행에 대한 순차 처리를 강제한다.
+  const isLeadMutating = (leadId: string) =>
+    updatingLeadId === leadId || updatingAssigneeLeadId === leadId || updatingCounselorLeadId === leadId
+
   // 변경 이력 관련 상태
   const [changeLogs, setChangeLogs] = useState<any[]>([])
   const [loadingChangeLogs, setLoadingChangeLogs] = useState(false)
@@ -1817,7 +1825,7 @@ export default function LeadsClient({
                         {/* 상태 배지 (클릭 가능) */}
                         <button
                           onClick={(e) => handleDropdownToggle(lead.id, e)}
-                          disabled={updatingLeadId === lead.id}
+                          disabled={isLeadMutating(lead.id)}
                           aria-haspopup="menu"
                           aria-expanded={editingLeadId === lead.id}
                           className={`px-3 py-1 inline-flex items-center gap-1 text-xs leading-5 font-semibold rounded-full transition-all ${
@@ -1867,7 +1875,7 @@ export default function LeadsClient({
                       <div className="relative inline-block assignee-dropdown">
                         <button
                           onClick={(e) => handleAssigneeDropdownToggle(lead.id, e)}
-                          disabled={updatingAssigneeLeadId === lead.id}
+                          disabled={isLeadMutating(lead.id)}
                           aria-haspopup="menu"
                           aria-expanded={editingAssigneeLeadId === lead.id}
                           aria-label={`콜 담당자: ${lead.call_assigned_user?.full_name || '미지정'}`}
@@ -1892,7 +1900,7 @@ export default function LeadsClient({
                       <div className="relative inline-block counselor-dropdown">
                         <button
                           onClick={(e) => handleCounselorDropdownToggle(lead.id, e)}
-                          disabled={updatingCounselorLeadId === lead.id}
+                          disabled={isLeadMutating(lead.id)}
                           aria-haspopup="menu"
                           aria-expanded={editingCounselorLeadId === lead.id}
                           aria-label={`상담 담당자: ${lead.counselor_assigned_user?.full_name || '미지정'}`}

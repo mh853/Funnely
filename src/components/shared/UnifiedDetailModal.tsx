@@ -81,6 +81,13 @@ export default function UnifiedDetailModal({
   const [currentStatus, setCurrentStatus] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
 
+  // 콜/상담 담당자, 상태 변경은 전부 같은 expectedUpdatedAt을 공유한다.
+  // 개별 로딩 플래그로만 버튼을 잠그면 두 요청이 동시에 in-flight 상태에서
+  // 같은(아직 갱신 전) expectedUpdatedAt을 읽어 보내고, 서버에 먼저 도착한
+  // 쪽만 반영되고 나중 요청은 이미 바뀐 updated_at과 충돌해 가짜 409로
+  // 조용히 유실된다. 셋 중 하나라도 진행 중이면 전부 잠가 순차 처리를 강제한다.
+  const isMutatingLead = updatingCallAssignee || updatingCounselor || updatingStatus
+
   // 낙관적 동시성 제어용 - lead가 바뀔 때 초기화되고, 이 모달 안에서 연속으로
   // 여러 필드를 수정할 때마다(콜 담당자 변경 후 바로 상태 변경 등) 매 요청 성공
   // 시 서버가 반환한 최신 값으로 갱신한다. lead prop 자체는 onUpdate?.()가
@@ -173,6 +180,9 @@ export default function UnifiedDetailModal({
       const data = await response.json()
       setMemos((prev) => [data.data, ...prev])
       setNewMemo('')
+      // 메모 추가도 leads.updated_at을 갱신하므로, 낙관적 동시성 제어용 값을
+      // 같이 갱신하지 않으면 이어지는 상태/담당자 변경이 자기 자신과 충돌한다.
+      setExpectedUpdatedAt(data.leadUpdatedAt ?? expectedUpdatedAt)
       onUpdate?.()
     } catch (error) {
       console.error('Add memo error:', error)
@@ -252,10 +262,14 @@ export default function UnifiedDetailModal({
 
       const data = await response.json().catch(() => null)
 
+      // 응답을 받은 뒤(=서버가 보낸 메시지가 있는) 실패는 여기서 바로 처리한다.
+      // fetch() 자체가 던지는 네트워크 오류(TypeError 등, 응답이 없는 경우)와
+      // 구분해야 catch 블록에서 원문 그대로의 영문 오류 텍스트가 새지 않는다.
       if (!response.ok) {
-        throw new Error(response.status === 409
+        setError(response.status === 409
           ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           : '콜 담당자 업데이트 실패')
+        return
       }
 
       setCallAssignedTo(newAssigneeId)
@@ -264,7 +278,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Call assignee update error:', error)
-      setError(error instanceof Error ? error.message : '콜 담당자 변경에 실패했습니다.')
+      setError('콜 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCallAssignee(false)
     }
@@ -289,9 +303,10 @@ export default function UnifiedDetailModal({
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(response.status === 409
+        setError(response.status === 409
           ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           : '상담 담당자 업데이트 실패')
+        return
       }
 
       setCounselorAssignedTo(newCounselorId)
@@ -300,7 +315,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Counselor update error:', error)
-      setError(error instanceof Error ? error.message : '상담 담당자 변경에 실패했습니다.')
+      setError('상담 담당자 변경에 실패했습니다.')
     } finally {
       setUpdatingCounselor(false)
     }
@@ -331,9 +346,10 @@ export default function UnifiedDetailModal({
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(response.status === 409
+        setError(response.status === 409
           ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           : '상태 업데이트 실패')
+        return
       }
 
       setCurrentStatus(newStatus)
@@ -342,7 +358,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Status update error:', error)
-      setError(error instanceof Error ? error.message : '상태 변경에 실패했습니다.')
+      setError('상태 변경에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -370,9 +386,10 @@ export default function UnifiedDetailModal({
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(response.status === 409
+        setError(response.status === 409
           ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           : '예약 확정 실패')
+        return
       }
 
       setCurrentStatus('contract_completed')
@@ -383,7 +400,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Schedule confirm error:', error)
-      setError(error instanceof Error ? error.message : '예약 확정에 실패했습니다.')
+      setError('예약 확정에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -412,9 +429,10 @@ export default function UnifiedDetailModal({
       const data = await response.json().catch(() => null)
 
       if (!response.ok) {
-        throw new Error(response.status === 409
+        setError(response.status === 409
           ? (data?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           : '예약 취소 실패')
+        return
       }
 
       setCurrentStatus('needs_followup')
@@ -424,7 +442,7 @@ export default function UnifiedDetailModal({
       onUpdate?.()
     } catch (error) {
       console.error('Cancel reservation error:', error)
-      setError(error instanceof Error ? error.message : '예약 취소에 실패했습니다.')
+      setError('예약 취소에 실패했습니다.')
     } finally {
       setUpdatingStatus(false)
     }
@@ -462,6 +480,9 @@ export default function UnifiedDetailModal({
       setPaymentsTotalAmount(data.data.totalAmount)
       setNewPaymentAmount('')
       setNewPaymentNotes('')
+      // 결제 추가도 leads.updated_at을 갱신하므로, 낙관적 동시성 제어용 값을
+      // 같이 갱신하지 않으면 이어지는 상태/담당자 변경이 자기 자신과 충돌한다.
+      setExpectedUpdatedAt(data.leadUpdatedAt ?? expectedUpdatedAt)
       onUpdate?.()
     } catch (error) {
       console.error('Add payment error:', error)
@@ -485,6 +506,9 @@ export default function UnifiedDetailModal({
       const data = await response.json()
       setPayments((prev) => prev.filter((p) => p.id !== paymentId))
       setPaymentsTotalAmount(data.data.totalAmount)
+      // 결제 삭제도 leads.updated_at을 갱신하므로, 낙관적 동시성 제어용 값을
+      // 같이 갱신하지 않으면 이어지는 상태/담당자 변경이 자기 자신과 충돌한다.
+      setExpectedUpdatedAt(data.leadUpdatedAt ?? expectedUpdatedAt)
       onUpdate?.()
     } catch (error) {
       console.error('Delete payment error:', error)
@@ -589,7 +613,7 @@ export default function UnifiedDetailModal({
                       <select
                         value={callAssignedTo}
                         onChange={(e) => handleCallAssigneeChange(e.target.value)}
-                        disabled={updatingCallAssignee}
+                        disabled={isMutatingLead}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
                       >
                         <option value="">미지정</option>
@@ -607,7 +631,7 @@ export default function UnifiedDetailModal({
                       <select
                         value={counselorAssignedTo}
                         onChange={(e) => handleCounselorChange(e.target.value)}
-                        disabled={updatingCounselor}
+                        disabled={isMutatingLead}
                         className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50"
                       >
                         <option value="">미지정</option>
@@ -711,7 +735,7 @@ export default function UnifiedDetailModal({
                                 <select
                                   value={currentStatus}
                                   onChange={(e) => handleStatusChange(e.target.value)}
-                                  disabled={updatingStatus}
+                                  disabled={isMutatingLead}
                                   className={`w-full px-3 py-2 text-sm border-2 rounded-lg font-medium focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:opacity-50 ${currentStatusStyle.bg} ${currentStatusStyle.text}`}
                                 >
                                   {statusOptions.map((option) => (
@@ -747,7 +771,7 @@ export default function UnifiedDetailModal({
                                         </button>
                                         <button
                                           onClick={handleCancelReservation}
-                                          disabled={updatingStatus}
+                                          disabled={isMutatingLead}
                                           className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition disabled:opacity-50"
                                           title="예약 취소"
                                         >

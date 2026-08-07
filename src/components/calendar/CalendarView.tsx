@@ -481,6 +481,10 @@ export default function CalendarView({
     }
 
     // 낙관적 업데이트 - 상태에 따라 적절한 필드만 업데이트
+    // 실패 시 이 시점(지금까지의 최신 localLeads)으로 롤백해야 한다. leads
+    // prop을 다시 필터링해서 복원하면, 그 사이 다른 성공한 드래그로 반영된
+    // 변경까지 화면에서 사라진다.
+    const previousLocalLeads = localLeads
     const updatedLeads = localLeads.map(l => {
       if (l.id !== droppedLead.id) return l
 
@@ -528,8 +532,7 @@ export default function CalendarView({
       if (!response.ok) {
         if (response.status === 409) {
           const result = await response.json().catch(() => null)
-          const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
-          setLocalLeads(filtered)
+          setLocalLeads(previousLocalLeads)
           toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           router.refresh()
           return
@@ -537,12 +540,18 @@ export default function CalendarView({
         throw new Error('스케줄 업데이트 실패')
       }
 
+      // 서버가 반환한 최신 updated_at을 반영해 다음 수정이 스스로와 충돌하지 않게 한다
+      const result = await response.json().catch(() => null)
+      setLocalLeads(prevLeads =>
+        prevLeads.map(l =>
+          l.id === droppedLead.id ? { ...l, updated_at: result?.data?.updated_at ?? l.updated_at } : l
+        )
+      )
       router.refresh()
     } catch (error) {
       console.error('Schedule update error:', error)
-      // 롤백 - 필터링된 leads로 복원
-      const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
-      setLocalLeads(filtered)
+      // 롤백
+      setLocalLeads(previousLocalLeads)
       toast.error('스케줄 변경에 실패했습니다.')
     }
   }

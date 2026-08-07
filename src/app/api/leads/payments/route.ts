@@ -154,10 +154,15 @@ export async function POST(request: NextRequest) {
     const totalAmount = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
 
     // Update leads table payment_amount with total
-    await supabase
+    // leadUpdatedAt을 응답에 함께 실어 보낸다 - 이 요청도 leads.updated_at을
+    // 바꾸므로, 호출한 모달이 들고 있던 낙관적 동시성 제어용 값을 갱신하지
+    // 않으면 바로 다음 수정이 자기 자신과 충돌(가짜 409)하게 된다.
+    const { data: updatedLead } = await supabase
       .from('leads')
       .update({ payment_amount: totalAmount })
       .eq('id', lead_id)
+      .select('updated_at')
+      .single()
 
     return NextResponse.json({
       success: true,
@@ -165,6 +170,7 @@ export async function POST(request: NextRequest) {
         payment,
         totalAmount,
       },
+      leadUpdatedAt: updatedLead?.updated_at,
     })
   } catch (error: any) {
     console.error('Create payment error:', error)
@@ -249,16 +255,22 @@ export async function DELETE(request: NextRequest) {
     const totalAmount = payments?.reduce((sum, p) => sum + (p.amount || 0), 0) || 0
 
     // Update leads table payment_amount with total
-    await supabase
+    // leadUpdatedAt을 응답에 함께 실어 보낸다 - 이 요청도 leads.updated_at을
+    // 바꾸므로, 호출한 모달이 들고 있던 낙관적 동시성 제어용 값을 갱신하지
+    // 않으면 바로 다음 수정이 자기 자신과 충돌(가짜 409)하게 된다.
+    const { data: updatedLead } = await supabase
       .from('leads')
       .update({ payment_amount: totalAmount })
       .eq('id', payment.lead_id)
+      .select('updated_at')
+      .single()
 
     return NextResponse.json({
       success: true,
       data: {
         totalAmount,
       },
+      leadUpdatedAt: updatedLead?.updated_at,
     })
   } catch (error: any) {
     console.error('Delete payment error:', error)

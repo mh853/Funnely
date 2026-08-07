@@ -627,7 +627,11 @@ export default function ReservationsClient({
       }
     }
 
-    // 낙관적 업데이트
+    // 낙관적 업데이트 - 실패 시 이 시점(드래그 시작 시점이 아니라 지금까지의
+    // 최신 상태)으로 롤백해야 한다. initialLeads(마운트 시점 prop)로 롤백하면
+    // 그 사이 realtime 구독이나 다른 성공한 수정으로 반영된 변경들까지 화면에서
+    // 사라진다.
+    const previousLeads = leads
     const updatedLeads = leads.map(l =>
       l.id === draggedLead.id
         ? { ...l, contract_completed_at: newContractCompletedAt }
@@ -651,7 +655,7 @@ export default function ReservationsClient({
 
       if (!response.ok) {
         // 롤백
-        setLeads(initialLeads)
+        setLeads(previousLeads)
         if (response.status === 409) {
           toast.error(result?.error?.message || '다른 사용자가 이미 이 리드를 수정했습니다. 새로고침 후 다시 시도해주세요.')
           router.refresh()
@@ -671,7 +675,7 @@ export default function ReservationsClient({
     } catch (error) {
       console.error('Schedule update error:', error)
       // 롤백
-      setLeads(initialLeads)
+      setLeads(previousLeads)
       toast.error('스케줄 변경에 실패했습니다.')
     }
   }
