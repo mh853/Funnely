@@ -154,8 +154,12 @@ export default function NotificationsClient({
 
   useEffect(() => {
     // Subscribe to Realtime notifications (both user-specific and company-wide)
-    // Note: Realtime filters don't support complex OR conditions,
-    // so we subscribe to the whole table and filter in the handler
+    // Note: Realtime filters don't support complex OR conditions(user_id.eq.X OR
+    // (user_id.is.null AND company_id.eq.Y)), so 사용자 단위 세분화는 핸들러에서
+    // fetchNotifications()가 다시 RLS로 정확히 걸러온다. 다만 company_id 단일
+    // 조건 필터는 Realtime이 지원하므로, RLS에만 의존하지 않도록 이것만이라도
+    // 구독 단계에서 걸어 다른 회사 변경 이벤트 자체를 아예 받지 않게 한다
+    // (68차 QA 확인 - 필터 없이 테이블 전체를 구독하고 있었음).
     const channel = supabase
       .channel('user-notifications-page')
       .on(
@@ -164,6 +168,7 @@ export default function NotificationsClient({
           event: '*',
           schema: 'public',
           table: 'notifications',
+          filter: `company_id=eq.${companyId}`,
         },
         (payload) => {
           // Service role로 INSERT된 경우 RLS로 인해 payload.new가 빈 객체일 수 있음
