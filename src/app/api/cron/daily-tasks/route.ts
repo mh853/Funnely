@@ -246,6 +246,10 @@ async function calculateRevenue(supabase: any) {
       company_id,
       status,
       billing_cycle,
+      plan_id,
+      locked_plan_id,
+      locked_price_monthly,
+      locked_price_yearly,
       subscription_plans:plan_id (
         id,
         name,
@@ -277,10 +281,18 @@ async function calculateRevenue(supabase: any) {
   )) {
     const subscriptions: Subscription[] = companySubs.map((sub: any) => {
       const plan = sub.subscription_plans
+      // 그랜드파더링(61차) 중인 구독은 카탈로그가가 아니라 locked_price_*로 청구된다 -
+      // admin/subscriptions/metrics와 동일한 판정 기준(63차 QA에서 이 크론은 반영 누락 확인).
+      const priceLockValid =
+        sub.locked_plan_id === sub.plan_id &&
+        sub.locked_price_monthly !== null &&
+        sub.locked_price_yearly !== null
+      const monthlyPrice = priceLockValid ? sub.locked_price_monthly : plan.price_monthly
+      const yearlyPrice = priceLockValid ? sub.locked_price_yearly : plan.price_yearly
       const amount =
         sub.billing_cycle === 'yearly'
-          ? plan.price_yearly || plan.price_monthly * 12
-          : plan.price_monthly
+          ? yearlyPrice || monthlyPrice * 12
+          : monthlyPrice
 
       return {
         id: sub.id,

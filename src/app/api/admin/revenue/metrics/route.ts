@@ -66,6 +66,10 @@ export async function GET(request: NextRequest) {
         company_id,
         status,
         billing_cycle,
+        plan_id,
+        locked_plan_id,
+        locked_price_monthly,
+        locked_price_yearly,
         subscription_plans:plan_id (
           id,
           name,
@@ -109,10 +113,19 @@ export async function GET(request: NextRequest) {
     const subscriptions: Subscription[] = (activeSubscriptions || []).map(
       (sub: any) => {
         const plan = sub.subscription_plans
+        // 그랜드파더링(61차) 중인 구독은 카탈로그 최신가가 아니라 locked_price_*로
+        // 청구된다 - admin/subscriptions/metrics와 동일한 판정 기준을 쓴다(63차 QA에서
+        // 이 라우트는 반영이 누락됐던 것을 확인).
+        const priceLockValid =
+          sub.locked_plan_id === sub.plan_id &&
+          sub.locked_price_monthly !== null &&
+          sub.locked_price_yearly !== null
+        const monthlyPrice = priceLockValid ? sub.locked_price_monthly : plan.price_monthly
+        const yearlyPrice = priceLockValid ? sub.locked_price_yearly : plan.price_yearly
         const amount =
           sub.billing_cycle === 'yearly'
-            ? plan.price_yearly || plan.price_monthly * 12
-            : plan.price_monthly
+            ? yearlyPrice || monthlyPrice * 12
+            : monthlyPrice
 
         // 플랜명 생성 로직
         let planDisplayName: string
