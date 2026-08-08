@@ -94,19 +94,23 @@ export async function PUT(request: NextRequest) {
     if (status !== undefined) {
       updateData.status = status
 
-      // Update timestamps based on status changes
-      if (status === 'contacting' && lead.status === 'new') {
-        updateData.first_contact_at = new Date().toISOString()
-      }
-
-      if (status === 'completed') {
-        updateData.completed_at = new Date().toISOString()
-      }
-
       // 회사가 커스텀 코드를 만들어도(예: 'signed') 통계 범주(category)가
       // 'contract_completed'인 상태로 바뀌면 타임스탬프가 정확히 반영되도록
       // 리터럴 코드가 아니라 category 기준으로 판단한다.
       const categoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
+
+      // first_contact_at/completed_at도 원래 'contacting'/'completed'라는 리터럴 코드로
+      // 비교했는데, 시드 코드는 'contacted'('상담 진행중')/'converted'('상담 완료')라
+      // 한 번도 일치한 적이 없어 전 회사에서 두 타임스탬프가 영구 공백이었다(71차 QA).
+      // contract_completed_at과 동일하게 category 기준으로 판단한다.
+      if (categoryMap[status] === 'contacted' && categoryMap[lead.status] === 'new') {
+        updateData.first_contact_at = new Date().toISOString()
+      }
+
+      if (categoryMap[status] === 'converted') {
+        updateData.completed_at = new Date().toISOString()
+      }
+
       const newIsContractCompleted = categoryMap[status] === 'contract_completed'
       const previousWasContractCompleted = categoryMap[lead.status] === 'contract_completed'
 
