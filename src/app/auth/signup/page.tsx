@@ -253,6 +253,7 @@ export default function SignupPage() {
                 name="email"
                 type="email"
                 required
+                autoComplete="off"
                 value={formData.email}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
@@ -270,6 +271,7 @@ export default function SignupPage() {
                 name="password"
                 type="password"
                 required
+                autoComplete="new-password"
                 value={formData.password}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
@@ -287,6 +289,7 @@ export default function SignupPage() {
                 name="confirmPassword"
                 type="password"
                 required
+                autoComplete="new-password"
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
