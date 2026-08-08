@@ -68,7 +68,7 @@ export default function ContactForm() {
       }
 
       setSuccess(true)
-      setTicketId(data.ticketId)
+      setTicketId(data.inquiryId)
       setFormData(initialFormData)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : '문의 전송에 실패했습니다.')
