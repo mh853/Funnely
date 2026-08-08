@@ -33,6 +33,20 @@ function getSignInErrorMessage(error: any): string {
   return '회원가입은 완료되었지만 자동 로그인에 실패했습니다. 로그인 페이지에서 다시 시도해주세요.'
 }
 
+// 전화번호 자동 포맷팅 함수 (숫자만 입력해도 xxx-xxxx-xxxx 형태로 변환)
+function formatPhoneNumber(value: string): string {
+  const numbers = value.replace(/[^0-9]/g, '')
+  const limited = numbers.slice(0, 11)
+
+  if (limited.length <= 3) {
+    return limited
+  } else if (limited.length <= 7) {
+    return `${limited.slice(0, 3)}-${limited.slice(3)}`
+  } else {
+    return `${limited.slice(0, 3)}-${limited.slice(3, 7)}-${limited.slice(7)}`
+  }
+}
+
 export default function SignupPage() {
   const router = useRouter()
   const [formData, setFormData] = useState({
@@ -74,9 +88,10 @@ export default function SignupPage() {
   }, [formData.companyName])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: name === 'phone' ? formatPhoneNumber(value) : value,
     })
   }
 
