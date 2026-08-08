@@ -65,12 +65,6 @@ export default function ForgotPasswordPage() {
                 비밀번호 재설정 링크를 발송했습니다.
               </p>
               <p className="text-xs text-gray-500">링크는 1시간 후 만료됩니다.</p>
-              <Link
-                href="/auth/login"
-                className="block mt-4 text-sm text-blue-600 hover:text-blue-700 font-medium"
-              >
-                로그인으로 돌아가기
-              </Link>
             </div>
           ) : (
             <form onSubmit={handleSubmit} method="post" className="space-y-5">
