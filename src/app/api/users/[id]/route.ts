@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { NextResponse } from 'next/server'
 
 export async function PATCH(
@@ -203,13 +204,15 @@ export async function DELETE(
       return NextResponse.json({ error: '사용자 삭제에 실패했습니다: ' + deleteUserError.message }, { status: 500 })
     }
 
-    // Delete auth user using admin API
-    const { error: deleteAuthError } = await supabase.auth.admin.deleteUser(id)
+    // Delete auth user using admin API - GoTrue의 /admin/* 엔드포인트는 service_role이
+    // 필요해 세션(anon key) 클라이언트로는 항상 권한 오류로 실패했다(71차 QA 확인).
+    const { error: deleteAuthError } = await createAdminClient().auth.admin.deleteUser(id)
 
     if (deleteAuthError) {
       console.error('Auth user deletion error:', deleteAuthError)
-      // Note: User profile is already deleted, but log the auth deletion error
-      // This is acceptable as the user won't be able to login anyway
+      // public.users 프로필은 이미 삭제됐지만, auth 계정이 남아있으면 삭제된 팀원이
+      // 기존 자격증명으로 계속 로그인은 된다(단, is_active 전제 데이터 접근은 이미
+      // 68차 RLS 전역패치로 차단됨). 운영 확인을 위해 로그만 남긴다.
     }
 
     return NextResponse.json({

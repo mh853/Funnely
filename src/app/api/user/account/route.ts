@@ -109,8 +109,15 @@ export async function DELETE(request: Request) {
     .eq('id', user.id)
 
   // auth.users 하드 삭제 — 이메일이 재가입에 사용될 수 있도록 완전 제거
-  // public.users는 ON DELETE CASCADE로 함께 삭제됨
-  await adminClient.auth.admin.deleteUser(user.id)
+  // public.users는 ON DELETE CASCADE로 함께 삭제됨. lead_notes/calendar_events 등
+  // 본인이 남긴 기록이 있으면 그 테이블들의 ON DELETE NO ACTION 제약으로 실패할 수
+  // 있는데, 에러를 확인하지 않아 조용히 은폐됐다(71차 QA) - 바로 위에서 이미
+  // is_active=false 처리해 로그인 후 데이터 접근은 막히지만, 이메일이 계속 "사용 중"으로
+  // 남아 재가입이 막히는 문제를 진단할 수 있도록 로그는 남긴다.
+  const { error: deleteAuthError } = await adminClient.auth.admin.deleteUser(user.id)
+  if (deleteAuthError) {
+    console.error('Account deletion - auth user delete failed:', deleteAuthError)
+  }
 
   return NextResponse.json({ success: true })
 }
