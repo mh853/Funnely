@@ -145,9 +145,19 @@ export async function GET(request: NextRequest) {
     })
 
     // 10. 플랜별 분포 (회사당 최신 구독 1건 기준)
+    // 2026-04-30 요금제 카탈로그 개편(한글 플랜명 전면 도입) 이전에 가입해 그랜드파더링
+    // 가격을 유지 중인 구독은 subscription_plans.name이 옛 영문명("Pro" 등)으로 남아있어,
+    // 신규 플랜(한글 "프로")과 별개 항목으로 집계되는 문제가 있었다(64차 QA 확인).
+    // 확인된 범위(현재 활성 구독이 실제로 가리키는 옛 이름)만 정규화하고, 그 외 레거시
+    // 카탈로그(Enterprise/Business/Personal 등)는 현재 어떤 신규 플랜과 대응되는지가
+    // 순수 데이터로 판단할 수 없는 비즈니스 의사결정 영역이라 임의로 매핑하지 않는다.
+    const LEGACY_PLAN_NAME_ALIASES: Record<string, string> = {
+      Pro: '프로',
+    }
     const planDistribution: Record<string, number> = {}
     latestSubscriptions.forEach(sub => {
-      const plan = (sub as any).subscription_plans?.name || 'unknown'
+      const rawPlan = (sub as any).subscription_plans?.name || 'unknown'
+      const plan = LEGACY_PLAN_NAME_ALIASES[rawPlan] || rawPlan
       planDistribution[plan] = (planDistribution[plan] || 0) + 1
     })
 
