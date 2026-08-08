@@ -1,7 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { sendTicketReplyNotificationEmail } from '@/lib/email/send-ticket-reply-notification'
+
+// 고객에게 답변 알림 - 인앱 알림 + 즉시 이메일. 둘 다 실패해도 답변 생성/수정 자체는
+// 이미 성공했으므로 응답을 막지 않는다(best-effort, non-critical). 답변 "수정"(PATCH)이
+// POST와 동일한 알림을 안 보내던 것을 71차 QA에서 발견해 공용 함수로 뽑아 재사용한다.
+async function notifyTicketReply(
+  supabase: SupabaseClient,
+  ticketId: string,
+  replyMessage: string
+) {
+  const { data: ticket } = await supabase
+    .from('support_tickets')
+    .select('company_id, subject, created_by:users!support_tickets_created_by_user_id_fkey(email)')
+    .eq('id', ticketId)
+    .maybeSingle()
+
+  if (!ticket) return
+
+  const dashboardUrl = process.env.NEXT_PUBLIC_DOMAIN
+    ? `${process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '')}/dashboard/support/${ticketId}`
+    : `https://funnely.co.kr/dashboard/support/${ticketId}`
+
+  await supabase.from('notifications').insert({
+    company_id: ticket.company_id,
+    title: '문의하신 내용에 답변이 등록되었습니다',
+    message: `"${ticket.subject}" 문의에 새로운 답변이 등록되었습니다.`,
+    type: 'support_reply',
+    metadata: { ticket_id: ticketId },
+  }).then(({ error }) => {
+    if (error) console.error('[Support Reply API] 인앱 알림 생성 실패:', error)
+  })
+
+  const creatorEmail = (ticket.created_by as unknown as { email: string } | null)?.email
+  if (creatorEmail) {
+    try {
+      await sendTicketReplyNotificationEmail({
+        recipientEmail: creatorEmail,
+        ticketSubject: ticket.subject,
+        replyMessage,
+        dashboardUrl,
+      })
+    } catch (emailError) {
+      console.error('[Support Reply API] 이메일 발송 실패:', emailError)
+    }
+  }
+}
 
 /**
  * GET /api/admin/support/tickets/[id]/reply
@@ -117,43 +162,7 @@ export async function POST(
       return NextResponse.json({ error: replyError.message }, { status: 500 })
     }
 
-    // 고객에게 답변 알림 - 인앱 알림 + 즉시 이메일. 둘 다 실패해도 답변 생성 자체는
-    // 이미 성공했으므로 응답을 막지 않는다(best-effort, non-critical).
-    const { data: ticket } = await supabase
-      .from('support_tickets')
-      .select('company_id, subject, created_by:users!support_tickets_created_by_user_id_fkey(email)')
-      .eq('id', params.id)
-      .maybeSingle()
-
-    if (ticket) {
-      const dashboardUrl = process.env.NEXT_PUBLIC_DOMAIN
-        ? `${process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '')}/dashboard/support/${params.id}`
-        : `https://funnely.co.kr/dashboard/support/${params.id}`
-
-      await supabase.from('notifications').insert({
-        company_id: ticket.company_id,
-        title: '문의하신 내용에 답변이 등록되었습니다',
-        message: `"${ticket.subject}" 문의에 새로운 답변이 등록되었습니다.`,
-        type: 'support_reply',
-        metadata: { ticket_id: params.id },
-      }).then(({ error }) => {
-        if (error) console.error('[Support Reply API] 인앱 알림 생성 실패:', error)
-      })
-
-      const creatorEmail = (ticket.created_by as unknown as { email: string } | null)?.email
-      if (creatorEmail) {
-        try {
-          await sendTicketReplyNotificationEmail({
-            recipientEmail: creatorEmail,
-            ticketSubject: ticket.subject,
-            replyMessage: reply_message.trim(),
-            dashboardUrl,
-          })
-        } catch (emailError) {
-          console.error('[Support Reply API] 이메일 발송 실패:', emailError)
-        }
-      }
-    }
+    await notifyTicketReply(supabase, params.id, reply_message.trim())
 
     return NextResponse.json({
       success: true,
@@ -220,6 +229,8 @@ export async function PATCH(
       console.error('[Support Reply API] Error updating reply:', replyError)
       return NextResponse.json({ error: replyError.message }, { status: 500 })
     }
+
+    await notifyTicketReply(supabase, params.id, reply_message.trim())
 
     return NextResponse.json({
       success: true,
