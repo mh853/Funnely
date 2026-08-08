@@ -106,21 +106,25 @@ export async function GET(request: Request) {
       },
     ]
 
-    // 전환율 계산 (신규 → 전환)
-    const conversionRate = statusCounts.new > 0
-      ? (statusCounts.converted / statusCounts.new) * 100
+    // 전환율 계산 - 분모가 "현재 아직 new 상태로 남은 리드 수"라, 리드가 처리될수록
+    // (new 버킷이 줄어들수록) 분모가 같이 줄어 100%를 초과하거나 new=0이면 전환이
+    // 많아도 0%로 표시됐다(71차 QA). 각 버킷은 리드의 "현재" 상태 하나에만 속하는
+    // 스냅샷 집계라 이전 단계 수를 분모로 쓰는 순차 퍼널 계산이 성립하지 않는다 -
+    // trends/route.ts가 이미 쓰는 것과 동일하게 전체 리드 수(total)를 분모로 통일한다.
+    const conversionRate = total > 0
+      ? (statusCounts.converted / total) * 100
       : 0
 
-    // 단계별 전환율
+    // 단계별 전환율(각 단계에 "현재" 속한 리드가 전체에서 차지하는 비중)
     const stageConversionRates = {
-      new_to_contacted: statusCounts.new > 0
-        ? (statusCounts.contacted / statusCounts.new) * 100
+      new_to_contacted: total > 0
+        ? (statusCounts.contacted / total) * 100
         : 0,
-      contacted_to_converted: statusCounts.contacted > 0
-        ? (statusCounts.converted / statusCounts.contacted) * 100
+      contacted_to_converted: total > 0
+        ? (statusCounts.converted / total) * 100
         : 0,
-      converted_to_contract: statusCounts.converted > 0
-        ? (statusCounts.contract_completed / statusCounts.converted) * 100
+      converted_to_contract: total > 0
+        ? (statusCounts.contract_completed / total) * 100
         : 0,
     }
 
