@@ -685,7 +685,9 @@ export default function ReservationsClient({
     const firstDay = new Date(year, month, 1)
     const lastDay = new Date(year, month + 1, 0)
     const daysInMonth = lastDay.getDate()
-    const startingDayOfWeek = firstDay.getDay() // 0 = Sunday
+    // 월요일 시작으로 조정 (일요일=0이면 6, 그 외는 -1) - DB 스케줄(CalendarView.tsx)과 동일한 기준
+    const dayOfWeek = firstDay.getDay()
+    const startingDayOfWeek = dayOfWeek === 0 ? 6 : dayOfWeek - 1
 
     const days: (number | null)[] = []
 
@@ -1267,11 +1269,11 @@ export default function ReservationsClient({
           <div className="p-6">
             {/* Weekday Headers */}
             <div className="grid grid-cols-7 gap-px mb-2">
-              {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
+              {['월', '화', '수', '목', '금', '토', '일'].map((day, idx) => (
                 <div
                   key={day}
                   className={`text-center text-sm font-medium py-2 ${
-                    idx === 0 ? 'text-red-600' : idx === 6 ? 'text-blue-600' : 'text-gray-700'
+                    idx === 5 ? 'text-blue-600' : idx === 6 ? 'text-red-600' : 'text-gray-700'
                   }`}
                 >
                   {day}
@@ -1294,14 +1296,13 @@ export default function ReservationsClient({
                   calendarCurrentMonth.getMonth(),
                   day
                 )
-                const isToday = isTodayKST(
-                  new Date(
-                    calendarCurrentMonth.getFullYear(),
-                    calendarCurrentMonth.getMonth(),
-                    day
-                  )
+                const dateObj = new Date(
+                  calendarCurrentMonth.getFullYear(),
+                  calendarCurrentMonth.getMonth(),
+                  day
                 )
-                const dayOfWeek = idx % 7
+                const isToday = isTodayKST(dateObj)
+                const dayOfWeek = dateObj.getDay()
 
                 // 최대 3개 표시, 나머지는 "더보기"
                 const displayedLeads = dayLeads.slice(0, 3)
@@ -1896,11 +1897,11 @@ export default function ReservationsClient({
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 {/* Weekday Headers */}
                 <div className="grid grid-cols-7 bg-gray-50">
-                  {['일', '월', '화', '수', '목', '금', '토'].map((day, idx) => (
+                  {['월', '화', '수', '목', '금', '토', '일'].map((day, idx) => (
                     <div
                       key={day}
                       className={`py-3 text-center text-sm font-semibold ${
-                        idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-700'
+                        idx === 5 ? 'text-blue-500' : idx === 6 ? 'text-red-500' : 'text-gray-700'
                       }`}
                     >
                       {day}
@@ -1921,16 +1922,15 @@ export default function ReservationsClient({
                           day
                         )
                       : 0
-                    const isToday =
-                      day &&
-                      isTodayKST(
-                        new Date(
+                    const dateObj = day
+                      ? new Date(
                           calendarCurrentMonth.getFullYear(),
                           calendarCurrentMonth.getMonth(),
                           day
                         )
-                      )
-                    const dayOfWeek = idx % 7
+                      : null
+                    const isToday = dateObj && isTodayKST(dateObj)
+                    const dayOfWeek = dateObj ? dateObj.getDay() : -1
 
                     return (
                       <div
