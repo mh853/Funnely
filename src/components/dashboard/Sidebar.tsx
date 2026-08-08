@@ -58,12 +58,6 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState<'트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄'>('트래픽 분석')
 
-  // 디버깅: planFeatures 확인
-  if (process.env.NODE_ENV === 'development') {
-    console.log('📱 [Sidebar] Received planFeatures:', planFeatures)
-    console.log('📱 [Sidebar] User profile:', userProfile?.email, userProfile?.company_id)
-  }
-
   // Feature name mapping
   const featureNameMap: { [key: string]: '트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄' } = {
     'traffic_analytics': '트래픽 분석',
@@ -96,16 +90,6 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
       disabledReason,
     }
   })
-
-  // 디버깅: processedNavigation 확인
-  if (process.env.NODE_ENV === 'development') {
-    console.log('📱 [Sidebar] Processed navigation:', processedNavigation.map(item => ({
-      name: item.name,
-      requiredFeature: item.requiredFeature,
-      featureValue: item.requiredFeature ? planFeatures[item.requiredFeature] : 'N/A',
-      disabled: item.disabled
-    })))
-  }
 
   const handleDisabledClick = (e: React.MouseEvent, requiredFeature: string) => {
     e.preventDefault()
