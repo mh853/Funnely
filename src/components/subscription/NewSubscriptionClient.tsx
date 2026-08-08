@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckIcon } from '@heroicons/react/24/outline'
 import { createClient } from '@/lib/supabase/client'
 import { formatDate } from '@/lib/utils/date'
@@ -99,6 +99,7 @@ export default function NewSubscriptionClient({
   companyCardInfo,
 }: NewSubscriptionClientProps) {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const toast = useToast()
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
@@ -160,6 +161,25 @@ export default function NewSubscriptionClient({
   }, [upgradeModal])
 
   const sortedPlans = [...plans].sort((a, b) => a.sort_order - b.sort_order)
+
+  // 홈페이지 요금제 CTA(?plan=pro&trial=true)로 들어온 경우 어떤 플랜을 보려 했는지
+  // 안내한다. 마케팅 사이트의 영문 slug(PricingSection.tsx의 plan.id)를 DB의
+  // 한글 플랜명으로 매핑해서 찾는다.
+  const PLAN_SLUG_TO_NAME: Record<string, string> = {
+    starter: '스타터',
+    'starter-plus': '스타터 플러스',
+    pro: '프로',
+    premium: '프리미엄',
+    custom: '커스터마이징',
+  }
+  const requestedPlanSlug = searchParams.get('plan')
+  const requestedTrial = searchParams.get('trial') === 'true'
+  const requestedPlanName = requestedPlanSlug ? PLAN_SLUG_TO_NAME[requestedPlanSlug] : null
+  const requestedPlan = requestedPlanName ? sortedPlans.find((p) => p.name === requestedPlanName) : null
+  const alreadyOnRequestedOrHigher =
+    requestedPlan && currentSubscription
+      ? currentSubscription.subscription_plans.sort_order >= requestedPlan.sort_order
+      : false
 
   // 다운그레이드 예약 안내에 표시할 변경 예정 플랜명
   const pendingPlanName = currentSubscription?.pending_plan_id
@@ -1052,6 +1072,14 @@ export default function NewSubscriptionClient({
         </p>
       </div>
 
+      {requestedPlan && (
+        <div className="mx-auto max-w-2xl rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-center text-sm text-indigo-900">
+          {alreadyOnRequestedOrHigher
+            ? `이미 ${currentSubscription?.subscription_plans.name} 플랜을 사용 중이에요.`
+            : `${requestedPlan.name} 플랜을 보러 오셨군요${requestedTrial ? ' — 7일 무료체험이 가능해요' : ''}. 아래에서 바로 시작할 수 있어요.`}
+        </div>
+      )}
+
       {/* 결제 주기 선택 */}
       <div className="flex justify-center">
         <div className="inline-flex rounded-lg bg-gray-100 p-1">
@@ -1089,6 +1117,7 @@ export default function NewSubscriptionClient({
           // 이미 선택(가입)한 플랜이 있으면 "추천" 강조는 의미가 없으므로, 현재 플랜
           // 강조만 남기고 추천 배지는 신규 사용자(구독이 아예 없는 경우)에게만 보여준다.
           const isRecommended = !currentSubscription && plan.sort_order === 3
+          const isRequested = !alreadyOnRequestedOrHigher && requestedPlan?.id === plan.id
           const canReactivate =
             isCurrentPlan &&
             (isCancelledWithValidAccess || isSuspendedWithValidAccess || isPastDue || isCurrentPlanUnpaid)
@@ -1104,6 +1133,8 @@ export default function NewSubscriptionClient({
               className={`relative rounded-xl border-2 p-6 h-full flex flex-col ${
                 isCurrentPlan
                   ? 'border-blue-500 bg-blue-50'
+                  : isRequested
+                  ? 'border-indigo-500 ring-2 ring-indigo-200'
                   : isRecommended
                   ? 'border-indigo-500 shadow-lg'
                   : 'border-gray-200 hover:border-gray-300'

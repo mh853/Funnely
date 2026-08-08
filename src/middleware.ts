@@ -424,6 +424,16 @@ export async function middleware(request: NextRequest) {
     redirectUrl.pathname = safeRedirect
     redirectUrl.search = ''
 
+    // /auth/signup?plan=X&trial=true로 왔다면(홈페이지 플랜 선택 CTA) 구독 관리
+    // 페이지에서도 어떤 플랜을 보려 했는지 알 수 있도록 두 파라미터만 화이트리스트로
+    // 전달한다. redirectTo가 지정된 경우는 별개 흐름이라 건드리지 않는다.
+    if (currentPathname === '/auth/signup' && !requestedRedirect) {
+      const plan = request.nextUrl.searchParams.get('plan')
+      const trial = request.nextUrl.searchParams.get('trial')
+      if (plan) redirectUrl.searchParams.set('plan', plan)
+      if (trial === 'true') redirectUrl.searchParams.set('trial', trial)
+    }
+
     // getUser()가 만료된 액세스 토큰을 방금 갱신했을 수 있다 — 그 쿠키는 위 콜백들이
     // response에 실어뒀으므로, 새로 만드는 리다이렉트 응답에도 그대로 옮겨줘야
     // 브라우저가 갱신된 세션 쿠키를 잃지 않는다.
