@@ -67,6 +67,24 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceRoleClient()
+
+    // pageId만으로 랜딩페이지 자체의 is_active나 소속 회사의 활성/탈퇴 상태를
+    // 전혀 확인하지 않아, 비공개 전환되거나 정지된 회사의 페이지도 조회수/전환율
+    // 지표가 계속 조작될 수 있었다(submit 라우트와 동일한 검증 패턴).
+    const { data: landingPage } = await supabase
+      .from('landing_pages')
+      .select('id, is_active, companies!inner(is_active, withdrawn_at)')
+      .eq('id', pageId)
+      .maybeSingle()
+
+    const company = landingPage
+      ? Array.isArray(landingPage.companies) ? landingPage.companies[0] : landingPage.companies
+      : null
+
+    if (!landingPage || !landingPage.is_active || !company || company.is_active === false || company.withdrawn_at) {
+      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    }
+
     const userAgent = request.headers.get('user-agent')
     const deviceType = getDeviceType(userAgent)
     const today = getTodayDateKST()

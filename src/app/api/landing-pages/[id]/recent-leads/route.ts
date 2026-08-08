@@ -33,7 +33,7 @@ export async function GET(
 
     const { data: landingPage } = await supabase
       .from('landing_pages')
-      .select('id, status, is_active, realtime_enabled, collect_data, realtime_count')
+      .select('id, status, is_active, realtime_enabled, collect_data, realtime_count, companies!inner(is_active, withdrawn_at)')
       .eq('id', params.id)
       .maybeSingle()
 
@@ -44,6 +44,14 @@ export async function GET(
       !landingPage.realtime_enabled ||
       !landingPage.collect_data
     ) {
+      return NextResponse.json({ leads: [] })
+    }
+
+    // 회사가 비활성화/탈퇴 처리된 경우 - 랜딩페이지 자체는 is_active여도
+    // 소속 회사가 정지되면 위젯에 리드 정보를 계속 노출해서는 안 된다(submit
+    // 라우트와 동일한 검증 패턴).
+    const company = Array.isArray(landingPage.companies) ? landingPage.companies[0] : landingPage.companies
+    if (!company || company.is_active === false || company.withdrawn_at) {
       return NextResponse.json({ leads: [] })
     }
 
