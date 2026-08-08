@@ -108,7 +108,7 @@ export default function FindEmailPage() {
             <div className="mt-6 p-4 bg-gray-50 rounded-xl">
               {maskedEmails.length === 0 ? (
                 <p className="text-sm text-gray-600 text-center">
-                  해당 이름으로 가입된 계정을 찾을 수 없습니다.
+                  입력하신 정보와 일치하는 계정을 찾을 수 없습니다.
                 </p>
               ) : (
                 <div className="space-y-3">
