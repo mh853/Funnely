@@ -21,7 +21,7 @@ export async function DELETE(
     // Check if landing page exists and belongs to user's hospital
     const { data: landingPage, error: fetchError } = await supabase
       .from('landing_pages')
-      .select('company_id')
+      .select('company_id, images, completion_bg_image')
       .eq('id', id)
       .single()
 
@@ -60,6 +60,30 @@ export async function DELETE(
         { status: 500 }
       )
     }
+
+    // DB row만 지우고 Storage 파일(images/completion_bg_image)은 그대로 남아
+    // orphan이 쌓였다 - 에디터의 개별 이미지 삭제(removeImage/handleRemoveCompletionBgImage)와
+    // 동일한 방식으로 정리한다. 실패해도 삭제 자체는 이미 끝난 뒤라 응답에 영향 주지 않는다.
+    const removeStorageFile = async (bucket: string, publicUrl: string) => {
+      try {
+        const pathParts = new URL(publicUrl).pathname.split('/')
+        const bucketIndex = pathParts.findIndex((p) => p === bucket)
+        if (bucketIndex === -1) return
+        const filePath = pathParts.slice(bucketIndex + 1).join('/')
+        const { error } = await supabase.storage.from(bucket).remove([filePath])
+        if (error) console.error('Storage cleanup error:', bucket, error)
+      } catch (error) {
+        console.error('Storage cleanup error:', bucket, error)
+      }
+    }
+
+    const images = Array.isArray(landingPage.images) ? landingPage.images : []
+    await Promise.all([
+      ...images.map((url: string) => removeStorageFile('public-assets', url)),
+      landingPage.completion_bg_image
+        ? removeStorageFile('landing-page-images', landingPage.completion_bg_image)
+        : Promise.resolve(),
+    ])
 
     return NextResponse.json({
       success: true,
