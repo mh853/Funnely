@@ -79,10 +79,14 @@ export async function calculateEngagementScore(
   // 갱신됨)로 판단해야 한다 — audit_logs에는 company_id 컬럼 자체가 없어 매번
   // 조회가 실패했고, 그마저도 이 프로젝트에서 쓰는 admin 감사로그 용도라
   // 일반 사용자 로그인과는 무관하다.
+  // 퇴사/비활성 처리된 팀원까지 분모에 포함되면(is_active 필터 누락) 남은 팀원이
+  // 매일 로그인해도 참여도 점수가 과소평가된다(76차 QA) - 아래 landing_pages 쿼리와
+  // 동일하게 is_active=true만 집계 대상으로 삼는다.
   const { data: companyUsers, count: totalUsers } = await supabase
     .from('users')
     .select('id, last_login', { count: 'exact' })
     .eq('company_id', companyId)
+    .eq('is_active', true)
 
   if (!totalUsers || totalUsers === 0) {
     riskFactors.push({
