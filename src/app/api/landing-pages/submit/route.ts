@@ -307,27 +307,50 @@ export async function POST(request: NextRequest) {
     // 다시 중복 저장하지 않도록 소비한 키를 추적한다.
     const consumedFormDataKeys = new Set<string>()
 
+    const MAX_CUSTOM_FIELDS = 50
+    const MAX_FIELD_VALUE_LENGTH = 2000
+
     if (collectFields && Array.isArray(collectFields)) {
       // short_answer/multiple_choice 필드만 추출하고, 클라이언트와 동일한 규칙
       // (id 우선, 없으면 필터링된 배열 내 위치)으로 fieldKey를 계산한다.
+      // type/options도 함께 유지해야 multiple_choice 값을 옵션목록으로 검증할 수 있다
+      // (83차 QA 이전엔 이 두 값이 버려져 검증 자체가 불가능했음).
       const customFieldDefs = collectFields
         .filter(field => field.type === 'short_answer' || field.type === 'multiple_choice')
         .map((field, index) => ({
           key: field.id || `field_${index}`,
           label: field.question,
+          type: field.type,
+          options: field.options,
           required: field.required ?? false,
         }))
-        .filter((f): f is { key: string; label: string; required: boolean } => !!f.label)
+        .filter((f): f is { key: string; label: string; type: string; options: string[] | undefined; required: boolean } => !!f.label)
 
       // 필수 항목 여부는 클라이언트(PublicLandingPage.tsx)에서만 검증하고 있어,
       // 공개 제출 API를 브라우저 없이 직접 호출하면 필수로 지정한 커스텀 질문을
       // 그냥 건너뛸 수 있었다(66차 QA 확인) - 서버에서도 동일하게 강제한다.
+      // trim()이 없으면 공백 문자열도 truthy라 required 검증을 통과해버린다(83차 QA).
       const missingRequiredField = customFieldDefs.find(
-        (f) => f.required && !form_data[f.key]
+        (f) => f.required && !String(form_data[f.key] ?? '').trim()
       )
       if (missingRequiredField) {
         return NextResponse.json(
           { error: { message: `"${missingRequiredField.label}" 항목은 필수입니다` } },
+          { status: 400 }
+        )
+      }
+
+      // multiple_choice는 정의된 옵션 중 하나여야 한다 - 검증이 없으면 옵션목록과
+      // 무관한 임의 문자열이 그대로 저장됐다(83차 QA).
+      const invalidChoiceField = customFieldDefs.find((f) => {
+        if (f.type !== 'multiple_choice' || !f.options || f.options.length === 0) return false
+        const value = form_data[f.key]
+        if (value === undefined || value === null || value === '') return false
+        return !f.options.includes(String(value))
+      })
+      if (invalidChoiceField) {
+        return NextResponse.json(
+          { error: { message: `"${invalidChoiceField.label}" 항목에 올바르지 않은 값입니다` } },
           { status: 400 }
         )
       }
@@ -338,7 +361,7 @@ export async function POST(request: NextRequest) {
           customFields.push({
             id: key,
             label,
-            value: String(form_data[key])
+            value: String(form_data[key]).slice(0, MAX_FIELD_VALUE_LENGTH)
           })
           consumedFormDataKeys.add(key)
         }
@@ -351,8 +374,6 @@ export async function POST(request: NextRequest) {
     // 외부 연동/구버전 클라이언트가 fieldKey 대신 임의의 키(과거 방식대로 질문
     // 텍스트를 그대로 키로 사용하는 경우 포함)를 보내는 경우를 위한 폴백이다 -
     // 위에서 이미 fieldKey로 소비한 값은 다시 잡지 않는다.
-    const MAX_CUSTOM_FIELDS = 50
-    const MAX_FIELD_VALUE_LENGTH = 2000
     Object.entries(form_data).forEach(([key, value]) => {
       if (customFields.length >= MAX_CUSTOM_FIELDS) return
       if (consumedFormDataKeys.has(key)) return
