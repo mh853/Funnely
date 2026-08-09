@@ -1232,6 +1232,14 @@ export default function LandingPageNewForm({
   }
 
   const handleSave = async () => {
+    // sections가 비어있으면 공개 페이지는 헤더/CTA 없이 빈 화면으로 렌더링된다
+    // (PublicLandingPage.tsx가 sections를 순회해서만 콘텐츠를 그린다). 게시(published)
+    // 상태로 저장하는 시도는 막는다 - 임시저장(draft)은 계속 허용.
+    if (isActive && sections.filter(s => s.enabled !== false).length === 0) {
+      toast.error('게시하려면 최소 1개 이상의 섹션이 활성화되어 있어야 합니다.')
+      return
+    }
+
     // 질문 텍스트가 빈 문자열이면 서버(submit/route.ts)가 해당 필드 정의를 통째로
     // 버려, 리드가 실제로 제출한 답변이 질문 라벨 대신 내부 랜덤 field id로 리드
     // 목록/엑셀에 그대로 노출된다(48차 QA로 코드경로 확인) - 저장 자체를 막는다.
