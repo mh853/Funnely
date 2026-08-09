@@ -121,6 +121,27 @@ function normalizeSheetPhone(rawPhone: string): string {
   return rawPhone
 }
 
+// 컬럼 매핑이 실제 시트 헤더와 일치하는지 검증한다. 시트 헤더 텍스트가 바뀌거나
+// (예: "전화번호"→"연락처") 헤더 위에 안내행이 추가되어 rows[0]이 더 이상 실제
+// 헤더가 아니게 되면, getColumnValue가 모든 행에서 매칭 실패해 name/phone이
+// 전부 빈 문자열이 되고 parseSheetToLeads의 필수필드 필터에 전량 걸러진다.
+// 이 과정에서 에러가 전혀 발생하지 않아 몇 달간 리드 유실이 인지되지 못할 수
+// 있었다(81차 QA) - 파싱 전에 헤더 존재 여부를 먼저 확인해 명시적으로 실패시킨다.
+export function findMissingColumns(
+  headers: string[],
+  columnMapping: ColumnMapping
+): string[] {
+  const normalized = new Set(headers.map((h) => h.toLowerCase().trim()))
+  const missing: string[] = []
+  if (!normalized.has(columnMapping.name.toLowerCase().trim())) {
+    missing.push(columnMapping.name)
+  }
+  if (!normalized.has(columnMapping.phone.toLowerCase().trim())) {
+    missing.push(columnMapping.phone)
+  }
+  return missing
+}
+
 function getColumnValue(
   row: string[],
   headers: string[],

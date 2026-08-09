@@ -6,6 +6,7 @@ import { calculateHealthScore, toCustomerHealthScoreRow } from '@/lib/health/cal
 import {
   fetchSheetData,
   parseSheetToLeads,
+  findMissingColumns,
   ColumnMapping,
 } from '@/lib/google-sheets'
 import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
@@ -511,8 +512,16 @@ async function syncGoogleSheets(supabase: any) {
         continue
       }
 
-      // Parse and filter new leads
+      // 매핑된 컬럼(이름/전화번호)이 실제 시트 헤더에 존재하는지 먼저 확인 - 헤더가
+      // 바뀌면(예: "전화번호"→"연락처") 모든 행이 조용히 필터링되어 매일 "empty"로만
+      // 남고 실패로 분류되지 않아 몇 달간 리드 유실이 인지되지 못할 수 있었다(81차 QA).
       const columnMapping = config.column_mapping as ColumnMapping
+      const missingColumns = findMissingColumns(rows[0], columnMapping)
+      if (missingColumns.length > 0) {
+        throw new Error(`시트에서 다음 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`)
+      }
+
+      // Parse and filter new leads
       const sheetLeads = parseSheetToLeads(rows, columnMapping)
 
       // range() 없이 조회하면 supabase의 암묵적 max_rows(1000)에 걸려 회사의

@@ -7,6 +7,7 @@ import {
   fetchSheetData,
   getSheetNames,
   parseSheetToLeads,
+  findMissingColumns,
   ColumnMapping,
   DEFAULT_META_MAPPING,
 } from '@/lib/google-sheets'
@@ -222,6 +223,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: '시트에 데이터가 없습니다', imported: 0 },
         { status: 200 }
+      )
+    }
+
+    // 매핑된 컬럼(이름/전화번호)이 실제 시트 헤더에 존재하는지 먼저 확인 - 헤더가
+    // 바뀌면 모든 행이 조용히 필터링되어 "새로운 데이터가 없습니다"로만 보인다.
+    const missingColumns = findMissingColumns(rows[0], columnMapping as ColumnMapping)
+    if (missingColumns.length > 0) {
+      const msg = `시트에서 다음 컬럼을 찾을 수 없습니다: ${missingColumns.join(', ')}`
+      await logFailure(msg)
+      return NextResponse.json(
+        {
+          error: msg,
+          availableHeaders: rows[0],
+          hint: '시트의 헤더 이름이 동기화 설정과 일치하는지 확인하세요.',
+        },
+        { status: 400 }
       )
     }
 
