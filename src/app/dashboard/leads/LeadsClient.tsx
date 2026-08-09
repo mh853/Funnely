@@ -303,7 +303,12 @@ export default function LeadsClient({
   // 상태 수정 관련 상태
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null)
   const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null)
-  const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1)
+  // useState로 마운트 시 1회만 읽으면 필터 변경(항상 page=1로 리셋)이나 브라우저
+  // 뒤/앞으로가기로 URL의 page가 바뀌어도 이 값이 따라가지 못해, 페이지네이션 UI가
+  // 실제 조회 중인 페이지와 다른 번호를 활성 표시하고 다음 버튼이 range 밖 페이지로
+  // 이동해 빈 화면에 갇힐 수 있었다(73차 QA) - 매 렌더마다 URL에서 직접 파생시켜
+  // 항상 동기화되도록 한다.
+  const currentPage = Number(searchParams.get('page')) || 1
   const [dropdownPosition, setDropdownPosition] = useState<{ top: number; left: number; openUpward?: boolean } | null>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
   // 드롭다운을 연 트리거 버튼 - Escape/포커스 이탈 시 포커스를 돌려주기 위해 기억해둠
@@ -1193,7 +1198,6 @@ export default function LeadsClient({
     const params = new URLSearchParams(searchParams.toString())
     params.set('page', page.toString())
     router.push(`/dashboard/leads?${params.toString()}`)
-    setCurrentPage(page)
   }
 
   const handleExcelExport = async () => {
