@@ -48,47 +48,44 @@ function BillingSuccessContent() {
         // 탭 복원으로 이 컴포넌트가 재마운트되면(hasProcessed ref는 마운트 내 중복실행만
         // 막을 뿐 재마운트는 못 막음) 같은 authKey로 Step1을 다시 호출하게 되어 Toss가
         // 거부한다 - 실제로는 이미 성공했는데 "결제 실패"로 잘못 표시된다(61차 QA
-        // 확인). Step1을 다시 시도하기 전에 DB에서 이 구독의 실제 처리 상태를 먼저
-        // 확인해, 이미 끝난 단계는 재실행하지 않는다.
-        const { data: existingSub } = await supabase
-          .from('company_subscriptions')
-          .select('billing_key, current_period_end')
-          .eq('id', subscriptionId)
-          .maybeSingle()
+        // 확인). 원래는 "구독에 billing_key가 이미 있는지"로 이 재실행 여부를
+        // 판단했는데, 이미 다른(예전) 카드의 billing_key가 있는 상태에서 카드를
+        // "변경"하는 모든 경우(past_due 재시도 포함)에 이 판단이 잘못 작동해 방금
+        // 발급받은 새 authKey를 절대 교환하지 않고 DB에 남아있는 옛(거절된) 카드로
+        // 계속 재시도하는 심각한 버그가 있었다(82차 QA) - 카드변경/재시도 자체가
+        // 항상 실패하는데 사용자에겐 "완료" 메시지만 보였다. billing_key 존재여부가
+        // 아니라 이 authKey 자체가 이 탭에서 이미 처리됐는지를 sessionStorage로
+        // 정확히 추적한다.
+        const step1Key = `billing-auth-processed:${authKey}`
+        const step2Key = `billing-payment-processed:${authKey}`
 
-        const billingKeyAlreadySet = !!existingSub?.billing_key
-        const now = new Date().toISOString()
-        const paymentAlreadyCompleted =
-          mode === 'update' ||
-          (!!existingSub?.current_period_end && existingSub.current_period_end > now)
-
-        if (!(billingKeyAlreadySet && paymentAlreadyCompleted)) {
-          // Step 1: 빌링키 발급 + 카드 정보 저장 (아직 안 됐을 때만)
+        if (sessionStorage.getItem(step1Key) !== '1') {
+          // Step 1: 빌링키 발급 + 카드 정보 저장
           // 프록시 API를 경유하여 trial 상태 구독도 처리 가능하도록 함
-          if (!billingKeyAlreadySet) {
-            const authRes = await fetch('/api/subscription/proxy-billing-auth', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ customerKey, authKey, subscriptionId }),
-            })
-            if (!authRes.ok) {
-              const err = await authRes.json()
-              throw new Error(err.error || '카드 등록에 실패했습니다.')
-            }
+          const authRes = await fetch('/api/subscription/proxy-billing-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ customerKey, authKey, subscriptionId }),
+          })
+          if (!authRes.ok) {
+            const err = await authRes.json()
+            throw new Error(err.error || '카드 등록에 실패했습니다.')
           }
+          sessionStorage.setItem(step1Key, '1')
+        }
 
-          // Step 2: 즉시 첫 결제 (카드 변경 모드에서는 생략, 이미 완료됐으면 생략)
-          if (mode !== 'update') {
-            const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
-              method: 'POST',
-              headers,
-              body: JSON.stringify({ subscriptionId }),
-            })
-            if (!payRes.ok) {
-              const err = await payRes.json()
-              throw new Error(err.error || '결제에 실패했습니다.')
-            }
+        // Step 2: 즉시 첫 결제 (카드 변경 모드에서는 생략, 이미 완료됐으면 생략)
+        if (mode !== 'update' && sessionStorage.getItem(step2Key) !== '1') {
+          const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ subscriptionId }),
+          })
+          if (!payRes.ok) {
+            const err = await payRes.json()
+            throw new Error(err.error || '결제에 실패했습니다.')
           }
+          sessionStorage.setItem(step2Key, '1')
         }
 
         setProcessing(false)
