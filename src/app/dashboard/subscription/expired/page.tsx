@@ -81,11 +81,18 @@ export default function SubscriptionExpiredPage() {
       // 못 찾으면 그 사이 상태가 정상화된 것 — 대시보드로 돌려보낸다.
       const now = new Date().toISOString()
       const subs = (allSubsRaw as SubRow[] | null) ?? []
+      // middleware.ts의 isActiveOrPastDueAndExpired와 정확히 같은 조건이어야 한다.
+      // status==='active'만 검사하면 past_due(결제실패, 유예기간까지 만료)가
+      // 어느 조건에도 안 걸려 blockedSub가 null이 되고, subs.length>0이라
+      // /dashboard로 돌려보낸다 - middleware는 여전히 차단중이라 다시 이
+      // 페이지로 보내 무한 리다이렉트에 빠졌다(82차 QA, 다음날 크론이 status를
+      // expired로 바꿔줄 때까지 최대 24시간 지속).
       const blockedSub =
         subs.find(s =>
-          s.status === 'active' &&
+          ['active', 'past_due'].includes(s.status) &&
           s.current_period_end !== null &&
-          s.current_period_end < now
+          s.current_period_end < now &&
+          (!s.grace_period_end || s.grace_period_end < now)
         ) ??
         subs.find(s =>
           s.status === 'trial' &&
