@@ -16,6 +16,20 @@ function createServiceClient() {
   )
 }
 
+// 인증 없는 공개 엔드포인트가 리드 실명을 마스킹 없이 그대로 반환하고 있었다
+// (83차 QA) - "홍○○" 형태로 첫 글자만 남기고 나머지는 마스킹한다.
+function maskName(name: string): string {
+  const trimmed = name.trim()
+  if (trimmed.length <= 1) return trimmed
+  return trimmed[0] + '○'.repeat(trimmed.length - 1)
+}
+
+// realtime_count는 클라이언트에서 직접 landing_pages 행을 update하는 경로로도
+// 저장되어(LandingPageNewForm.tsx) 서버측 저장시점 검증을 우회할 수 있다 - 조회
+// 시점에 한 번 더 상한을 강제해, 비정상적으로 큰 값을 설정해도 이 회사 리드
+// 실명 전체를 한 번에 끌어올 수는 없도록 막는다.
+const MAX_REALTIME_COUNT = 50
+
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
@@ -55,14 +69,20 @@ export async function GET(
       return NextResponse.json({ leads: [] })
     }
 
+    const requestedCount = landingPage.realtime_count || 10
     const { data: leads } = await supabase
       .from('leads')
       .select('name, device_type, created_at')
       .eq('landing_page_id', landingPage.id)
       .order('created_at', { ascending: false })
-      .limit(landingPage.realtime_count || 10)
+      .limit(Math.min(Math.max(requestedCount, 1), MAX_REALTIME_COUNT))
 
-    return NextResponse.json({ leads: leads || [] })
+    const maskedLeads = (leads || []).map((lead) => ({
+      ...lead,
+      name: lead.name ? maskName(lead.name) : lead.name,
+    }))
+
+    return NextResponse.json({ leads: maskedLeads })
   } catch (error) {
     console.error('[Recent Leads API] 오류:', error)
     return NextResponse.json({ leads: [] })
