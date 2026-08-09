@@ -150,7 +150,9 @@ function isOwnDomain(hostname: string): boolean {
   const ownDomains = ['funnely.co.kr', 'localhost', '127.0.0.1']
   return (
     ownDomains.some(d => hostname === d || hostname.endsWith(`.${d}`)) ||
-    hostname.includes('vercel.app')
+    // includes()는 부분일치라 'vercel.app.attacker.com' 같은 호스트도 자사
+    // 도메인으로 오인해 커스텀도메인 검사(Phase 0)를 건너뛰게 할 수 있었다(77차 QA)
+    hostname === 'vercel.app' || hostname.endsWith('.vercel.app')
   )
 }
 
@@ -193,6 +195,15 @@ export async function middleware(request: NextRequest) {
         url.pathname = `/${domainInfo.shortId}${url.pathname}`
         return NextResponse.rewrite(url)
       }
+
+      // 도메인 미등록/미인증/기능해제(다운그레이드) 또는 조회 실패 - 아무 것도
+      // return하지 않고 그냥 통과시키면 아래 Phase 2의 `/landing/*` 폴백이 그대로
+      // 실행되어, 회사/도메인 바인딩이 전혀 없는 전역 slug 조회 라우트
+      // (src/app/landing/[slug]/page.tsx)가 이 자사 도메인이 아닌 호스트에서도
+      // 렌더링됐다(fail-open, 77차 QA). 그 폴백 라우트 자체는 메인 도메인(funnely.co.kr)
+      // 접속 시의 의도된 하위호환(구 ?ref= 마이그레이션)이라 남겨두되, 자사 도메인이
+      // 아닌 호스트에서는 여기서 명시적으로 404 처리한다(fail-closed).
+      return new NextResponse('Not Found', { status: 404 })
     }
 
     // 커스텀 도메인 루트 접속 → 이 도메인에 배정된 랜딩페이지(없으면 회사의
