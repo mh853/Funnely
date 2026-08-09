@@ -1,8 +1,12 @@
 import Link from 'next/link'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
+import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
+import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 
 export default function KakaoMomentSetupGuide() {
   return (
+    <>
+    <MarketingHeader />
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Back Button */}
@@ -465,5 +469,7 @@ export default function KakaoMomentSetupGuide() {
         </div>
       </div>
     </div>
+    <MarketingFooter />
+    </>
   )
 }

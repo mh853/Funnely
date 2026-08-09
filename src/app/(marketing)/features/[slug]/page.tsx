@@ -9,6 +9,8 @@ import UseCases from '@/components/features/detail/UseCases'
 import PricingCallout from '@/components/features/detail/PricingCallout'
 import RelatedFeatures from '@/components/features/detail/RelatedFeatures'
 import FinalCTASection from '@/components/marketing/sections/FinalCTASection'
+import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
+import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 
 interface PageProps {
   params: {
@@ -46,40 +48,44 @@ export default function FeatureDetailPage({ params }: PageProps) {
   }
 
   return (
-    <main>
-      {/* Hero Section */}
-      <FeatureHero
-        icon={feature.icon}
-        iconGradient={feature.iconGradient}
-        title={feature.title}
-        subtitle={feature.subtitle}
-        isPro={feature.isPro}
-      />
+    <>
+      <MarketingHeader />
+      <main>
+        {/* Hero Section */}
+        <FeatureHero
+          icon={feature.icon}
+          iconGradient={feature.iconGradient}
+          title={feature.title}
+          subtitle={feature.subtitle}
+          isPro={feature.isPro}
+        />
 
-      {/* Key Benefits Section */}
-      <KeyBenefits benefits={feature.keyBenefits} />
+        {/* Key Benefits Section */}
+        <KeyBenefits benefits={feature.keyBenefits} />
 
-      {/* How It Works Section */}
-      <HowItWorks steps={feature.howItWorks} />
+        {/* How It Works Section */}
+        <HowItWorks steps={feature.howItWorks} />
 
-      {/* Features Detail Section */}
-      <FeaturesDetail features={feature.featuresDetail} />
+        {/* Features Detail Section */}
+        <FeaturesDetail features={feature.featuresDetail} />
 
-      {/* Use Cases Section */}
-      <UseCases useCases={feature.useCases} />
+        {/* Use Cases Section */}
+        <UseCases useCases={feature.useCases} />
 
-      {/* Pricing Callout Section */}
-      <PricingCallout
-        message={feature.pricingCallout.message}
-        note={feature.pricingCallout.note}
-        isPro={feature.isPro}
-      />
+        {/* Pricing Callout Section */}
+        <PricingCallout
+          message={feature.pricingCallout.message}
+          note={feature.pricingCallout.note}
+          isPro={feature.isPro}
+        />
 
-      {/* Related Features Section */}
-      <RelatedFeatures features={feature.relatedFeatures} />
+        {/* Related Features Section */}
+        <RelatedFeatures features={feature.relatedFeatures} />
 
-      {/* Final CTA Section */}
-      <FinalCTASection />
-    </main>
+        {/* Final CTA Section */}
+        <FinalCTASection />
+      </main>
+      <MarketingFooter />
+    </>
   )
 }

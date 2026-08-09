@@ -3,6 +3,8 @@ import ComparisonHero from '@/components/features/comparison/ComparisonHero'
 import ComparisonCards from '@/components/features/comparison/ComparisonCards'
 import ComparisonFAQ from '@/components/features/comparison/ComparisonFAQ'
 import FinalCTASection from '@/components/marketing/sections/FinalCTASection'
+import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
+import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 import { createClient } from '@/lib/supabase/server'
 import { SubscriptionPlan } from '@/types/subscription'
 
@@ -59,18 +61,22 @@ export default async function ComparisonPage() {
   const plans = await getSubscriptionPlans()
 
   return (
-    <main>
-      {/* Hero Section */}
-      <ComparisonHero />
+    <>
+      <MarketingHeader />
+      <main>
+        {/* Hero Section */}
+        <ComparisonHero />
 
-      {/* Plan Cards Section */}
-      <ComparisonCards plans={plans} />
+        {/* Plan Cards Section */}
+        <ComparisonCards plans={plans} />
 
-      {/* FAQ Section */}
-      <ComparisonFAQ faqs={faqs} />
+        {/* FAQ Section */}
+        <ComparisonFAQ faqs={faqs} />
 
-      {/* Final CTA Section */}
-      <FinalCTASection />
-    </main>
+        {/* Final CTA Section */}
+        <FinalCTASection />
+      </main>
+      <MarketingFooter />
+    </>
   )
 }
