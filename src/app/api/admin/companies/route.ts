@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { escapeIlike } from '@/lib/utils/search'
+import { pickCurrentSubscription } from '@/lib/subscription-current'
 
 function getServiceClient() {
   return createClient(
@@ -189,9 +190,18 @@ export async function GET(request: NextRequest) {
       userCountMap[u.company_id] = (userCountMap[u.company_id] || 0) + 1
     }
 
-    const subscriptionMap: Record<string, any> = {}
+    // 단순히 created_at 기준 첫 행(가장 최근 생성된 행)을 고르면, 실제 유효한
+    // 구독보다 나중에 생성된 만료/취소 이력 행이 뽑혀 요금이 잘못 표시될 수 있다 -
+    // admin/subscriptions/metrics와 동일하게 pickCurrentSubscription으로 통일한다
+    // (83차 QA 확인, 위 order('created_at', desc)로 이미 정렬돼 있어 그대로 재사용 가능).
+    const subsByCompanyForPick: Record<string, typeof subscriptionsRows> = {}
     for (const s of subscriptionsRows) {
-      if (!subscriptionMap[s.company_id]) subscriptionMap[s.company_id] = s
+      (subsByCompanyForPick[s.company_id] ||= []).push(s)
+    }
+    const subscriptionMap: Record<string, any> = {}
+    for (const [companyId, subs] of Object.entries(subsByCompanyForPick)) {
+      const picked = pickCurrentSubscription(subs)
+      if (picked) subscriptionMap[companyId] = picked
     }
 
     // Payment stats per company
