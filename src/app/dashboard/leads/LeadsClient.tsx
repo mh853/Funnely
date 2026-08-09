@@ -108,16 +108,16 @@ export default function LeadsClient({
   const statusOptions = useMemo(() => {
     if (leadStatuses.length === 0) {
       return [
-        { value: 'new', label: '상담 전' },
-        { value: 'rejected', label: '상담 거절' },
-        { value: 'contacted', label: '상담 진행중' },
-        { value: 'converted', label: '상담 완료' },
-        { value: 'contract_completed', label: '예약 확정' },
-        { value: 'needs_followup', label: '추가상담 필요' },
-        { value: 'other', label: '기타' },
+        { value: 'new', label: '상담 전', category: 'new' },
+        { value: 'rejected', label: '상담 거절', category: 'rejected' },
+        { value: 'contacted', label: '상담 진행중', category: 'contacted' },
+        { value: 'converted', label: '상담 완료', category: 'converted' },
+        { value: 'contract_completed', label: '예약 확정', category: 'contract_completed' },
+        { value: 'needs_followup', label: '추가상담 필요', category: 'needs_followup' },
+        { value: 'other', label: '기타', category: 'other' },
       ]
     }
-    return leadStatuses.map(s => ({ value: s.code, label: s.label }))
+    return leadStatuses.map(s => ({ value: s.code, label: s.label, category: s.category || 'other' }))
   }, [leadStatuses])
 
   // 코드 → 통계 범주(category) 맵 (커스텀 코드도 '계약완료' 범주인지 정확히 판단하기 위함)

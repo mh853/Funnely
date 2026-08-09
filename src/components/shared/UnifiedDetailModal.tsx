@@ -54,7 +54,7 @@ interface UnifiedDetailModalProps {
   onClose: () => void
   lead: LeadData | null
   teamMembers: TeamMember[]
-  statusOptions: Array<{ value: string; label: string }>
+  statusOptions: Array<{ value: string; label: string; category?: string }>
   statusStyles: { [key: string]: { bg: string; text: string; label: string } }
   onUpdate?: () => void
 }
@@ -321,12 +321,21 @@ export default function UnifiedDetailModal({
     }
   }
 
+  // 회사가 상태 코드를 커스터마이즈해도(예: '계약확정' 코드를 'signed'로 변경) 통계
+  // 범주(category) 기준으로 정확히 판단하기 위한 헬퍼. statusOptions에 category 정보가
+  // 없으면(레거시 기본값) 코드명 자체가 범주명과 같다고 가정해 하위 호환을 유지한다.
+  const getCategoryForCode = (code: string): string =>
+    statusOptions.find((o) => o.value === code)?.category ?? code
+
+  const getCodeForCategory = (category: string): string =>
+    statusOptions.find((o) => o.category === category)?.value ?? category
+
   // 상태 변경
   const handleStatusChange = async (newStatus: string) => {
     if (!lead) return
 
     // 예약 확정 선택 시 모달 열기
-    if (newStatus === 'contract_completed') {
+    if (getCategoryForCode(newStatus) === 'contract_completed') {
       setShowScheduleModal(true)
       return
     }
@@ -371,13 +380,14 @@ export default function UnifiedDetailModal({
     setUpdatingStatus(true)
     try {
       const contractCompletedAt = new Date(`${date}T${time}:00`).toISOString()
+      const contractCompletedCode = getCodeForCategory('contract_completed')
 
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: lead.id,
-          status: 'contract_completed',
+          status: contractCompletedCode,
           contract_completed_at: contractCompletedAt,
           expected_updated_at: expectedUpdatedAt,
         }),
@@ -392,7 +402,7 @@ export default function UnifiedDetailModal({
         return
       }
 
-      setCurrentStatus('contract_completed')
+      setCurrentStatus(contractCompletedCode)
       setReservationDate(contractCompletedAt) // 즉시 업데이트
       setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       setShowScheduleModal(false)
@@ -414,12 +424,13 @@ export default function UnifiedDetailModal({
 
     setUpdatingStatus(true)
     try {
+      const needsFollowupCode = getCodeForCategory('needs_followup')
       const response = await fetch('/api/leads/update', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: lead.id,
-          status: 'needs_followup',
+          status: needsFollowupCode,
           contract_completed_at: null,
           cancel_reason: '예약취소(추가상담 필요)',
           expected_updated_at: expectedUpdatedAt,
@@ -435,7 +446,7 @@ export default function UnifiedDetailModal({
         return
       }
 
-      setCurrentStatus('needs_followup')
+      setCurrentStatus(needsFollowupCode)
       setReservationDate(null) // 즉시 업데이트
       setExpectedUpdatedAt(data?.data?.updated_at ?? expectedUpdatedAt)
       fetchChangeLogs(lead.id)

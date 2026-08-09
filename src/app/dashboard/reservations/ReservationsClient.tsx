@@ -102,13 +102,13 @@ const STATUS_STYLES: { [key: string]: { bg: string; text: string; label: string 
 
 // 상태 변경 가능 목록 (회사별 커스텀 상태를 불러오지 못했을 때의 기본값)
 const DEFAULT_STATUS_OPTIONS = [
-  { value: 'new', label: '상담 전' },
-  { value: 'rejected', label: '상담 거절' },
-  { value: 'contacted', label: '상담 진행중' },
-  { value: 'converted', label: '상담 완료' },
-  { value: 'contract_completed', label: '예약 확정' },
-  { value: 'needs_followup', label: '추가상담 필요' },
-  { value: 'other', label: '기타' },
+  { value: 'new', label: '상담 전', category: 'new' },
+  { value: 'rejected', label: '상담 거절', category: 'rejected' },
+  { value: 'contacted', label: '상담 진행중', category: 'contacted' },
+  { value: 'converted', label: '상담 완료', category: 'converted' },
+  { value: 'contract_completed', label: '예약 확정', category: 'contract_completed' },
+  { value: 'needs_followup', label: '추가상담 필요', category: 'needs_followup' },
+  { value: 'other', label: '기타', category: 'other' },
 ]
 
 // leads.phone은 암호화 저장되어 있고 복호화 키는 서버 전용이라, 브라우저에서
@@ -219,20 +219,20 @@ export default function ReservationsClient({
 
   // 회사별 커스텀 리드 상태 목록
   const [leadStatuses, setLeadStatuses] = useState<
-    { id: string; code: string; label: string; color: string; sort_order: number }[]
+    { id: string; code: string; label: string; color: string; sort_order: number; category: string | null }[]
   >([])
 
   // 상태 변경 드롭다운에 사용할 옵션 목록 (커스텀 상태 우선, 없으면 기본값)
   const statusOptions = useMemo(() => {
     if (leadStatuses.length === 0) return DEFAULT_STATUS_OPTIONS
-    return leadStatuses.map(s => ({ value: s.code, label: s.label }))
+    return leadStatuses.map(s => ({ value: s.code, label: s.label, category: s.category || 'other' }))
   }, [leadStatuses])
 
   useEffect(() => {
     const fetchLeadStatuses = async () => {
       const { data } = await supabase
         .from('lead_statuses')
-        .select('id, code, label, color, sort_order')
+        .select('id, code, label, color, sort_order, category')
         .eq('company_id', companyId)
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
