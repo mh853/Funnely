@@ -4,10 +4,13 @@ import { decryptPhone } from '@/lib/encryption/phone'
 import { getLeadStatusCategoryMap } from '@/lib/leadStatusCategory'
 
 // 리드 배정 알림 - 콜/상담 담당자를 지정해도 담당자에게 알릴 수단이 전혀 없어
-// 대시보드를 수동으로 확인해야만 새 배정을 알 수 있었다(66차 QA 확인). notifications
-// 테이블이 특정 사용자가 아니라 회사 전체 단위로만 구성돼 있어(다른 알림들과 동일한
-// 제약), 회사 전체에 노출하되 누구에게 배정됐는지 메시지에 명시한다. fire-and-forget이라
-// 실패해도 메인 배정 처리에는 영향 없다.
+// 대시보드를 수동으로 확인해야만 새 배정을 알 수 있었다(66차 QA 확인). 만들 당시엔
+// notifications가 회사 전체 단위로만 구성돼 있어 회사 전체에 노출했는데, 이후 user_id
+// 컬럼+개인 스코프 RLS+notification_reads(20260709000004 등)가 추가돼 개인 타겟팅이
+// 가능해졌음에도 이 함수만 계속 회사 전체 브로드캐스트로 남아 있었다(80차 QA) -
+// 팀원이 많은 회사에서 자신과 무관한 배정 알림까지 전원에게 노출되던 문제. 배정된
+// 본인에게만 가도록 user_id를 채운다. fire-and-forget이라 실패해도 메인 배정 처리에는
+// 영향 없다.
 async function notifyAssignment(
   supabase: any,
   companyId: string,
@@ -24,6 +27,7 @@ async function notifyAssignment(
 
     await supabase.from('notifications').insert({
       company_id: companyId,
+      user_id: assignedUserId,
       title: `${roleLabel} 담당자 배정`,
       message: `${leadName || '리드'}님이 ${assignedUser?.full_name || '담당자'}님에게 ${roleLabel} 담당으로 배정되었습니다.`,
       type: 'lead_assigned',
