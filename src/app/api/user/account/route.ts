@@ -60,12 +60,18 @@ export async function DELETE(request: Request) {
     }
 
     if (!otherOwnerCount) {
-      // 활성 구독 자동 취소
-      await adminDb
+      // 활성 구독 자동 취소 - past_due(결제실패 유예기간)도 포함해야 한다.
+      // 빠지면 취소 표시 없이 상태가 영원히 past_due로 남아 취소가 아니라
+      // 결제실패로 보인다(80차 QA 확인, 실제 청구 위험은 companies.is_active=false로
+      // 이미 차단됨).
+      const { error: cancelSubError } = await adminDb
         .from('company_subscriptions')
         .update({ status: 'cancelled', cancelled_at: now })
         .eq('company_id', profile.company_id)
-        .in('status', ['active', 'trial'])
+        .in('status', ['active', 'trial', 'past_due'])
+      if (cancelSubError) {
+        console.error('Account deletion - subscription cancel failed:', cancelSubError)
+      }
 
       // 팀원 전체 소프트 삭제 - 이 주석대로 소프트 삭제를 의도했으나 실제로는
       // auth.admin.deleteUser(하드삭제)를 호출하고 있었다. 팀원이 담당 리드를 갖고
@@ -80,11 +86,16 @@ export async function DELETE(request: Request) {
         .eq('is_active', true)
         .neq('id', user.id)
 
-      // 회사 비활성화
-      await adminDb
+      // 회사 비활성화 - withdrawn_at을 채우지 않으면 관리자 화면(admin/companies)이
+      // "탈퇴"가 아니라 "비활성"으로만 표시하고, 이탈(churn) 집계 쿼리들이 전부
+      // withdrawn_at 기준이라 이 탈퇴가 누락된다(80차 QA 확인).
+      const { error: deactivateCompanyError } = await adminDb
         .from('companies')
-        .update({ is_active: false })
+        .update({ is_active: false, withdrawn_at: now })
         .eq('id', profile.company_id)
+      if (deactivateCompanyError) {
+        console.error('Account deletion - company deactivation failed:', deactivateCompanyError)
+      }
     }
   }
 
