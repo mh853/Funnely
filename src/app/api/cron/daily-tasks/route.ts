@@ -1250,6 +1250,11 @@ async function sendLeadDigestEmails(supabase: any) {
  * 어디에도 없었다(신규 발견). subject/body_text는 이미 생성 시점에 채워져 있으므로 여기서는
  * 그대로 발송만 한다. body_html은 생성부에서 채우지 않으므로(항상 null) HTML 없이 텍스트
  * 메일로만 보낸다 - 이스케이프되지 않은 값을 HTML로 렌더링할 필요 자체가 없어 안전하다.
+ *
+ * 발송 실패 시 재시도 없이 status:'failed'로 영구 방치됐다(73차 QA) - 구독 만료 시
+ * 대시보드 접근 자체가 막히므로 이 이메일이 고객이 사실을 알 수 있는 사실상 유일한
+ * 채널인데, 일시적 장애만으로 영구 유실됐다. lead_notification_queue와 동일한
+ * retry_count 패턴(최대 3회, 다음 크론에서 재시도)을 적용한다.
  */
 async function sendPaymentNotificationEmails(supabase: any) {
   console.log('[Payment Notifications] Starting email processing')
@@ -1258,6 +1263,7 @@ async function sendPaymentNotificationEmails(supabase: any) {
     .from('payment_notifications')
     .select('*')
     .eq('status', 'pending')
+    .lt('retry_count', 3)
     .order('created_at', { ascending: true })
 
   if (queryError) {
@@ -1303,10 +1309,14 @@ async function sendPaymentNotificationEmails(supabase: any) {
     } catch (error) {
       console.error(`[Payment Notifications] Failed to send to ${notif.recipient_email}:`, error)
 
+      const nextRetryCount = (notif.retry_count || 0) + 1
       await supabase
         .from('payment_notifications')
         .update({
-          status: 'failed',
+          // 3회 미만이면 status는 pending으로 유지해 다음 크론이 위 쿼리(.lt('retry_count', 3))로
+          // 다시 집어가도록 하고, 3회를 채우면 그때 비로소 최종 실패로 마킹한다.
+          status: nextRetryCount >= 3 ? 'failed' : 'pending',
+          retry_count: nextRetryCount,
           error_message: error instanceof Error ? error.message : 'Unknown error',
         })
         .eq('id', notif.id)
