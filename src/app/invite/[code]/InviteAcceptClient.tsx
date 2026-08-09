@@ -367,9 +367,13 @@ export default function InviteAcceptClient({ code }: InviteAcceptClientProps) {
       <div className="mt-6 text-center">
         <p className="text-sm text-gray-600">
           이미 계정이 있으신가요?{' '}
-          <a href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500">
+          <button
+            type="button"
+            onClick={signOutAndGoToLogin}
+            className="font-medium text-blue-600 hover:text-blue-500"
+          >
             로그인
-          </a>
+          </button>
         </p>
       </div>
     </div>
