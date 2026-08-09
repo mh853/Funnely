@@ -138,6 +138,37 @@ export default function NotificationBell({ companyId, userId }: { companyId: str
           }
         }
       )
+      .on(
+        // INSERT만 구독하면 다른 탭/기기에서 읽음 처리해도(is_read UPDATE) 이 탭의
+        // 뱃지/목록이 새 알림이 오기 전까지 갱신되지 않는다 - UPDATE도 함께 구독.
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'notifications',
+          filter: `company_id=eq.${companyId}`,
+        },
+        () => {
+          fetchNotifications()
+          fetchUnreadCount()
+        }
+      )
+      .on(
+        // 브로드캐스트(user_id NULL) 알림의 읽음 여부는 notification_reads에 별도로
+        // 기록되므로, 그쪽 테이블 변경도 감시해야 다른 탭에서 읽은 브로드캐스트 알림이
+        // 이 탭에도 반영된다.
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notification_reads',
+          filter: `user_id=eq.${userId}`,
+        },
+        () => {
+          fetchNotifications()
+          fetchUnreadCount()
+        }
+      )
       .subscribe((status) => {
         if (!isActive) return
         if (status === 'SUBSCRIBED') {
