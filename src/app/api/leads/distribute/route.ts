@@ -265,29 +265,45 @@ export async function POST(request: NextRequest) {
       })))
     }
 
-    const updatePromises = assignments.map(async ({ leadId, userId }) => {
-      return supabase
-        .from('leads')
-        .update({ call_assigned_to: userId })
-        .eq('id', leadId)
-        .eq('company_id', companyId)
-        .is('call_assigned_to', null) // 동시성 제어: 이미 배정된 리드는 스킵 (is() 메서드 사용)
-    })
+    // 두 관리자가 겹치는 미배정 리드셋을 동시에 배분하면(레이스컨디션), .is('call_assigned_to',
+    // null) 가드 덕에 이중배정 자체는 안 일어나지만 - 나중 요청은 해당 행이 이미 다른
+    // 관리자에게 배정돼 UPDATE가 0건 매칭돼도 그 사실을 확인하지 않아 "배정 완료"로
+    // 응답/통계/알림에 그대로 보고했다. .select('id')로 실제 갱신된 행만 받아 그 결과로
+    // 통계를 계산한다. 또한 배분 대상이 수백~수천 건일 때 제한 없이 한 번에 Promise.all을
+    // 실행하면 커넥션 과부하/타임아웃 위험이 있어 배치로 나눠 처리한다(81차 QA).
+    const BATCH_SIZE = 50
+    const actuallyAssignedLeadIds = new Set<string>()
+    for (let i = 0; i < assignments.length; i += BATCH_SIZE) {
+      const batch = assignments.slice(i, i + BATCH_SIZE)
+      const batchResults = await Promise.all(
+        batch.map(({ leadId, userId }) =>
+          supabase
+            .from('leads')
+            .update({ call_assigned_to: userId })
+            .eq('id', leadId)
+            .eq('company_id', companyId)
+            .is('call_assigned_to', null) // 동시성 제어: 이미 배정된 리드는 스킵 (is() 메서드 사용)
+            .select('id')
+        )
+      )
 
-    const results = await Promise.all(updatePromises)
+      const errors = batchResults.filter((r) => r.error)
+      if (errors.length > 0) {
+        console.error('Distribution errors:', errors)
+        throw new Error(`${errors.length}개 리드 분배 실패`)
+      }
 
-    // 오류 확인
-    const errors = results.filter((r) => r.error)
-    if (errors.length > 0) {
-      console.error('Distribution errors:', errors)
-      throw new Error(`${errors.length}개 리드 분배 실패`)
+      batchResults.forEach((r) => {
+        ;(r.data || []).forEach((row: { id: string }) => actuallyAssignedLeadIds.add(row.id))
+      })
     }
 
     // ========================================================================
-    // 7. 분배 통계 계산
+    // 7. 분배 통계 계산 - 계획(assignments)이 아니라 실제로 갱신된 리드만 집계
     // ========================================================================
+    const actualAssignments = assignments.filter((a) => actuallyAssignedLeadIds.has(a.leadId))
     const distributionStats = regularUsers.map((user) => {
-      const assignedCount = assignments.filter((a) => a.userId === user.id).length
+      const assignedCount = actualAssignments.filter((a) => a.userId === user.id).length
       return {
         userId: user.id,
         userName: user.full_name,
@@ -305,9 +321,9 @@ export async function POST(request: NextRequest) {
     supabase.from('notifications').insert({
       company_id: companyId,
       title: 'DB 배분 완료',
-      message: `${unassignedLeads.length}건의 DB가 배분되었습니다: ${statsSummary}`,
+      message: `${actualAssignments.length}건의 DB가 배분되었습니다: ${statsSummary}`,
       type: 'lead_assigned',
-      metadata: { distributed: unassignedLeads.length, stats: distributionStats },
+      metadata: { distributed: actualAssignments.length, stats: distributionStats },
     }).then(({ error }: any) => {
       if (error) console.error('Failed to create distribution notification:', error)
     })
@@ -318,8 +334,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        message: `${unassignedLeads.length}개의 DB가 ${userCount}명의 담당자에게 분배되었습니다.`,
-        distributed: unassignedLeads.length,
+        message: `${actualAssignments.length}개의 DB가 ${userCount}명의 담당자에게 분배되었습니다.`,
+        distributed: actualAssignments.length,
         userCount,
         stats: distributionStats,
       },
