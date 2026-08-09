@@ -395,6 +395,12 @@ export async function POST(request: NextRequest) {
         user_agent: metadata?.user_agent,
         device_type: detectDeviceType(metadata?.user_agent),
         custom_fields: customFields.length > 0 ? customFields : [],
+        // 동의 여부 검증(182행)만 하고 실제로는 저장하지 않아, 동의한 리드도 DB상
+        // 컬럼 기본값(false)이 그대로 남아 "미동의"로 조회됐다(81차 QA) - 실제 체크값을
+        // 기록한다.
+        privacy_consent_agreed: !!form_data.privacy_consent,
+        marketing_consent_agreed: !!form_data.marketing_consent,
+        consented_at: form_data.privacy_consent ? new Date().toISOString() : null,
       })
       .select()
       .single()
