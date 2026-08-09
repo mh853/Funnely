@@ -1,4 +1,5 @@
 import { Resend } from 'resend'
+import { escapeHtml } from '@/lib/email/template-renderer'
 
 // Lazy initialization to avoid build-time errors when API key is not set
 let resend: Resend | null = null
@@ -54,7 +55,16 @@ export async function sendLeadNotificationEmail(data: LeadNotificationData) {
     timeZone: 'Asia/Seoul',
   })
 
-  const subject = `[Funnely] 새로운 상담 신청 - ${leadName}`
+  // 리드 이름/회사명은 공개 랜딩페이지 제출로 임의 입력되는 값이라, HTML 이스케이프
+  // 없이 그대로 삽입하면 XSS가, 제목에 개행문자가 섞이면 헤더 인젝션이 가능했다
+  // (81차 QA - 같은 프로젝트의 다이제스트 생성기는 이미 escapeHtml을 일관 적용 중인데
+  // 이 파일만 빠져있었음).
+  const safeLeadName = escapeHtml(leadName)
+  const safeLeadPhone = escapeHtml(leadPhone)
+  const safeLeadEmail = leadEmail ? escapeHtml(leadEmail) : leadEmail
+  const safeLandingPageTitle = landingPageTitle ? escapeHtml(landingPageTitle) : landingPageTitle
+  const safeCompanyName = escapeHtml(companyName)
+  const subject = `[Funnely] 새로운 상담 신청 - ${leadName.replace(/[\r\n]/g, ' ')}`
 
   const htmlContent = `
 <!DOCTYPE html>
@@ -152,31 +162,31 @@ export async function sendLeadNotificationEmail(data: LeadNotificationData) {
     <div class="content">
       <div class="info-row">
         <div class="label">👤 고객명</div>
-        <div class="value">${leadName}</div>
+        <div class="value">${safeLeadName}</div>
       </div>
 
       <div class="info-row">
         <div class="label">📞 연락처</div>
-        <div class="value">${leadPhone}</div>
+        <div class="value">${safeLeadPhone}</div>
       </div>
 
       ${
-        leadEmail
+        safeLeadEmail
           ? `
       <div class="info-row">
         <div class="label">📧 이메일</div>
-        <div class="value">${leadEmail}</div>
+        <div class="value">${safeLeadEmail}</div>
       </div>
       `
           : ''
       }
 
       ${
-        landingPageTitle
+        safeLandingPageTitle
           ? `
       <div class="info-row">
         <div class="label">📄 랜딩페이지</div>
-        <div class="value">${landingPageTitle}</div>
+        <div class="value">${safeLandingPageTitle}</div>
       </div>
       `
           : ''
@@ -200,7 +210,7 @@ export async function sendLeadNotificationEmail(data: LeadNotificationData) {
     </div>
 
     <div class="footer">
-      <p>이 이메일은 <strong>${companyName}</strong>의 Funnely 알림 설정에 따라 자동 발송되었습니다.</p>
+      <p>이 이메일은 <strong>${safeCompanyName}</strong>의 Funnely 알림 설정에 따라 자동 발송되었습니다.</p>
       <p>알림 설정은 <a href="${dashboardUrl}/settings/notifications">여기</a>에서 변경할 수 있습니다.</p>
     </div>
   </div>
