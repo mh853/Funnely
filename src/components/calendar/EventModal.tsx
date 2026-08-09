@@ -104,6 +104,12 @@ export default function EventModal({
       const url = event ? '/api/calendar/events/update' : '/api/calendar/events'
       const method = event ? 'PUT' : 'POST'
 
+      // datetime-local input은 타임존 정보가 없는 "YYYY-MM-DDTHH:mm" 문자열만 다룬다
+      // (HTML 표준 제약) - 이 값을 그대로 TIMESTAMPTZ 컬럼에 보내면 서버가 UTC로 해석해
+      // KST 대비 9시간 밀려 저장된다(같은 회사의 리드 예약일시는 이미 +09:00을 명시하는
+      // 것과 동일 패턴, 78차 QA). 전송 직전에만 KST 오프셋을 붙인다.
+      const toKSTIso = (v: string) => (v ? `${v}:00+09:00` : v)
+
       const res = await fetch(url, {
         method,
         headers: {
@@ -112,6 +118,8 @@ export default function EventModal({
         body: JSON.stringify({
           id: event?.id,
           ...formData,
+          start_time: toKSTIso(formData.start_time),
+          end_time: toKSTIso(formData.end_time),
           expected_updated_at: event?.updated_at,
         }),
       })
