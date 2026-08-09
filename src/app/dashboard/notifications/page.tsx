@@ -39,6 +39,7 @@ export default async function NotificationsPage() {
     .select('*')
     .or(orFilter)
     .order('created_at', { ascending: false })
+    .limit(200)
 
   // Log error for debugging
   if (notificationsError) {

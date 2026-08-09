@@ -218,6 +218,24 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Task 8: Clean Up Old Notifications
+    console.log('[Cron] Running notification cleanup')
+    try {
+      const cleanupResult = await cleanupOldNotifications(supabase)
+      results.tasksExecuted.push({
+        task: 'notification_cleanup',
+        status: 'success',
+        ...cleanupResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Notification cleanup error:', error)
+      results.tasksExecuted.push({
+        task: 'notification_cleanup',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
     console.log(`[Cron] Daily tasks completed: ${results.tasksExecuted.length} tasks executed`)
 
     return NextResponse.json(results)
@@ -1416,6 +1434,30 @@ async function disableExpiredTimers(supabase: any) {
       deadline: page.timer_deadline,
     })),
     message: `Disabled ${expiredPages.length} expired landing pages`,
+  }
+}
+
+// notifications 테이블에 보존/정리 정책이 없어 리드가 생성될 때마다(new_lead) 무한히
+// 쌓였다 - 알림 목록/뱃지/모두읽음 쿼리가 전부 페이지네이션 없이 전체 조회라 회사가
+// 오래 사용할수록 계속 느려진다(80차 QA). notification_reads는 notification_id를
+// ON DELETE CASCADE로 참조하므로 notifications만 지워도 함께 정리된다.
+async function cleanupOldNotifications(supabase: any) {
+  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+
+  const { data: deleted, error } = await supabase
+    .from('notifications')
+    .delete()
+    .lt('created_at', cutoff)
+    .select('id')
+
+  if (error) {
+    throw new Error(`Failed to clean up old notifications: ${error.message}`)
+  }
+
+  return {
+    deleted: deleted?.length || 0,
+    cutoff,
+    message: `Deleted ${deleted?.length || 0} notifications older than 90 days`,
   }
 }
 

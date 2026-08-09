@@ -91,6 +91,7 @@ export default function NotificationsClient({
         .select('*')
         .or(`user_id.eq.${userId},and(user_id.is.null,company_id.eq.${companyId})`)
         .order('created_at', { ascending: false })
+        .limit(200)
 
       if (error) throw error
 
@@ -210,6 +211,8 @@ export default function NotificationsClient({
       landing_page_timer_expired: '랜딩페이지 타이머 만료',
       subscription_expiring_soon: '구독 만료 예정',
       subscription_expired: '구독 만료',
+      lead_assigned: '담당자 배정',
+      sheet_sync_failed: '시트 동기화 실패',
     }
     return labels[type] || type
   }
@@ -230,6 +233,8 @@ export default function NotificationsClient({
       landing_page_timer_expired: 'bg-orange-100 text-orange-800',
       subscription_expiring_soon: 'bg-yellow-100 text-yellow-800',
       subscription_expired: 'bg-red-100 text-red-800',
+      lead_assigned: 'bg-indigo-100 text-indigo-800',
+      sheet_sync_failed: 'bg-red-100 text-red-800',
     }
     return badges[type] || 'bg-gray-100 text-gray-800'
   }
