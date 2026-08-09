@@ -197,18 +197,25 @@ export default function GrowthOpportunitiesPage() {
           <p className="text-2xl font-bold text-green-700">
             {data.summary.upsell_count}
           </p>
-          <p className="text-xs text-green-600 mt-1">
-            +{data.summary.total_potential_mrr.toLocaleString()}원 잠재 MRR
-          </p>
+          {/* 합계가 0이면 실제로 잠재 MRR이 없는 게 아니라 산정로직 버그(81차 QA
+              백로그)로 항상 0이 나오는 상태일 수 있어, 확정값처럼 "+0원"을 보여주지
+              않는다(82차 QA). */}
+          {!!data.summary.total_potential_mrr && (
+            <p className="text-xs text-green-600 mt-1">
+              +{data.summary.total_potential_mrr.toLocaleString()}원 잠재 MRR
+            </p>
+          )}
         </div>
         <div className="bg-red-50 rounded-lg shadow p-4">
           <p className="text-sm text-red-600">다운셀 위험</p>
           <p className="text-2xl font-bold text-red-700">
             {data.summary.downsell_risk_count}
           </p>
-          <p className="text-xs text-red-600 mt-1">
-            -{data.summary.total_at_risk_mrr.toLocaleString()}원 위험 MRR
-          </p>
+          {!!data.summary.total_at_risk_mrr && (
+            <p className="text-xs text-red-600 mt-1">
+              -{data.summary.total_at_risk_mrr.toLocaleString()}원 위험 MRR
+            </p>
+          )}
         </div>
         <div className="bg-blue-50 rounded-lg shadow p-4">
           <p className="text-sm text-blue-600">평균 신뢰도</p>
@@ -354,12 +361,16 @@ export default function GrowthOpportunitiesPage() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {opp.estimated_additional_mrr && (
+                    {/* 값이 0이면 `0 && (...)`가 JSX에서 그대로 숫자 0을 렌더링하는
+                        React 함정에 걸려, 부호/단위 없이 벌거벗은 "0"이 표시됐다
+                        (82차 QA) - Boolean으로 명시 변환해 0일 때는 아무것도 안
+                        보이게 한다. */}
+                    {!!opp.estimated_additional_mrr && (
                       <span className="text-green-600 font-medium">
                         +{opp.estimated_additional_mrr.toLocaleString()}원
                       </span>
                     )}
-                    {opp.potential_lost_mrr && (
+                    {!!opp.potential_lost_mrr && (
                       <span className="text-red-600 font-medium">
                         -{opp.potential_lost_mrr.toLocaleString()}원
                       </span>
