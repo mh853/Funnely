@@ -66,12 +66,21 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const queryStart = getKSTMonthStart(selectedYear, selectedMonth).toISOString()
   const queryEnd = getKSTMonthStart(selectedYear, selectedMonth + 1).toISOString() // 다음달 1일
 
+  // 현재 월을 보는 중이면 "이번주"/"어제"가 매달 1~6일경 전월로 넘어가는데, queryStart
+  // (선택월 1일)로만 조회하면 그 구간이 통째로 빠져 최근 7일 테이블(DB/트래픽/전환)이
+  // 실제 데이터가 있어도 0으로 표시됐다(72차 QA). 최근 7일치는 항상 포함하도록 조회
+  // 하한을 넓힌다 - 과거 월을 보는 중이면 "최근 7일"이 그 달 안에서만 계산되므로
+  // (아래 last7Days 참고) 넓힐 필요 없음.
+  const leadsQueryFloorIso = isCurrentMonth
+    ? new Date(Math.min(new Date(queryStart).getTime(), getKSTStartOfDay(-6).getTime())).toISOString()
+    : queryStart
+
   // 선택된 월의 리드 데이터 조회
   const { data: allLeads } = await supabase
     .from('leads')
     .select('id, created_at, status, device_type')
     .eq('company_id', userProfile?.company_id)
-    .gte('created_at', queryStart)
+    .gte('created_at', leadsQueryFloorIso)
     .lt('created_at', queryEnd)
     .order('created_at', { ascending: true })
 
@@ -80,21 +89,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   // 확인해 커스텀 상태가 전부 "기타"로 뭉뚱그려졌다).
   const leadStatusCategoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
 
-  // 선택된 월의 결제 데이터 조회 (리드의 created_at 기준으로 집계)
+  // 선택된 월의 결제 데이터 조회 (리드의 created_at 기준으로 집계) - allLeads와 동일하게 확장된 범위
   const { data: paymentData } = await supabase
     .from('lead_payments')
     .select('lead_id, amount, leads!inner(created_at)')
     .eq('company_id', userProfile?.company_id)
-    .gte('leads.created_at', queryStart)
+    .gte('leads.created_at', leadsQueryFloorIso)
     .lt('leads.created_at', queryEnd)
 
-  // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics)
+  // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics) - date 컬럼은 KST 날짜 문자열인데
+  // queryStart/queryEnd(ISO 인스턴트)를 split('T')[0]로 자르면 UTC 기준 문자열이 돼 KST보다
+  // 하루 이른 값이 된다 - 매달 말일 페이지뷰가 영구 누락되던 원인(72차 QA). toKSTDateStr로 보정.
   const { data: pageViewsData } = await supabase
     .from('landing_page_analytics')
     .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
     .eq('landing_pages.company_id', userProfile?.company_id)
-    .gte('date', queryStart.split('T')[0])
-    .lt('date', queryEnd.split('T')[0])
+    .gte('date', toKSTDateStr(new Date(leadsQueryFloorIso)))
+    .lt('date', toKSTDateStr(new Date(queryEnd)))
 
   // 페이지뷰를 날짜별로 집계
   const pageViewsByDate: { [key: string]: { total: number; desktop: number; mobile: number; tablet: number } } = {}
@@ -109,31 +120,32 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     pageViewsByDate[dateStr].tablet += pv.tablet_views || 0
   })
 
-  // 현재 월 통계용 데이터 (Stats Cards는 항상 현재 월 기준)
+  // Stats Cards(오늘/어제/이번주/이번달)는 선택된 월과 무관하게 항상 실제 "지금" 기준이다.
+  // 이전엔 선택월이 현재월이면 allLeads(선택월 1일부터)를, 아니면 별도로 이번달 1일부터만
+  // 조회해 재사용했는데, 두 경우 다 "어제"/"이번주"가 매달 1~6일경 전월로 넘어가면 그 구간이
+  // 쿼리 범위 밖이라 항상 0으로 집계됐다(72차 QA) - 전용 쿼리로 분리하고 하한을 넓힌다.
   let todayCount = 0
   let yesterdayCount = 0
   let thisWeekCount = 0
   let thisMonthCount = 0
 
-  // 현재 월 통계를 위한 별도 쿼리 (선택된 월이 현재 월이 아닐 경우)
-  if (!isCurrentMonth) {
-    const { data: currentMonthLeads } = await supabase
-      .from('leads')
-      .select('id, created_at')
-      .eq('company_id', userProfile.company_id)
-      .gte('created_at', thisMonthStart.toISOString())
-      .order('created_at', { ascending: true })
+  const statsQueryFloor = new Date(
+    Math.min(thisMonthStart.getTime(), thisWeekStart.getTime(), yesterday.getTime())
+  )
+  const { data: statsLeads } = await supabase
+    .from('leads')
+    .select('id, created_at')
+    .eq('company_id', userProfile.company_id)
+    .gte('created_at', statsQueryFloor.toISOString())
+    .order('created_at', { ascending: true })
 
-    currentMonthLeads?.forEach(lead => {
-      const leadDate = new Date(lead.created_at)
-      const leadTime = leadDate.getTime()
-
-      if (leadTime >= today.getTime()) todayCount++
-      if (leadTime >= yesterday.getTime() && leadTime < today.getTime()) yesterdayCount++
-      if (leadTime >= thisWeekStart.getTime()) thisWeekCount++
-      if (leadTime >= thisMonthStart.getTime()) thisMonthCount++
-    })
-  }
+  statsLeads?.forEach(lead => {
+    const leadTime = new Date(lead.created_at).getTime()
+    if (leadTime >= today.getTime()) todayCount++
+    if (leadTime >= yesterday.getTime() && leadTime < today.getTime()) yesterdayCount++
+    if (leadTime >= thisWeekStart.getTime()) thisWeekCount++
+    if (leadTime >= thisMonthStart.getTime()) thisMonthCount++
+  })
 
   const dailyStats: { [key: string]: number } = {}
   const resultsByDate: { [key: string]: any } = {}
@@ -148,29 +160,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   // 선택된 월의 총 DB 수
   let selectedMonthCount = 0
+  const selectedMonthStartMs = new Date(queryStart).getTime()
 
   allLeads?.forEach(lead => {
     const leadDate = new Date(lead.created_at)
     const leadTime = leadDate.getTime()
+    const kstDateStr = toKSTDateStr(leadDate)
 
-    // 현재 월인 경우에만 Stats Cards 통계 계산
-    if (isCurrentMonth) {
-      if (leadTime >= today.getTime()) todayCount++
-      if (leadTime >= yesterday.getTime() && leadTime < today.getTime()) yesterdayCount++
-      if (leadTime >= thisWeekStart.getTime()) thisWeekCount++
-      if (leadTime >= thisMonthStart.getTime()) thisMonthCount++
+    // 선택된 월의 총 개수/월간 차트(dailyStats)는 실제로 선택된 월에 속한 리드만 집계한다.
+    // allLeads는 최근 7일 테이블(resultsByDate)을 위해 월 경계 이전까지 조회 범위를
+    // 넓혔을 수 있어(leadsQueryFloorIso, 위 참고) 여기서 다시 걸러야 한다.
+    if (leadTime >= selectedMonthStartMs) {
+      selectedMonthCount++
+
+      // Daily chart data (KST 기준 월/일 파싱)
+      const [, kstMonthStr, kstDayStr] = kstDateStr.split('-')
+      const dateKey = `${parseInt(kstMonthStr)}/${parseInt(kstDayStr)}`
+      dailyStats[dateKey] = (dailyStats[dateKey] || 0) + 1
     }
 
-    // 선택된 월의 총 개수
-    selectedMonthCount++
-
-    // Daily chart data (KST 기준 월/일 파싱)
-    const kstDateStr = toKSTDateStr(leadDate)
-    const [, kstMonthStr, kstDayStr] = kstDateStr.split('-')
-    const dateKey = `${parseInt(kstMonthStr)}/${parseInt(kstDayStr)}`
-    dailyStats[dateKey] = (dailyStats[dateKey] || 0) + 1
-
-    // Results table data
+    // Results table data - 최근 7일 테이블은 선택 월 경계 밖 날짜도 필요하므로 무조건 채운다
     const dateStr = kstDateStr
     if (!resultsByDate[dateStr]) {
       resultsByDate[dateStr] = {
