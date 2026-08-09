@@ -53,6 +53,10 @@ export async function detectGrowthOpportunities(
           id,
           status,
           billing_cycle,
+          plan_id,
+          locked_plan_id,
+          locked_price_monthly,
+          locked_price_yearly,
           subscription_plans!plan_id (
             name,
             price_monthly,
@@ -122,10 +126,19 @@ export async function detectGrowthOpportunities(
           opportunityType
         )
 
+        // 그랜드파더링(가격 잠금) 중인 구독은 카탈로그 최신가가 아니라 locked_price_*로
+        // 청구된다 - admin/revenue/metrics, admin/subscriptions/metrics, daily-tasks의
+        // MRR 계산과 동일한 판정 기준을 여기도 적용한다(83차 QA, 4번째 누락 지점 확인).
+        const priceLockValid =
+          subscription.locked_plan_id === subscription.plan_id &&
+          subscription.locked_price_monthly !== null &&
+          subscription.locked_price_yearly !== null
+        const monthlyPrice = priceLockValid ? subscription.locked_price_monthly : plan.price_monthly
+        const yearlyPrice = priceLockValid ? subscription.locked_price_yearly : plan.price_yearly
         const currentMRR =
           subscription.billing_cycle === 'yearly'
-            ? Number(plan.price_yearly) / 12
-            : Number(plan.price_monthly)
+            ? Number(yearlyPrice) / 12
+            : Number(monthlyPrice)
         const mrrImpact = estimateMRRImpact(
           plan.name,
           recommendedPlan,
