@@ -1477,15 +1477,22 @@ export default function ReservationsClient({
                               setShowScheduleInputModal(true)
                               setLoadingAvailableLeads(true)
                               setScheduleSearchQuery('')
-                              supabase
-                                .from('leads')
-                                .select(`id, name, phone, status, updated_at, landing_pages (id, title)`)
-                                .eq('company_id', companyId)
-                                .neq('status', 'contract_completed')
-                                .neq('status', 'rejected')
-                                .order('created_at', { ascending: false })
-                                .limit(200)
-                                .then(async ({ data }) => {
+                              // 커스텀 상태도 정확히 제외되도록, 리터럴 코드가 아니라 그
+                              // 범주에 속하는 모든 코드를 제외한다(위 handleSlotClick과 동일 패턴, 77차 QA)
+                              getLeadStatusCategoryMap(supabase, companyId).then((categoryMap) => {
+                                const excludedCodes = [
+                                  ...getCodesForCategory(categoryMap, 'contract_completed'),
+                                  ...getCodesForCategory(categoryMap, 'rejected'),
+                                ]
+                                let leadsQuery = supabase
+                                  .from('leads')
+                                  .select(`id, name, phone, status, updated_at, landing_pages (id, title)`)
+                                  .eq('company_id', companyId)
+                                excludedCodes.forEach((code) => {
+                                  leadsQuery = leadsQuery.neq('status', code)
+                                })
+                                return leadsQuery.order('created_at', { ascending: false }).limit(200)
+                              }).then(async ({ data }) => {
                                   setAvailableLeadsForSchedule(await decryptLeadPhones(data || []))
                                   setLoadingAvailableLeads(false)
                                 })
@@ -1816,13 +1823,21 @@ export default function ReservationsClient({
                   setLoadingAvailableLeads(true)
                   setScheduleSearchQuery('')
 
-                  // 예약 가능한 리드 조회 (contract_completed, rejected 제외)
-                  const { data: availableLeads } = await supabase
+                  // 예약 가능한 리드 조회 (contract_completed, rejected 범주 제외 - 커스텀
+                  // 코드도 정확히 걸러지도록 리터럴이 아닌 범주 기준, 77차 QA)
+                  const categoryMap = await getLeadStatusCategoryMap(supabase, companyId)
+                  const excludedCodes = [
+                    ...getCodesForCategory(categoryMap, 'contract_completed'),
+                    ...getCodesForCategory(categoryMap, 'rejected'),
+                  ]
+                  let availableLeadsQuery = supabase
                     .from('leads')
                     .select(`id, name, phone, status, updated_at, landing_pages (id, title)`)
                     .eq('company_id', companyId)
-                    .neq('status', 'contract_completed')
-                    .neq('status', 'rejected')
+                  excludedCodes.forEach((code) => {
+                    availableLeadsQuery = availableLeadsQuery.neq('status', code)
+                  })
+                  const { data: availableLeads } = await availableLeadsQuery
                     .order('created_at', { ascending: false })
                     .limit(200)
 

@@ -55,7 +55,11 @@ export default async function ReservationsPage() {
     `
     )
     .eq('company_id', userProfile.company_id)
-    .eq('status', 'contract_completed')
+    // status를 'contract_completed' 리터럴로 한 번 더 거르면, 이 카테고리를 커스텀
+    // 코드(예: 'signed')로 쓰는 회사의 리드가 전부 빠진다 - contract_completed_at은
+    // 이미 category 기준(leads/update/route.ts)으로만 채워지고 그 범주를 벗어나면
+    // null로 비워지므로, 이 필드 하나만으로 정확히 "현재 계약완료 범주인 리드"를
+    // 가려낼 수 있다(77차 QA).
     .not('contract_completed_at', 'is', null)
     .order('contract_completed_at', { ascending: true })
 
