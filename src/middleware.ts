@@ -510,7 +510,7 @@ export async function middleware(request: NextRequest) {
         const now = new Date().toISOString()
 
         // 회사의 구독 목록 조회 후 가장 유효한 구독 선택 (우선순위는 pickCurrentSubscription 참고)
-        const { data: allSubs } = await supabase
+        const { data: allSubs, error: allSubsError } = await supabase
           .from('company_subscriptions')
           .select('id, status, current_period_end, grace_period_end, trial_end_date, cancelled_at, plan_id')
           .eq('company_id', userProfile.company_id)
@@ -518,6 +518,20 @@ export async function middleware(request: NextRequest) {
           .limit(10)
 
         const subscription = pickCurrentSubscription(allSubs ?? [])
+
+        // 회원가입 시 트라이얼 구독 부여가 실패하면(예: subscription_plans에 '프로'
+        // 플랜이 없거나 insert 실패) company_subscriptions 행이 0개인 채로 남는데,
+        // 이 블록 전체가 `if (subscription)` 안에서만 판정해 그 경우를 그냥 통과시켰다
+        // - 대시보드엔 들어가지지만 초대/랜딩페이지생성 등 핵심 기능이 안내 없이
+        // 전부 막히는 상태로 방치됐다(72차 QA). 단, 쿼리 자체가 실패한 경우(allSubsError)는
+        // 일시적 오류로 기존 구독자를 잘못 차단하지 않도록 이 판정에서 제외한다(fail-open 유지).
+        const hasNoSubscriptionAtAll = !allSubsError && (allSubs?.length ?? 0) === 0
+
+        if (hasNoSubscriptionAtAll) {
+          const redirectUrl = request.nextUrl.clone()
+          redirectUrl.pathname = '/dashboard/subscription/expired'
+          return NextResponse.redirect(redirectUrl)
+        }
 
         if (subscription) {
           const isTrialExpired =

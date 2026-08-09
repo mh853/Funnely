@@ -105,9 +105,14 @@ export default function SubscriptionExpiredPage() {
           grace_period_end: blockedSub.grace_period_end,
           plan: (blockedSub.subscription_plans ?? { name: '알 수 없음', plan_type: 'individual' }) as any,
         })
-      } else {
+      } else if (subs.length > 0) {
         router.replace('/dashboard')
       }
+      // subs.length === 0(구독 행 자체가 없음 - 예: 회원가입 시 트라이얼 부여 실패,
+      // 72차 QA)인 경우는 middleware가 이 페이지로 보낸 판단이 여전히 유효하므로
+      // /dashboard로 되돌리지 않는다 - 되돌리면 middleware가 다시 이 페이지로 보내
+      // 무한 리다이렉트에 빠진다. subscription을 null로 유지해 아래 일반 안내
+      // 화면(플랜 선택 CTA)만 표시한다.
     } catch (error) {
       console.error('Failed to fetch subscription:', error)
     } finally {
