@@ -27,7 +27,10 @@ export async function sendTicketReplyNotificationEmail(data: TicketReplyNotifica
   const safeSubject = escapeHtml(ticketSubject)
   const safeReply = escapeHtml(replyMessage).replace(/\n/g, '<br>')
 
-  const subject = `[Funnely] 문의하신 "${ticketSubject}"에 답변이 등록되었습니다`
+  // 본문(safeReply)은 escapeHtml을 쓰면서 제목은 원본 ticketSubject(사용자가 티켓 생성
+  // 시 자유입력한 값)를 그대로 써서, 개행문자를 삽입하면 이메일 헤더 인젝션이 가능했다
+  // (81차 QA, 73차 백로그 항목 재확인).
+  const subject = `[Funnely] 문의하신 "${ticketSubject.replace(/[\r\n]/g, ' ')}"에 답변이 등록되었습니다`
 
   const htmlContent = `
 <!DOCTYPE html>

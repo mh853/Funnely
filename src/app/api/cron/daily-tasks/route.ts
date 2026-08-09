@@ -1185,10 +1185,13 @@ async function sendLeadDigestEmails(supabase: any) {
         const htmlContent = generateDigestEmailHTML(companyName, leadItems, dashboardUrl)
         const textContent = generateDigestEmailText(companyName, leadItems, dashboardUrl)
 
+        // 본문 생성기(generateDigestEmailHTML)는 escapeHtml을 쓰지만 제목은 원본
+        // companyName(회원가입 시 자유입력)을 그대로 써서 개행문자로 헤더 인젝션이
+        // 가능했다(81차 QA, 73차 백로그 항목 재확인).
         const { data: emailData, error: emailError } = await resend.emails.send({
           from: 'Funnely <noreply@funnely.co.kr>',
           to: [recipientEmail],
-          subject: `📊 [${companyName}] ${leadItems.length}건의 새로운 상담 신청`,
+          subject: `📊 [${companyName.replace(/[\r\n]/g, ' ')}] ${leadItems.length}건의 새로운 상담 신청`,
           html: htmlContent,
           text: textContent,
         })
