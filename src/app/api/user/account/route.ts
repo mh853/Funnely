@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { revokeBillingKey } from '@/lib/payments/revoke-billing-key'
 
 export async function DELETE(request: Request) {
   const supabase = await createClient()
@@ -64,6 +65,16 @@ export async function DELETE(request: Request) {
       // 빠지면 취소 표시 없이 상태가 영원히 past_due로 남아 취소가 아니라
       // 결제실패로 보인다(80차 QA 확인, 실제 청구 위험은 companies.is_active=false로
       // 이미 차단됨).
+      // Toss에 등록된 빌링키(카드)는 취소 후에도 별도로 해지하지 않으면 Toss
+      // 서버에 결제 가능한 상태로 무기한 남는다(83차 QA) - 취소 전에 대상
+      // billing_key들을 먼저 확보해둔다. 계정탈퇴는 되돌릴 방법이 없으므로
+      // (구독 취소와 달리) 즉시 해지해도 재개 흐름과 충돌하지 않는다.
+      const { data: subsToCancel } = await adminDb
+        .from('company_subscriptions')
+        .select('id, billing_key')
+        .eq('company_id', profile.company_id)
+        .in('status', ['active', 'trial', 'past_due'])
+
       const { error: cancelSubError } = await adminDb
         .from('company_subscriptions')
         .update({ status: 'cancelled', cancelled_at: now })
@@ -71,6 +82,11 @@ export async function DELETE(request: Request) {
         .in('status', ['active', 'trial', 'past_due'])
       if (cancelSubError) {
         console.error('Account deletion - subscription cancel failed:', cancelSubError)
+      } else {
+        const billingKeys = Array.from(
+          new Set((subsToCancel || []).map((s: any) => s.billing_key).filter(Boolean))
+        ) as string[]
+        await Promise.all(billingKeys.map((key) => revokeBillingKey(key)))
       }
 
       // 팀원 전체 소프트 삭제 - 이 주석대로 소프트 삭제를 의도했으나 실제로는
