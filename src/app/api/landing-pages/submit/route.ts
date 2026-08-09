@@ -95,40 +95,8 @@ export async function POST(request: NextRequest) {
     const phone = form_data.phone || form_data.전화번호 || ''
     const email = form_data.email || form_data.이메일 || undefined
 
-    if (!name || !phone) {
-      return NextResponse.json(
-        { error: { message: '이름과 전화번호는 필수입니다' } },
-        { status: 400 }
-      )
-    }
-
-    // 클라이언트 검증은 프론트에만 있고 이 API는 직접 호출도 가능해, 값이
-    // 비어있지 않기만 하면 전부 통과시키고 있었다("123" 같은 값도 그대로
-    // 리드로 저장됨). 자릿수와 길이를 서버에서도 검증한다.
-    const phoneDigitsOnly = phone.replace(/\D/g, '')
-    if (phoneDigitsOnly.length < 9 || phoneDigitsOnly.length > 11) {
-      return NextResponse.json(
-        { error: { message: '올바른 전화번호를 입력해주세요' } },
-        { status: 400 }
-      )
-    }
-    if (name.length > 100) {
-      return NextResponse.json(
-        { error: { message: '이름이 너무 깁니다' } },
-        { status: 400 }
-      )
-    }
-    if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
-      return NextResponse.json(
-        { error: { message: '올바른 이메일 주소를 입력해주세요' } },
-        { status: 400 }
-      )
-    }
-
-    // 전화번호 해시 (중복 체크용 — 라이브러리 공통 구현 사용)
-    const phoneHash = hashPhone(phoneDigitsOnly)
-
-    // Phase 1: 랜딩페이지 조회 (company_id가 필요한 후속 쿼리를 위해 먼저 실행)
+    // Phase 1: 랜딩페이지 조회 (company_id가 필요한 후속 쿼리를 위해 먼저 실행 - 이름/
+    // 전화번호 필수여부 판단에도 collect_fields가 필요해 이 검증들보다 앞으로 옮김)
     const threeHoursAgo = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString()
 
     const { data: landingPage, error: lpError } = await supabase
@@ -151,6 +119,53 @@ export async function POST(request: NextRequest) {
         { status: 403 }
       )
     }
+
+    // 이름/전화번호 수집 여부는 PublicLandingPage.tsx와 동일하게 collect_fields
+    // 배열 안에 type:'name'/'phone' 항목이 있는지로 판단해야 한다(레거시 페이지 호환을
+    // 위해 정보 없으면 true로 기본 처리). 이전엔 이 값과 무관하게 항상 둘 다 필수로
+    // 요구해, 관리자가 에디터에서 두 필드를 모두 숨긴 페이지는 모든 제출이 서버 400으로
+    // 영구 실패했다(78차 QA).
+    // collect_fields가 아예 없는(null/undefined) 레거시 페이지만 true로 기본 처리하고,
+    // 빈 배열([])은 "이름/전화번호를 포함해 아무 것도 명시적으로 수집하지 않음"으로
+    // PublicLandingPage.tsx와 동일하게 취급한다(?? 연산자는 빈 배열에서 트리거되지 않음).
+    const collectFieldsArr: any[] | null = Array.isArray(landingPage.collect_fields) ? landingPage.collect_fields : null
+    const collectName = collectFieldsArr ? collectFieldsArr.some((f: any) => f?.type === 'name') : true
+    const collectPhone = collectFieldsArr ? collectFieldsArr.some((f: any) => f?.type === 'phone') : true
+
+    if ((collectName && !name) || (collectPhone && !phone)) {
+      return NextResponse.json(
+        { error: { message: '이름과 전화번호는 필수입니다' } },
+        { status: 400 }
+      )
+    }
+
+    // 클라이언트 검증은 프론트에만 있고 이 API는 직접 호출도 가능해, 값이
+    // 비어있지 않기만 하면 전부 통과시키고 있었다("123" 같은 값도 그대로
+    // 리드로 저장됨). 자릿수와 길이를 서버에서도 검증한다(수집 대상일 때만).
+    const phoneDigitsOnly = phone.replace(/\D/g, '')
+    if (collectPhone && phone && (phoneDigitsOnly.length < 9 || phoneDigitsOnly.length > 11)) {
+      return NextResponse.json(
+        { error: { message: '올바른 전화번호를 입력해주세요' } },
+        { status: 400 }
+      )
+    }
+    if (collectName && name.length > 100) {
+      return NextResponse.json(
+        { error: { message: '이름이 너무 깁니다' } },
+        { status: 400 }
+      )
+    }
+    if (email && (email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+      return NextResponse.json(
+        { error: { message: '올바른 이메일 주소를 입력해주세요' } },
+        { status: 400 }
+      )
+    }
+
+    // 전화번호 해시 (중복 체크용 — 라이브러리 공통 구현 사용). 전화번호를 안 받는
+    // 페이지라면 빈 문자열의 해시가 되는데, 이 경우 중복체크는 사실상 무의미해지지만
+    // (동일 페이지의 무기명 제출끼리만 우연히 겹침) 별도 식별자가 없어 기존 컬럼을 그대로 씀.
+    const phoneHash = hashPhone(phoneDigitsOnly)
 
     // 회사가 비활성화/탈퇴 처리된 경우 - 대시보드는 미들웨어가 이미 차단하지만
     // 공개 제출 API는 랜딩페이지 자체의 is_active만 봤을 뿐 소속 회사 상태는
