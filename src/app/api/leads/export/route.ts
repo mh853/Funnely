@@ -32,7 +32,11 @@ export async function GET(request: Request) {
     const landingPageId = searchParams.get('landingPageId')
     const deviceType = searchParams.get('deviceType')
     const status = searchParams.get('status')
-    const assignedTo = searchParams.get('assignedTo')
+    // 화면(LeadsClient.tsx)은 콜/상담 담당자를 callAssignedTo/counselorAssignedTo로
+    // URL에 싣는데, 이 export 라우트는 다른 이름(assignedTo)만 읽고 있어 담당자
+    // 필터를 건 상태로 내보내기를 눌러도 그 필터가 조용히 무시되고 있었다(83차 QA).
+    const callAssignedTo = searchParams.get('callAssignedTo') || searchParams.get('assignedTo')
+    const counselorAssignedTo = searchParams.get('counselorAssignedTo')
     const search = searchParams.get('search')
     const selectedLeadId = searchParams.get('id')
 
@@ -139,8 +143,12 @@ export async function GET(request: Request) {
         query = query.ilike('name', `%${escapeIlike(search)}%`)
       }
 
-      if (assignedTo) {
-        query = query.eq('call_assigned_to', assignedTo)
+      if (callAssignedTo) {
+        query = query.eq('call_assigned_to', callAssignedTo)
+      }
+
+      if (counselorAssignedTo) {
+        query = query.eq('counselor_assigned_to', counselorAssignedTo)
       }
     }
 
