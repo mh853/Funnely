@@ -106,7 +106,11 @@ export async function POST(request: NextRequest) {
       filePath = `${ticketId}/${Date.now()}_${sanitized}`
     } else {
       const prefix = kind === 'landing-page-image' ? 'landing-pages' : 'completion-backgrounds'
-      const ext = kind === 'completion-background' ? file.name.split('.').pop() || 'jpg' : 'jpg'
+      // 두 kind 모두 allowedMimeTypes가 image/jpeg뿐이라(매직바이트로 검증) 확장자는
+      // 항상 jpg다. completion-background만 클라이언트가 보낸 file.name에서 확장자를
+      // 그대로 가져다 썼는데, sanitize가 없어 슬래시 등 경로구분자가 파일명에 그대로
+      // 삽입될 수 있었다(80차 QA) - landing-page-image와 동일하게 고정값으로 통일.
+      const ext = 'jpg'
       const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${ext}`
       filePath = `${prefix}/${profile.company_id}/${fileName}`
     }
