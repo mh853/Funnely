@@ -591,6 +591,14 @@ export default function NewSubscriptionClient({
           // 되돌리는 코드가 없어 결제 이력 없이 유료 플랜만 영구 활성화됐다(59차 QA
           // 확인, Critical). failUrl에 원래 값을 실어 보내 billing-fail 페이지가
           // 되돌릴 수 있게 한다.
+          //
+          // failUrl은 Toss가 실제로 리다이렉트해줄 때만 실행된다 - 사용자가 카드등록
+          // 팝업에서 브라우저 뒤로가기를 누르거나 탭을 그냥 닫으면 failUrl 자체를
+          // 방문하지 않아 롤백이 호출되지 않는다(73차 QA 확인). 아래 "구독 자체가
+          // 없는 경우" 분기(61차)와 동일하게 current_period_end를 지금 시각으로
+          // 채워, Step2 결제가 끝내 실행되지 못해도 daily-tasks 만료 쿼리가 정상
+          // 매치해 다음 크론에서 자연히 만료 처리되도록 안전망을 추가한다(성공 시엔
+          // 실제 결제 흐름이 이 값을 정상 주기로 덮어씀).
           const originalPlanId = currentSubscription.subscription_plans.id
           const originalBillingCycle = currentSubscription.billing_cycle
 
@@ -599,6 +607,7 @@ export default function NewSubscriptionClient({
             .update({
               plan_id: plan.id,
               billing_cycle: billingCycle,
+              current_period_end: new Date().toISOString(),
               pending_plan_id: null,
               pending_billing_cycle: null,
             })
@@ -641,13 +650,14 @@ export default function NewSubscriptionClient({
         } else {
           // 신규 사용자 + 기타 유료 플랜 → 카드 등록 후 즉시 결제
           // 카드 등록 실패/취소 시 되돌릴 수 있도록 원래 값을 failUrl에 실어 보낸다
-          // (59차 QA 확인, Critical - 위 isExistingUser 분기와 동일한 이유)
+          // (59차 QA 확인, Critical - 위 isExistingUser 분기와 동일한 이유).
+          // 뒤로가기/탭닫기로 failUrl 자체를 안 거치는 경우의 안전망(73차 QA)도 동일 적용.
           const originalPlanId = currentSubscription.subscription_plans.id
           const originalBillingCycle = currentSubscription.billing_cycle
 
           const { error: updateError } = await supabase
             .from('company_subscriptions')
-            .update({ plan_id: plan.id, billing_cycle: billingCycle })
+            .update({ plan_id: plan.id, billing_cycle: billingCycle, current_period_end: new Date().toISOString() })
             .eq('id', currentSubscription.id)
 
           if (updateError) throw new Error(updateError.message)
