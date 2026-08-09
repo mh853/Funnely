@@ -186,13 +186,18 @@ export async function PATCH(request: NextRequest) {
     if (is_active !== undefined) updateData.is_active = is_active
     if (category !== undefined) updateData.category = category
 
-    // If setting as default, unset other defaults first
+    // If setting as default, unset other defaults first - 이 업데이트가 실패하면
+    // company_id당 하나만 존재해야 하는 unique index(lead_statuses_one_default_per_company)에
+    // 걸려 아래 본 업데이트가 대신 에러를 던진다(77차 QA - 이전엔 이 결과를 확인하지
+    // 않아 두 관리자가 동시에 다른 상태를 기본값으로 지정하면 기본값이 2개 공존할 수 있었음).
     if (is_default === true) {
-      await supabase
+      const { error: unsetError } = await supabase
         .from('lead_statuses')
         .update({ is_default: false })
         .eq('company_id', userProfile.company_id)
         .neq('id', id)
+
+      if (unsetError) throw unsetError
     }
 
     // Update status
@@ -265,13 +270,24 @@ export async function DELETE(request: NextRequest) {
     // Check if status is being used by any leads
     const { data: statusToDelete } = await supabase
       .from('lead_statuses')
-      .select('code')
+      .select('code, is_default')
       .eq('id', statusId)
       .eq('company_id', userProfile.company_id)
       .single()
 
     if (!statusToDelete) {
       return NextResponse.json({ error: { message: 'Status not found' } }, { status: 404 })
+    }
+
+    // 기본 상태(is_default)는 신규 리드 생성 시 폴백 코드로 쓰인다
+    // (leads/create, landing-pages/submit, sheets/sync 전부 동일 패턴) - 삭제(소프트
+    // 포함)를 허용하면 신규 리드가 존재하지 않는 상태값으로 생성될 수 있다(77차 QA).
+    // 먼저 다른 상태를 기본값으로 지정한 뒤에만 삭제 가능하도록 막는다.
+    if (statusToDelete.is_default) {
+      return NextResponse.json(
+        { error: { message: '기본 상태는 삭제할 수 없습니다. 먼저 다른 상태를 기본값으로 지정해주세요.' } },
+        { status: 400 }
+      )
     }
 
     const { count: leadsUsingStatus } = await supabase
