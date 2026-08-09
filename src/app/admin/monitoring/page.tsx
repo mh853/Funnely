@@ -34,12 +34,14 @@ const STATUS_COLORS: Record<string, string> = {
   healthy: 'text-green-600 bg-green-50',
   degraded: 'text-yellow-600 bg-yellow-50',
   down: 'text-red-600 bg-red-50',
+  unknown: 'text-gray-600 bg-gray-50',
 }
 
 const STATUS_ICONS: Record<string, any> = {
   healthy: CheckCircle,
   degraded: AlertCircle,
   down: XCircle,
+  unknown: Activity,
 }
 
 export default function MonitoringPage() {

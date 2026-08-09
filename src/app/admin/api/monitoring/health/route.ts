@@ -68,7 +68,12 @@ export async function GET(request: Request) {
       metrics.uptime = (metrics.healthyCount / metrics.count) * 100
     })
 
-    // 전체 시스템 상태
+    // 전체 시스템 상태 - 최근 window 내 기록이 0건이면(수동 "헬스체크 실행" 버튼을
+    // 안 누른 게 흔한 상태) every()/some()이 빈 배열에 대해 각각 vacuous true/false를
+    // 반환해 "0개 서비스 모니터링"인데도 overallStatus가 'healthy'로 표시되고,
+    // lastCheck도 실제 체크 시각 대신 지금 시각으로 채워져 방금 확인한 것처럼
+    // 보였다(78차 QA). 기록이 아예 없는 상태는 'healthy'와 구분되는 'unknown'으로 분리.
+    const hasAnyLog = Object.keys(serviceStatus).length > 0
     const allHealthy = Object.values(serviceStatus).every(
       (log: any) => log.status === 'healthy'
     )
@@ -76,13 +81,13 @@ export async function GET(request: Request) {
       (log: any) => log.status === 'down'
     )
 
-    const overallStatus = anyDown ? 'down' : allHealthy ? 'healthy' : 'degraded'
+    const overallStatus = !hasAnyLog ? 'unknown' : anyDown ? 'down' : allHealthy ? 'healthy' : 'degraded'
 
     return NextResponse.json({
       overallStatus,
       serviceStatus,
       serviceMetrics,
-      lastCheck: healthLogs?.[0]?.checked_at || new Date().toISOString(),
+      lastCheck: healthLogs?.[0]?.checked_at || null,
     })
   } catch (error) {
     console.error('System health API error:', error)
