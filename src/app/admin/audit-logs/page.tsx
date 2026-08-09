@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Eye,
 } from 'lucide-react'
+import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 interface AuditLog {
   id: string
@@ -138,9 +139,10 @@ export default function AuditLogsPage() {
   }
 
   // 값에 큰따옴표가 포함되면 CSV 구조가 깨지므로 ""로 이스케이프한다(RFC 4180).
-  // 사용자명/회사명은 자유 입력값이라 따옴표가 들어올 수 있다.
+  // 사용자명/회사명은 자유 입력값이라 따옴표는 물론 수식 인젝션(=/+/-/@로 시작하는
+  // 값)도 들어올 수 있어 sanitizeForSpreadsheet로 함께 방어한다(76차 QA).
   const escapeCSV = (value: unknown): string => {
-    const str = String(value ?? '')
+    const str = String(sanitizeForSpreadsheet(value ?? ''))
     return `"${str.replace(/"/g, '""')}"`
   }
 

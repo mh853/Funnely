@@ -6,6 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
 import { getLeadStatusCategoryMap, getCodesForCategory } from '@/lib/leadStatusCategory'
+import { sanitizeRowsForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -932,8 +933,9 @@ export default function ReservationsClient({
         return dateA.localeCompare(dateB)
       })
 
-      // 워크시트 생성
-      const worksheet = XLSX.utils.json_to_sheet(excelData)
+      // 워크시트 생성 - 고객명/비고/유입경로는 공개 랜딩페이지 방문자 입력값이라
+      // 수식 인젝션(=/+/-로 시작) 방어가 필요하다(LeadsClient.tsx와 동일 패턴, 76차 QA)
+      const worksheet = XLSX.utils.json_to_sheet(sanitizeRowsForSpreadsheet(excelData))
 
       // 컬럼 너비 설정
       worksheet['!cols'] = [

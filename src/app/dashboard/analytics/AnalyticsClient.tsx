@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
+import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
 // 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
 function toLocalDateStr(date: Date): string {
@@ -127,9 +128,11 @@ export default function AnalyticsClient({
     return dateStr
   }
 
-  // CSV 이스케이프 함수 (DB리포트와 동일)
+  // CSV 이스케이프 함수 (DB리포트와 동일) - UTM 값은 인증 없이 공개 랜딩페이지
+  // URL로 누구나 주입 가능한 값이라, sanitizeForSpreadsheet로 수식 인젝션(=/+/-/@로
+  // 시작하는 값)도 함께 방어해야 한다(76차 QA - 다른 export는 이미 68차에서 적용됨).
   const escapeCSV = (value: any): string => {
-    const strValue = String(value)
+    const strValue = String(sanitizeForSpreadsheet(value))
     if (strValue.includes(',') || strValue.includes('"') || strValue.includes('\n')) {
       return `"${strValue.replace(/"/g, '""')}"`
     }
