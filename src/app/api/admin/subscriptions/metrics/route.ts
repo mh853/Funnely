@@ -98,10 +98,16 @@ export async function GET(request: NextRequest) {
       .map(subs => pickCurrentSubscription(subs))
       .filter((sub): sub is NonNullable<typeof sub> => sub !== null)
 
-    // 5. 활성 구독 필터링 (active, trial, past_due)
+    // 5. 활성 구독 필터링 (active, trial, past_due) + 기간종료형 취소(cancelled지만
+    // current_period_end가 아직 안 지나 이번 기간은 이미 결제완료·이용중인 경우)도
+    // 포함한다 - hasValidPlanAccess(subscription-current.ts)의 cancelled 판정과
+    // 동일 기준. 이게 빠져있으면 이번 달 취소한 유료고객의 매출이 MRR에서 누락되어
+    // 실제보다 낮게 표시됐다(83차 QA).
+    const nowIso = now.toISOString()
     const activeStatuses = ['active', 'trial', 'past_due']
     const activeSubscriptions = latestSubscriptions.filter(sub =>
-      activeStatuses.includes(sub.status)
+      activeStatuses.includes(sub.status) ||
+      (sub.status === 'cancelled' && sub.current_period_end !== null && sub.current_period_end > nowIso)
     )
 
     // 6. MRR 계산 (Monthly Recurring Revenue)

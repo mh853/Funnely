@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         status,
         billing_cycle,
         plan_id,
+        current_period_end,
         locked_plan_id,
         locked_price_monthly,
         locked_price_yearly,
@@ -81,7 +82,11 @@ export async function GET(request: NextRequest) {
         )
       `
         )
-        .eq('status', 'active'),
+        // status='active'만 보면, 이번 달 취소했지만 아직 기간이 안 지나 이미
+        // 결제완료·이용중인(기간종료형 취소) 구독의 매출이 MRR에서 통째로 빠져
+        // 실제보다 낮게 표시됐다(83차 QA) - cancelled도 함께 가져와 아래에서
+        // current_period_end로 다시 거른다.
+        .in('status', ['active', 'cancelled']),
       // 7. 이전 달 MRR/ARR 조회 (revenue_metrics 테이블에서)
       // revenue_metrics의 실제 컬럼명은 calculated_at이 아니라 period_start다.
       supabase
@@ -109,8 +114,17 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // status='cancelled'로 함께 가져온 구독 중, 기간이 아직 안 지난(기간종료형 취소)
+    // 것만 남기고 나머지(이미 기간이 지난 취소)는 제외한다.
+    const nowIso = new Date().toISOString()
+    const revenueGeneratingSubscriptions = (activeSubscriptions || []).filter(
+      (sub: any) =>
+        sub.status === 'active' ||
+        (sub.status === 'cancelled' && sub.current_period_end !== null && sub.current_period_end > nowIso)
+    )
+
     // 5. 구독 데이터를 Subscription 타입으로 변환
-    const subscriptions: Subscription[] = (activeSubscriptions || []).map(
+    const subscriptions: Subscription[] = revenueGeneratingSubscriptions.map(
       (sub: any) => {
         const plan = sub.subscription_plans
         // 그랜드파더링(61차) 중인 구독은 카탈로그 최신가가 아니라 locked_price_*로

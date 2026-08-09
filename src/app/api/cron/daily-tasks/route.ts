@@ -256,8 +256,12 @@ export async function GET(request: NextRequest) {
  * Calculate revenue (MRR/ARR) for all companies
  */
 async function calculateRevenue(supabase: any) {
-  // Fetch all active subscriptions
-  const { data: activeSubscriptions, error: subsError } = await supabase
+  // Fetch all revenue-generating subscriptions
+  // status='active'만 보면, 이번 달 취소했지만 아직 기간이 안 지나 이미 결제완료·
+  // 이용중인(기간종료형 취소) 구독의 매출이 매일 저장되는 revenue_metrics에서
+  // 통째로 빠져, MRR 추이차트가 실제보다 낮게 소급 기록됐다(83차 QA) - cancelled도
+  // 함께 가져와 아래에서 current_period_end로 다시 거른다.
+  const { data: fetchedSubscriptions, error: subsError } = await supabase
     .from('company_subscriptions')
     .select(
       `
@@ -266,6 +270,7 @@ async function calculateRevenue(supabase: any) {
       status,
       billing_cycle,
       plan_id,
+      current_period_end,
       locked_plan_id,
       locked_price_monthly,
       locked_price_yearly,
@@ -277,11 +282,18 @@ async function calculateRevenue(supabase: any) {
       )
     `
     )
-    .eq('status', 'active')
+    .in('status', ['active', 'cancelled'])
 
   if (subsError) {
     throw new Error(`Failed to fetch subscriptions: ${subsError.message}`)
   }
+
+  const nowIso = new Date().toISOString()
+  const activeSubscriptions = (fetchedSubscriptions || []).filter(
+    (sub: any) =>
+      sub.status === 'active' ||
+      (sub.status === 'cancelled' && sub.current_period_end !== null && sub.current_period_end > nowIso)
+  )
 
   // Group subscriptions by company
   const companySubscriptionsMap = new Map<string, any[]>()
