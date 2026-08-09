@@ -62,8 +62,14 @@ export async function POST(request: Request) {
 
   if (!authRes.ok) {
     const err = await authRes.json()
+    // toss-billing-auth 엣지함수(supabase/functions는 gitignore 대상이라 별도 배포 필요,
+    // 이 레포에서 직접 수정 불가)가 "Toss API Error: {한글메시지}" 형태로 영문 접두사를
+    // 붙여 그대로 던져, 사용자에게 영문/한글이 뒤섞인 문구가 노출됐다(81차 QA) - 접두사만
+    // 제거해 보여준다.
+    const rawMessage = err.error || '카드 등록에 실패했습니다.'
+    const cleanMessage = rawMessage.replace(/^Toss API Error:\s*/i, '')
     return NextResponse.json(
-      { error: err.error || '카드 등록에 실패했습니다.' },
+      { error: cleanMessage },
       { status: 500 }
     )
   }
