@@ -176,6 +176,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Missing landing page ID' } }, { status: 400 })
     }
 
+    // status는 DB에 CHECK 제약이 없어 검증 없이는 임의 문자열이 그대로 저장되고,
+    // submit/route.ts 등 여러 곳이 status === 'published' 문자열 비교에 의존한다.
+    if (status !== undefined && !['draft', 'published', 'archived'].includes(status)) {
+      return NextResponse.json({ error: { message: '올바르지 않은 상태값입니다.' } }, { status: 400 })
+    }
+
     // Update landing page (company_id 필터로 소유권 검증)
     // 공개 렌더링/제출 라우트는 status='published'뿐 아니라 is_active=true도 함께
     // 요구한다. status만 바꾸고 is_active를 안 건드리면, 이 에디터에서 "발행"을
