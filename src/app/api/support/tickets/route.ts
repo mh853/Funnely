@@ -1,5 +1,9 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { checkRateLimit } from '@/lib/rate-limit'
+
+const VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent']
+const VALID_CATEGORIES = ['technical', 'billing', 'feature_request', 'bug', 'general']
 
 // 티켓 목록 조회 (고객사용)
 export async function GET(request: Request) {
@@ -104,7 +108,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
+    if (!checkRateLimit(`support-ticket-create:${userData.company_id}`, 10, 60 * 60 * 1000)) {
+      return NextResponse.json(
+        { error: '너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.' },
+        { status: 429 }
+      )
+    }
+
     const body = await request.json()
+
+    if (typeof body.subject !== 'string' || typeof body.description !== 'string' || !body.subject.trim() || !body.description.trim()) {
+      return NextResponse.json({ error: '제목과 내용을 입력해주세요.' }, { status: 400 })
+    }
+
+    if (body.subject.length > 200 || body.description.length > 5000) {
+      return NextResponse.json({ error: '입력 내용이 너무 깁니다.' }, { status: 400 })
+    }
+
+    if (body.priority && !VALID_PRIORITIES.includes(body.priority)) {
+      return NextResponse.json({ error: '올바른 우선순위를 선택해주세요.' }, { status: 400 })
+    }
+
+    if (body.category && !VALID_CATEGORIES.includes(body.category)) {
+      return NextResponse.json({ error: '올바른 카테고리를 선택해주세요.' }, { status: 400 })
+    }
 
     // 티켓 생성
     const { data: ticket, error: ticketError } = await supabase
