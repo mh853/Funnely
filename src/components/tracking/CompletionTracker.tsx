@@ -23,12 +23,17 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
   // 시마다 이 컴포넌트가 다시 마운트되고, 그때마다 전환 픽셀이 다시 발화되고 있었다
   // (54차 QA 라이브 확인). 제출 1건당 고유한 completionToken 단위로 localStorage에
   // 발화 여부를 남겨, 같은 제출 건에 대한 재방문/새로고침은 재발화하지 않는다.
-  // 토큰이 없는 경우(구버전 링크 등)는 기존과 동일하게 매번 발화한다.
+  //
+  // 토큰이 없으면(직접 URL 접근 등) 예전엔 "구버전 링크 호환"을 이유로 매번 발화시켰는데,
+  // 실제 제출 성공 경로(PublicLandingPage.tsx)는 항상 ct 토큰을 붙여 이동하고 이
+  // 완료 페이지를 직접 가리키는 광고/구버전 링크도 없어(자신의 랜딩페이지 URL만
+  // 캠페인에 노출됨) - 결과적으로 slug만 알면 이 페이지를 새로고침하는 것만으로
+  // 제출 없이도 매번 실제 전환 픽셀(CompleteRegistration 등)이 광고 플랫폼에
+  // 발화되고 있었다(72차 QA). 토큰이 없으면 발화하지 않도록 기본값을 반대로 뒤집는다.
   const [shouldFire, setShouldFire] = useState(false)
 
   useEffect(() => {
     if (!completionToken) {
-      setShouldFire(true)
       return
     }
     try {
@@ -36,7 +41,8 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
       if (window.localStorage.getItem(key)) return
       window.localStorage.setItem(key, '1')
     } catch {
-      // 시크릿 모드 등 localStorage 접근 불가 환경 - dedup 없이 발화(기존 동작과 동일)
+      // 시크릿 모드 등 localStorage 접근 불가 환경 - dedup 없이도 발화는 허용한다
+      // (토큰 자체는 있으므로 실제 제출 성공 경로에서 온 것은 맞다).
     }
     setShouldFire(true)
   }, [completionToken])
