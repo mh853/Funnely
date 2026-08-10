@@ -14,15 +14,17 @@ interface EventModalProps {
   onSave: () => void
 }
 
-// DB현황의 상태 옵션과 동일하게 설정 (일정 유형)
+// DB현황(리드 상태)의 코드값을 그대로 복사해뒀었는데, calendar_events.event_type은
+// 리드 상태와 무관한 별도 Postgres enum(consultation/callback/meeting/task/reminder,
+// 20250114000000_add_landing_page_system.sql:34-40)이다 - 여기서 보내는 값 중
+// 어떤 것도 그 enum에 속하지 않아 일정 저장이 항상 22P02(enum 위반)로 실패했다
+// (85차 QA, 실DB에 calendar_events 행이 0건이었던 것으로 재확인). 실제 enum 값으로 교체.
 const EVENT_TYPES = [
-  { value: 'pending', label: '상담 전', color: 'orange', bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-300' },
-  { value: 'rejected', label: '상담 거절', color: 'red', bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-300' },
-  { value: 'contacted', label: '상담 진행중', color: 'blue', bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
-  { value: 'converted', label: '상담 완료', color: 'purple', bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
-  { value: 'contract_completed', label: '예약 확정', color: 'emerald', bg: 'bg-emerald-100', text: 'text-emerald-700', border: 'border-emerald-300' },
-  { value: 'needs_followup', label: '추가상담 필요', color: 'amber', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300' },
-  { value: 'other', label: '기타', color: 'gray', bg: 'bg-gray-100', text: 'text-gray-700', border: 'border-gray-300' },
+  { value: 'consultation', label: '상담', color: 'green', bg: 'bg-green-100', text: 'text-green-700', border: 'border-green-300' },
+  { value: 'callback', label: '재연락', color: 'blue', bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-300' },
+  { value: 'meeting', label: '미팅', color: 'purple', bg: 'bg-purple-100', text: 'text-purple-700', border: 'border-purple-300' },
+  { value: 'task', label: '업무', color: 'yellow', bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-300' },
+  { value: 'reminder', label: '리마인더', color: 'amber', bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-300' },
 ]
 
 // 빠른 시간 선택 옵션
@@ -42,7 +44,7 @@ export default function EventModal({
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    event_type: 'pending',
+    event_type: 'consultation',
     start_time: '',
     end_time: '',
     assigned_to: currentUserId,

@@ -46,12 +46,17 @@ interface CalendarViewProps {
 
 type CalendarMode = 'month' | 'week' | 'day'
 
+// calendar_events.event_type의 실제 DB enum(consultation/callback/meeting/task/reminder,
+// 20250114000000_add_landing_page_system.sql:34-40)과 어긋나 있었다 - 'call'/'other'는
+// 유효하지 않은 값이라 죽은 키였고, 실제 enum 값인 'callback'/'reminder'는 색상 매핑이
+// 없어 해당 이벤트는 undefined 클래스로 스타일이 깨졌다(85차 QA, EventModal.tsx의
+// 선택지 자체가 이 enum과 전혀 다른 값을 보내던 Critical 버그와 함께 발견).
 const EVENT_COLORS = {
-  call: 'bg-blue-100 border-blue-500 text-blue-900',
-  meeting: 'bg-purple-100 border-purple-500 text-purple-900',
   consultation: 'bg-green-100 border-green-500 text-green-900',
+  callback: 'bg-blue-100 border-blue-500 text-blue-900',
+  meeting: 'bg-purple-100 border-purple-500 text-purple-900',
   task: 'bg-yellow-100 border-yellow-500 text-yellow-900',
-  other: 'bg-gray-100 border-gray-500 text-gray-900',
+  reminder: 'bg-amber-100 border-amber-500 text-amber-900',
 }
 
 const LEAD_STATUS_COLORS = {
@@ -180,16 +185,6 @@ export default function CalendarView({
   // 읽음 상태 추적용 state (리렌더링 트리거용)
   const [readStatusVersion, setReadStatusVersion] = useState(0)
 
-  // 캘린더에 표시할 상태만 필터링: 상담 전, 상담 진행중, 추가상담 필요, 기타
-  const allowedStatuses = ['new', 'pending', 'contacting', 'contacted', 'qualified', 'needs_followup', 'other']
-  const filteredLeads = leads.filter(lead => allowedStatuses.includes(lead.status))
-  const [localLeads, setLocalLeads] = useState<Lead[]>(filteredLeads)
-
-  // 드래그 앤 드롭 상태
-  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
-  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
-
   // 회사별 커스텀 리드 상태 목록
   const [leadStatuses, setLeadStatuses] = useState<
     { id: string; code: string; label: string; color: string; sort_order: number; category: string | null }[]
@@ -222,6 +217,22 @@ export default function CalendarView({
     fetchLeadStatuses()
   }, [currentUserId])
 
+  // 캘린더에 표시할 상태만 필터링(예약확정/거절 범주 제외) - 리터럴 코드 배열
+  // (new/pending/contacting/...)로 비교하면 회사가 상태코드를 커스터마이즈했을 때
+  // "진행중" 계열 리드가 캘린더 어디에도 안 나타났다(79/84차와 동일한 패턴, 85차 QA).
+  // statusOptions는 이미 위에서 category와 함께 로드돼 있어 그대로 재사용한다.
+  const excludedStatusCodes = useMemo(
+    () => statusOptions.filter((o) => o.category === 'contract_completed' || o.category === 'rejected').map((o) => o.value),
+    [statusOptions]
+  )
+  const filteredLeads = leads.filter(lead => !excludedStatusCodes.includes(lead.status))
+  const [localLeads, setLocalLeads] = useState<Lead[]>(filteredLeads)
+
+  // 드래그 앤 드롭 상태
+  const [draggedLead, setDraggedLead] = useState<Lead | null>(null)
+  const [dragOverSlot, setDragOverSlot] = useState<string | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
   // 로컬 날짜 문자열 생성 헬퍼 함수
   const getLocalDateString = (date: Date) => {
     const y = date.getFullYear()
@@ -232,9 +243,9 @@ export default function CalendarView({
 
   // leads prop 변경 시 필터링된 leads로 업데이트
   useEffect(() => {
-    const filtered = leads.filter(lead => allowedStatuses.includes(lead.status))
+    const filtered = leads.filter(lead => !excludedStatusCodes.includes(lead.status))
     setLocalLeads(filtered)
-  }, [leads])
+  }, [leads, excludedStatusCodes])
 
   // 예약 건수 계산 및 업데이트
   useEffect(() => {
@@ -384,7 +395,7 @@ export default function CalendarView({
     const dayEvents = getEventsForDay(day)
     const dayLeads = getLeadsForDay(day)
     // 모달에 표시할 leads도 필터링 적용
-    const filteredDayLeads = dayLeads.filter(lead => allowedStatuses.includes(lead.status))
+    const filteredDayLeads = dayLeads.filter(lead => !excludedStatusCodes.includes(lead.status))
     setSelectedDayData({ events: dayEvents, leads: filteredDayLeads, day })
     setShowDayDetailModal(true)
   }
