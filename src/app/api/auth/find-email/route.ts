@@ -34,6 +34,17 @@ export async function POST(request: Request) {
       )
     }
 
+    // 화면(find-email 폼)은 전화번호를 필수로 강제하지만, API는 이 값이 없으면
+    // 이름만으로 매칭된 계정의 마스킹 이메일을 그대로 반환했다 - 이름만 아는
+    // 공격자가 "이름+전화번호 2단계 확인" 설계를 우회해 계정 존재여부·이메일
+    // 일부를 알아낼 수 있었다(87차 QA). 서버에서도 필수로 강제한다.
+    if (!phone || typeof phone !== 'string' || phone.trim().length === 0) {
+      return NextResponse.json(
+        { error: '전화번호를 입력해주세요.' },
+        { status: 400 }
+      )
+    }
+
     const adminClient = createAdminClient()
 
     let query = adminClient
@@ -53,15 +64,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ maskedEmails: [] })
     }
 
-    // 핸드폰 번호가 입력된 경우 번호로 필터링
-    let filtered = users
-    if (phone && typeof phone === 'string' && phone.trim().length > 0) {
-      const normalizedPhone = normalizePhone(phone.trim())
-      filtered = users.filter((u: any) => {
-        if (!u.phone) return false
-        return normalizePhone(u.phone) === normalizedPhone
-      })
-    }
+    const normalizedPhone = normalizePhone(phone.trim())
+    const filtered = users.filter((u: any) => {
+      if (!u.phone) return false
+      return normalizePhone(u.phone) === normalizedPhone
+    })
 
     if (filtered.length === 0) {
       return NextResponse.json({ maskedEmails: [] })
