@@ -47,14 +47,26 @@ function parseRefParam(ref: string | undefined): { shortId: string | null; slug:
 async function fetchLandingPage(slug: string): Promise<LandingPageType | null> {
   const supabase = getServiceRoleClient()
 
+  // is_active/companies 검사가 없어, 이 레거시 ?ref= 경로는 비활성화된 랜딩페이지나
+  // 비활성화·탈퇴한 회사의 페이지도 계속 그대로 노출했다 - 형제 라우트(/landing/[slug])는
+  // 이미 이 검사를 갖고 있는데 이 경로만 빠져있었다(84차 QA).
   const { data, error } = await supabase
     .from('landing_pages')
-    .select('*')
+    .select(`
+      *,
+      companies!inner(
+        id,
+        is_active,
+        withdrawn_at
+      )
+    `)
     .eq('slug', slug)
     .eq('status', 'published')
+    .eq('is_active', true)
     .single()
 
   if (error || !data) return null
+  if (data.companies?.is_active === false || data.companies?.withdrawn_at) return null
   return data as LandingPageType
 }
 
