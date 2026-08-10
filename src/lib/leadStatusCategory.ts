@@ -62,12 +62,18 @@ export async function getLeadStatusCategoryMap(
  * 리드의 status 코드로 통계 버킷 키를 구한다. 'pending'은 실제 lead_statuses에는
  * 없는 레거시 코드 값이지만 과거 코드가 전부 'new'와 동일하게 취급해왔으므로
  * 하위 호환을 위해 그대로 유지한다.
+ *
+ * 단, 이 레거시 폴백이 무조건 우선했었다 - 회사가 lead-statuses 설정화면에서
+ * 코드값을 정확히 'pending'으로 새 상태를 만들고 category를 다른 값(예: 계약확정)
+ * 으로 지정해도, categoryMap 조회 결과와 무관하게 항상 '신규'로 집계됐다(85차 QA).
+ * categoryMap에 'pending'이 실제로 등록돼 있지 않을 때(진짜 레거시 고아 데이터)만
+ * 폴백을 적용한다.
  */
 export function getBucketKeyForStatus(
   categoryMap: Record<string, LeadStatusCategory>,
   status: string | null | undefined
 ): (typeof CATEGORY_TO_BUCKET_KEY)[LeadStatusCategory] {
-  if (status === 'pending') return CATEGORY_TO_BUCKET_KEY.new
+  if (status === 'pending' && !categoryMap['pending']) return CATEGORY_TO_BUCKET_KEY.new
   const category = (status && categoryMap[status]) || 'other'
   return CATEGORY_TO_BUCKET_KEY[category]
 }
