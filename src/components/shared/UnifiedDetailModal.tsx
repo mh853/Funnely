@@ -379,7 +379,9 @@ export default function UnifiedDetailModal({
 
     setUpdatingStatus(true)
     try {
-      const contractCompletedAt = new Date(`${date}T${time}:00`).toISOString()
+      // 오프셋 없이 new Date()에 넘기면 브라우저 로컬 타임존에 암묵적으로 의존한다 -
+      // ReservationsClient.tsx의 예약 저장 경로들과 동일하게 +09:00을 명시한다(84차 QA).
+      const contractCompletedAt = new Date(`${date}T${time}:00+09:00`).toISOString()
       const contractCompletedCode = getCodeForCategory('contract_completed')
 
       const response = await fetch('/api/leads/update', {

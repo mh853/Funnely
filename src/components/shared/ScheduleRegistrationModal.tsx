@@ -27,7 +27,13 @@ export default function ScheduleRegistrationModal({
   useEffect(() => {
     if (isOpen) {
       const now = new Date()
-      const dateStr = now.toISOString().split('T')[0]
+      // toISOString()은 UTC 기준이라 KST 00~08시대(UTC로는 아직 전날)에 모달을 열면
+      // 기본 날짜가 하루 전으로 채워졌다(84차 QA) - 브라우저 로컬(KST) 날짜를 직접 조합한다
+      // (ReservationsClient.tsx의 getLocalDateString과 동일 패턴).
+      const year = now.getFullYear()
+      const month = String(now.getMonth() + 1).padStart(2, '0')
+      const day = String(now.getDate()).padStart(2, '0')
+      const dateStr = `${year}-${month}-${day}`
       const timeStr = now.toTimeString().slice(0, 5)
       setDate(dateStr)
       setTime(timeStr)
