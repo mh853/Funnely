@@ -57,17 +57,23 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
     const newStatus = !isActive
 
     try {
-      const { error, count } = await (supabase as any)
+      // count: 'exact'는 UPDATE 체인에서 이 프로젝트 환경상 항상 null로 돌아와(84차 QA
+      // 실DB 확인) "권한없음/대상없음" 검증이 사실상 통과되고 있었다(85차 count 전수조사로
+      // 재확인 - 이 화면은 하필 RLS의 landing_pages UPDATE 정책에 company_admin 역할이
+      // 빠져있어(별도 이슈로 백로그 기록) 매일 실사용되는 게시/중지 토글이 조용히
+      // 안 먹히다가 router.refresh() 후 원상태로 되돌아가는 증상으로 이어졌다).
+      // 실제로 갱신된 행(data)의 존재여부로 판단한다.
+      const { error, data: updatedRows } = await (supabase as any)
         .from('landing_pages')
         .update({
           is_active: newStatus,
           status: newStatus ? 'published' : 'draft',
         })
         .eq('id', page.id)
-        .select('id', { count: 'exact', head: true })
+        .select('id')
 
       if (error) throw error
-      if (count === 0) throw new Error('권한이 없거나 대상을 찾을 수 없습니다.')
+      if (!updatedRows || updatedRows.length === 0) throw new Error('권한이 없거나 대상을 찾을 수 없습니다.')
 
       setIsActive(newStatus)
 

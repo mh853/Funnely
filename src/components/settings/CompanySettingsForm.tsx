@@ -71,14 +71,17 @@ export default function CompanySettingsForm({ company, canEdit }: CompanySetting
         updateData.business_number = trimmed
       }
 
-      const { error: updateError, count } = await supabase
+      // count: 'exact'는 UPDATE 체인에서 이 프로젝트 환경상 항상 null로 돌아와(84차 QA
+      // 실DB 확인) "저장 권한없음" 검증이 사실상 통과되고 있었다(85차 count 전수조사로
+      // 재확인) - 실제로 갱신된 행(data)의 존재여부로 판단한다.
+      const { error: updateError, data: updatedRows } = await supabase
         .from('companies')
         .update(updateData)
         .eq('id', company.id)
-        .select('id', { count: 'exact', head: true })
+        .select('id')
 
       if (updateError) throw updateError
-      if (count === 0) throw new Error('저장 권한이 없습니다. 관리자에게 문의하세요.')
+      if (!updatedRows || updatedRows.length === 0) throw new Error('저장 권한이 없습니다. 관리자에게 문의하세요.')
 
       toast.success('변경사항이 저장되었습니다.')
       router.refresh()
