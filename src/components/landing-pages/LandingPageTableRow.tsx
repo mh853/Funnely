@@ -21,9 +21,22 @@ interface LandingPageTableRowProps {
     dbInflow: number
     rejectedCount: number
     contractCount: number
+    timer_enabled?: boolean
+    timer_deadline?: string | null
+    timer_auto_update?: boolean
   }
   index: number
   companyShortId?: string | null
+}
+
+// 에디터(LandingPageNewForm.tsx)의 게시 토글은 타이머가 만료됐으면 켜는 것을
+// 막는데, 목록 화면의 빠른토글은 이 가드가 없어 타이머 만료로 자동 비활성화된
+// 페이지를 다시 켜도 곧바로(timer-expired API 재검증으로) 도로 꺼지고 알림만
+// 쌓였다(87차 QA). 동일한 가드를 적용한다.
+function isTimerExpired(deadline: string | null | undefined, autoUpdate = false): boolean {
+  if (!deadline) return false
+  if (autoUpdate) return false
+  return Date.now() > new Date(deadline).getTime()
 }
 
 export default function LandingPageTableRow({ page, index, companyShortId }: LandingPageTableRowProps) {
@@ -53,8 +66,14 @@ export default function LandingPageTableRow({ page, index, companyShortId }: Lan
   const handleToggleStatus = async () => {
     if (isUpdating) return
 
-    setIsUpdating(true)
     const newStatus = !isActive
+
+    if (newStatus && page.timer_enabled && page.timer_deadline && isTimerExpired(page.timer_deadline, page.timer_auto_update)) {
+      toast.error('타이머가 마감되었습니다. 먼저 타이머 설정을 변경해주세요.')
+      return
+    }
+
+    setIsUpdating(true)
 
     try {
       // count: 'exact'는 UPDATE 체인에서 이 프로젝트 환경상 항상 null로 돌아와(84차 QA
