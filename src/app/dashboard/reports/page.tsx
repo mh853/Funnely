@@ -17,16 +17,12 @@ interface ReportsPageProps {
   }>
 }
 
-// "전체" 기간 조회는 날짜 범위로 제한되지 않아 PostgREST의 암묵적 max_rows(1000) 캡에
-// 걸리면 오래된 데이터가 조용히 누락된다(leads/export/route.ts와 동일한 패턴, 54차 QA
-// 확인). 월별 조회는 이미 날짜 범위로 좁혀져 있어 그대로 단건 조회하고, "전체"일 때만
-// range()로 배치 반복 조회해 진짜 전체 데이터를 가져온다.
-async function fetchAllIfNeeded(query: any, batchAll: boolean): Promise<any[]> {
-  if (!batchAll) {
-    const { data } = await query
-    return data || []
-  }
-
+// range() 없이 조회하면 PostgREST의 암묵적 max_rows(1000) 캡에 걸리면 데이터가
+// 조용히 누락된다(leads/export/route.ts와 동일한 패턴, 54차 QA 확인). "전체" 기간
+// 조회일 때만 배치조회하던 것을, 특정 월의 리드가 1000건을 넘어도 후반부 통계가
+// 축소 표시되던 것을 발견해(86차 QA) 월별 조회에도 예외 없이 적용한다 - 결과가
+// 1000건 미만이면 배치 루프도 첫 반복에서 바로 끝나 비용 차이가 없다.
+async function fetchAllIfNeeded(query: any): Promise<any[]> {
   const BATCH_SIZE = 1000 // PostgREST max_rows와 동일하게 맞춤
   const MAX_TOTAL_ROWS = 20000 // 메모리/응답시간 보호용 상한
 
@@ -117,7 +113,10 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
     leadsQuery = leadsQuery.gte('created_at', queryStart).lt('created_at', queryEnd)
   }
 
-  leadsQuery = leadsQuery.order('created_at', { ascending: true })
+  // range() 배치조회가 안정적으로 나뉘려면 정렬 기준이 유일해야 하는데 created_at은
+  // 유일하지 않다(동시각 생성 가능) - paymentQuery는 이미 id를 보조키로 쓰고 있어
+  // 동일하게 맞춘다(86차 QA, "전체 배치의 정렬 키 불안정" 발견).
+  leadsQuery = leadsQuery.order('created_at', { ascending: true }).order('id', { ascending: true })
 
   // 담당자 필터
   if (params.assignedTo) {
@@ -146,8 +145,8 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
       .eq('company_id', userProfile.company_id)
       .eq('is_active', true)
       .order('full_name'),
-    fetchAllIfNeeded(leadsQuery, isAllMonths),
-    fetchAllIfNeeded(paymentQuery, isAllMonths),
+    fetchAllIfNeeded(leadsQuery),
+    fetchAllIfNeeded(paymentQuery),
     getLeadStatusCategoryMap(supabase, userProfile.company_id),
   ])
 
