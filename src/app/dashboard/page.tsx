@@ -75,14 +75,38 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     ? new Date(Math.min(new Date(queryStart).getTime(), getKSTStartOfDay(-6).getTime())).toISOString()
     : queryStart
 
+  // range()/limit() 없이 조회하면 supabase/config.toml의 max_rows(1000)가 암묵적으로
+  // 적용돼 결과가 잘린다(analytics/page.tsx, reports/page.tsx, leads/export/route.ts에서
+  // 이미 같은 문제를 겪고 고친 바로 그 이슈인데, 정작 메인 진입점인 이 페이지는 빠져있었다 -
+  // 리드 많은 회사는 "오늘"/"이번달" 카드가 실제보다 낮게 표시될 수 있었다, 85차 QA).
+  // 1000행씩 배치로 반복 조회해 전체를 가져온다.
+  async function fetchAllRows<T>(
+    queryBuilder: { range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }> }
+  ): Promise<T[]> {
+    const BATCH_SIZE = 1000
+    const allRows: T[] = []
+    let offset = 0
+    while (true) {
+      const { data, error } = await queryBuilder.range(offset, offset + BATCH_SIZE - 1)
+      if (error) throw error
+      if (!data || data.length === 0) break
+      allRows.push(...data)
+      if (data.length < BATCH_SIZE) break
+      offset += BATCH_SIZE
+    }
+    return allRows
+  }
+
   // 선택된 월의 리드 데이터 조회
-  const { data: allLeads } = await supabase
-    .from('leads')
-    .select('id, created_at, status, device_type')
-    .eq('company_id', userProfile?.company_id)
-    .gte('created_at', leadsQueryFloorIso)
-    .lt('created_at', queryEnd)
-    .order('created_at', { ascending: true })
+  const allLeads = await fetchAllRows(
+    supabase
+      .from('leads')
+      .select('id, created_at, status, device_type')
+      .eq('company_id', userProfile?.company_id)
+      .gte('created_at', leadsQueryFloorIso)
+      .lt('created_at', queryEnd)
+      .order('created_at', { ascending: true })
+  )
 
   // 회사가 만든 커스텀 상태도 정확한 통계 버킷(완료/거절/진행중 등)에 잡히도록
   // code → category 매핑을 조회한다 (이전에는 7개 시스템 기본 코드만 하드코딩
@@ -90,22 +114,26 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const leadStatusCategoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
 
   // 선택된 월의 결제 데이터 조회 (리드의 created_at 기준으로 집계) - allLeads와 동일하게 확장된 범위
-  const { data: paymentData } = await supabase
-    .from('lead_payments')
-    .select('lead_id, amount, leads!inner(created_at)')
-    .eq('company_id', userProfile?.company_id)
-    .gte('leads.created_at', leadsQueryFloorIso)
-    .lt('leads.created_at', queryEnd)
+  const paymentData = await fetchAllRows(
+    supabase
+      .from('lead_payments')
+      .select('lead_id, amount, leads!inner(created_at)')
+      .eq('company_id', userProfile?.company_id)
+      .gte('leads.created_at', leadsQueryFloorIso)
+      .lt('leads.created_at', queryEnd)
+  )
 
   // 날짜별 페이지뷰 데이터 조회 (landing_page_analytics) - date 컬럼은 KST 날짜 문자열인데
   // queryStart/queryEnd(ISO 인스턴트)를 split('T')[0]로 자르면 UTC 기준 문자열이 돼 KST보다
   // 하루 이른 값이 된다 - 매달 말일 페이지뷰가 영구 누락되던 원인(72차 QA). toKSTDateStr로 보정.
-  const { data: pageViewsData } = await supabase
-    .from('landing_page_analytics')
-    .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
-    .eq('landing_pages.company_id', userProfile?.company_id)
-    .gte('date', toKSTDateStr(new Date(leadsQueryFloorIso)))
-    .lt('date', toKSTDateStr(new Date(queryEnd)))
+  const pageViewsData = await fetchAllRows(
+    supabase
+      .from('landing_page_analytics')
+      .select('date, page_views, desktop_views, mobile_views, tablet_views, landing_page_id, landing_pages!inner(company_id)')
+      .eq('landing_pages.company_id', userProfile?.company_id)
+      .gte('date', toKSTDateStr(new Date(leadsQueryFloorIso)))
+      .lt('date', toKSTDateStr(new Date(queryEnd)))
+  )
 
   // 페이지뷰를 날짜별로 집계
   const pageViewsByDate: { [key: string]: { total: number; desktop: number; mobile: number; tablet: number } } = {}
@@ -132,12 +160,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const statsQueryFloor = new Date(
     Math.min(thisMonthStart.getTime(), thisWeekStart.getTime(), yesterday.getTime())
   )
-  const { data: statsLeads } = await supabase
-    .from('leads')
-    .select('id, created_at')
-    .eq('company_id', userProfile.company_id)
-    .gte('created_at', statsQueryFloor.toISOString())
-    .order('created_at', { ascending: true })
+  const statsLeads = await fetchAllRows(
+    supabase
+      .from('leads')
+      .select('id, created_at')
+      .eq('company_id', userProfile.company_id)
+      .gte('created_at', statsQueryFloor.toISOString())
+      .order('created_at', { ascending: true })
+  )
 
   statsLeads?.forEach(lead => {
     const leadTime = new Date(lead.created_at).getTime()

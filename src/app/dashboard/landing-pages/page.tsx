@@ -43,12 +43,34 @@ export default async function LandingPagesPage() {
 
   const companyShortId = companyShortIdData?.short_id || null
 
+  // range()/limit() 없이 조회하면 supabase/config.toml의 max_rows(1000)가 암묵적으로
+  // 적용돼 결과가 잘린다(dashboard/page.tsx 등 이미 여러 곳에서 겪은 문제) - 리드가
+  // 1000건을 넘는 회사는 목록의 DB유입/거절/확정 카운트가 조용히 과소집계됐다(85차 QA).
+  async function fetchAllRows<T>(
+    queryBuilder: { range: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }> }
+  ): Promise<T[]> {
+    const BATCH_SIZE = 1000
+    const allRows: T[] = []
+    let offset = 0
+    while (true) {
+      const { data, error } = await queryBuilder.range(offset, offset + BATCH_SIZE - 1)
+      if (error) throw error
+      if (!data || data.length === 0) break
+      allRows.push(...data)
+      if (data.length < BATCH_SIZE) break
+      offset += BATCH_SIZE
+    }
+    return allRows
+  }
+
   // 리드 통계와 상태 범주 맵은 서로 무관하므로 병렬로 조회
-  const [{ data: leadsStats }, leadStatusCategoryMap] = await Promise.all([
-    supabase
-      .from('leads')
-      .select('landing_page_id, status, created_at')
-      .in('landing_page_id', (landingPages || []).map(p => p.id)),
+  const [leadsStats, leadStatusCategoryMap] = await Promise.all([
+    fetchAllRows(
+      supabase
+        .from('leads')
+        .select('landing_page_id, status, created_at')
+        .in('landing_page_id', (landingPages || []).map(p => p.id))
+    ),
     getLeadStatusCategoryMap(supabase, userProfile.company_id),
   ])
 
