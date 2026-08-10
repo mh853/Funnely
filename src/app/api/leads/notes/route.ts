@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 // POST /api/leads/notes - Add note to lead
 export async function POST(request: NextRequest) {
@@ -201,7 +202,7 @@ export async function DELETE(request: NextRequest) {
     // Get user's hospital
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
@@ -215,6 +216,7 @@ export async function DELETE(request: NextRequest) {
       .select(
         `
         id,
+        user_id,
         leads!inner (
           company_id
         )
@@ -225,6 +227,12 @@ export async function DELETE(request: NextRequest) {
 
     if (!note || (note.leads as any).company_id !== userProfile.company_id) {
       return NextResponse.json({ error: { message: 'Note not found' } }, { status: 404 })
+    }
+
+    // 같은 회사 소속이기만 하면 작성자와 무관하게 누구나 삭제할 수 있었다 -
+    // 작성자 본인이거나 관리자만 삭제 가능하도록 제한한다(87차 QA).
+    if (note.user_id !== user.id && !isAdminUser(userProfile)) {
+      return NextResponse.json({ error: { message: '삭제 권한이 없습니다.' } }, { status: 403 })
     }
 
     // Delete note
