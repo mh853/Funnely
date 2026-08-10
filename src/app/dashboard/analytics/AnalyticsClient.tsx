@@ -3,14 +3,13 @@
 import { useRouter } from 'next/navigation'
 import { ChevronLeftIcon, ChevronRightIcon, ChartBarIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline'
 import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
-
-// 로컬 타임존 기준 날짜 문자열 (toISOString()은 UTC 반환으로 KST 9PM 이후 날짜가 틀림)
-function toLocalDateStr(date: Date): string {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
-}
+import { toKSTDateStr as toLocalDateStr } from '@/lib/utils/date'
+// 기존엔 getFullYear() 등 런타임의 "로컬" 타임존에 의존하는 자체 함수였는데, 이 페이지는
+// 'use client'라 서버(Vercel=UTC)에서 1차 렌더된 뒤 브라우저(KST 가정)에서 하이드레이션된다.
+// KST로 하루가 넘어가는 시각대(UTC 15~24시 = KST 00~09시)에 생성된 랜딩페이지는 서버가
+// 계산한 날짜와 하이드레이션 후 날짜가 달라져 화면이 깜빡이고 하이드레이션 경고가 났다
+// (84차 QA). toKSTDateStr는 오프셋 산술이라 서버/클라이언트 어디서 실행해도 결과가
+// 동일해 하이드레이션 불일치가 없다.
 
 interface TrafficRow {
   date: string
@@ -302,9 +301,12 @@ export default function AnalyticsClient({
       const totalTrafficMobilePct = totalTraffic > 0 ? ((totalTrafficMobile / totalTraffic) * 100).toFixed(1) : '0.0'
       const totalTrafficTabletPct = totalTraffic > 0 ? ((totalTrafficTablet / totalTraffic) * 100).toFixed(1) : '0.0'
 
-      const totalConversionPcPct = totalConversion > 0 ? ((totalConversionPc / totalConversion) * 100).toFixed(1) : '0.0'
-      const totalConversionMobilePct = totalConversion > 0 ? ((totalConversionMobile / totalConversion) * 100).toFixed(1) : '0.0'
-      const totalConversionTabletPct = totalConversion > 0 ? ((totalConversionTablet / totalConversion) * 100).toFixed(1) : '0.0'
+      // 행별 계산(262-264행)·화면 합계(893-895행)와 동일하게 "전환 구성비"가 아니라
+      // 기기별 전환율(해당 기기 전환수÷해당 기기 트래픽)이어야 한다 - 분모가
+      // totalConversion(전체 전환수)이라 완전히 다른 값이 나오고 있었다(84차 QA).
+      const totalConversionPcPct = totalTrafficPc > 0 ? ((totalConversionPc / totalTrafficPc) * 100).toFixed(1) : '0.0'
+      const totalConversionMobilePct = totalTrafficMobile > 0 ? ((totalConversionMobile / totalTrafficMobile) * 100).toFixed(1) : '0.0'
+      const totalConversionTabletPct = totalTrafficTablet > 0 ? ((totalConversionTablet / totalTrafficTablet) * 100).toFixed(1) : '0.0'
 
       const totalConversionRate = totalTraffic > 0 ? ((totalConversion / totalTraffic) * 100).toFixed(1) : '0.0'
 
