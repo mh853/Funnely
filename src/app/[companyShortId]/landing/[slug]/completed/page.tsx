@@ -42,7 +42,7 @@ export default async function CompletedPage({ params, searchParams }: Props) {
   // 409(중복 제출)로 인한 완료 페이지 이동이면 전환 추적 픽셀을 재발화하지 않는다
   // (실제로 존재하지 않는 두 번째 전환이 광고 플랫폼에 집계되는 것 방지)
   const isDuplicate = duplicate === '1'
-  const completionToken = typeof ct === 'string' ? ct : undefined
+  const rawToken = typeof ct === 'string' ? ct : undefined
   const supabase = getServiceRoleClient()
 
   // Fetch company by short_id with tracking_pixels
@@ -81,6 +81,30 @@ export default async function CompletedPage({ params, searchParams }: Props) {
 
   if (!landingPage) {
     notFound()
+  }
+
+  // ct 토큰이 이전엔 클라이언트가 crypto.randomUUID()로 생성해 서버 검증이 전혀
+  // 없었다 - 실제 제출 없이 URL의 ct 값만 바꿔가며 광고 전환 픽셀(Meta/GA/네이버
+  // 등)을 무제한 위조 발화시킬 수 있었다(86차 QA). 이제 ct는 서버가 실제로 생성한
+  // lead.id이므로, 이 랜딩페이지 소속으로 최근에(30분 이내) 생성된 리드가 맞는지
+  // 확인한 뒤에만 픽셀 발화를 허용한다 - 위조되었거나 오래된 토큰은 토큰이 아예
+  // 없는 것과 동일하게 처리해(CompletionTracker의 기본값 - 미발화) 픽셀을 막는다.
+  let completionToken: string | undefined
+  if (rawToken) {
+    // rawToken이 UUID 형식이 아니면(위조 시도 등) DB가 "invalid input syntax for
+    // type uuid" 에러를 던질 수 있다 - 에러도 미검증과 동일하게 미발화로 처리한다.
+    try {
+      const { data: matchingLead } = await supabase
+        .from('leads')
+        .select('id')
+        .eq('id', rawToken)
+        .eq('landing_page_id', landingPage.id)
+        .gte('created_at', new Date(Date.now() - 30 * 60 * 1000).toISOString())
+        .maybeSingle()
+      completionToken = matchingLead ? rawToken : undefined
+    } catch {
+      completionToken = undefined
+    }
   }
 
   // Extract tracking pixels (handle both object and array formats)

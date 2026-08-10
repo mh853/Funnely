@@ -272,19 +272,23 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   // 완료 페이지로 이동 (pathname 기반으로 서브도메인 중복 shortId 방지)
   // isDuplicate: 409(중복 제출)로 인한 이동이면 true를 전달해 완료 페이지가 전환
   // 추적 픽셀을 재발화하지 않도록 표시한다 (중복 재방문을 신규 전환으로 잘못 집계하는 것 방지)
-  const navigateToCompleted = useCallback((isDuplicate = false) => {
+  const navigateToCompleted = useCallback((isDuplicate = false, leadId?: string) => {
     const currentPath = window.location.pathname
     const completedPath = currentPath.endsWith('/')
       ? `${currentPath}completed`
       : `${currentPath}/completed`
-    if (isDuplicate) {
+    if (isDuplicate || !leadId) {
       window.location.replace(`${completedPath}?duplicate=1`)
       return
     }
     // 제출 성공마다 고유 토큰을 붙여 완료 페이지가 새로고침/재방문 시 픽셀을
     // 재발화하지 않도록 한다(54차 QA 라이브 확인: 이 토큰이 없으면 완료 페이지를
-    // 새로고침할 때마다 전환 픽셀이 매번 다시 발화되고 있었음)
-    window.location.replace(`${completedPath}?ct=${crypto.randomUUID()}`)
+    // 새로고침할 때마다 전환 픽셀이 매번 다시 발화되고 있었음). 이전엔 이 토큰을
+    // 클라이언트에서 crypto.randomUUID()로 생성했는데, 서버가 이 값을 전혀 검증하지
+    // 않아 실제 제출 없이 URL의 ct 값만 바꿔가며 광고 전환 픽셀을 무제한 위조
+    // 발화시킬 수 있었다(86차 QA). 서버가 실제로 생성한 lead.id를 토큰으로 써서
+    // 완료 페이지가 진짜 제출 건인지 검증할 수 있게 한다.
+    window.location.replace(`${completedPath}?ct=${leadId}`)
   }, [])
 
   useEffect(() => {
@@ -405,7 +409,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
       const isBlocked = data?.data?.lead_id === null
 
       // 신청 성공: 완료 페이지로 이동
-      navigateToCompleted(isBlocked)
+      navigateToCompleted(isBlocked, data?.data?.lead_id)
       return
     } catch (err: any) {
       setSubmitError(err.message)
