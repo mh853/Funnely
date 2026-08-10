@@ -345,50 +345,32 @@ export default function CalendarView({
   }
 
   // Get events for a specific day
+  // event.start_time/lead.created_at 등은 실제 타임스탬프라 로컬 게터로 비교하면
+  // 서버(UTC) 첫 렌더와 클라이언트(KST) 하이드레이션이 UTC 15:00~23:59(=KST 익일
+  // 00:00~08:59) 구간의 레코드를 다른 날짜 셀에 배치할 수 있었다(87차 QA). 이 값들과
+  // targetDate(이미 KST 로컬 달력값으로 구성됨)를 toKSTDateStr 문자열 비교로 통일한다.
   const getEventsForDay = (day: number) => {
-    const targetDate = new Date(year, month, day)
-    return events.filter((event) => {
-      const eventDate = new Date(event.start_time)
-      return (
-        eventDate.getFullYear() === targetDate.getFullYear() &&
-        eventDate.getMonth() === targetDate.getMonth() &&
-        eventDate.getDate() === targetDate.getDate()
-      )
-    })
+    const targetDateStr = toKSTDateStr(new Date(year, month, day))
+    return events.filter((event) => toKSTDateStr(new Date(event.start_time)) === targetDateStr)
   }
 
   // Get leads for a specific day (by contract_completed_at for contract_completed status, otherwise preferred_date or created_at)
   const getLeadsForDay = (day: number) => {
-    const targetDate = new Date(year, month, day)
+    const targetDateStr = toKSTDateStr(new Date(year, month, day))
     // 필터링된 localLeads 사용
     return localLeads.filter((lead) => {
       // For contract_completed status, use contract_completed_at date
       if (lead.status === 'contract_completed' && lead.contract_completed_at) {
-        const completedDate = new Date(lead.contract_completed_at)
-        return (
-          completedDate.getFullYear() === targetDate.getFullYear() &&
-          completedDate.getMonth() === targetDate.getMonth() &&
-          completedDate.getDate() === targetDate.getDate()
-        )
+        return toKSTDateStr(new Date(lead.contract_completed_at)) === targetDateStr
       }
       // Check preferred_date first (if set)
       if (lead.preferred_date) {
-        const preferredDate = new Date(lead.preferred_date)
-        if (
-          preferredDate.getFullYear() === targetDate.getFullYear() &&
-          preferredDate.getMonth() === targetDate.getMonth() &&
-          preferredDate.getDate() === targetDate.getDate()
-        ) {
+        if (toKSTDateStr(new Date(lead.preferred_date)) === targetDateStr) {
           return true
         }
       }
       // Otherwise check created_at
-      const createdDate = new Date(lead.created_at)
-      return (
-        createdDate.getFullYear() === targetDate.getFullYear() &&
-        createdDate.getMonth() === targetDate.getMonth() &&
-        createdDate.getDate() === targetDate.getDate()
-      )
+      return toKSTDateStr(new Date(lead.created_at)) === targetDateStr
     })
   }
 
@@ -814,8 +796,9 @@ export default function CalendarView({
                     const dayLeads = localLeads.filter(lead => {
                       const leadDate = lead.preferred_date || lead.created_at
                       if (!leadDate) return false
-                      const d = new Date(leadDate)
-                      return d.toDateString() === day.toDateString()
+                      // toDateString()은 브라우저 로컬 타임존 기준이라 KST가 아닌
+                      // 환경에서는 날짜가 밀릴 수 있다 - toKSTDateStr로 통일(87차 QA).
+                      return toKSTDateStr(new Date(leadDate)) === toKSTDateStr(day)
                     })
                     return (
                       <div
@@ -873,9 +856,11 @@ export default function CalendarView({
                         const isDropTarget = dragOverSlot === slotId
                         const leadsInSlot = localLeads.filter(lead => {
                           // contract_completed_at 기준으로 필터링 (예약 확정일)
+                          // toDateString()은 브라우저 로컬 타임존 기준이라 KST가 아닌
+                          // 환경에서는 날짜가 밀릴 수 있다 - toKSTDateStr로 통일(87차 QA).
                           if (lead.contract_completed_at) {
                             const d = new Date(lead.contract_completed_at)
-                            if (d.toDateString() !== day.toDateString()) return false
+                            if (toKSTDateStr(d) !== toKSTDateStr(day)) return false
                             const leadHour = d.getHours()
                             return leadHour === slotHour
                           }
@@ -883,7 +868,7 @@ export default function CalendarView({
                           const leadDate = lead.preferred_date || lead.created_at
                           if (!leadDate) return false
                           const d = new Date(leadDate)
-                          if (d.toDateString() !== day.toDateString()) return false
+                          if (toKSTDateStr(d) !== toKSTDateStr(day)) return false
                           const leadTime = lead.preferred_time || d.toTimeString().slice(0, 5)
                           const leadHour = parseInt(leadTime.split(':')[0])
                           return leadHour === slotHour
