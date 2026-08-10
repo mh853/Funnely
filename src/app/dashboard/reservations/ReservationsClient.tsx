@@ -228,6 +228,13 @@ export default function ReservationsClient({
     return leadStatuses.map(s => ({ value: s.code, label: s.label, category: s.category || 'other' }))
   }, [leadStatuses])
 
+  // 회사가 '계약확정' 코드를 커스텀 코드로 교체해도(예: 'contract_completed' → 'signed')
+  // 정확한 실제 코드를 보내기 위한 헬퍼(UnifiedDetailModal.tsx의 동일 패턴) - 예약 저장/
+  // 이동 3곳이 리터럴 'contract_completed'를 그대로 보내 커스텀 코드 회사에서 존재하지
+  // 않는 코드로 저장되고 contract_completed_at이 초기화되던 문제(84차 QA).
+  const getCodeForCategory = (category: string): string =>
+    statusOptions.find((o) => o.category === category)?.value ?? category
+
   useEffect(() => {
     const fetchLeadStatuses = async () => {
       const { data } = await supabase
@@ -439,7 +446,7 @@ export default function ReservationsClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: leadDetails.id,
-          status: 'contract_completed',
+          status: getCodeForCategory('contract_completed'),
           contract_completed_at: newContractCompletedAt,
         }),
       })
@@ -646,7 +653,7 @@ export default function ReservationsClient({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           id: draggedLead.id,
-          status: 'contract_completed',
+          status: getCodeForCategory('contract_completed'),
           contract_completed_at: newContractCompletedAt,
           expected_updated_at: draggedLead.updated_at,
         }),
@@ -794,7 +801,7 @@ export default function ReservationsClient({
 
       const updateBody: any = {
         id: scheduleInputLeadId,
-        status: 'contract_completed',
+        status: getCodeForCategory('contract_completed'),
         contract_completed_at: contractCompletedAt,
         expected_updated_at: currentLead?.updated_at,
       }
@@ -859,7 +866,11 @@ export default function ReservationsClient({
 
   // 엑셀 다운로드 핸들러
   const handleExcelDownload = async () => {
-    if (leads.length === 0) {
+    // 화면(달력/목록)은 상담담당자 필터가 적용된 filteredLeads를 기준으로 그려지는데
+    // (leadsByDate가 filteredLeads에서 파생됨) 다운로드는 필터 이전의 전체 leads를
+    // 써서, 특정 담당자로 좁혀 보고 있어도 엑셀엔 다른 담당자 몫까지 전부 포함됐다
+    // (83차 리드목록 export에서 발견된 것과 같은 계열의 화면-다운로드 불일치, 84차 QA).
+    if (filteredLeads.length === 0) {
       toast.error('다운로드할 예약 데이터가 없습니다.')
       return
     }
@@ -870,7 +881,7 @@ export default function ReservationsClient({
 
       // 데이터 가공
       const excelData = await Promise.all(
-        leads.map(async (lead) => {
+        filteredLeads.map(async (lead) => {
           // 랜딩페이지 이름 가져오기
           const landingPageTitle = lead.landing_pages
             ? Array.isArray(lead.landing_pages)
