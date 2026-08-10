@@ -36,6 +36,12 @@ export async function POST(request: NextRequest) {
     if (!normalizedPhone) {
       return NextResponse.json({ error: 'Phone number is required' }, { status: 400 })
     }
+    // 클라이언트(AddBlacklistModal)는 모바일 형식(10~11자리)을 강제하지만 API는 이 검증이
+    // 없어, 직접 호출로 과도하게 긴 값을 보내면 phone_number VARCHAR(20) 제약 위반으로
+    // 처리되지 않은 500이 났다(84차 QA) - 명확한 400으로 미리 거른다.
+    if (normalizedPhone.length > 20) {
+      return NextResponse.json({ error: '전화번호 형식이 올바르지 않습니다.' }, { status: 400 })
+    }
 
     const { data, error } = await supabase
       .from('phone_blacklist')
