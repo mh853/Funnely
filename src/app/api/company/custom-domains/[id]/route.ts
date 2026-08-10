@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 import type { UpdateCustomDomainRequest } from '@/types/custom-domain.types'
 
 type Params = { params: Promise<{ id: string }> }
@@ -56,12 +57,18 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+    }
+
+    // 회사 기본 도메인 지정은 회사 전체 랜딩페이지 라우팅에 영향을 주는 설정이라
+    // 관리자 전용으로 제한한다(86차 QA, RLS도 함께 수정).
+    if (!isAdminUser(userProfile)) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
 
     // 도메인 소유 확인
@@ -134,12 +141,17 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+    }
+
+    // 도메인 삭제도 관리자 전용으로 제한한다(86차 QA, RLS도 함께 수정).
+    if (!isAdminUser(userProfile)) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
 
     // landing_pages.custom_domain_id는 ON DELETE SET NULL이라 도메인을 삭제해도

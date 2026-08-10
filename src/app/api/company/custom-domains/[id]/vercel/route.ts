@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { isAdminUser } from '@/lib/auth/permissions'
 import type { DomainDnsConfig } from '@/types/custom-domain.types'
 
 type Params = { params: Promise<{ id: string }> }
@@ -98,12 +99,17 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+    }
+
+    // Vercel 도메인 등록도 관리자 전용으로 통일한다(86차 QA, RLS도 함께 수정).
+    if (!isAdminUser(userProfile)) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
 
     const { data: domainRaw, error: fetchError } = await supabase

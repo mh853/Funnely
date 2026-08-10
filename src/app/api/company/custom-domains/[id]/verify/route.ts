@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { promises as dns } from 'dns'
+import { isAdminUser } from '@/lib/auth/permissions'
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -36,12 +37,17 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+    }
+
+    // 도메인 인증 트리거도 관리자 전용으로 통일한다(86차 QA, RLS도 함께 수정).
+    if (!isAdminUser(userProfile)) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
 
     // 도메인 조회

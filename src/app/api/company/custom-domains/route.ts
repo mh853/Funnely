@@ -1,6 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import { canUseCustomDomain } from '@/lib/subscription-access'
+import { isAdminUser } from '@/lib/auth/permissions'
 import type { CreateCustomDomainRequest } from '@/types/custom-domain.types'
 
 // 자사 도메인 패턴 (악용 방지)
@@ -77,12 +78,19 @@ export async function POST(request: NextRequest) {
 
     const { data: userProfile } = await supabase
       .from('users')
-      .select('company_id')
+      .select('company_id, simple_role, role')
       .eq('id', user.id)
       .single()
 
     if (!userProfile) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
+    }
+
+    // 커스텀 도메인은 회사 전체 랜딩페이지 라우팅에 영향을 주는 설정이라 companies
+    // UPDATE와 동일하게 관리자 전용으로 제한한다 - 이전엔 회사 소속이기만 하면
+    // viewer 등 최하위 권한도 도메인을 등록할 수 있었다(86차 QA, RLS도 함께 수정).
+    if (!isAdminUser(userProfile)) {
+      return NextResponse.json({ error: '관리자 권한이 필요합니다.' }, { status: 403 })
     }
 
     // 플랜 확인 (소규모 기업 이상만 허용)
