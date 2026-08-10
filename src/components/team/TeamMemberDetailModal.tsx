@@ -102,14 +102,17 @@ export default function TeamMemberDetailModal({
         updateData.role = roleMap[selectedRole] || 'marketing_staff'
       }
 
-      const { error, count } = await supabase
+      // count: 'exact'는 UPDATE 체인에서 이 프로젝트 환경상 항상 null로 돌아와(84차 QA
+      // 실DB 확인) "권한없음/대상없음" 검증이 사실상 늘 통과되고 있었다 - 실제로 갱신된
+      // 행(data)의 존재여부로 판단한다.
+      const { data, error } = await supabase
         .from('users')
         .update(updateData)
         .eq('id', member.id)
-        .select('id', { count: 'exact', head: true })
+        .select('id')
 
       if (error) throw error
-      if (count === 0) throw new Error('저장 권한이 없거나 대상을 찾을 수 없습니다.')
+      if (!data || data.length === 0) throw new Error('저장 권한이 없거나 대상을 찾을 수 없습니다.')
 
       setMessage({ type: 'success', text: '정보가 저장되었습니다.' })
       setTimeout(() => {
@@ -135,14 +138,17 @@ export default function TeamMemberDetailModal({
 
     try {
       const supabase = createClient()
-      const { error, count } = await supabase
+      // count: 'exact'는 UPDATE 체인에서 이 프로젝트 환경상 항상 null로 돌아와(84차 QA
+      // 실DB 확인) 이 검증이 사실상 늘 통과되고 있었다 - 실제로 갱신된 행(data)의
+      // 존재여부로 판단한다.
+      const { data, error } = await supabase
         .from('users')
         .update({ is_active: false })
         .eq('id', member.id)
-        .select('id', { count: 'exact', head: true })
+        .select('id')
 
       if (error) throw error
-      if (count === 0) throw new Error('비활성화 권한이 없거나 대상을 찾을 수 없습니다.')
+      if (!data || data.length === 0) throw new Error('비활성화 권한이 없거나 대상을 찾을 수 없습니다.')
 
       setMessage({ type: 'success', text: '팀원이 비활성화되었습니다.' })
       setTimeout(() => {
