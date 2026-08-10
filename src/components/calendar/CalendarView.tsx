@@ -156,7 +156,14 @@ export default function CalendarView({
   const router = useRouter()
   const toast = useToast()
   const supabase = createClient()
-  const [currentDate, setCurrentDate] = useState(new Date())
+  // new Date()의 로컬 게터를 바로 쓰면 서버(UTC) 첫 렌더와 클라이언트(KST)
+  // 하이드레이션이 자정 근처(00~09시 KST)에 서로 다른 "이번달"을 그려 월간뷰
+  // 헤더/그리드가 하이드레이션 전후로 어긋날 수 있었다(86차 QA) - weekStartDate와
+  // 동일한 패턴으로 KST 날짜를 먼저 구한 뒤 로컬 생성자로 일관되게 계산한다.
+  const [currentDate, setCurrentDate] = useState(() => {
+    const [y, m, d] = toKSTDateStr(new Date()).split('-').map(Number)
+    return new Date(y, m - 1, d)
+  })
   const [calendarMode, setCalendarMode] = useState<CalendarMode>('month')
 
   // 주간 리스트 뷰용 상태 (월요일 시작)

@@ -4,6 +4,7 @@ import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { requirePermission } from '@/lib/admin/rbac-middleware'
 import { PERMISSIONS } from '@/types/rbac'
 import { pickCurrentSubscription } from '@/lib/subscription-current'
+import { getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,8 +26,12 @@ export async function GET(request: NextRequest) {
     )
 
     const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() + 1
+    // 서버(UTC) 로컬 게터로 "이번달"을 구하면 KST 월경계와 최대 9시간 어긋나
+    // 매월 1일 00:00~08:59 KST의 결제가 그 달 내내 "이번달 결제"에서 누락됐다
+    // (86차 QA, KST 타임존 전수조사).
+    const nowKST = getKSTNow()
+    const currentYear = nowKST.getUTCFullYear()
+    const currentMonth = nowKST.getUTCMonth() + 1
 
     // 4. 모든 구독 조회 (plan 정보 포함)
     // subscription_plans!plan_id: company_subscriptions는 plan_id/pending_plan_id 두 개의
@@ -65,11 +70,8 @@ export async function GET(request: NextRequest) {
         .from('payment_transactions')
         .select('total_amount, approved_at, status')
         .eq('status', 'success')
-        .gte(
-          'approved_at',
-          new Date(currentYear, currentMonth - 1, 1).toISOString()
-        )
-        .lt('approved_at', new Date(currentYear, currentMonth, 1).toISOString()),
+        .gte('approved_at', getKSTMonthStart(currentYear, currentMonth).toISOString())
+        .lt('approved_at', getKSTMonthStart(currentYear, currentMonth + 1).toISOString()),
     ])
 
     if (subsError) {

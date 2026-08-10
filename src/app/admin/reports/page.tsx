@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { format, subDays } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Download } from 'lucide-react'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 interface DailyRow {
   date: string
@@ -22,8 +23,10 @@ interface AnalyticsData {
   totals: Omit<DailyRow, 'date'>
 }
 
+// toISOString()은 UTC 기준이라 KST 00~08시대엔 관리자가 "오늘"을 아예 선택할 수
+// 없었다(기본 조회기간과 date input의 max가 모두 어제로 고정됨, 86차 QA).
 function toInputDate(date: Date) {
-  return date.toISOString().split('T')[0]
+  return toKSTDateStr(date)
 }
 
 const COLS = [

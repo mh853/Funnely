@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
+import { getKSTNow, getKSTMonthStart } from '@/lib/utils/date'
 import type { UserDetailResponse } from '@/types/admin'
 
 export async function GET(
@@ -46,8 +47,11 @@ export async function GET(
     }
 
     // 통계 데이터 조회
-    const now = new Date()
-    const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+    // 서버(UTC) 로컬 게터로 "이번달"을 구하면 KST 월경계와 최대 9시간 어긋나
+    // 매월 1일 00:00~08:59 KST에 생성된 리드가 그 달 내내 "이번달 리드"에서
+    // 누락됐다(86차 QA, KST 타임존 전수조사).
+    const nowKST = getKSTNow()
+    const thisMonthStart = getKSTMonthStart(nowKST.getUTCFullYear(), nowKST.getUTCMonth() + 1)
 
     // leads에는 user_id 컬럼이 없다(실제: assigned_to). landing_pages도
     // user_id가 아니라 created_by이며, 발행 여부는 is_published가 아니라
