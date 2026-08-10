@@ -74,6 +74,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: { message: 'Invalid category' } }, { status: 400 })
     }
 
+    // 공백만 '_'로 치환할 뿐 다른 특수문자/이모지/한글은 그대로 통과했다 - 이 code값이
+    // URL 쿼리파라미터·필터조건·categoryMap 키 등 앱 곳곳에서 그대로 재사용되므로
+    // 형식이 깨지면 여러 화면에 영향을 준다(85차 QA). 추적픽셀 ID와 동일한 안전한
+    // 화이트리스트로 제한한다.
+    const normalizedCode = code.toLowerCase().replace(/\s+/g, '_')
+    if (!/^[a-z0-9_-]{1,50}$/.test(normalizedCode)) {
+      return NextResponse.json({ error: { message: '상태 코드는 영문 소문자, 숫자, -, _ 만 사용할 수 있습니다.' } }, { status: 400 })
+    }
+
     // Get user's company and role
     const { data: userProfile } = await supabase
       .from('users')
@@ -106,7 +115,7 @@ export async function POST(request: NextRequest) {
       .from('lead_statuses')
       .insert({
         company_id: userProfile.company_id,
-        code: code.toLowerCase().replace(/\s+/g, '_'),
+        code: normalizedCode,
         label,
         color: color || 'gray',
         sort_order: nextSortOrder,
@@ -190,7 +199,30 @@ export async function PATCH(request: NextRequest) {
     // company_id당 하나만 존재해야 하는 unique index(lead_statuses_one_default_per_company)에
     // 걸려 아래 본 업데이트가 대신 에러를 던진다(77차 QA - 이전엔 이 결과를 확인하지
     // 않아 두 관리자가 동시에 다른 상태를 기본값으로 지정하면 기본값이 2개 공존할 수 있었음).
+    //
+    // 대상 id의 존재/소속 검증보다 이 초기화가 먼저 실행되고 있었다 - id가 유효하지
+    // 않거나(예: 다른 탭에서 방금 삭제됨) 다른 회사 소속이면, .neq('id', id) 조건상
+    // 이 회사의 모든 실제 행이 is_default=false로 커밋된 뒤에야 본 업데이트가 0건
+    // 매치로 404를 반환했다. 트랜잭션이 없어 그 부작용은 롤백되지 않고 그대로 남아
+    // 회사에 기본상태가 하나도 없는 상태가 되며, 이는 DELETE의 마지막 기본상태
+    // 보호 가드까지 무력화시켰다(85차 QA). 초기화 전에 대상이 이 회사 소속으로
+    // 실재하는지 먼저 확인한다.
     if (is_default === true) {
+      const { data: targetExists, error: targetCheckError } = await supabase
+        .from('lead_statuses')
+        .select('id')
+        .eq('id', id)
+        .eq('company_id', userProfile.company_id)
+        .maybeSingle()
+
+      if (targetCheckError) throw targetCheckError
+      if (!targetExists) {
+        return NextResponse.json(
+          { success: false, error: { message: '상태를 찾을 수 없거나 권한이 없습니다.' } },
+          { status: 404 }
+        )
+      }
+
       const { error: unsetError } = await supabase
         .from('lead_statuses')
         .update({ is_default: false })
