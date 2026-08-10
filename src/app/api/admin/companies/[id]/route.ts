@@ -44,9 +44,12 @@ export async function GET(
     }
 
     // OverviewTab이 실제로 읽는 필드는 stats/detailed_stats/recent_activities뿐이다
-    // (admin_user/users/subscription/recent_activity(단수)는 어디서도 소비되지 않으며,
-    // 존재하지 않는 profiles/subscriptions 테이블과 company_id 컬럼이 없는 audit_logs를
-    // 잘못 참조하고 있어 제거한다).
+    // (users/subscription/recent_activity(단수)는 어디서도 소비되지 않으며, 존재하지
+    // 않는 profiles/subscriptions 테이블과 company_id 컬럼이 없는 audit_logs를 잘못
+    // 참조하고 있어 제거한다). 다만 admin_user는 CompanyHeader.tsx가 실제로 읽고
+    // 있는데 이 응답엔 빠져있어 목록 화면(admin/companies)에선 정상 표시되는 담당자가
+    // 상세 페이지에서는 항상 "미지정"으로 보였다(87차 QA) - 목록 API와 동일한 쿼리로
+    // 채운다.
     // 서버(Vercel)는 UTC라서 new Date(year, month, 1)을 그대로 쓰면 KST 기준 매월 1일
     // 00:00~09:00 사이 리드가 전월로 새는 문제가 있어 KST 캘린더 기준으로 계산한다.
     const kstNow = getKSTNow()
@@ -56,6 +59,7 @@ export async function GET(
     const startOfLastMonth = getKSTMonthStart(kstYear, kstMonth - 1).toISOString()
 
     const [
+      { data: adminUserRows },
       { count: totalUsers },
       { count: activeUsers },
       { count: totalLeads },
@@ -64,6 +68,12 @@ export async function GET(
       { count: totalLandingPages },
       { count: activeLandingPages },
     ] = await Promise.all([
+      supabase
+        .from('users')
+        .select('id, full_name, email')
+        .eq('company_id', params.id)
+        .eq('role', 'company_owner')
+        .limit(1),
       supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
@@ -133,6 +143,7 @@ export async function GET(
     // 4. 응답 구성
     const companyDetail = {
       ...company,
+      admin_user: adminUserRows?.[0] || null,
       stats: {
         total_users: totalUsers || 0,
         total_leads: totalLeads || 0,
