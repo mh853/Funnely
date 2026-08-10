@@ -15,6 +15,7 @@ import {
   MagnifyingGlassIcon,
 } from '@heroicons/react/24/outline'
 import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 interface ResultRow {
   date: string
@@ -109,9 +110,14 @@ export default function ReportsClient({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  const now = new Date()
+  // 부모 Server Component(dashboard/reports/page.tsx)는 이미 getKSTNow()로 KST 기준
+  // selectedYear/selectedMonth를 계산해 넘겨주는데, 이 컴포넌트가 별도로 new Date()의
+  // 로컬 게터로 "지금"을 다시 계산해 KST 00~09시대에 서버(UTC) 첫 렌더와 클라이언트
+  // (KST) 하이드레이션이 다른 "이번달"을 그려 다음달 버튼/월선택 드롭다운이 어긋날 수
+  // 있었다(87차 QA). CalendarView.tsx와 동일한 결정적 패턴(오프셋 산술)으로 통일한다.
+  const [nowYear, nowMonth] = toKSTDateStr(new Date()).split('-').map(Number)
   const isCurrentMonth =
-    selectedYear === now.getFullYear() && selectedMonth === now.getMonth() + 1
+    selectedYear === nowYear && selectedMonth === nowMonth
 
   // 탭 상태 관리
   const activeTab = (searchParams.get('tab') as 'monthly' | 'department' | 'staff') || 'monthly'
@@ -170,7 +176,7 @@ export default function ReportsClient({
 
     // 미래 월은 선택 불가
     const targetDate = new Date(newYear, newMonth - 1, 1)
-    const nowDate = new Date(now.getFullYear(), now.getMonth(), 1)
+    const nowDate = new Date(nowYear, nowMonth - 1, 1)
     if (targetDate > nowDate) return
 
     updateFilters({ year: String(newYear), month: String(newMonth) })
@@ -179,7 +185,7 @@ export default function ReportsClient({
   // 월 선택 목록 (최근 12개월)
   const monthOptions = []
   for (let i = 0; i < 12; i++) {
-    const date = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    const date = new Date(nowYear, nowMonth - 1 - i, 1)
     monthOptions.push({
       year: date.getFullYear(),
       month: date.getMonth() + 1,
