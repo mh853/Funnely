@@ -40,8 +40,21 @@ async function registerDomainOnVercel(domain: string): Promise<{
 
     if (!registerRes.ok) {
       const errorData = await registerRes.json()
-      // 이미 등록된 도메인인 경우는 계속 진행 (DNS 설정값 조회)
-      if (errorData.error?.code !== 'domain_already_in_use') {
+      // 우리 프로젝트에 이미 있는 도메인만 재등록으로 인정한다.
+      // 예전엔 domain_already_in_use를 무조건 성공으로 보고 vercel_registered:true를
+      // 찍어, 타 계정 소유 도메인도 DB에 등록된 것처럼 남았다(85차 QA).
+      if (errorData.error?.code === 'domain_already_in_use') {
+        const ownedRes = await fetch(
+          `${VERCEL_API_BASE}/v9/projects/${VERCEL_PROJECT_ID}/domains/${encodeURIComponent(domain)}`,
+          { headers: { Authorization: `Bearer ${VERCEL_TOKEN}` } }
+        )
+        if (!ownedRes.ok) {
+          return {
+            success: false,
+            error: '이 도메인은 다른 Vercel 프로젝트에서 이미 사용 중입니다.',
+          }
+        }
+      } else {
         console.error('[Vercel API] 도메인 등록 실패:', errorData)
         return {
           success: false,
@@ -122,6 +135,13 @@ export async function POST(_request: NextRequest, { params }: Params) {
 
     if (fetchError || !domain) {
       return NextResponse.json({ error: '도메인을 찾을 수 없습니다.' }, { status: 404 })
+    }
+
+    if (domain.verification_status !== 'verified') {
+      return NextResponse.json(
+        { error: '도메인 소유권 인증 후에만 Vercel에 등록할 수 있습니다.' },
+        { status: 409 }
+      )
     }
 
     // Vercel에 도메인 등록

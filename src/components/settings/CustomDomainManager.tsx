@@ -58,18 +58,9 @@ export default function CustomDomainManager() {
         return
       }
 
-      // Vercel에 등록
-      const vercelRes = await fetch(`/api/company/custom-domains/${data.domain.id}/vercel`, {
-        method: 'POST',
-      })
-
-      if (!vercelRes.ok) {
-        const vercelData = await vercelRes.json().catch(() => ({}))
-        toast.error(vercelData.error || 'Vercel 도메인 등록에 실패했습니다. 다시 시도해주세요.')
-        await fetchDomains()
-        return
-      }
-
+      // DNS 소유권 인증 전에는 Vercel에 등록하지 않는다.
+      // 이전엔 추가 직후 Vercel API를 호출해 미소유 도메인을
+      // 프로젝트 한도까지 채울 수 있었다(85차 QA).
       setDnsGuide({
         domainId: data.domain.id,
         domain: data.domain.domain,
@@ -84,6 +75,18 @@ export default function CustomDomainManager() {
     }
   }
 
+  const registerOnVercel = async (domainId: string) => {
+    const vercelRes = await fetch(`/api/company/custom-domains/${domainId}/vercel`, {
+      method: 'POST',
+    })
+    if (!vercelRes.ok) {
+      const vercelData = await vercelRes.json().catch(() => ({}))
+      toast.error(vercelData.error || 'Vercel 도메인 등록에 실패했습니다. 다시 시도해주세요.')
+      return false
+    }
+    return true
+  }
+
   const handleVerify = async (domainId: string) => {
     setVerifying(domainId)
 
@@ -95,6 +98,7 @@ export default function CustomDomainManager() {
 
       if (data.verified) {
         toast.success('도메인 소유권이 확인되었습니다!')
+        await registerOnVercel(domainId)
         await fetchDomains()
       } else {
         toast.error(data.message || 'DNS 레코드를 찾을 수 없습니다. 설정 후 최대 48시간이 소요될 수 있습니다.')
@@ -365,6 +369,11 @@ export default function CustomDomainManager() {
                         랜딩페이지: https://{domain.domain}/landing/...
                       </p>
                     )}
+                    {domain.verification_status === 'verified' && !domain.vercel_registered && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        소유권은 확인됐지만 아직 연결되지 않았습니다.
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
@@ -376,6 +385,24 @@ export default function CustomDomainManager() {
                         className="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-50"
                       >
                         {verifying === domain.id ? '확인 중...' : '인증 확인'}
+                      </button>
+                    )}
+
+                    {domain.verification_status === 'verified' && !domain.vercel_registered && (
+                      <button
+                        onClick={async () => {
+                          setVerifying(domain.id)
+                          try {
+                            const ok = await registerOnVercel(domain.id)
+                            if (ok) await fetchDomains()
+                          } finally {
+                            setVerifying(null)
+                          }
+                        }}
+                        disabled={verifying === domain.id}
+                        className="px-2.5 py-1 text-xs font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {verifying === domain.id ? '연결 중...' : '연결 재시도'}
                       </button>
                     )}
 
