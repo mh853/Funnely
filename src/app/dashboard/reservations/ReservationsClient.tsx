@@ -235,11 +235,16 @@ export default function ReservationsClient({
   const getCodeForCategory = (category: string): string =>
     statusOptions.find((o) => o.category === category)?.value ?? category
 
-  // 반대 방향(코드→범주) 조회. Realtime 구독 핸들러가 다른 세션에서 들어온 코드를
-  // 리터럴 'contract_completed'와 비교하면 커스텀 코드 회사에서 항상 거짓으로
-  // 평가돼 landing_pages 관계 데이터를 놓친다.
+  // 반대 방향(코드→범주) 조회. Realtime 구독 이펙트는 [companyId]에만 의존해
+  // 마운트 시점(대부분 leadStatuses 로드 전 = DEFAULT_STATUS_OPTIONS)의 클로저를
+  // 계속 들고 있으므로, 이후 커스텀 상태가 로드돼도 statusOptions를 직접 참조하면
+  // 갱신되지 않는다 - ref로 최신값을 읽어야 Realtime 핸들러 안에서도 정확하다.
+  const statusOptionsRef = useRef(statusOptions)
+  useEffect(() => {
+    statusOptionsRef.current = statusOptions
+  }, [statusOptions])
   const getCategoryForCode = (code: string): string =>
-    statusOptions.find((o) => o.value === code)?.category ?? code
+    statusOptionsRef.current.find((o) => o.value === code)?.category ?? code
 
   useEffect(() => {
     const fetchLeadStatuses = async () => {
