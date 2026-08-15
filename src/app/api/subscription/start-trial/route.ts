@@ -1,6 +1,7 @@
 // 프로 플랜 7일 무료 체험 시작 API — 서비스 롤로 RLS 우회하여 안정적으로 처리
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export async function POST(request: Request) {
   try {
@@ -33,11 +34,7 @@ export async function POST(request: Request) {
       .eq('id', user.id)
       .maybeSingle() as { data: { company_id: string; role: string | null; simple_role: string | null } | null }
 
-    if (
-      !profile ||
-      (profile.simple_role !== 'admin' &&
-        !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(profile.role || ''))
-    ) {
+    if (!profile || !isAdminOrLegacyOwner(profile)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

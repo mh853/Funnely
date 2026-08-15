@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
 import { canInviteUser } from '@/lib/subscription-access'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 // 초대 링크 생성 API
 export async function POST(request: Request) {
@@ -28,11 +29,7 @@ export async function POST(request: Request) {
     }
 
     // Check if user has permission to invite (admin only)
-    const isAdmin =
-      currentUserProfile.simple_role === 'admin' ||
-      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
-
-    if (!isAdmin) {
+    if (!isAdminOrLegacyOwner(currentUserProfile)) {
       return NextResponse.json({ error: '팀원을 초대할 권한이 없습니다.' }, { status: 403 })
     }
 
@@ -210,11 +207,7 @@ export async function DELETE(request: Request) {
     }
 
     // Check admin permission
-    const isAdmin =
-      currentUserProfile.simple_role === 'admin' ||
-      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)
-
-    if (!isAdmin) {
+    if (!isAdminOrLegacyOwner(currentUserProfile)) {
       return NextResponse.json({ error: '초대를 취소할 권한이 없습니다.' }, { status: 403 })
     }
 

@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import TeamMembersList from '@/components/team/TeamMembersList'
 import InviteUserButton from '@/components/users/InviteUserButton'
 import PendingInvitations from '@/components/team/PendingInvitations'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export default async function TeamPage() {
   const supabase = await createClient()
@@ -30,10 +31,8 @@ export default async function TeamPage() {
     )
   }
 
-  // Check if user has permission to manage team (admin만 팀원 초대 가능)
-  const canManage =
-    userProfile.simple_role === 'admin' ||
-    ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
+  // Check if user has permission to manage team (admin만 팀원 초대 가능, manager 제외)
+  const canManage = isAdminOrLegacyOwner(userProfile)
 
   // Get all team members
   const { data: teamMembers } = await supabase

@@ -1,6 +1,7 @@
 // 체험 구독을 유료 구독으로 전환하는 API (기존 빌링키 재사용)
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -46,12 +47,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (
-    !profile ||
-    profile.company_id !== currentSub.company_id ||
-    (profile.simple_role !== 'admin' &&
-      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(profile.role))
-  ) {
+  if (!profile || profile.company_id !== currentSub.company_id || !isAdminOrLegacyOwner(profile)) {
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
   }
 

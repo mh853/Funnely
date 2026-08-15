@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 // GET - 이메일 목록 조회
 export async function GET(request: NextRequest) {
@@ -72,13 +73,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
-    // Check permission - 원래 의도(회사 관리자 전용, manager 제외)는 유지하되
-    // 레거시 role(hospital_owner/hospital_admin)과 simple_role='admin' 폴백
-    // 누락만 보완 (dashboard/settings/page.tsx canEdit과 동일 기준)
-    const isCompanyAdmin =
-      userProfile.simple_role === 'admin' ||
-      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
-    if (!isCompanyAdmin) {
+    // Check permission - 회사 관리자 전용(manager 제외), dashboard/settings/page.tsx
+    // canEdit과 동일 기준
+    if (!isAdminOrLegacyOwner(userProfile)) {
       return NextResponse.json(
         { error: '권한이 없습니다. 회사 관리자만 수정할 수 있습니다.' },
         { status: 403 }
@@ -176,13 +173,9 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'User profile not found' }, { status: 404 })
     }
 
-    // Check permission - 원래 의도(회사 관리자 전용, manager 제외)는 유지하되
-    // 레거시 role(hospital_owner/hospital_admin)과 simple_role='admin' 폴백
-    // 누락만 보완 (dashboard/settings/page.tsx canEdit과 동일 기준)
-    const isCompanyAdmin =
-      userProfile.simple_role === 'admin' ||
-      ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
-    if (!isCompanyAdmin) {
+    // Check permission - 회사 관리자 전용(manager 제외), dashboard/settings/page.tsx
+    // canEdit과 동일 기준
+    if (!isAdminOrLegacyOwner(userProfile)) {
       return NextResponse.json(
         { error: '권한이 없습니다. 회사 관리자만 수정할 수 있습니다.' },
         { status: 403 }

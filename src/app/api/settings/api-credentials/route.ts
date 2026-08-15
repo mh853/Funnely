@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { encryptCredentials, decryptCredentials } from '@/lib/encryption/credentials'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 const VALID_PLATFORMS = ['meta', 'kakao', 'google']
 
@@ -29,11 +30,8 @@ export async function GET() {
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    // 저장된 시크릿은 회사 관리자만 열람할 수 있다 (viewer 등 일반 구성원 제외).
-    if (
-      userProfile.simple_role !== 'admin' &&
-      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
-    ) {
+    // 저장된 시크릿은 회사 관리자만 열람할 수 있다 (manager 등 일반 구성원 제외).
+    if (!isAdminOrLegacyOwner(userProfile)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 
@@ -82,10 +80,7 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
     }
 
-    if (
-      userProfile.simple_role !== 'admin' &&
-      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
-    ) {
+    if (!isAdminOrLegacyOwner(userProfile)) {
       return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
     }
 

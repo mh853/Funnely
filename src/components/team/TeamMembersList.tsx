@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { UserCircleIcon, ClipboardDocumentIcon, CheckIcon } from '@heroicons/react/24/outline'
 import { formatDateTime } from '@/lib/utils/date'
+import { isAdminUser } from '@/lib/auth/permissions'
 import TeamMemberDetailModal from './TeamMemberDetailModal'
 
 interface TeamMember {
@@ -66,7 +67,7 @@ export default function TeamMembersList({
 
   // simple_role + role 기반 배지 색상
   const getSimpleRoleBadgeColor = (simpleRole?: string, role?: string): string => {
-    const isAdmin = simpleRole === 'admin' || simpleRole === 'manager' || (role && OWNER_ROLES.includes(role))
+    const isAdmin = isAdminUser({ simple_role: simpleRole, role })
     if (isAdmin) return simpleRole === 'manager' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
     return 'bg-gray-100 text-gray-800'
   }

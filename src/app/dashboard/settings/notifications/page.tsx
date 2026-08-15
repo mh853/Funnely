@@ -2,6 +2,7 @@ import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { BellIcon } from '@heroicons/react/24/outline'
 import NotificationEmailSettings from '@/components/settings/NotificationEmailSettings'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export default async function NotificationSettingsPage() {
   const supabase = await createClient()
@@ -50,10 +51,8 @@ export default async function NotificationSettingsPage() {
 
   // Check permissions
   // 백엔드(/api/settings/notification-emails, /api/notifications/test-lead-email)와
-  // 동일한 기준(레거시 role 4종 + simple_role='admin' 폴백)으로 맞춘다.
-  const canEdit =
-    userProfile.simple_role === 'admin' ||
-    ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(userProfile.role)
+  // 동일한 기준(isAdminOrLegacyOwner, manager 제외)으로 맞춘다.
+  const canEdit = isAdminOrLegacyOwner(userProfile)
 
   return (
     <div className="px-4 space-y-6">

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export async function PATCH(
   request: Request,
@@ -21,7 +22,7 @@ export async function PATCH(
     // Get current user's profile to check permissions
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('users')
-      .select('company_id, role')
+      .select('company_id, role, simple_role')
       .eq('id', user.id)
       .single()
 
@@ -30,7 +31,7 @@ export async function PATCH(
     }
 
     // Check if user has permission to edit (company_owner or company_admin)
-    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
+    if (!isAdminOrLegacyOwner(currentUserProfile)) {
       return NextResponse.json({ error: '팀원을 수정할 권한이 없습니다.' }, { status: 403 })
     }
 
@@ -148,7 +149,7 @@ export async function DELETE(
     // Get current user's profile to check permissions
     const { data: currentUserProfile, error: profileError } = await supabase
       .from('users')
-      .select('company_id, role')
+      .select('company_id, role, simple_role')
       .eq('id', user.id)
       .single()
 
@@ -157,7 +158,7 @@ export async function DELETE(
     }
 
     // Check if user has permission to delete (company_owner or company_admin)
-    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(currentUserProfile.role)) {
+    if (!isAdminOrLegacyOwner(currentUserProfile)) {
       return NextResponse.json({ error: '팀원을 삭제할 권한이 없습니다.' }, { status: 403 })
     }
 

@@ -1,6 +1,7 @@
 // toss-billing-auth 에지 함수 프록시: 인증 검증 후 에지 함수 호출
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -40,12 +41,7 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .maybeSingle()
 
-  if (
-    !profile ||
-    profile.company_id !== currentSub.company_id ||
-    (profile.simple_role !== 'admin' &&
-      !['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'].includes(profile.role))
-  ) {
+  if (!profile || profile.company_id !== currentSub.company_id || !isAdminOrLegacyOwner(profile)) {
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
   }
 
