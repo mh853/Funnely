@@ -9,7 +9,10 @@
  */
 export function toKSTDateStr(date: Date): string {
   const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
-  return kst.toISOString().split('T')[0]
+  const y = kst.getUTCFullYear()
+  const m = String(kst.getUTCMonth() + 1).padStart(2, '0')
+  const d = String(kst.getUTCDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
 }
 
 /**

@@ -7,6 +7,7 @@ import { format } from 'date-fns'
 import { ko } from 'date-fns/locale'
 import { Pagination } from '@/components/ui/pagination'
 import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 interface Company {
   id: string
@@ -431,7 +432,7 @@ export default function CompaniesPage() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `고객사_${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `고객사_${toKSTDateStr(new Date())}.csv`
       a.click()
       URL.revokeObjectURL(url)
     } catch (err) {

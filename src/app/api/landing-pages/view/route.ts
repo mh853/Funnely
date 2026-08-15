@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 // Service role client for bypassing RLS
 function getServiceRoleClient() {
@@ -41,15 +42,6 @@ function getDeviceType(userAgent: string | null): DeviceType {
   return 'desktop'
 }
 
-// Get today's date in YYYY-MM-DD format (KST)
-function getTodayDateKST(): string {
-  const now = new Date()
-  // Convert to KST (UTC+9)
-  const kstOffset = 9 * 60 * 60 * 1000
-  const kstDate = new Date(now.getTime() + kstOffset)
-  return kstDate.toISOString().split('T')[0]
-}
-
 // POST /api/landing-pages/view - Increment page view count
 export async function POST(request: NextRequest) {
   try {
@@ -87,7 +79,7 @@ export async function POST(request: NextRequest) {
 
     const userAgent = request.headers.get('user-agent')
     const deviceType = getDeviceType(userAgent)
-    const today = getTodayDateKST()
+    const today = toKSTDateStr(new Date())
 
     // 1. Increment total views_count in landing_pages table
     const { error: rpcError } = await supabase.rpc('increment_landing_page_views', {

@@ -3,10 +3,6 @@ import { requireSuperAdmin } from '@/lib/admin/permissions'
 import { createClient } from '@supabase/supabase-js'
 import { toKSTDateStr, getKSTDayRange } from '@/lib/utils/date'
 
-function toDateString(date: Date) {
-  return date.toISOString().split('T')[0]
-}
-
 function addDays(date: Date, days: number) {
   const d = new Date(date)
   d.setDate(d.getDate() + days)
@@ -38,7 +34,9 @@ export async function GET(request: NextRequest) {
     const dates: string[] = []
     let cur = fromDate
     while (cur <= toDate) {
-      dates.push(toDateString(cur))
+      dates.push(
+        `${cur.getUTCFullYear()}-${String(cur.getUTCMonth() + 1).padStart(2, '0')}-${String(cur.getUTCDate()).padStart(2, '0')}`
+      )
       cur = addDays(cur, 1)
     }
 

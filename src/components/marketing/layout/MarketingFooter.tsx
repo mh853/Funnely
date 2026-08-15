@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { config } from '@/lib/config'
+import { getKSTNow } from '@/lib/utils/date'
 
 type NavItem = { name: string; href: string | null }
 
@@ -106,7 +107,7 @@ export default function MarketingFooter() {
             {config.business.email && <> | 이메일: {config.business.email}</>}
           </p>
           <p className="mt-4 text-xs leading-5 text-gray-400">
-            &copy; {new Date().getFullYear()} Funnely. All rights reserved.
+            &copy; {getKSTNow().getUTCFullYear()} Funnely. All rights reserved.
           </p>
         </div>
       </div>

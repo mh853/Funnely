@@ -79,7 +79,7 @@ export async function GET(request: Request) {
       if (granularity === 'week') {
         const asUTC = new Date(Date.UTC(y, m - 1, day))
         const weekStart = new Date(Date.UTC(y, m - 1, day - asUTC.getUTCDay()))
-        return weekStart.toISOString().split('T')[0]
+        return `${weekStart.getUTCFullYear()}-${String(weekStart.getUTCMonth() + 1).padStart(2, '0')}-${String(weekStart.getUTCDate()).padStart(2, '0')}`
       } else if (granularity === 'month') {
         return `${y}-${String(m).padStart(2, '0')}`
       }

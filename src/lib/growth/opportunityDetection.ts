@@ -2,6 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import { getKSTNow } from '@/lib/utils/date'
 import {
   detectUsageLimitSignals,
   detectActivityGrowthSignals,
@@ -193,15 +194,22 @@ async function detectSignalsForCompany(
 ): Promise<Signal[]> {
   const signals: Signal[] = []
 
-  // Get current month's usage
-  const currentMonth = new Date()
-  currentMonth.setDate(1) // First day of current month
+  // Get current month's usage (KST 기준 - 서버는 UTC라 로컬 게터를 쓰면
+  // KST 자정~오전9시 사이 "이번달"이 전달로 오판된다)
+  const kstNow = getKSTNow()
+  const currentYear = kstNow.getUTCFullYear()
+  const currentMonthIndex = kstNow.getUTCMonth() // 0-indexed
+  const monthStr = (year: number, monthIndex: number) => {
+    const d = new Date(Date.UTC(year, monthIndex, 1))
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-01`
+  }
+  const currentMonthStr = monthStr(currentYear, currentMonthIndex)
 
   const { data: currentUsage } = await supabase
     .from('usage_metrics')
     .select('*')
     .eq('company_id', companyId)
-    .eq('metric_month', currentMonth.toISOString().split('T')[0])
+    .eq('metric_month', currentMonthStr)
     .single()
 
   if (!currentUsage) {
@@ -209,14 +217,13 @@ async function detectSignalsForCompany(
   }
 
   // Get previous month's usage
-  const previousMonth = new Date(currentMonth)
-  previousMonth.setMonth(previousMonth.getMonth() - 1)
+  const previousMonthStr = monthStr(currentYear, currentMonthIndex - 1)
 
   const { data: previousUsage } = await supabase
     .from('usage_metrics')
     .select('*')
     .eq('company_id', companyId)
-    .eq('metric_month', previousMonth.toISOString().split('T')[0])
+    .eq('metric_month', previousMonthStr)
     .single()
 
   // Detect usage limit signals
@@ -244,14 +251,13 @@ async function detectSignalsForCompany(
   }
 
   // Get recent 3 months usage for under-utilization check
-  const threeMonthsAgo = new Date(currentMonth)
-  threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3)
+  const threeMonthsAgoStr = monthStr(currentYear, currentMonthIndex - 3)
 
   const { data: recentMetrics } = await supabase
     .from('usage_metrics')
     .select('*')
     .eq('company_id', companyId)
-    .gte('metric_month', threeMonthsAgo.toISOString().split('T')[0])
+    .gte('metric_month', threeMonthsAgoStr)
     .order('metric_month', { ascending: false })
     .limit(3)
 

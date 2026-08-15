@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
 import { decryptPhone } from '@/lib/encryption/phone'
 import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 // 값에 큰따옴표가 포함되면 CSV 구조 자체가 깨지므로("" 로 이스케이프해야 함),
 // 무조건 큰따옴표로 감싸기 전에 내부 큰따옴표를 두 배로 이스케이프해야 한다(RFC 4180).
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
     return new NextResponse('﻿' + csvData, {
       headers: {
         'Content-Type': 'text/csv; charset=utf-8',
-        'Content-Disposition': `attachment; filename="${type}_export_${new Date().toISOString().split('T')[0]}.csv"`,
+        'Content-Disposition': `attachment; filename="${type}_export_${toKSTDateStr(new Date())}.csv"`,
       },
     })
   } catch (error) {

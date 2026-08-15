@@ -7,6 +7,7 @@ import SimpleStatsCard from '../components/SimpleStatsCard'
 import TrendsChart from '../components/TrendsChart'
 import TopCompaniesTable from '../components/TopCompaniesTable'
 import ActivityFeed from '../components/ActivityFeed'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 interface DashboardData {
   trends: Array<{
@@ -82,7 +83,7 @@ export default function EnhancedDashboard() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${type}_export_${new Date().toISOString().split('T')[0]}.csv`
+      a.download = `${type}_export_${toKSTDateStr(new Date())}.csv`
       document.body.appendChild(a)
       a.click()
       window.URL.revokeObjectURL(url)

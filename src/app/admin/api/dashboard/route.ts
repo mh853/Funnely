@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { requireSuperAdmin } from '@/lib/admin/permissions'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 export async function GET() {
   try {
@@ -76,7 +77,7 @@ async function getTrendsData(supabase: any, startDate: Date) {
       ])
 
       monthlyData.push({
-        date: monthStart.toISOString().split('T')[0],
+        date: toKSTDateStr(monthStart),
         companies: companies || 0,
         users: users || 0,
         leads: leads || 0,

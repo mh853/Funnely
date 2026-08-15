@@ -15,6 +15,7 @@ import {
   Eye,
 } from 'lucide-react'
 import { sanitizeForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
+import { toKSTDateStr } from '@/lib/utils/date'
 
 interface AuditLog {
   id: string
@@ -178,7 +179,7 @@ export default function AuditLogsPage() {
     })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
-    link.download = `audit-logs-${new Date().toISOString().split('T')[0]}.csv`
+    link.download = `audit-logs-${toKSTDateStr(new Date())}.csv`
     link.click()
   }
 
