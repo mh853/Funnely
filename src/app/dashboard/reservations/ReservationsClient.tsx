@@ -235,6 +235,12 @@ export default function ReservationsClient({
   const getCodeForCategory = (category: string): string =>
     statusOptions.find((o) => o.category === category)?.value ?? category
 
+  // 반대 방향(코드→범주) 조회. Realtime 구독 핸들러가 다른 세션에서 들어온 코드를
+  // 리터럴 'contract_completed'와 비교하면 커스텀 코드 회사에서 항상 거짓으로
+  // 평가돼 landing_pages 관계 데이터를 놓친다.
+  const getCategoryForCode = (code: string): string =>
+    statusOptions.find((o) => o.value === code)?.category ?? code
+
   useEffect(() => {
     const fetchLeadStatuses = async () => {
       const { data } = await supabase
@@ -1055,9 +1061,10 @@ export default function ReservationsClient({
           if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
             const newLead = payload.new as any
 
-            // contract_completed 상태이고 contract_completed_at이 있는 경우만 처리
+            // contract_completed 범주이고 contract_completed_at이 있는 경우만 처리
+            // (리터럴 코드 비교는 커스텀 코드 회사에서 항상 거짓으로 평가됨 - QA 반복패턴 #5)
             if (
-              newLead.status === 'contract_completed' &&
+              getCategoryForCode(newLead.status) === 'contract_completed' &&
               newLead.contract_completed_at
             ) {
               // landing_pages 정보를 가져오기 위해 추가 쿼리
