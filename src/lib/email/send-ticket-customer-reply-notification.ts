@@ -1,15 +1,6 @@
 // 고객이 지원 티켓에 후속 메시지를 남겼음을 담당 관리자(또는 전체 super admin)에게 알리는 헬퍼
-import { Resend } from 'resend'
 import { escapeHtml } from '@/lib/email/template-renderer'
-
-let resend: Resend | null = null
-
-function getResendClient() {
-  if (!resend && process.env.RESEND_API_KEY) {
-    resend = new Resend(process.env.RESEND_API_KEY)
-  }
-  return resend
-}
+import { sendAndLogEmail } from '@/lib/email/send-and-log'
 
 interface TicketCustomerReplyNotificationData {
   recipientEmails: string[]
@@ -69,22 +60,25 @@ export async function sendTicketCustomerReplyNotificationEmail(
 
   const textContent = `${companyName}에서 "${ticketSubject}" 문의에 답글을 남겼습니다.\n\n${messageContent}\n\n관리자 페이지에서 확인하기: ${adminUrl}`
 
-  const client = getResendClient()
-  if (!client) {
-    throw new Error('Resend API key is not configured')
+  const results = await Promise.allSettled(
+    recipientEmails.map((to) =>
+      sendAndLogEmail({
+        to,
+        subject,
+        html: htmlContent,
+        text: textContent,
+        kind: 'ticket_customer_reply',
+      })
+    )
+  )
+
+  const succeeded = results.filter((r) => r.status === 'fulfilled')
+  if (succeeded.length === 0) {
+    const first = results[0]
+    if (first && first.status === 'rejected') throw first.reason
+    throw new Error('Failed to send ticket customer reply notification')
   }
 
-  const { data: emailData, error } = await client.emails.send({
-    from: 'Funnely <noreply@funnely.co.kr>',
-    to: recipientEmails,
-    subject,
-    html: htmlContent,
-    text: textContent,
-  })
-
-  if (error) {
-    throw error
-  }
-
-  return { success: true, emailId: emailData?.id }
+  const firstOk = succeeded[0] as PromiseFulfilledResult<{ success: boolean; emailId?: string }>
+  return { success: true, emailId: firstOk.value.emailId }
 }

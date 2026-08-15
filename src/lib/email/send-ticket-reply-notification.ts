@@ -1,15 +1,6 @@
 // 고객지원 티켓 공식 답변을 고객에게 즉시 이메일로 알리는 헬퍼
-import { Resend } from 'resend'
 import { escapeHtml } from '@/lib/email/template-renderer'
-
-let resend: Resend | null = null
-
-function getResendClient() {
-  if (!resend && process.env.RESEND_API_KEY) {
-    resend = new Resend(process.env.RESEND_API_KEY)
-  }
-  return resend
-}
+import { sendAndLogEmail } from '@/lib/email/send-and-log'
 
 interface TicketReplyNotificationData {
   recipientEmail: string
@@ -63,22 +54,11 @@ export async function sendTicketReplyNotificationEmail(data: TicketReplyNotifica
 
   const textContent = `문의하신 "${ticketSubject}"에 답변이 등록되었습니다.\n\n${replyMessage}\n\n대시보드에서 확인하기: ${dashboardUrl}`
 
-  const client = getResendClient()
-  if (!client) {
-    throw new Error('Resend API key is not configured')
-  }
-
-  const { data: emailData, error } = await client.emails.send({
-    from: 'Funnely <noreply@funnely.co.kr>',
-    to: [recipientEmail],
+  return sendAndLogEmail({
+    to: recipientEmail,
     subject,
     html: htmlContent,
     text: textContent,
+    kind: 'ticket_admin_reply',
   })
-
-  if (error) {
-    throw error
-  }
-
-  return { success: true, emailId: emailData?.id }
 }

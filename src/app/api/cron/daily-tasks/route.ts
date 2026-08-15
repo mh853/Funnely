@@ -12,6 +12,7 @@ import {
 import { detectGrowthOpportunities } from '@/lib/growth/opportunityDetection'
 import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
+import { FROM_ADDRESS, MAX_RETRIES } from '@/lib/email/constants'
 import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 import { escapeHtml } from '@/lib/email/template-renderer'
 import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
@@ -196,6 +197,24 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Payment notifications error:', error)
       results.tasksExecuted.push({
         task: 'payment_notifications',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 6b: Retry pending transactional emails (ticket reply 등)
+    console.log('[Cron] Retrying pending transactional emails')
+    try {
+      const retryResult = await retryPendingTransactionalEmails(supabase)
+      results.tasksExecuted.push({
+        task: 'transactional_email_retry',
+        status: 'success',
+        ...retryResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Transactional email retry error:', error)
+      results.tasksExecuted.push({
+        task: 'transactional_email_retry',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -1192,6 +1211,7 @@ async function sendLeadDigestEmails(supabase: any) {
 
     // Send digest email to each recipient
     let anyRecipientSucceeded = false
+    const failedRecipients: string[] = []
     for (const recipientEmail of recipientEmails) {
       try {
         const htmlContent = generateDigestEmailHTML(companyName, leadItems, dashboardUrl)
@@ -1232,6 +1252,7 @@ async function sendLeadDigestEmails(supabase: any) {
         }
       } catch (error) {
         console.error(`[Lead Digest] Failed to send to ${recipientEmail}:`, error)
+        failedRecipients.push(recipientEmail)
         totalFailed++
 
         // Log failed send
@@ -1250,13 +1271,26 @@ async function sendLeadDigestEmails(supabase: any) {
       }
     }
 
-    if (anyRecipientSucceeded) {
-      // Mark all notifications as sent
+    if (failedRecipients.length === 0) {
       const notificationIds = notifications.map((n) => n.id)
       await supabase
         .from('lead_notification_queue')
         .update({ sent: true, sent_at: now })
         .in('id', notificationIds)
+    } else if (anyRecipientSucceeded) {
+      // 일부만 성공하면 배치 전체를 sent로 두지 않고, 실패한 수신자만 남겨 재시도한다.
+      for (const notification of notifications) {
+        await supabase
+          .from('lead_notification_queue')
+          .update({
+            recipient_emails: failedRecipients,
+            retry_count: (notification.retry_count || 0) + 1,
+          })
+          .eq('id', notification.id)
+      }
+      console.warn(
+        `[Lead Digest] Partial send for company ${companyId}: ${failedRecipients.length} recipient(s) remaining`
+      )
     } else {
       // 수신자 전원 발송 실패(예: Resend 장애) - 이전에는 이 경우에도 무조건
       // sent:true로 마킹해 재시도 없이 그날 알림이 영구 유실됐다. retry_count를
@@ -1372,6 +1406,79 @@ async function sendPaymentNotificationEmails(supabase: any) {
     emailsSent,
     emailsFailed,
     message: `Processed ${pending.length} payment notifications`,
+  }
+}
+
+/**
+ * email_logs에 pending으로 남은 트랜잭션 메일(티켓 답변 등)을 재발송한다.
+ * sendAndLogEmail이 첫 실패를 pending으로 남겨 두므로, 이 크론이 최대 MAX_RETRIES회까지 재시도한다.
+ */
+async function retryPendingTransactionalEmails(supabase: any) {
+  const { data: pending, error: queryError } = await supabase
+    .from('email_logs')
+    .select('*')
+    .eq('status', 'pending')
+    .order('created_at', { ascending: true })
+    .limit(50)
+
+  if (queryError) {
+    throw new Error(`email_logs 조회 실패: ${queryError.message}`)
+  }
+
+  if (!pending || pending.length === 0) {
+    return { total: 0, emailsSent: 0, emailsFailed: 0, message: 'No pending transactional emails' }
+  }
+
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  let emailsSent = 0
+  let emailsFailed = 0
+
+  for (const log of pending) {
+    const retryCount = Number(log.metadata?.retry_count || 0)
+    if (retryCount >= MAX_RETRIES) {
+      await supabase.from('email_logs').update({ status: 'failed' }).eq('id', log.id)
+      emailsFailed++
+      continue
+    }
+
+    try {
+      const { error: sendError } = await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: [log.to_email],
+        subject: log.subject,
+        html: log.body_html,
+        text: log.metadata?.text || undefined,
+      })
+      if (sendError) throw sendError
+
+      await supabase
+        .from('email_logs')
+        .update({
+          status: 'sent',
+          sent_at: new Date().toISOString(),
+          error_message: null,
+        })
+        .eq('id', log.id)
+      emailsSent++
+    } catch (error) {
+      const nextRetry = retryCount + 1
+      await supabase
+        .from('email_logs')
+        .update({
+          status: nextRetry >= MAX_RETRIES ? 'failed' : 'pending',
+          error_message: error instanceof Error ? error.message : 'Unknown error',
+          metadata: { ...(log.metadata || {}), retry_count: nextRetry },
+        })
+        .eq('id', log.id)
+      emailsFailed++
+    }
+  }
+
+  return {
+    total: pending.length,
+    emailsSent,
+    emailsFailed,
+    message: `Processed ${pending.length} pending transactional emails`,
   }
 }
 
