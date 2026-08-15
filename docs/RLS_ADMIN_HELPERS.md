@@ -81,37 +81,52 @@
 `api/admin/payments/[id]/refund`) 모두 서비스롤 클라이언트를 쓰고 있어(RLS 자체를
 우회) 실질적 문제는 없다 - 의도된 상태로 보고 조치하지 않는다.
 
-## 앱(TypeScript) 쪽에도 같은 모양의 미채택 문제가 있다
+## 앱(TypeScript) 쪽에도 같은 모양의 미채택 문제가 있었다 - 처리 완료
 
 RLS가 DB 레벨 안전망이라면, 실제 세밀한 인가는 API 라우트가 담당한다(과거 인시던트
-문서의 철학과 일치). 그런데 `src/lib/auth/permissions.ts`에 이미 공용 헬퍼
-`isAdminUser()`가 있는데도, 관리자 role 배열을 `.includes(...)`로 직접 인라인 반복하는
-파일이 **22개** 있다(`convert-trial`, `proxy-billing-auth`, `users/[id]`,
-`users/invite`, `campaigns` 등). RLS 쪽 헬퍼가 처음엔 없다가 QA 라운드를 거치며 생긴
-것과 마찬가지로, 이 TS 헬퍼도 아직 완전히 퍼지지 않은 상태다 - **패턴1의 라이브
-재발 경로는 지금은 DB보다 오히려 앱 코드 쪽에 있다.**
+문서의 철학과 일치). `src/lib/auth/permissions.ts`에 공용 헬퍼가 있는데도 22개 파일이
+관리자 role 배열을 `.includes(...)`로 직접 인라인 반복하고 있던 것을 발견해
+2026-08-15 세션에서 정리했다(커밋 991d9f9).
 
-주의할 점 하나: `isAdminUser()`의 판정 기준이 RLS의 `am_i_admin_or_legacy_owner()`와
-미묘하게 다르다 - TS 버전은 `simple_role === 'manager'`도 관리자로 인정하지만 RLS
-버전은 `simple_role === 'admin'`만 인정한다. 이 차이가 의도된 정책인지 드리프트인지는
-확인하지 않았다(정책 판단이 필요해 보임 - 아래 참고).
+**처음엔 "TS 헬퍼가 manager를 관리자로 인정하는 게 RLS 대비 드리프트"라고 의심했으나,
+조사 결과 드리프트가 아니라 의도적으로 분리된 2단계(two-tier) 체계였다** - 세 곳에서
+독립적으로 같은 결론에 도달한 증거를 찾았다.
 
-## 남은 선택지 (코드 변경 없음, 사용자 결정 필요)
+1. `isAdminUser()`(wide, manager 포함)는 2026-06-26(a4e05e5)에 "simple_role='manager'
+   계정이 실제 관리자인데도 차단되는" UX 버그를 고치려고 만들어졌다.
+2. `dashboard/settings/page.tsx`는 이미 같은 파일 안에서 `isAdminUser()`(링크 노출용,
+   wide)와 `canEdit`(회사정보 실제 수정용, manager 제외 - "RLS 정책과 동일한 범위로
+   맞춤"이라는 주석)을 나란히 쓰고 있었다.
+3. `proxy-billing-auth`/`convert-trial`의 주석도 "RLS와 인가 기준을 반드시 일치시켜야
+   한다"고 명시하고 있었다 - 이 두 라우트는 서비스롤 클라이언트를 쓰기 때문에 이
+   앱 코드 체크가 유일한 인가 장치다.
 
-두 가지 후속 작업이 가능하다. 둘 다 이번 세션에서 실행하지 않았다 - 블라스트 반경과
-성격이 크게 달라 각각 독립적인 판단이 필요하다.
+즉 **RLS 쪽 `am_i_admin_or_legacy_owner()`가 manager를 빼는 것도, TS 쪽
+`isAdminUser()`가 manager를 넣는 것도 둘 다 옳다** - 게이트하는 동작의 민감도가
+다르기 때문이다. `permissions.ts`에 이제 두 헬퍼가 있다.
 
-1. **RLS 쪽 110개 정책의 인라인 서브쿼리를 헬퍼 함수 호출로 교체.** 53개 테이블에
-   걸쳐 있고 라이브 보안 정책을 직접 건드리는 대규모 기계적 마이그레이션이다. 86차
-   전례(드라이런 → `pg_policies` 재조회 검증 → 사용자 승인 → `ALTER POLICY`로 적용,
-   DROP+CREATE의 차단 공백 구간 회피)를 그대로 따라야 하고, `authenticated` 역할의
-   실제 JWT로 검증해야 한다(서비스롤 클라이언트는 RLS를 우회하므로 테스트가 항상
-   "통과"로 나와 의미가 없다). 이득은 "다음 전역 인가규칙 변경이 43KB짜리 마이그레이션
-   대신 함수 하나 수정으로 끝난다"는 것.
-2. **앱 쪽 22개 파일의 인라인 role 배열을 `isAdminUser()` 호출로 교체.** 순수 TypeScript
-   변경이라 마이그레이션이 없고 블라스트 반경이 훨씬 작다. 단, 위에서 발견한
-   `manager`/`admin` 판정 차이를 먼저 정리해야 한다 - 그대로 교체하면 `manager`
-   역할의 동작이 파일별로 달라질 수 있어 정책 판단이 선행돼야 한다.
+- **wide** `isAdminUser()` - manager 포함. 화면/링크 노출, 눌러도 그 안에서 다시
+  걸러지는 곳.
+- **strict** `isAdminOrLegacyOwner()` - admin만 인정, RLS의
+  `am_i_admin_or_legacy_owner()`와 범위를 맞춤. 실제 상태변경, 특히 서비스롤이라
+  앱 코드 체크가 유일한 인가 장치인 결제 라우트.
+
+22개 "히트" 중 실제로 admin 전용 체크였던 11곳(파일별 상세는 커밋 991d9f9 참고)은
+strict로 교체했다. 나머지는 손대지 않았다 - 8곳은 marketing_manager/staff까지 포함하는
+전혀 다른(더 넓은) 권한셋이라 admin 체크가 아니었고(campaigns, ad-accounts,
+sync/campaigns, auth/callback/meta, users/invite의 GET), 2곳은 이미 `isAdminUser()`를
+쓰고 있었고(leads/payments/audit, leads/distribute), 1곳은 SQL 필터라 성격이 달랐다
+(cron/daily-tasks의 `.in('role', [...])`).
+
+## 남은 선택지: RLS 쪽 110개 정책 (보류, 사용자 결정 대기)
+
+앱 쪽(위 22개 파일)은 2026-08-15에 처리 완료. RLS 쪽 110개 정책의 인라인 서브쿼리를
+헬퍼 함수 호출로 교체하는 작업은 **사용자가 명시적으로 보류를 선택했다** - "다음에
+작업 진행할 때 누락되는 내용이 없게 상세하게 정리해서 넘어가는 게 좋겠다"는 요청에
+따라, 상세 착수 계획은 별도 문서 `docs/RLS_INLINE_SUBQUERY_MIGRATION_PLAN.md`에
+정리했다. 이 작업에 착수하기 전 그 문서를 먼저 읽을 것 - 대상 테이블/정책 전체 목록,
+86차 절차, 검증 방법(반드시 `authenticated` 실JWT, 서비스롤 테스트는 무의미)이
+전부 거기 있다.
 
 ## 이 문서를 갱신해야 할 때
 
