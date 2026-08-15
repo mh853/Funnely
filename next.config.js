@@ -9,7 +9,7 @@ const nextConfig = {
   },
 
   eslint: {
-    ignoreDuringBuilds: true,
+    ignoreDuringBuilds: false,
   },
 
   // 서브도메인(q81d1c.localhost:PORT)에서 _next/static 에셋을 항상 메인 도메인에서 로드
