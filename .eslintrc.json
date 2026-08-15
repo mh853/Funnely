@@ -1,3 +1,16 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-syntax": [
+      "warn",
+      {
+        "selector": "MemberExpression[object.type='NewExpression'][object.callee.name='Date'][object.arguments.length=0][property.name=/^(getFullYear|getMonth|getDate|getDay)$/]",
+        "message": "로컬 Date 게터 대신 @/lib/utils/date의 toKSTDateStr/getKSTNow를 사용하세요. (QA 반복패턴 #2)"
+      },
+      {
+        "selector": "CallExpression[callee.property.name='split'][callee.object.callee.property.name='toISOString'][arguments.0.value='T']",
+        "message": "toISOString().split('T')는 UTC 날짜입니다. toKSTDateStr()을 사용하세요. (QA 반복패턴 #2)"
+      }
+    ]
+  }
 }
