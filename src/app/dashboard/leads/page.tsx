@@ -18,6 +18,7 @@ interface SearchParams {
   search?: string
   page?: string
   id?: string  // 특정 리드 ID로 필터링 (캘린더에서 클릭 시)
+  paymentComplete?: string  // '1'이면 결제금액이 1원 이상인 리드만 필터링
 }
 
 export default async function LeadsPage({
@@ -59,6 +60,7 @@ export default async function LeadsPage({
   const page = Number(searchParams.page) || 1
   const pageSize = 20
   const selectedLeadId = searchParams.id  // 캘린더에서 클릭한 특정 리드 ID
+  const paymentComplete = searchParams.paymentComplete === '1'
 
   // Calculate date range
   const now = new Date()
@@ -105,6 +107,10 @@ export default async function LeadsPage({
   }
 
   // Build query
+  // 결제 완료 필터가 걸리면 lead_payments를 !inner로 조인해 결제금액이 1원
+  // 이상인 리드만 남긴다 - PostgREST 임베드 조인은 SQL 조인과 달리 부모 행을
+  // 중복시키지 않고, 리드당 한 행에 필터링된 결제 내역만 담아 반환하므로
+  // count/페이지네이션이 그대로 정확하다.
   let query = supabase
     .from('leads')
     .select(
@@ -118,7 +124,7 @@ export default async function LeadsPage({
       ),
       call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
       counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name),
-      lead_payments (
+      lead_payments${paymentComplete ? '!inner' : ''} (
         id,
         amount,
         payment_date
@@ -180,6 +186,10 @@ export default async function LeadsPage({
 
     if (counselorAssignedTo) {
       query = query.eq('counselor_assigned_to', counselorAssignedTo)
+    }
+
+    if (paymentComplete) {
+      query = query.gt('lead_payments.amount', 0)
     }
   }
 

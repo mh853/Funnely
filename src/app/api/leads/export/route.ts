@@ -99,7 +99,8 @@ export async function GET(request: Request) {
         lead_payments (
           id,
           amount,
-          payment_date
+          payment_date,
+          notes
         )
       `
       )

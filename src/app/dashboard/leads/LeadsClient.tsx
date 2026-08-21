@@ -148,6 +148,7 @@ export default function LeadsClient({
   const urlCallAssignedTo = searchParams.get('callAssignedTo') || ''
   const urlCounselorAssignedTo = searchParams.get('counselorAssignedTo') || ''
   const urlSearch = searchParams.get('search') || ''
+  const urlPaymentComplete = searchParams.get('paymentComplete') === '1'
 
   // 날짜 범위 상태 (Date 객체)
   const [startDate, setStartDate] = useState<Date | null>(() => {
@@ -180,6 +181,7 @@ export default function LeadsClient({
   const [callAssignedTo, setCallAssignedTo] = useState(urlCallAssignedTo)
   const [counselorAssignedTo, setCounselorAssignedTo] = useState(urlCounselorAssignedTo)
   const [searchQuery, setSearchQuery] = useState(urlSearch)
+  const [paymentComplete, setPaymentComplete] = useState(urlPaymentComplete)
 
   // URL 파라미터가 변경될 때 (router.push 후) 필터 상태 동기화
   useEffect(() => {
@@ -220,7 +222,8 @@ export default function LeadsClient({
     setCallAssignedTo(urlCallAssignedTo)
     setCounselorAssignedTo(urlCounselorAssignedTo)
     setSearchQuery(urlSearch)
-  }, [urlDateRange, urlStartDate, urlEndDate, urlSingleDate, urlLandingPageId, urlDeviceType, urlStatus, urlCallAssignedTo, urlCounselorAssignedTo, urlSearch])
+    setPaymentComplete(urlPaymentComplete)
+  }, [urlDateRange, urlStartDate, urlEndDate, urlSingleDate, urlLandingPageId, urlDeviceType, urlStatus, urlCallAssignedTo, urlCounselorAssignedTo, urlSearch, urlPaymentComplete])
 
   // 로컬 리드 상태 (업데이트 즉시 반영)
   const [leads, setLeads] = useState(initialLeads)
@@ -1142,13 +1145,14 @@ export default function LeadsClient({
     if (callAssignedTo) params.set('callAssignedTo', callAssignedTo)
     if (counselorAssignedTo) params.set('counselorAssignedTo', counselorAssignedTo)
     if (searchQuery) params.set('search', searchQuery)
+    if (paymentComplete) params.set('paymentComplete', '1')
     params.set('page', '1')
 
     // useTransition으로 비차단 업데이트
     startTransition(() => {
       router.push(`/dashboard/leads?${params.toString()}`)
     })
-  }, [startDate, endDate, landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, searchQuery, router])
+  }, [startDate, endDate, landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, searchQuery, paymentComplete, router])
 
   // 셀렉트 박스 필터 변경 시 즉시 업데이트
   useEffect(() => {
@@ -1158,7 +1162,7 @@ export default function LeadsClient({
     }
 
     updateFiltersInstantly()
-  }, [landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, updateFiltersInstantly])
+  }, [landingPageId, deviceType, status, callAssignedTo, counselorAssignedTo, paymentComplete, updateFiltersInstantly])
 
   // 검색어 변경 시 debounce 적용
   useEffect(() => {
@@ -1233,7 +1237,10 @@ export default function LeadsClient({
       }
 
       // 엑셀 데이터 생성 (사용자 경험 최적화 - 한글 헤더, 정리된 순서)
-      const excelData = allLeads.map((lead: any, index: number) => {
+      // 결제가 여러 건인 리드는 결제금액을 합쳐서 한 행으로 내보내면 결제 건별
+      // 비고(lead_payments.notes)를 구분할 수 없어, 결제 건수만큼 행을 나눈다
+      // (노션 QA 접수 #13). '번호'는 최종 평탄화된 행 기준으로 뒤에서 다시 매긴다.
+      const excelRows = allLeads.flatMap((lead: any) => {
         // 상태 라벨 가져오기
         const statusLabel = statusStyles[lead.status]?.label || lead.status || '-'
 
@@ -1297,8 +1304,8 @@ export default function LeadsClient({
           if (RESERVED_COLUMNS.has(key)) delete customFieldsData[key]
         }
 
-        return {
-          '번호': index + 1,
+        const sharedColumns = {
+          '번호': 0, // 아래에서 최종 행 순서 기준으로 다시 매김
           'DB 신청일': formatDateTime(lead.created_at),
           '랜딩페이지': lead.landing_pages?.title || '-',
           '이름': lead.name || '-',
@@ -1312,10 +1319,9 @@ export default function LeadsClient({
             : '-',
           '결과': statusLabel,
           '예약일': formatDateTime(lead.contract_completed_at),
-          '결제금액': lead.lead_payments && lead.lead_payments.length > 0
-            ? lead.lead_payments.reduce((sum: number, p: any) => sum + (p.amount || 0), 0).toLocaleString() + '원'
-            : '-',
-          '비고': lead.notes || '-',
+        }
+
+        const trailingColumns = {
           '콜 담당자': callAssignedUserName,
           '상담 담당자': counselorAssignedUserName,
           'UTM_Source': lead.utm_source || '-',
@@ -1330,7 +1336,31 @@ export default function LeadsClient({
           // 커스텀 필드들 (동적으로 추가, 위에서 고정 컬럼명과 겹치는 키는 제외됨)
           ...customFieldsData,
         }
+
+        // 결제 내역이 없는 리드는 결제금액/비고를 빈 값으로 한 행만 반환
+        if (!lead.lead_payments || lead.lead_payments.length === 0) {
+          return [{
+            ...sharedColumns,
+            '결제금액': '-',
+            '비고': '-',
+            ...trailingColumns,
+          }]
+        }
+
+        // 결제 건수만큼 행을 분리 - 결제금액은 '원' 없이 숫자(천단위 구분)만,
+        // 비고는 해당 결제 건에 달린 메모(lead_payments.notes)를 그대로 노출
+        return lead.lead_payments.map((payment: any) => ({
+          ...sharedColumns,
+          '결제금액': (payment.amount || 0).toLocaleString(),
+          '비고': payment.notes || '-',
+          ...trailingColumns,
+        }))
       })
+
+      const excelData = excelRows.map((row: any, index: number) => ({
+        ...row,
+        '번호': index + 1,
+      }))
 
       // 워크시트 생성 - 이름/비고/커스텀 필드 등은 공개 랜딩페이지에서 방문자가
       // 직접 입력한 값이라, =/+/-/@로 시작하면 엑셀에서 수식으로 해석될 수 있다
@@ -1432,6 +1462,7 @@ export default function LeadsClient({
     setCallAssignedTo('')
     setCounselorAssignedTo('')
     setSearchQuery('')
+    setPaymentComplete(false)
 
     // URL 업데이트 (useEffect가 자동으로 처리)
     router.push('/dashboard/leads?dateRange=all')
@@ -1583,7 +1614,7 @@ export default function LeadsClient({
             </span>
           </div>
 
-          {(startDate || endDate || landingPageId || deviceType || status || callAssignedTo || counselorAssignedTo || searchQuery) && (
+          {(startDate || endDate || landingPageId || deviceType || status || callAssignedTo || counselorAssignedTo || searchQuery || paymentComplete) && (
             <button
               onClick={handleClearFilter}
               className="text-xs text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1 transition-colors"
@@ -1659,6 +1690,21 @@ export default function LeadsClient({
                   {option.label}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Payment Complete */}
+          <div className="flex-shrink-0 w-32">
+            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              결제 여부
+            </label>
+            <select
+              value={paymentComplete ? '1' : ''}
+              onChange={(e) => setPaymentComplete(e.target.value === '1')}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            >
+              <option value="">전체</option>
+              <option value="1">결제 완료</option>
             </select>
           </div>
 
@@ -1752,9 +1798,6 @@ export default function LeadsClient({
                   결제금액
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
-                  비고
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                   콜 담당자
                 </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
@@ -1774,7 +1817,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={13} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -1868,11 +1911,6 @@ export default function LeadsClient({
                       ) : (
                         '-'
                       )}
-                    </td>
-                    <td className="px-4 py-2.5 text-sm text-gray-600 max-w-[150px]">
-                      <span className="truncate block" title={lead.notes || ''}>
-                        {lead.notes || '-'}
-                      </span>
                     </td>
                     {/* 콜 담당자 */}
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-600">
