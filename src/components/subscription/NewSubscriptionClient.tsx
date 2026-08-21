@@ -460,6 +460,30 @@ export default function NewSubscriptionClient({
           }
           toast.success(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
           router.refresh()
+        } else if (isCurrentlyOnTrial && !hasBillingKey && !isFree) {
+          // 체험 중 + 회사 전체에 등록된 카드가 전혀 없는 경우: 아래 isExistingUser
+          // 분기처럼 카드 등록 팝업을 띄우기 전에 plan_id를 먼저 낙관적으로 커밋하면,
+          // 팝업이 그냥 방치돼도(뒤로가기/탭 닫기 등 failUrl조차 안 거치는 경우) 결제
+          // 없이 체험만 다른 플랜으로 조용히 넘어가 있었다(노션 QA 접수 #6). 카드
+          // 등록(mode:'update', 결제 없음)까지만 먼저 진행하고, 그게 실제로 성공한
+          // 뒤에만 billing-success 페이지가 convert-trial을 호출해 plan_id 전환+즉시
+          // 결제+체험 종료를 원자적으로 처리한다 - 그 전까지는 구독 행을 전혀 건드리지 않는다.
+          const tossPayments = await loadTossPayments(
+            process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
+          )
+          const successParams = new URLSearchParams({
+            subscriptionId: currentSubscription.id,
+            mode: 'trial_convert',
+            targetPlanId: plan.id,
+            targetBillingCycle: billingCycle,
+          })
+          await tossPayments.requestBillingAuth('카드', {
+            customerKey: companyId,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?${successParams}`,
+            failUrl: `${window.location.origin}/dashboard/subscription/billing-fail`,
+          })
+          // requestBillingAuth는 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음
+          return
         } else if (isFree) {
           // Free 플랜으로 다운그레이드: 즉시 적용, 기간 없음.
           // 유료 플랜 간 다운그레이드는 다음 결제일까지 유예되지만, Free 전환은

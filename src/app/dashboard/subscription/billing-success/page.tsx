@@ -21,8 +21,11 @@ function BillingSuccessContent() {
     const authKey = searchParams.get('authKey')
     const customerKey = searchParams.get('customerKey')
     const subscriptionId = searchParams.get('subscriptionId')
-    // mode=update: 카드 변경만 (결제 없음) / 기본: 카드 등록 + 즉시 결제
+    // mode=update: 카드 변경만 (결제 없음) / mode=trial_convert: 카드 등록 후 체험→유료
+    // 플랜 전환(convert-trial) / 기본: 카드 등록 + 즉시 결제
     const mode = searchParams.get('mode') ?? 'payment'
+    const targetPlanId = searchParams.get('targetPlanId')
+    const targetBillingCycle = searchParams.get('targetBillingCycle')
 
     if (!authKey || !customerKey || !subscriptionId) {
       setError('필수 파라미터가 누락되었습니다.')
@@ -75,7 +78,25 @@ function BillingSuccessContent() {
         }
 
         // Step 2: 즉시 첫 결제 (카드 변경 모드에서는 생략, 이미 완료됐으면 생략)
-        if (mode !== 'update' && sessionStorage.getItem(step2Key) !== '1') {
+        if (mode === 'trial_convert' && sessionStorage.getItem(step2Key) !== '1') {
+          // 체험 중 플랜 변경: 방금 Step 1에서 이 구독에 직접 등록된 빌링키로
+          // convert-trial을 호출해 plan_id 전환+즉시결제+체험종료를 원자적으로 처리한다.
+          if (!targetPlanId) throw new Error('변경할 플랜 정보가 없습니다.')
+          const convertRes = await fetch('/api/subscription/convert-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              subscriptionId,
+              planId: targetPlanId,
+              billingCycle: targetBillingCycle || undefined,
+            }),
+          })
+          if (!convertRes.ok) {
+            const err = await convertRes.json()
+            throw new Error(err.error || '결제에 실패했습니다.')
+          }
+          sessionStorage.setItem(step2Key, '1')
+        } else if (mode !== 'update' && mode !== 'trial_convert' && sessionStorage.getItem(step2Key) !== '1') {
           const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
             method: 'POST',
             headers,
