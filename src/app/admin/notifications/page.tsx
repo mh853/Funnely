@@ -58,6 +58,7 @@ const TYPE_ICONS: Record<string, any> = {
   subscription_in_grace_period: Clock,
   support_reply: MessageSquare,
   new_support_ticket: Inbox,
+  support_ticket_customer_reply: MessageSquare,
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -73,6 +74,7 @@ const TYPE_COLORS: Record<string, string> = {
   subscription_in_grace_period: 'text-yellow-600 bg-yellow-50',
   support_reply: 'text-indigo-600 bg-indigo-50',
   new_support_ticket: 'text-blue-600 bg-blue-50',
+  support_ticket_customer_reply: 'text-indigo-600 bg-indigo-50',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -88,6 +90,7 @@ const TYPE_LABELS: Record<string, string> = {
   subscription_in_grace_period: '결제 지연',
   support_reply: '기술지원 답변',
   new_support_ticket: '새 기술지원 문의',
+  support_ticket_customer_reply: '고객 추가 문의',
   new_public_inquiry: '홈페이지 문의',
   new_signup: '신규 회원가입',
   new_payment: '신규 결제',
