@@ -184,7 +184,7 @@ export default function SignupPage() {
             {/* Full Name */}
             <div>
               <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-1">
-                이름
+                이름 <span className="text-red-500">*</span>
               </label>
               <input
                 id="fullName"
@@ -201,7 +201,7 @@ export default function SignupPage() {
             {/* Company Name */}
             <div>
               <label htmlFor="companyName" className="block text-sm font-medium text-gray-700 mb-1">
-                회사명
+                회사명 <span className="text-red-500">*</span>
               </label>
               <input
                 id="companyName"
@@ -246,7 +246,7 @@ export default function SignupPage() {
             {/* Email */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                이메일
+                이메일 <span className="text-red-500">*</span>
               </label>
               <input
                 id="email"
@@ -264,7 +264,7 @@ export default function SignupPage() {
             {/* Password */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                비밀번호
+                비밀번호 <span className="text-red-500">*</span>
               </label>
               <input
                 id="password"
@@ -282,7 +282,7 @@ export default function SignupPage() {
             {/* Confirm Password */}
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
-                비밀번호 확인
+                비밀번호 확인 <span className="text-red-500">*</span>
               </label>
               <input
                 id="confirmPassword"
