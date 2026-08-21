@@ -174,7 +174,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
     <div className="flex grow flex-col gap-y-3 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
       {/* Logo & Toggle */}
       <div className="flex h-16 shrink-0 items-center justify-between">
-        <img src="/brand/funnely-logo-horizontal-primary.png" alt="Funnely" className="h-7 w-auto" />
+        <img src="/brand/funnely-logo-horizontal-primary.png" alt="Funnely" className="h-9 w-auto" />
         {showToggle && onToggleCollapse && (
           <button
             onClick={onToggleCollapse}
