@@ -332,6 +332,22 @@ export default function NewSubscriptionClient({
       )
       const remainingMs = Math.max(0, periodEnd.getTime() - now.getTime())
       const remainingDays = Math.ceil(remainingMs / (1000 * 60 * 60 * 24))
+
+      // 결제 기간이 이미 끝난 상태(isCurrentPlanUnpaid)에서 이 함수까지 도달하면
+      // 남은 일수가 0이라 차액도 0으로 계산되는데, 이는 handleSelectPlan이 이제
+      // isCurrentPlanUnpaid를 먼저 걸러 재결제(convert-trial) 경로로 보내므로 정상
+      // 흐름에서는 발생하지 않는다 - 그래도 이 미리보기 함수가 서버(toss-billing-payment)의
+      // 실제 청구 기준과 항상 같은 값을 보여주도록, 서버와 동일하게 갱신 전체 금액으로
+      // 취급한다.
+      if (remainingDays <= 0) {
+        return {
+          proratedNet: newPrice,
+          proratedTotal: newPrice + Math.floor(newPrice * 0.1),
+          remainingDays: 0,
+          isCycleChange: false,
+        }
+      }
+
       const oldPrice = lockValid
         ? currentSubscription.billing_cycle === 'monthly'
           ? (currentSubscription as any).locked_price_monthly
@@ -439,8 +455,18 @@ export default function NewSubscriptionClient({
           }
           toast.success('구독이 재개되었습니다.')
           router.refresh()
-        } else if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription)) {
-          // 체험 중 또는 만료/취소/결제지연 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
+        } else if (hasBillingKey && (isCurrentlyOnTrial || hasPreviousSubscription || isCurrentPlanUnpaid)) {
+          // 체험 중 또는 만료/취소/결제지연/재결제 필요 + 빌링키 있음: 서버 API로 빌링키 복사 + 상태 전환 + 결제 처리
+          //
+          // isCurrentPlanUnpaid를 추가하기 전에는 status가 'active'인데 current_period_end만
+          // 지난 경우(daily-tasks 크론이 아직 past_due로 못 바꾼 24시간 이내 구간) 이 분기를
+          // 타지 못하고 아래 isActivePaidUser 분기(같은 플랜 "업그레이드"로 오인)로 빠졌다.
+          // 그 분기는 남은 일수가 0이라 차액도 0으로 계산해 실제 결제 없이 status만
+          // active로 "갱신"하면서 current_period_end는 과거 값 그대로 남겨, 결제가
+          // "성공"했다고 뜨는데도 hasValidPlanAccess가 계속 false라 대시보드가 계속
+          // 잠겨 있었다(2026-08-21 munong2 계정 라이브 재현 확인). 지금 실제로 이용
+          // 권한이 없는 상태(isCurrentPlanUnpaid)는 상태값과 무관하게 항상 이 재결제
+          // 경로로 보내 실제 갱신 결제(toss-billing-payment mode 없음)를 태운다.
           const res = await fetch('/api/subscription/convert-trial', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
