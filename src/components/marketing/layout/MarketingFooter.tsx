@@ -28,9 +28,7 @@ export default function MarketingFooter() {
       <div className="mx-auto max-w-7xl px-6 pb-8 pt-16 sm:pt-24 lg:px-8 lg:pt-32">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-8">
-            <span className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-indigo-400 bg-clip-text text-transparent">
-              Funnely
-            </span>
+            <img src="/brand/funnely-logo-horizontal-reverse.png" alt="Funnely" className="h-9 w-auto" />
             <p className="text-sm leading-6 text-gray-400">
               비즈니스 성장을 위한 올인원 플랫폼
             </p>

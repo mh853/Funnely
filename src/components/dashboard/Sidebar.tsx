@@ -105,7 +105,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
     <div className="flex grow flex-col gap-y-3 overflow-y-auto bg-white border-r border-gray-200 px-3 pb-4">
       {/* Logo */}
       <div className="flex h-16 shrink-0 items-center justify-center">
-        <h1 className="text-xl font-bold text-blue-600">F</h1>
+        <img src="/brand/funnely-symbol-primary.png" alt="Funnely" className="h-8 w-8" />
       </div>
 
       {/* Toggle Button */}
@@ -174,7 +174,7 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
     <div className="flex grow flex-col gap-y-3 overflow-y-auto bg-white border-r border-gray-200 px-6 pb-4">
       {/* Logo & Toggle */}
       <div className="flex h-16 shrink-0 items-center justify-between">
-        <h1 className="text-2xl font-bold text-blue-600">Funnely</h1>
+        <img src="/brand/funnely-logo-horizontal-primary.png" alt="Funnely" className="h-7 w-auto" />
         {showToggle && onToggleCollapse && (
           <button
             onClick={onToggleCollapse}

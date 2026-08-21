@@ -136,9 +136,7 @@ function LoginForm() {
         {/* Brand logo */}
         <div className="text-center mb-6">
           <Link href="/" className="inline-block">
-            <span className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Funnely
-            </span>
+            <img src="/brand/funnely-logo-horizontal-primary.png" alt="Funnely" className="h-9 w-auto mx-auto" />
           </Link>
           <p className="mt-1 text-sm text-gray-500">비즈니스 성장을 위한 올인원 플랫폼</p>
         </div>

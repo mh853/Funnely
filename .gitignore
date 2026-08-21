@@ -59,6 +59,8 @@ ds-bundle/
 *.jpeg
 *.jpg
 
-# favicon/app icons (실제 자산 - 위 스크린샷 무시 규칙에서 예외)
+# favicon/app icons/브랜드 로고 (실제 자산 - 위 스크린샷 무시 규칙에서 예외)
 !src/app/icon.png
 !src/app/apple-icon.png
+!public/brand/
+!public/brand/*.png

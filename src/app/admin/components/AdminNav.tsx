@@ -39,9 +39,7 @@ function AdminNavContent({ user, onNavigate }: { user: { name: string; email: st
       {/* Logo */}
       <div className="px-5 py-5 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 bg-gradient-to-br from-indigo-600 to-blue-500 rounded-lg flex items-center justify-center shadow-sm shadow-indigo-200">
-            <span className="text-white font-bold text-base">F</span>
-          </div>
+          <img src="/brand/funnely-symbol-primary.png" alt="Funnely" className="w-9 h-9" />
           <div>
             <p className="font-bold text-gray-900 text-sm">퍼널리</p>
             <p className="text-[11px] text-gray-400 tracking-wide">Admin Panel</p>
