@@ -13,6 +13,7 @@ type Plan = {
   name: string
   target: string
   price: number | null
+  priceYearly: number | null
   priceLabel?: string
   badge?: string
   highlighted: boolean
@@ -49,6 +50,7 @@ const plans: Plan[] = [
     name: '스타터',
     target: '1인 사업자 및 개인',
     price: 19000,
+    priceYearly: 205200,
     highlighted: false,
     cta: '시작하기',
     ctaVariant: 'outline',
@@ -59,6 +61,7 @@ const plans: Plan[] = [
     name: '스타터 플러스',
     target: '1인 사업자 및 개인',
     price: 49000,
+    priceYearly: 529200,
     highlighted: false,
     cta: '시작하기',
     ctaVariant: 'outline',
@@ -69,6 +72,7 @@ const plans: Plan[] = [
     name: '프로',
     target: '스타트업, 소규모 사업자',
     price: 290000,
+    priceYearly: 3132000,
     highlighted: false,
     badge: '7일 무료체험',
     cta: '시작하기',
@@ -80,6 +84,7 @@ const plans: Plan[] = [
     name: '프리미엄',
     target: '기업 및 팀 조직',
     price: 490000,
+    priceYearly: 5292000,
     highlighted: false,
     badge: '기업 추천',
     cta: '시작하기',
@@ -91,6 +96,7 @@ const plans: Plan[] = [
     name: '커스터마이징',
     target: '맞춤형 개발이 필요한 기업',
     price: null,
+    priceYearly: null,
     priceLabel: '협의',
     highlighted: false,
     cta: '상담하기',
@@ -120,6 +126,7 @@ function FeatureCell({ value, highlighted }: { value: FeatureValue; highlighted:
 
 export default function PricingSection() {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false)
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
   return (
     <>
@@ -143,6 +150,37 @@ export default function PricingSection() {
             <p className="mt-6 text-lg leading-8 text-gray-600">
               언제든 취소 가능 • 취소 후 결제 기간 만료까지 이용 • 만료 후 서비스 접근 제한
             </p>
+          </div>
+
+          {/* Billing cycle toggle */}
+          <div className="mb-10 flex justify-center">
+            <div className="inline-flex items-center rounded-full bg-gray-100 p-1">
+              <button
+                type="button"
+                onClick={() => setBillingCycle('monthly')}
+                className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  billingCycle === 'monthly'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                월별 결제
+              </button>
+              <button
+                type="button"
+                onClick={() => setBillingCycle('yearly')}
+                className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
+                  billingCycle === 'yearly'
+                    ? 'bg-white text-gray-900 shadow-sm'
+                    : 'text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                연간 결제
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-700">
+                  10% 할인
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Plan cards row */}
@@ -185,12 +223,23 @@ export default function PricingSection() {
                     {/* Price */}
                     <div className="mb-5 flex-1">
                       {plan.price !== null ? (
-                        <div className="flex items-baseline gap-1">
-                          <span className="text-3xl font-bold tracking-tight text-gray-900">
-                            ₩{plan.price.toLocaleString()}
-                          </span>
-                          <span className="text-sm text-gray-500">/월</span>
-                        </div>
+                        <>
+                          <div className="flex items-baseline gap-1">
+                            <span className="text-3xl font-bold tracking-tight text-gray-900">
+                              ₩{(billingCycle === 'yearly' && plan.priceYearly
+                                ? Math.round(plan.priceYearly / 12)
+                                : plan.price
+                              ).toLocaleString()}
+                            </span>
+                            <span className="text-sm text-gray-500">/월</span>
+                          </div>
+                          {billingCycle === 'yearly' && plan.priceYearly && (
+                            <p className="mt-1 text-xs text-emerald-600 font-medium">
+                              연 ₩{plan.priceYearly.toLocaleString()} 일시 결제 (
+                              {Math.round((plan.price * 12 - plan.priceYearly) / 10000)}만원 절약)
+                            </p>
+                          )}
+                        </>
                       ) : (
                         <span className="text-3xl font-bold text-gray-900">
                           {plan.priceLabel}

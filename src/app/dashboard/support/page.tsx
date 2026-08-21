@@ -109,7 +109,6 @@ export default function SupportPage() {
   const [formData, setFormData] = useState({
     subject: '',
     description: '',
-    priority: 'medium',
     category: 'technical',
   })
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
@@ -284,7 +283,6 @@ export default function SupportPage() {
       setFormData({
         subject: '',
         description: '',
-        priority: 'medium',
         category: 'technical',
       })
       setAttachedFiles([])
@@ -306,7 +304,6 @@ export default function SupportPage() {
     setFormData({
       subject: '',
       description: '',
-      priority: 'medium',
       category: 'technical',
     })
     setAttachedFiles([])
@@ -416,47 +413,25 @@ export default function SupportPage() {
                         />
                       </div>
 
-                      {/* 카테고리 & 우선순위 */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
-                            카테고리 <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            id="category"
-                            value={formData.category}
-                            onChange={(e) =>
-                              setFormData({ ...formData, category: e.target.value })
-                            }
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          >
-                            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        <div>
-                          <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-                            우선순위 <span className="text-red-500">*</span>
-                          </label>
-                          <select
-                            id="priority"
-                            value={formData.priority}
-                            onChange={(e) =>
-                              setFormData({ ...formData, priority: e.target.value })
-                            }
-                            className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                          >
-                            {Object.entries(PRIORITY_LABELS).map(([value, label]) => (
-                              <option key={value} value={value}>
-                                {label}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
+                      {/* 카테고리 */}
+                      <div>
+                        <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-2">
+                          카테고리 <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          id="category"
+                          value={formData.category}
+                          onChange={(e) =>
+                            setFormData({ ...formData, category: e.target.value })
+                          }
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                        >
+                          {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
                       </div>
 
                       {/* 내용 */}
