@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendInquiryNotificationEmail } from '@/lib/email/send-inquiry-notification'
 
 // /api/contact와 동일한 in-memory rate limit 패턴(프로덕션에서는 Redis 등으로 대체 필요)
 const requestCounts = new Map<string, { count: number; resetTime: number }>()
@@ -96,6 +97,22 @@ export async function POST(request: NextRequest) {
         { error: 'Failed to submit inquiry' },
         { status: 500 }
       )
+    }
+
+    // 알림 메일 발송 실패로 문의 접수 자체가 실패하면 안 되므로 별도로 감싼다
+    try {
+      await sendInquiryNotificationEmail({
+        inquiryType: inquiry_type,
+        name,
+        email,
+        phone: phone || null,
+        company: company || null,
+        subject,
+        message,
+        createdAt: new Date().toISOString(),
+      })
+    } catch (emailError) {
+      console.error('Failed to send inquiry notification email:', emailError)
     }
 
     return NextResponse.json({

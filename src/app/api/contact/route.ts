@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/supabase/admin'
+import { sendInquiryNotificationEmail } from '@/lib/email/send-inquiry-notification'
 
 // public_inquiries.inquiry_type CHECK 제약은 general/sales/technical/billing만 허용한다.
 // 컨택폼의 문의 유형(feature_request/bug)은 이 중 하나로 매핑한다.
@@ -112,8 +113,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // TODO: Send confirmation email to customer
-    // TODO: Send notification email to admin team
+    // 알림 메일 발송 실패로 문의 접수 자체가 실패하면 안 되므로 별도로 감싼다
+    try {
+      await sendInquiryNotificationEmail({
+        inquiryType: CATEGORY_TO_INQUIRY_TYPE[category] || 'general',
+        name: fullName,
+        email,
+        phone: phone || null,
+        company: companyName,
+        subject,
+        message: description,
+        createdAt: new Date().toISOString(),
+      })
+    } catch (emailError) {
+      console.error('Failed to send inquiry notification email:', emailError)
+    }
 
     return NextResponse.json(
       {
