@@ -256,6 +256,24 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Task 9: Send Admin Daily Report Digest
+    console.log('[Cron] Running admin report digest')
+    try {
+      const digestResult = await sendAdminReportDigest(supabase)
+      results.tasksExecuted.push({
+        task: 'admin_report_digest',
+        status: 'success',
+        ...digestResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Admin report digest error:', error)
+      results.tasksExecuted.push({
+        task: 'admin_report_digest',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
     console.log(`[Cron] Daily tasks completed: ${results.tasksExecuted.length} tasks executed`)
 
     return NextResponse.json(results)
@@ -1589,6 +1607,178 @@ async function cleanupOldNotifications(supabase: any) {
     deleted: deleted?.length || 0,
     cutoff,
     message: `Deleted ${deleted?.length || 0} notifications older than 90 days`,
+  }
+}
+
+/**
+ * 어드민 리포트(회원가입/무료체험/결제/매출/탈퇴/구독취소/문의) 중 하나라도
+ * 전날(KST) 발생 건이 있으면 요약 메일을 보낸다. 노션 QA 18번 항목 요청대로
+ * 활동이 전혀 없는 날은 조용히 스킵한다(매일 빈 메일이 오는 것을 방지).
+ * 집계 기준은 /admin/reports가 쓰는 analytics/daily 쿼리와 동일하게 맞춘다
+ * (특히 company_subscriptions.status는 'canceled'가 아니라 'cancelled').
+ */
+async function sendAdminReportDigest(supabase: any) {
+  const rangeStart = getKSTStartOfDay(-1).toISOString()
+  const rangeEnd = getKSTStartOfDay(0).toISOString()
+  const reportDateLabel = toKSTDateStr(getKSTStartOfDay(-1))
+
+  const [signupsRes, trialsRes, paymentsRes, withdrawalsRes, cancellationsRes, ticketsRes] =
+    await Promise.all([
+      supabase
+        .from('companies')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', rangeStart)
+        .lt('created_at', rangeEnd)
+        .is('withdrawn_at', null),
+      supabase
+        .from('company_subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'trial')
+        .gte('created_at', rangeStart)
+        .lt('created_at', rangeEnd),
+      supabase
+        .from('payment_transactions')
+        .select('total_amount')
+        .eq('status', 'success')
+        .gte('approved_at', rangeStart)
+        .lt('approved_at', rangeEnd),
+      supabase
+        .from('companies')
+        .select('id', { count: 'exact', head: true })
+        .gte('withdrawn_at', rangeStart)
+        .lt('withdrawn_at', rangeEnd),
+      supabase
+        .from('company_subscriptions')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'cancelled')
+        .gte('updated_at', rangeStart)
+        .lt('updated_at', rangeEnd),
+      supabase
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .gte('created_at', rangeStart)
+        .lt('created_at', rangeEnd),
+    ])
+
+  for (const res of [signupsRes, trialsRes, paymentsRes, withdrawalsRes, cancellationsRes, ticketsRes]) {
+    if (res.error) throw res.error
+  }
+
+  const signups = signupsRes.count || 0
+  const trials = trialsRes.count || 0
+  const payments = (paymentsRes.data || []).length
+  const revenue = (paymentsRes.data || []).reduce(
+    (sum: number, r: { total_amount: number }) => sum + (r.total_amount || 0),
+    0
+  )
+  const withdrawals = withdrawalsRes.count || 0
+  const cancellations = cancellationsRes.count || 0
+  const tickets = ticketsRes.count || 0
+
+  const totalActivity = signups + trials + payments + withdrawals + cancellations + tickets
+
+  if (totalActivity === 0) {
+    return { sent: false, reason: 'no_activity', reportDate: reportDateLabel }
+  }
+
+  const [, monthStr, dayStr] = reportDateLabel.split('-')
+  const dateTitle = `${Number(monthStr)}월 ${Number(dayStr)}일`
+  const dashboardUrl = process.env.NEXT_PUBLIC_DOMAIN
+    ? process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '') + '/admin/reports'
+    : 'https://funnely.co.kr/admin/reports'
+
+  const metrics = [
+    { emoji: '👤', label: '회원가입', value: `${signups}건` },
+    { emoji: '🎁', label: '무료체험', value: `${trials}건` },
+    { emoji: '💳', label: '결제', value: `${payments}건` },
+    { emoji: '💰', label: '매출', value: `${revenue.toLocaleString('ko-KR')}원` },
+    { emoji: '📤', label: '탈퇴', value: `${withdrawals}건` },
+    { emoji: '🚫', label: '구독취소', value: `${cancellations}건` },
+    { emoji: '💬', label: '문의', value: `${tickets}건` },
+  ]
+
+  const htmlRows = metrics
+    .map(
+      (m) => `
+      <div class="info-row">
+        <div class="label">${m.emoji} ${m.label}</div>
+        <div class="value">${m.value}</div>
+      </div>`
+    )
+    .join('')
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background-color: #f9fafb; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
+    .header h1 { margin: 0 0 10px 0; font-size: 22px; font-weight: 700; }
+    .header p { margin: 0; font-size: 14px; opacity: 0.95; }
+    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+    .info-row { padding: 12px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
+    .info-row:last-child { border-bottom: none; }
+    .label { font-weight: 600; color: #374151; font-size: 14px; }
+    .value { color: #111827; font-size: 16px; font-weight: 700; }
+    .button { display: inline-block; background: #667eea; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 24px; text-align: center; }
+    .footer { text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📊 ${dateTitle} 일일 리포트</h1>
+      <p>어제 하루 퍼널리 서비스 현황입니다</p>
+    </div>
+    <div class="content">
+      ${htmlRows}
+      <div style="text-align: center;">
+        <a href="${dashboardUrl}" class="button">어드민 리포트에서 자세히 보기 →</a>
+      </div>
+    </div>
+    <div class="footer">
+      <p>이 이메일은 전날 신규 활동이 1건 이상 있을 때 매일 아침 자동 발송됩니다.</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+  const textContent = `📊 ${dateTitle} 일일 리포트\n\n${metrics
+    .map((m) => `${m.emoji} ${m.label}: ${m.value}`)
+    .join('\n')}\n\n어드민 리포트: ${dashboardUrl}`
+
+  const REPORT_DIGEST_RECIPIENTS = ['munong2@gmail.com', '1989comp@gmail.com']
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  let emailsSent = 0
+  let emailsFailed = 0
+
+  for (const recipient of REPORT_DIGEST_RECIPIENTS) {
+    try {
+      const { error } = await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: [recipient],
+        subject: `📊 [Funnely 어드민] ${dateTitle} 리포트 - 신규 ${totalActivity}건`,
+        html: htmlContent,
+        text: textContent,
+      })
+      if (error) throw error
+      emailsSent++
+    } catch (error) {
+      console.error(`[Admin Report Digest] Failed to send to ${recipient}:`, error)
+      emailsFailed++
+    }
+  }
+
+  return {
+    sent: emailsSent > 0,
+    reportDate: reportDateLabel,
+    counts: { signups, trials, payments, revenue, withdrawals, cancellations, tickets },
+    emailsSent,
+    emailsFailed,
   }
 }
 
