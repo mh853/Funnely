@@ -163,8 +163,8 @@ export default function SheetSyncSettings({
     // 화면엔 "이름 열 *", "전화번호 열 *"로 필수 표시만 해두고 실제로는 검증하지
     // 않아, 이 값이 비어있는 채로 저장되면 이후 모든 동기화가 매번 조용히
     // "가져올 데이터 없음"만 반환하며 원인을 알 방법이 없었다.
-    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim()) {
-      toast.error('이름 열과 전화번호 열은 필수입니다')
+    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim() || !newConfig.column_mapping.createdAt?.trim()) {
+      toast.error('이름 열, 전화번호 열, 생성일 열은 필수입니다')
       return
     }
 
@@ -304,8 +304,8 @@ export default function SheetSyncSettings({
       toast.error('스프레드시트 ID를 입력하세요')
       return
     }
-    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim()) {
-      toast.error('이름 열과 전화번호 열은 필수입니다')
+    if (!newConfig.column_mapping.name?.trim() || !newConfig.column_mapping.phone?.trim() || !newConfig.column_mapping.createdAt?.trim()) {
+      toast.error('이름 열, 전화번호 열, 생성일 열은 필수입니다')
       return
     }
 
@@ -460,7 +460,7 @@ export default function SheetSyncSettings({
                   <p className="text-sm font-semibold text-gray-900">필수 필드</p>
                   <span className="text-xs text-red-600">*</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">이름 열 *</label>
                     <input
@@ -500,6 +500,19 @@ export default function SheetSyncSettings({
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">생성일 열 *</label>
+                    <input
+                      type="text"
+                      value={newConfig.column_mapping.createdAt || ''}
+                      onChange={(e) => setNewConfig({
+                        ...newConfig,
+                        column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
+                      })}
+                      placeholder="예: 생성일, created_time"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -521,19 +534,6 @@ export default function SheetSyncSettings({
                         column_mapping: { ...newConfig.column_mapping, source: e.target.value }
                       })}
                       placeholder="예: 광고명, 캠페인, source"
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">생성일 열</label>
-                    <input
-                      type="text"
-                      value={newConfig.column_mapping.createdAt || ''}
-                      onChange={(e) => setNewConfig({
-                        ...newConfig,
-                        column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
-                      })}
-                      placeholder="예: 생성일, 등록일, created_at"
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     />
                   </div>
@@ -698,7 +698,7 @@ export default function SheetSyncSettings({
                   <p className="text-sm font-semibold text-gray-900">필수 필드</p>
                   <span className="text-xs text-red-600">*</span>
                 </div>
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <div>
                     <label className="block text-xs text-gray-500 mb-1">이름 열 *</label>
                     <input
@@ -738,6 +738,19 @@ export default function SheetSyncSettings({
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     />
                   </div>
+                  <div>
+                    <label className="block text-xs text-gray-500 mb-1">생성일 열 *</label>
+                    <input
+                      type="text"
+                      value={newConfig.column_mapping.createdAt || ''}
+                      onChange={(e) => setNewConfig({
+                        ...newConfig,
+                        column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
+                      })}
+                      placeholder="예: 생성일, created_time"
+                      className="w-full px-3 py-2 border rounded-lg text-sm"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -758,19 +771,6 @@ export default function SheetSyncSettings({
                         column_mapping: { ...newConfig.column_mapping, source: e.target.value }
                       })}
                       placeholder="예: 광고명, source"
-                      className="w-full px-3 py-2 border rounded-lg text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs text-gray-500 mb-1">생성일 열</label>
-                    <input
-                      type="text"
-                      value={newConfig.column_mapping.createdAt || ''}
-                      onChange={(e) => setNewConfig({
-                        ...newConfig,
-                        column_mapping: { ...newConfig.column_mapping, createdAt: e.target.value }
-                      })}
-                      placeholder="예: 생성일, created_at"
                       className="w-full px-3 py-2 border rounded-lg text-sm"
                     />
                   </div>
