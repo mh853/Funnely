@@ -58,3 +58,7 @@ ds-bundle/
 *.png
 *.jpeg
 *.jpg
+
+# favicon/app icons (실제 자산 - 위 스크린샷 무시 규칙에서 예외)
+!src/app/icon.png
+!src/app/apple-icon.png
