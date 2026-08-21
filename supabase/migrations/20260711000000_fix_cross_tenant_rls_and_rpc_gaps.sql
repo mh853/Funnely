@@ -35,6 +35,7 @@ $$;
 
 DROP POLICY IF EXISTS "users_select_all_authenticated" ON users;
 
+DROP POLICY IF EXISTS "users_select_same_company" ON users;
 CREATE POLICY "users_select_same_company" ON users
   FOR SELECT
   USING (company_id = get_my_company_id());

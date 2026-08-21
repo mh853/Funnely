@@ -6,7 +6,8 @@
 -- SELECT 전용으로 좁힌다. 조회는 그대로 유지되어 기존 어드민 화면(감사로그 조회,
 -- 벌크작업 이력 조회)에는 영향 없다.
 
-DROP POLICY "audit_logs_admin" ON audit_logs;
+DROP POLICY IF EXISTS "audit_logs_admin" ON audit_logs;
+DROP POLICY IF EXISTS "audit_logs_admin" ON audit_logs;
 CREATE POLICY "audit_logs_admin" ON audit_logs
   FOR SELECT USING (
     EXISTS (
@@ -16,7 +17,8 @@ CREATE POLICY "audit_logs_admin" ON audit_logs
     )
   );
 
-DROP POLICY "bulk_operation_logs_super_admin_all" ON public.bulk_operation_logs;
+DROP POLICY IF EXISTS "bulk_operation_logs_super_admin_all" ON public.bulk_operation_logs;
+DROP POLICY IF EXISTS "bulk_operation_logs_super_admin_all" ON public.bulk_operation_logs;
 CREATE POLICY "bulk_operation_logs_super_admin_all"
   ON public.bulk_operation_logs
   FOR SELECT
@@ -33,7 +35,8 @@ CREATE POLICY "bulk_operation_logs_super_admin_all"
 -- 정책("Users can manage their own reports")이 company_id 검증 없이 created_by만
 -- 확인해 로그인한 사용자가 REST API를 직접 호출하면 임의 company_id로 행을
 -- 쓸 수 있었다(82차 QA). 다른 테이블들과 동일한 패턴으로 소속 회사 검증을 추가한다.
-DROP POLICY "Users can manage their own reports" ON saved_reports;
+DROP POLICY IF EXISTS "Users can manage their own reports" ON saved_reports;
+DROP POLICY IF EXISTS "Users can manage their own reports" ON saved_reports;
 CREATE POLICY "Users can manage their own reports" ON saved_reports
   FOR ALL USING (
     created_by = auth.uid()

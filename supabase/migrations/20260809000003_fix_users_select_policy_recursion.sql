@@ -23,7 +23,8 @@ AS $$
   )
 $$;
 
-DROP POLICY "users_select_same_company" ON "users";
+DROP POLICY IF EXISTS "users_select_same_company" ON "users";
+DROP POLICY IF EXISTS "users_select_same_company" ON "users";
 CREATE POLICY "users_select_same_company" ON "users"
   AS PERMISSIVE FOR SELECT
   TO public

@@ -11,6 +11,9 @@
 -- 동일 조합을 실수로 두 번 등록해 매 동기화마다 같은 시트를 중복 호출하던 문제도
 -- 함께 막힌다.
 ALTER TABLE sheet_sync_configs
+  DROP CONSTRAINT IF EXISTS sheet_sync_configs_spreadsheet_sheet_unique;
+
+ALTER TABLE sheet_sync_configs
   ADD CONSTRAINT sheet_sync_configs_spreadsheet_sheet_unique
   UNIQUE (spreadsheet_id, sheet_name);
 

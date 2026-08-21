@@ -19,6 +19,7 @@ CREATE INDEX IF NOT EXISTS idx_notification_reads_user_id ON notification_reads(
 ALTER TABLE notification_reads ENABLE ROW LEVEL SECURITY;
 
 -- 본인의 읽음 영수증만, 그리고 본인 회사의 알림에 대한 것만 조회/생성/삭제 가능
+DROP POLICY IF EXISTS "Users can view their own read receipts" ON notification_reads;
 CREATE POLICY "Users can view their own read receipts"
   ON notification_reads
   FOR SELECT
@@ -34,6 +35,7 @@ CREATE POLICY "Users can view their own read receipts"
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert their own read receipts" ON notification_reads;
 CREATE POLICY "Users can insert their own read receipts"
   ON notification_reads
   FOR INSERT
@@ -49,6 +51,7 @@ CREATE POLICY "Users can insert their own read receipts"
     )
   );
 
+DROP POLICY IF EXISTS "Users can delete their own read receipts" ON notification_reads;
 CREATE POLICY "Users can delete their own read receipts"
   ON notification_reads
   FOR DELETE

@@ -9,6 +9,7 @@
 -- 아래 제약으로도 회귀 없이 계속 동작한다.
 
 DROP POLICY IF EXISTS "Service role can insert notifications" ON notifications;
+DROP POLICY IF EXISTS "Users can insert their own company notifications" ON notifications;
 CREATE POLICY "Users can insert their own company notifications"
   ON notifications
   FOR INSERT

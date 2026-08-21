@@ -7,7 +7,8 @@
 -- 조건을 추가한다. (원본 정책 텍스트를 pg_policies에서 그대로 가져와 마커 문자열만
 -- 기계적으로 치환 - 68차/71차 등에서 쓴 것과 동일한 안전한 방식)
 
-DROP POLICY "Users can manage their events" ON "calendar_events";
+DROP POLICY IF EXISTS "Users can manage their events" ON "calendar_events";
+DROP POLICY IF EXISTS "Users can manage their events" ON "calendar_events";
 CREATE POLICY "Users can manage their events" ON "calendar_events"
   AS PERMISSIVE FOR ALL
   TO public
@@ -23,7 +24,8 @@ CREATE POLICY "Users can manage their events" ON "calendar_events"
           WHERE ((companies.is_active = true) AND (companies.withdrawn_at IS NULL))))))))
   );
 
-DROP POLICY "Users can view their assigned events" ON "calendar_events";
+DROP POLICY IF EXISTS "Users can view their assigned events" ON "calendar_events";
+DROP POLICY IF EXISTS "Users can view their assigned events" ON "calendar_events";
 CREATE POLICY "Users can view their assigned events" ON "calendar_events"
   AS PERMISSIVE FOR SELECT
   TO public

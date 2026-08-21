@@ -10,7 +10,7 @@
 -- 재생성하면서 과거(20250131010000_create_subscription_system.sql)엔 있던
 -- 'past_due'를 빠뜨렸다. 기존 5개 값은 그대로 두고 past_due만 추가한다.
 
-ALTER TABLE company_subscriptions DROP CONSTRAINT company_subscriptions_status_check;
+ALTER TABLE company_subscriptions DROP CONSTRAINT IF EXISTS company_subscriptions_status_check;
 
 ALTER TABLE company_subscriptions ADD CONSTRAINT company_subscriptions_status_check
   CHECK (status IN ('active', 'trial', 'expired', 'cancelled', 'suspended', 'past_due'));

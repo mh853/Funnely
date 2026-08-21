@@ -6,6 +6,8 @@
 -- company 스코핑으로 DELETE 정책을 추가한다 (route.ts의 애플리케이션 레벨 체크와도 일치).
 -- Created: 2026-07-09
 
+DROP POLICY IF EXISTS "Users can delete notes for leads in their company" ON lead_notes;
+
 CREATE POLICY "Users can delete notes for leads in their company"
   ON lead_notes FOR DELETE
   USING (

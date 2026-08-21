@@ -4,7 +4,7 @@
 -- 것처럼 "복원"은 아니었다 - 카탈로그 최신가로 재잠기는 것뿐). 구독별 plan_id마다
 -- 처음 잠긴 가격을 별도로 기록해두면, 이후 그 plan_id로 다시 돌아올 때(환불 롤백
 -- 포함) 원래 가격을 정확히 복원할 수 있다.
-CREATE TABLE company_subscription_price_locks (
+CREATE TABLE IF NOT EXISTS company_subscription_price_locks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   subscription_id UUID NOT NULL REFERENCES company_subscriptions(id) ON DELETE CASCADE,
   plan_id UUID NOT NULL REFERENCES subscription_plans(id),
@@ -20,7 +20,7 @@ COMMENT ON TABLE company_subscription_price_locks IS '구독별 plan_id마다 �
 -- 필요가 없어 RLS만 켜고 별도 정책은 두지 않는다(서비스롤만 접근 가능).
 ALTER TABLE company_subscription_price_locks ENABLE ROW LEVEL SECURITY;
 
-CREATE INDEX idx_price_locks_subscription_plan ON company_subscription_price_locks(subscription_id, plan_id);
+CREATE INDEX IF NOT EXISTS idx_price_locks_subscription_plan ON company_subscription_price_locks(subscription_id, plan_id);
 
 -- 이미 잠긴 구독들의 현재 잠금값을 이력에도 백필한다. 과거에 다른 플랜에 있었을 때의
 -- 잠금값까지는 기록해두지 않았어서 복원 불가하지만, 지금 잠긴 값은 앞으로의 조회가

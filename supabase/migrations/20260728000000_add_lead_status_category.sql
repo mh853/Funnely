@@ -7,6 +7,9 @@ ALTER TABLE lead_statuses
   ADD COLUMN IF NOT EXISTS category VARCHAR(30) NOT NULL DEFAULT 'other';
 
 ALTER TABLE lead_statuses
+  DROP CONSTRAINT IF EXISTS lead_statuses_category_check;
+
+ALTER TABLE lead_statuses
   ADD CONSTRAINT lead_statuses_category_check
   CHECK (category IN ('new', 'rejected', 'contacted', 'converted', 'contract_completed', 'needs_followup', 'other'));
 

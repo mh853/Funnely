@@ -6,7 +6,8 @@
 -- (sheet_sync_configs)에 발견됐던 것과 동일한 계열의 RLS-앱코드 기준 불일치).
 -- 세 정책 모두 기존 company_id 스코프/활성회사 조건은 그대로 두고 역할 조건만 넓힌다.
 
-DROP POLICY "Admins can delete statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can delete statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can delete statuses" ON "lead_statuses";
 CREATE POLICY "Admins can delete statuses" ON "lead_statuses"
   AS PERMISSIVE FOR DELETE
   TO public
@@ -21,7 +22,8 @@ CREATE POLICY "Admins can delete statuses" ON "lead_statuses"
           WHERE ((companies.is_active = true) AND (companies.withdrawn_at IS NULL)))))))
   );
 
-DROP POLICY "Admins can insert statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can insert statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can insert statuses" ON "lead_statuses";
 CREATE POLICY "Admins can insert statuses" ON "lead_statuses"
   AS PERMISSIVE FOR INSERT
   TO public
@@ -45,7 +47,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS lead_statuses_one_default_per_company
   ON lead_statuses (company_id)
   WHERE is_default = true;
 
-DROP POLICY "Admins can update statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can update statuses" ON "lead_statuses";
+DROP POLICY IF EXISTS "Admins can update statuses" ON "lead_statuses";
 CREATE POLICY "Admins can update statuses" ON "lead_statuses"
   AS PERMISSIVE FOR UPDATE
   TO public

@@ -6,7 +6,8 @@
 -- 겹쳐 실패가 전혀 드러나지 않고 토글만 조용히 원상복구됐다(85차 QA). company_id
 -- 스코프/활성회사 조건은 그대로 두고 역할 조건만 넓힌다.
 
-DROP POLICY "Staff can update landing pages" ON "landing_pages";
+DROP POLICY IF EXISTS "Staff can update landing pages" ON "landing_pages";
+DROP POLICY IF EXISTS "Staff can update landing pages" ON "landing_pages";
 CREATE POLICY "Staff can update landing pages" ON "landing_pages"
   AS PERMISSIVE FOR UPDATE
   TO public

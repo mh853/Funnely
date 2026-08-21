@@ -4,6 +4,7 @@
 
 DROP POLICY IF EXISTS "Company owners can update their company" ON companies;
 DROP POLICY IF EXISTS "Hospital owners can update their hospital" ON companies;
+DROP POLICY IF EXISTS "Company admins can update their company" ON companies;
 
 CREATE POLICY "Company admins can update their company"
   ON companies FOR UPDATE

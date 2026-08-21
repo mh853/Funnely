@@ -13,6 +13,8 @@
 -- 유출을 냈던 사고)를 반복하지 않도록, 이번엔 반드시 SELECT 전용 + company_id
 -- 스코프로만 추가한다. 쓰기(INSERT/UPDATE/DELETE)는 계속 company_subscriptions_admin이
 -- 관리자로만 제한한다 - 이 정책은 SELECT 권한만 넓힌다.
+DROP POLICY IF EXISTS company_subscriptions_select_members ON company_subscriptions;
+
 CREATE POLICY company_subscriptions_select_members ON company_subscriptions
   FOR SELECT USING (
     company_id IN (

@@ -5,6 +5,9 @@
 -- 우회하는 경로에 대비해 DB 레벨에도 형식 제약을 건다. 가입 시 임시값(TEMP-{timestamp}-...)과
 -- NULL은 그대로 허용해야 한다.
 ALTER TABLE companies
+  DROP CONSTRAINT IF EXISTS companies_business_number_format_check;
+
+ALTER TABLE companies
   ADD CONSTRAINT companies_business_number_format_check
   CHECK (
     business_number IS NULL
