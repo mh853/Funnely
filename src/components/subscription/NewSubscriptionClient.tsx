@@ -417,6 +417,16 @@ export default function NewSubscriptionClient({
           currentSubscription.subscription_plans.id === plan.id &&
           currentSubscription.billing_cycle === billingCycle
 
+        // 무료체험(프로 플랜 한정) 중 다른 플랜을 선택하면 확인 없이 곧장 진행돼,
+        // 실수로 클릭해도 체험이 그 플랜으로 바뀐 것처럼 보이는 문제가 있었다
+        // (노션 QA 접수 #6) - 즉시 결제되고 체험이 종료된다는 점을 먼저 알린다.
+        if (isCurrentlyOnTrial && !isSamePlanAndCycle && !isFree) {
+          const confirmed = confirm(
+            `지금 구독하시면 '${plan.name}' 플랜으로 즉시 이용 가능하시며, 무료체험은 종료됩니다.`
+          )
+          if (!confirmed) return
+        }
+
         if (
           (isCancelledWithValidAccess || isSuspendedWithValidAccess) &&
           isSamePlanAndCycle
@@ -1134,8 +1144,12 @@ export default function NewSubscriptionClient({
           const isEnterprise = plan.price_monthly === 0 && plan.price_yearly === 0
           const isFree = plan.name === 'Free' && plan.price_monthly === 0
 
-          const price = billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly
-          const priceLabel = billingCycle === 'monthly' ? '월' : '연'
+          // 연간 결제도 월별 결제와 동일하게 "월 환산가"로 노출해야 두 결제주기의
+          // 할인폭을 바로 비교할 수 있다 - 연 총액(price_yearly)을 그대로 보여주면
+          // 월별가와 자릿수가 달라 직관적으로 비교되지 않는다(노션 QA 접수 #8).
+          // 실제 청구액(연 일시불)은 아래 보조 문구로 별도 표시한다.
+          const price = billingCycle === 'monthly' ? plan.price_monthly : Math.round(plan.price_yearly / 12)
+          const priceLabel = '월'
 
           return (
             <div
@@ -1183,9 +1197,14 @@ export default function NewSubscriptionClient({
                     </p>
                     <p className="text-xs text-gray-500 mt-1">VAT 별도</p>
                     {billingCycle === 'yearly' && plan.price_monthly > 0 && (
-                      <p className="text-xs text-green-600 mt-1">
-                        연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약
-                      </p>
+                      <>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          연 {plan.price_yearly.toLocaleString()}원 일시 결제
+                        </p>
+                        <p className="text-xs text-green-600 mt-1">
+                          연간 결제 시 {Math.round((plan.price_monthly * 12 - plan.price_yearly) / 10000)}만원 절약
+                        </p>
+                      </>
                     )}
                     {!isExistingUser && !isActivePaidUser && plan.name === '프로' && (
                       <p className="text-xs text-indigo-600 mt-1 font-medium">7일 무료 체험 가능</p>
