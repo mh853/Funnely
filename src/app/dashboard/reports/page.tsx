@@ -71,13 +71,11 @@ export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   // "전체" 필터는 명시적으로 year='all' 또는 month='all'로 표시
   const isAllMonths = params.year === 'all' || params.month === 'all'
 
-  // 파라미터가 없으면 현재 월로 리다이렉트 (KST 기준)
+  // 파라미터가 없으면 "전체"로 리다이렉트 (기본값을 특정 월이 아닌 전체 기간으로)
   if (!params.year && !params.month) {
-    const currentYear = nowKST.getUTCFullYear()
-    const currentMonth = nowKST.getUTCMonth() + 1
     const queryParams = new URLSearchParams()
-    queryParams.set('year', currentYear.toString())
-    queryParams.set('month', currentMonth.toString())
+    queryParams.set('year', 'all')
+    queryParams.set('month', 'all')
     if (params.department) queryParams.set('department', params.department)
     if (params.assignedTo) queryParams.set('assignedTo', params.assignedTo)
     redirect(`/dashboard/reports?${queryParams.toString()}`)

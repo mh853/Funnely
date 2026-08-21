@@ -1025,7 +1025,7 @@ export default function ReportsClient({
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
         <div className="p-4 border-b border-gray-100">
           <h2 className="text-base font-bold text-gray-900">
-            🏢 부서별 DB ({selectedMonth}월)
+            🏢 부서별 DB ({isAllMonths ? '전체' : `${selectedMonth}월`})
           </h2>
         </div>
 
@@ -1256,7 +1256,7 @@ export default function ReportsClient({
         <div className="bg-white rounded-xl shadow-lg overflow-hidden">
           <div className="p-4 border-b border-gray-100">
             <h2 className="text-base font-bold text-gray-900">
-              👤 담당자별 DB ({selectedMonth}월)
+              👤 담당자별 DB ({isAllMonths ? '전체' : `${selectedMonth}월`})
             </h2>
           </div>
 
