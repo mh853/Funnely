@@ -4,6 +4,7 @@ import CalendarViewWrapper from '@/components/calendar/CalendarViewWrapper'
 import UpgradeNotice from '@/components/UpgradeNotice'
 import { hasFeatureAccess } from '@/lib/subscription-access'
 import { decryptPhone } from '@/lib/encryption/phone'
+import { getLeadStatusCategoryMap, getCodesForCategory } from '@/lib/leadStatusCategory'
 
 interface SearchParams {
   status?: string
@@ -87,6 +88,12 @@ export default async function CalendarPage({
   // Apply status filter if provided (e.g., from reservations page)
   if (statusFilter) {
     leadsQuery = leadsQuery.eq('status', statusFilter)
+  } else {
+    // DB 스케줄은 상담결과가 "추가상담 필요"인 리드만 노출해야 하는데, 필터가
+    // 없으면 전체 리드(DB 최초 유입 포함)가 그대로 표시되고 있었다(노션 QA 접수).
+    const categoryMap = await getLeadStatusCategoryMap(supabase, userProfile.company_id)
+    const followUpCodes = getCodesForCategory(categoryMap, 'needs_followup')
+    leadsQuery = leadsQuery.in('status', followUpCodes.length > 0 ? followUpCodes : ['needs_followup'])
   }
 
   const { data: rawLeads } = await leadsQuery.order('created_at', { ascending: false })
