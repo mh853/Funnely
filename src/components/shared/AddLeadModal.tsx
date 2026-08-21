@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, Fragment } from 'react'
+import Link from 'next/link'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 
@@ -176,9 +177,19 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
                   </div>
 
                   {/* 안내 메시지 */}
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-1">
                     <p className="text-xs text-blue-800">
                       💡 추가된 DB는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
+                    </p>
+                    <p className="text-xs text-blue-800">
+                      DB를 대량으로 등록하려면{' '}
+                      <Link
+                        href="/dashboard/settings/sheet-sync"
+                        className="font-medium underline hover:text-blue-900"
+                      >
+                        대량 구글스프레드시트 연동
+                      </Link>
+                      을 이용해주세요.
                     </p>
                   </div>
                 </form>
