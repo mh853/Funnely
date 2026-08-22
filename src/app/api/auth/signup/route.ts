@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server'
 import type { Database } from '@/types/database.types'
 import { normalizePhone } from '@/lib/encryption/phone'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
+import { sendTrialCreationFailureAlert } from '@/lib/email/send-trial-creation-failure-alert'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -183,9 +184,21 @@ export async function POST(request: Request) {
 
       if (subError) {
         console.error('Trial subscription creation error:', subError)
+        await sendTrialCreationFailureAlert({
+          companyId: (companyData as any).id,
+          companyName: (companyData as any).name,
+          userEmail: email,
+          reason: subError.message,
+        })
       }
     } else {
       console.error('프로 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
+      await sendTrialCreationFailureAlert({
+        companyId: (companyData as any).id,
+        companyName: (companyData as any).name,
+        userEmail: email,
+        reason: '프로 플랜을 찾을 수 없습니다 (subscription_plans 테이블 확인 필요)',
+      })
     }
 
     // Success

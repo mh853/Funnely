@@ -10,6 +10,12 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
+declare global {
+  interface Window {
+    dataLayer: Record<string, unknown>[]
+  }
+}
+
 // 가입 직후 자동 로그인 실패 시 표시할 한글 메시지 (login/page.tsx의 매핑과 동일한 기준)
 function getSignInErrorMessage(error: any): string {
   const errorCode = error?.code || error?.message || ''
@@ -134,6 +140,17 @@ export default function SignupPage() {
       if (!response.ok) {
         throw new Error(data.error || '회원가입에 실패했습니다.')
       }
+
+      // GTM으로 가입 성공 퍼널 이벤트 전달 (노션 26번). plan/method/trial은 가입
+      // 폼에 선택지가 없는 구조적 상수라 API 응답이 아니라 여기서 고정값으로 보낸다
+      // - 서버는 항상 프로 플랜 7일 무료체험을 이메일 가입에 부여한다.
+      window.dataLayer = window.dataLayer || []
+      window.dataLayer.push({
+        event: 'signup_success',
+        method: 'email',
+        plan: 'pro',
+        trial: true,
+      })
 
       // Successful signup - now sign in
       const supabase = createClient()
