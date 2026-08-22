@@ -107,12 +107,12 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
     onClose()
   }
 
-  // 엑셀 업로드 템플릿(이름/전화번호 헤더 + 예시 행) 다운로드
+  // 엑셀 업로드 템플릿(이름/전화번호/이메일 헤더 + 예시 행) 다운로드
   const handleTemplateDownload = async () => {
     const XLSX = await import('xlsx')
     const worksheet = XLSX.utils.aoa_to_sheet([
-      ['이름', '전화번호'],
-      ['홍길동', '010-1234-5678'],
+      ['이름', '전화번호', '이메일'],
+      ['홍길동', '010-1234-5678', 'hong@example.com'],
     ])
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'DB 업로드')
@@ -367,8 +367,9 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
 
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-800">
-                        💡 템플릿의 &ldquo;이름&rdquo;, &ldquo;전화번호&rdquo; 컬럼명을 바꾸지 말고
-                        작성해주세요. 등록된 DB는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
+                        💡 템플릿의 &ldquo;이름&rdquo;, &ldquo;전화번호&rdquo;, &ldquo;이메일&rdquo;
+                        컬럼명을 바꾸지 말고 작성해주세요. 이메일은 없으면 비워두셔도 됩니다.
+                        등록된 DB는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
                       </p>
                     </div>
                   </div>

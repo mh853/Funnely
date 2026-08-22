@@ -7,7 +7,7 @@ import crypto from 'crypto'
 
 // 엑셀 업로드 템플릿의 고정 헤더 - 구글시트 연동처럼 회사별 컬럼 매핑 설정이 없으므로
 // 클라이언트가 내려주는 템플릿과 반드시 일치해야 한다.
-const COLUMN_MAPPING: ColumnMapping = { name: '이름', phone: '전화번호' }
+const COLUMN_MAPPING: ColumnMapping = { name: '이름', phone: '전화번호', email: '이메일' }
 
 const MAX_ROWS = 2000
 
@@ -163,6 +163,7 @@ export async function POST(request: NextRequest) {
       name: lead.name,
       phone: encryptPhone(lead.phone),
       phone_hash: crypto.createHash('sha256').update(lead.phone.replace(/\D/g, '')).digest('hex'),
+      email: lead.email || null,
       status: defaultStatus?.code || 'new',
       source: 'manual',
       device_type: 'manual',
