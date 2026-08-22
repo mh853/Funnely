@@ -107,13 +107,26 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
     onClose()
   }
 
-  // 엑셀 업로드 템플릿(이름/전화번호/이메일 헤더 + 예시 행) 다운로드
+  // 엑셀 업로드 템플릿(이름/전화번호/이메일 + 회사가 구글시트 동기화에 설정해둔
+  // 커스텀필드 헤더 + 예시 행) 다운로드. 커스텀필드 조회에 실패해도 템플릿
+  // 다운로드 자체는 기본 3컬럼으로 계속 진행한다(선택적 기능이 필수 기능을
+  // 막을 이유는 없음).
   const handleTemplateDownload = async () => {
+    let customFields: Array<{ label: string; column: string }> = []
+    try {
+      const res = await fetch('/api/leads/bulk-upload')
+      if (res.ok) {
+        const data = await res.json()
+        customFields = data.customFields || []
+      }
+    } catch {
+      // 무시하고 기본 템플릿으로 진행
+    }
+
     const XLSX = await import('xlsx')
-    const worksheet = XLSX.utils.aoa_to_sheet([
-      ['이름', '전화번호', '이메일'],
-      ['홍길동', '010-1234-5678', 'hong@example.com'],
-    ])
+    const headers = ['이름', '전화번호', '이메일', ...customFields.map((cf) => cf.column)]
+    const exampleRow = ['홍길동', '010-1234-5678', 'hong@example.com', ...customFields.map(() => '')]
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow])
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'DB 업로드')
     XLSX.writeFile(workbook, 'DB_업로드_템플릿.xlsx')
@@ -367,9 +380,15 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
 
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-800">
-                        💡 템플릿의 &ldquo;이름&rdquo;, &ldquo;전화번호&rdquo;, &ldquo;이메일&rdquo;
-                        컬럼명을 바꾸지 말고 작성해주세요. 이메일은 없으면 비워두셔도 됩니다.
-                        등록된 DB는 &ldquo;상담 전&rdquo; 상태로 저장됩니다.
+                        💡 템플릿의 컬럼명을 바꾸지 말고 작성해주세요. 이메일과{' '}
+                        <Link
+                          href="/dashboard/settings/sheet-sync"
+                          className="font-medium underline hover:text-blue-900"
+                        >
+                          구글스프레드시트 연동
+                        </Link>
+                        에 등록해둔 추가 항목(있는 경우)은 비워두셔도 됩니다. 등록된 DB는
+                        &ldquo;상담 전&rdquo; 상태로 저장됩니다.
                       </p>
                     </div>
                   </div>
