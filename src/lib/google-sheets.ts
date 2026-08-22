@@ -1,4 +1,5 @@
 import { google } from 'googleapis'
+import { parsePhoneNumberFromString } from 'libphonenumber-js'
 
 // Google Sheets 클라이언트 생성
 export async function getGoogleSheetsClient() {
@@ -108,37 +109,55 @@ export function parseSheetToLeads(
 
 // 구글 시트 특유의 숫자 서식 문제를 보정한다.
 // 1) Meta 광고 다운로드는 앞자리 0 유실을 막으려 "p:" 접두사를 붙여 텍스트로
-//    강제하는 경우가 있다("p:01012345678") - 접두사를 제거한다. 국가번호(82)를
-//    쓰는 리드는 여기에 "+"까지 붙어 "p:+821012345678" 형태로 오므로("퍼널리_
-//    구글시트 test" 실데이터 확인) "p:" 제거 후 남은 선행 "+"도 별도로 제거한다.
-// 2) 국가번호 82가 앞자리 0을 대신하는 경우("821012345678") - 82를 0으로 치환한다.
-//    이 두 형식은 접두사/국가번호(및 "+") 때문에 자릿수 검증(9~11자리)에 걸려
-//    리드 자체가 통째로 실패 처리되고 있었다(노션 QA 접수 #4). "+" 제거 없이
-//    "p:"만 벗겨내면 "+8210..."이 남아 82로 시작하는지 검사하는 정규식에 걸리지
-//    않아 여전히 실패했다.
-// 3) 전화번호 컬럼을 "숫자"로 서식 지정한 셀은 앞자리 0이 잘려 내려온다
+//    강제하는 경우가 있다("p:01012345678") - 접두사를 제거한다.
+// 2) 국가번호 82가 앞자리 0을 대신하는 경우("821012345678", "+821012345678") -
+//    82를 0으로 치환한다. 국가번호 형식은 "p:" 뒤에 "+"까지 붙어
+//    "p:+821012345678"로 오는 경우도 있고("퍼널리_구글시트 test" 실데이터 확인),
+//    "p:010#3248#5871"처럼 대시 대신 다른 구분자가 섞여 오는 경우도 있다. 이런
+//    형식들은 접두사/국가번호/구분자 때문에 자릿수 검증(9~11자리)에 걸려 리드
+//    자체가 통째로 실패 처리되고 있었다(노션 QA 접수 #4). 그래서 이 함수 안에서는
+//    구분자를 무시한 순수 숫자(digitsOnly)로 82 국가번호 여부를 먼저 판별한다.
+// 3) 82 이외의 해외 번호("p:+13107798423" 같은 미국 번호 등)는 나라마다 자릿수와
+//    묶음 규칙이 달라 임의로 대시를 넣으면 오히려 잘못된 형식이 되므로,
+//    libphonenumber-js로 국가별 표기 규칙에 맞게 포맷한다. 파싱에 실패하면(지원
+//    안 되는 국가번호 등) 원본을 그대로 반환해 데이터를 훼손하지 않는다.
+// 4) 전화번호 컬럼을 "숫자"로 서식 지정한 셀은 앞자리 0이 잘려 내려온다
 //    ("010-1234-5678" → "1012345678"). 순수 숫자 10자리(0이 잘린 11자리 한국
 //    휴대폰 번호)로만 이루어진 값일 때만 앞에 0을 복원한다. 단, 이미 0으로
 //    시작하는 10자리 숫자(서울 지역 유선전화 02-XXXX-XXXX 같은, 원래부터 완전한
 //    번호)까지 조건 없이 0을 또 붙이면 11자리 무효 번호로 오염되므로 0으로
 //    시작하지 않는 경우로 한정한다.
 // 위 과정을 거쳐 11자리 휴대폰 번호(010-XXXX-XXXX)로 확정되면, 다른 모든 리드
-// 생성 경로와 동일하게 대시 포함 형식으로 통일해서 반환한다. 순수 숫자 10자리
-// (서울 지역 유선전화 02-XXXX-XXXX 등)는 대시 형식을 새로 단정할 근거가 없어
-// 원래 동작대로 그대로 둔다. 이미 대시 등을 포함한 값(텍스트로 입력된 경우)도 그대로 둔다.
+// 생성 경로와 동일하게 대시 포함 형식으로 통일해서 반환한다. 이때 원래 구분자가
+// "#"처럼 이상하게 섞여 있었어도 숫자만 뽑아 11자리면 재포맷하되, 순수 텍스트(예:
+// 테스트 더미 문자열)까지 잘못 건드리지 않도록 숫자/공백/대시/점/#/괄호 이외의
+// 문자가 섞여 있으면 손대지 않는다. 순수 숫자 10자리(서울 지역 유선전화
+// 02-XXXX-XXXX 등)는 대시 형식을 새로 단정할 근거가 없어 원래 동작대로 그대로 둔다.
 function normalizeSheetPhone(rawPhone: string): string {
-  let normalized = rawPhone.trim().replace(/^p\s*:\s*/i, '').replace(/^\+/, '')
+  let normalized = rawPhone.trim().replace(/^p\s*:\s*/i, '')
+  const digitsOnly = normalized.replace(/\D/g, '')
 
-  if (/^82\d{9,10}$/.test(normalized)) {
-    normalized = `0${normalized.slice(2)}`
+  // 국가번호 82: "+" 유무, "#" 같은 구분자 유무와 무관하게 순수 숫자 기준으로 판별
+  if (/^82\d{9,10}$/.test(digitsOnly)) {
+    const local = `0${digitsOnly.slice(2)}`
+    return /^\d{11}$/.test(local)
+      ? `${local.slice(0, 3)}-${local.slice(3, 7)}-${local.slice(7)}`
+      : local
+  }
+
+  // 82 이외의 해외 번호: 국가별 표기 규칙에 맞게 포맷 (파싱 실패 시 원본 유지)
+  if (normalized.startsWith('+')) {
+    const parsed = parsePhoneNumberFromString(`+${digitsOnly}`)
+    return parsed?.isValid() ? parsed.formatInternational() : normalized
   }
 
   if (/^\d{10}$/.test(normalized) && !normalized.startsWith('0')) {
     normalized = `0${normalized}`
   }
 
-  if (/^\d{11}$/.test(normalized)) {
-    return `${normalized.slice(0, 3)}-${normalized.slice(3, 7)}-${normalized.slice(7)}`
+  const finalDigits = normalized.replace(/\D/g, '')
+  if (/^\d{11}$/.test(finalDigits) && /^[\d\s\-.#()]+$/.test(normalized)) {
+    return `${finalDigits.slice(0, 3)}-${finalDigits.slice(3, 7)}-${finalDigits.slice(7)}`
   }
 
   return normalized
