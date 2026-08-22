@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo, useTransition } from 'react'
 import { createPortal } from 'react-dom'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon, CircleStackIcon } from '@heroicons/react/24/outline'
+import { MagnifyingGlassIcon, XMarkIcon, CalendarDaysIcon, ChevronDownIcon, CheckIcon, ArrowDownTrayIcon, UserPlusIcon, CircleStackIcon, TrashIcon } from '@heroicons/react/24/outline'
 import DateRangePicker from '@/components/ui/DateRangePicker'
 import { Pagination } from '@/components/ui/pagination'
 import { formatDateTime } from '@/lib/utils/date'
@@ -302,6 +302,64 @@ export default function LeadsClient({
   useEffect(() => {
     setLeads(initialLeads)
   }, [initialLeads])
+
+  // 체크박스 선택 삭제 관련 상태 - 페이지/필터가 바뀌면(initialLeads 교체)
+  // 화면에 없는 리드의 id가 선택된 채로 남아있지 않도록 함께 초기화한다.
+  const [selectedLeadIds, setSelectedLeadIds] = useState<Set<string>>(new Set())
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+
+  useEffect(() => {
+    setSelectedLeadIds(new Set())
+  }, [initialLeads])
+
+  const toggleSelectLead = (id: string) => {
+    setSelectedLeadIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllLeads = () => {
+    setSelectedLeadIds((prev) =>
+      leads.length > 0 && prev.size === leads.length
+        ? new Set()
+        : new Set(leads.map((lead: any) => lead.id))
+    )
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedLeadIds.size === 0) return
+
+    const confirmed = window.confirm(
+      `선택한 ${selectedLeadIds.size}건을 삭제합니다.\n삭제된 DB는 복구되지 않습니다. 삭제하시겠습니까?`
+    )
+    if (!confirmed) return
+
+    setIsBulkDeleting(true)
+    try {
+      const response = await fetch('/api/leads/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedLeadIds) }),
+      })
+
+      if (!response.ok) {
+        const result = await response.json().catch(() => null)
+        throw new Error(result?.error?.message || '삭제에 실패했습니다.')
+      }
+
+      toast.success(`${selectedLeadIds.size}건을 삭제했습니다.`)
+      setSelectedLeadIds(new Set())
+      router.refresh()
+    } catch (error: any) {
+      console.error('Bulk delete error:', error)
+      toast.error(error.message || 'DB 삭제 중 오류가 발생했습니다.')
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
 
   // 상태 수정 관련 상태
   const [editingLeadId, setEditingLeadId] = useState<string | null>(null)
@@ -1567,6 +1625,16 @@ export default function LeadsClient({
             <ArrowDownTrayIcon className="h-4 w-4" />
             Excel
           </button>
+          {selectedLeadIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={isBulkDeleting}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-xl text-sm font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <TrashIcon className="h-4 w-4" />
+              {isBulkDeleting ? '삭제 중...' : `선택 삭제 (${selectedLeadIds.size})`}
+            </button>
+          )}
         </div>
       </div>
 
@@ -1773,6 +1841,15 @@ export default function LeadsClient({
           <table className="min-w-full divide-y divide-gray-200">
             <thead>
               <tr className="bg-gray-50">
+                <th className="px-4 py-2.5 text-left w-10">
+                  <input
+                    type="checkbox"
+                    checked={leads.length > 0 && selectedLeadIds.size === leads.length}
+                    onChange={toggleSelectAllLeads}
+                    className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    aria-label="전체 선택"
+                  />
+                </th>
                 <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">
                   DB 신청일
                 </th>
@@ -1817,7 +1894,7 @@ export default function LeadsClient({
             <tbody className="bg-white divide-y divide-gray-200">
               {!leads || leads.length === 0 ? (
                 <tr>
-                  <td colSpan={13} className="px-4 py-8 text-center text-sm text-gray-400">
+                  <td colSpan={14} className="px-4 py-8 text-center text-sm text-gray-400">
                     데이터가 없습니다
                   </td>
                 </tr>
@@ -1828,6 +1905,15 @@ export default function LeadsClient({
                     className="hover:bg-gray-50 transition-colors cursor-pointer"
                     onClick={(e) => handleRowClick(lead, e)}
                   >
+                    <td className="px-4 py-2.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedLeadIds.has(lead.id)}
+                        onChange={() => toggleSelectLead(lead.id)}
+                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                        aria-label={`${lead.name || '리드'} 선택`}
+                      />
+                    </td>
                     <td className="px-4 py-2.5 whitespace-nowrap text-sm text-gray-900">
                       {formatDateTime(lead.created_at)}
                     </td>
