@@ -19,8 +19,7 @@ export const config = {
     registrationNumber: '809-24-00626',
     address: '경기도 화성시 남양읍 고향의봄길 36',
     phone: '02-3436-1020',
-    // 실제 수신 가능한 고객지원 이메일 시스템 구축 후 값 채울 예정
-    email: null as string | null,
+    email: 'mh@3ch.kr' as string | null,
     // 통신판매업 신고번호는 사업장 주소 변경(화성시 이전) 신고가 완료되면 추가 예정
     mailOrderSalesNumber: null as string | null,
   },
