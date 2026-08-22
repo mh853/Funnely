@@ -39,6 +39,10 @@ export async function GET(request: Request) {
     const counselorAssignedTo = searchParams.get('counselorAssignedTo')
     const search = searchParams.get('search')
     const selectedLeadId = searchParams.get('id')
+    // 목록 화면(page.tsx)엔 있는 결제완료 필터가 여기엔 없어, 목록에서
+    // "결제완료"로 걸러놓고 엑셀 내보내기를 누르면 필터가 조용히 무시되고
+    // 전체 데이터가 나가고 있었다(노션 QA 접수 #23).
+    const paymentComplete = searchParams.get('paymentComplete') === '1'
 
     // Calculate date range
     const now = new Date()
@@ -96,7 +100,7 @@ export async function GET(request: Request) {
         ),
         call_assigned_user:users!leads_call_assigned_to_fkey(id, full_name),
         counselor_assigned_user:users!leads_counselor_assigned_to_fkey(id, full_name),
-        lead_payments (
+        lead_payments${paymentComplete ? '!inner' : ''} (
           id,
           amount,
           payment_date,
