@@ -27,7 +27,7 @@ export async function POST(
     // 남기고 있었다. RLS와 동일한 범위(같은 회사)로 맞춘다.
     const { data: ticket } = await supabase
       .from('support_tickets')
-      .select('company_id')
+      .select('company_id, status')
       .eq('id', params.id)
       .maybeSingle()
 
@@ -64,9 +64,17 @@ export async function POST(
     }
 
     // 티켓 updated_at 업데이트
+    // 종료(resolved/closed)된 티켓에 고객이 추가 문의를 남기면 처리중으로 되돌린다.
+    // 관리자 알림(이메일+인앱)은 상태와 무관하게 이미 항상 발동하므로(노션 QA
+    // 접수 #17), 여기서는 상태만 되돌려 "답변 완료로 종료된 줄 알았는데 조용히
+    // 방치되는" 일이 없도록 한다.
+    const ticketUpdate: Record<string, unknown> = { updated_at: new Date().toISOString() }
+    if (ticket.status === 'resolved' || ticket.status === 'closed') {
+      ticketUpdate.status = 'in_progress'
+    }
     await supabase
       .from('support_tickets')
-      .update({ updated_at: new Date().toISOString() })
+      .update(ticketUpdate)
       .eq('id', params.id)
 
     // 관리자 알림 - 고객이 후속 메시지를 남겨도 알 방법이 전혀 없어(admin 목록도
