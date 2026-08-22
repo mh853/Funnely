@@ -7,68 +7,21 @@ import crypto from 'crypto'
 
 const MAX_ROWS = 2000
 
-// 이 회사가 구글시트 동기화에 설정해둔 커스텀필드를 그대로 엑셀 업로드
-// 템플릿/파싱에 재사용한다(사용자 요청 - 노션 3번 항목 추가 요청 사항).
-// 한 회사가 시트 연동을 여러 개(스프레드시트 여러 개, 또는 같은 시트의 여러 탭)
-// 가질 수 있어 customFields가 하나로 정해지지 않으므로, 활성 연동 전체를
-// created_at 오름차순으로 훑어 label 기준으로 합친다(먼저 등록된 연동의 정의를
-// 우선하고, 같은 label이 이후 연동에서 다른 시트 컬럼명으로 다시 나오면 무시).
-async function getCompanyCustomFields(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  companyId: string
-): Promise<Array<{ label: string; column: string }>> {
-  const { data } = await supabase
-    .from('sheet_sync_configs')
-    .select('column_mapping')
-    .eq('company_id', companyId)
-    .eq('is_active', true)
-    .order('created_at', { ascending: true })
-
-  const seenLabels = new Set<string>()
-  const merged: Array<{ label: string; column: string }> = []
-  for (const row of data || []) {
-    const mapping = row.column_mapping as ColumnMapping | null
-    for (const field of mapping?.customFields || []) {
-      if (!field.label || !field.column || seenLabels.has(field.label)) continue
-      seenLabels.add(field.label)
-      merged.push(field)
-    }
-  }
-  return merged
-}
-
-// 엑셀 업로드 템플릿에 어떤 컬럼을 내려줘야 하는지(회사별 커스텀필드 포함) 조회
-export async function GET() {
-  try {
-    const supabase = await createClient()
-
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: { message: 'Unauthorized' } }, { status: 401 })
-    }
-
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('company_id')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
-      return NextResponse.json({ error: { message: 'User profile not found' } }, { status: 404 })
-    }
-
-    const customFields = await getCompanyCustomFields(supabase, userProfile.company_id)
-    return NextResponse.json({ customFields })
-  } catch (error: any) {
-    console.error('Bulk lead upload template config error:', error)
-    return NextResponse.json(
-      { error: { message: '템플릿 설정을 불러오지 못했습니다.' } },
-      { status: 500 }
-    )
-  }
+// 엑셀 업로드 템플릿의 고정 컬럼 매핑. 구글시트 동기화(회사별 컬럼 매핑을
+// sheet_sync_configs에서 자유롭게 설정)와는 다루는 항목 자체가 달라 별개로
+// 둔다 - 여기 항목1~5는 label을 컬럼명 그대로 고정해, 업로드한 값이 리드의
+// custom_fields로 저장되고 DB 관리 모달의 "DB 신청 상세내용"에 그대로 표시된다.
+const COLUMN_MAPPING: ColumnMapping = {
+  name: '이름',
+  phone: '전화번호',
+  email: '이메일',
+  customFields: [
+    { label: '항목1', column: '항목1' },
+    { label: '항목2', column: '항목2' },
+    { label: '항목3', column: '항목3' },
+    { label: '항목4', column: '항목4' },
+    { label: '항목5', column: '항목5' },
+  ],
 }
 
 export async function POST(request: NextRequest) {
@@ -94,13 +47,6 @@ export async function POST(request: NextRequest) {
     }
 
     const companyId = userProfile.company_id
-    const customFields = await getCompanyCustomFields(supabase, companyId)
-    const columnMapping: ColumnMapping = {
-      name: '이름',
-      phone: '전화번호',
-      email: '이메일',
-      customFields,
-    }
 
     const body = await request.json()
     const rows: unknown = body.rows
@@ -125,7 +71,7 @@ export async function POST(request: NextRequest) {
       row.map((cell) => (cell === null || cell === undefined ? '' : String(cell)))
     )
 
-    const missingColumns = findMissingColumns(stringRows[0], columnMapping)
+    const missingColumns = findMissingColumns(stringRows[0], COLUMN_MAPPING)
     if (missingColumns.length > 0) {
       return NextResponse.json(
         {
@@ -137,7 +83,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const parsedLeads = parseSheetToLeads(stringRows, columnMapping)
+    const parsedLeads = parseSheetToLeads(stringRows, COLUMN_MAPPING)
     const totalRows = stringRows.length - 1
 
     if (parsedLeads.length === 0) {

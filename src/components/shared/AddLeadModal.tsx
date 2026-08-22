@@ -107,25 +107,14 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
     onClose()
   }
 
-  // 엑셀 업로드 템플릿(이름/전화번호/이메일 + 회사가 구글시트 동기화에 설정해둔
-  // 커스텀필드 헤더 + 예시 행) 다운로드. 커스텀필드 조회에 실패해도 템플릿
-  // 다운로드 자체는 기본 3컬럼으로 계속 진행한다(선택적 기능이 필수 기능을
-  // 막을 이유는 없음).
+  // 엑셀 업로드 템플릿(이름/전화번호/이메일 + 자유 입력용 항목1~5 + 예시 행)
+  // 다운로드. 구글시트 동기화는 회사별로 컬럼 매핑을 자유롭게 설정하는 별개
+  // 기능이라 여기서는 참조하지 않는다 - 항목1~5는 고정 라벨로, 값을 채워
+  // 업로드하면 리드 상세의 "DB 신청 상세내용"에 그대로 표시된다.
   const handleTemplateDownload = async () => {
-    let customFields: Array<{ label: string; column: string }> = []
-    try {
-      const res = await fetch('/api/leads/bulk-upload')
-      if (res.ok) {
-        const data = await res.json()
-        customFields = data.customFields || []
-      }
-    } catch {
-      // 무시하고 기본 템플릿으로 진행
-    }
-
     const XLSX = await import('xlsx')
-    const headers = ['이름', '전화번호', '이메일', ...customFields.map((cf) => cf.column)]
-    const exampleRow = ['홍길동', '010-1234-5678', 'hong@example.com', ...customFields.map(() => '')]
+    const headers = ['이름', '전화번호', '이메일', '항목1', '항목2', '항목3', '항목4', '항목5']
+    const exampleRow = ['홍길동', '010-1234-5678', 'hong@example.com', '', '', '', '', '']
     const worksheet = XLSX.utils.aoa_to_sheet([headers, exampleRow])
     const workbook = XLSX.utils.book_new()
     XLSX.utils.book_append_sheet(workbook, worksheet, 'DB 업로드')
@@ -380,15 +369,10 @@ export default function AddLeadModal({ isOpen, onClose, onSuccess }: AddLeadModa
 
                     <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                       <p className="text-xs text-blue-800">
-                        💡 템플릿의 컬럼명을 바꾸지 말고 작성해주세요. 이메일과{' '}
-                        <Link
-                          href="/dashboard/settings/sheet-sync"
-                          className="font-medium underline hover:text-blue-900"
-                        >
-                          구글스프레드시트 연동
-                        </Link>
-                        에 등록해둔 추가 항목(있는 경우)은 비워두셔도 됩니다. 등록된 DB는
-                        &ldquo;상담 전&rdquo; 상태로 저장됩니다.
+                        💡 템플릿의 컬럼명을 바꾸지 말고 작성해주세요. 이메일과 항목1~5는
+                        비워두셔도 됩니다. 항목1~5에 채운 값은 DB 상세보기의 &ldquo;DB 신청
+                        상세내용&rdquo;에 표시됩니다. 등록된 DB는 &ldquo;상담 전&rdquo; 상태로
+                        저장됩니다.
                       </p>
                     </div>
                   </div>
