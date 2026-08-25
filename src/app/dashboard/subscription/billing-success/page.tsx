@@ -5,6 +5,43 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import { trackEvent } from '@/lib/analytics/track'
+import { planNameToSlug } from '@/lib/subscription/plan-slugs'
+
+// payment_success는 transaction_id 기준으로 딱 1회만 쏴야 한다(노션 30번 14/18항) -
+// 완료 페이지를 새로고침/재방문해도 같은 결제가 중복 집계되면 안 된다.
+async function trackPaymentSuccessOnce(
+  supabase: ReturnType<typeof createClient>,
+  subscriptionId: string,
+  transaction: { id: string; total_amount?: number } | null | undefined
+) {
+  if (!transaction?.id) return
+  const trackedKey = `payment-success-tracked:${transaction.id}`
+  if (sessionStorage.getItem(trackedKey) === '1') return
+
+  const { data: sub } = await supabase
+    .from('company_subscriptions')
+    .select('billing_cycle, subscription_plans!plan_id(name, price_monthly, price_yearly)')
+    .eq('id', subscriptionId)
+    .maybeSingle()
+
+  const plan = (sub as any)?.subscription_plans
+  const billingCycle = (sub as any)?.billing_cycle === 'yearly' ? 'annual' : 'monthly'
+  const value =
+    transaction.total_amount ??
+    (billingCycle === 'annual' ? plan?.price_yearly : plan?.price_monthly) ??
+    0
+
+  trackEvent({
+    event: 'payment_success',
+    transaction_id: transaction.id,
+    plan: planNameToSlug(plan?.name) ?? plan?.name ?? null,
+    value,
+    currency: 'KRW',
+    billing_cycle: billingCycle,
+  })
+  sessionStorage.setItem(trackedKey, '1')
+}
 
 function BillingSuccessContent() {
   const searchParams = useSearchParams()
@@ -91,22 +128,24 @@ function BillingSuccessContent() {
               billingCycle: targetBillingCycle || undefined,
             }),
           })
+          const convertData = await convertRes.json()
           if (!convertRes.ok) {
-            const err = await convertRes.json()
-            throw new Error(err.error || '결제에 실패했습니다.')
+            throw new Error(convertData.error || '결제에 실패했습니다.')
           }
           sessionStorage.setItem(step2Key, '1')
+          await trackPaymentSuccessOnce(supabase, subscriptionId, convertData.transaction)
         } else if (mode !== 'update' && mode !== 'trial_convert' && sessionStorage.getItem(step2Key) !== '1') {
           const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ subscriptionId }),
           })
+          const payData = await payRes.json()
           if (!payRes.ok) {
-            const err = await payRes.json()
-            throw new Error(err.error || '결제에 실패했습니다.')
+            throw new Error(payData.error || '결제에 실패했습니다.')
           }
           sessionStorage.setItem(step2Key, '1')
+          await trackPaymentSuccessOnce(supabase, subscriptionId, payData.transaction)
         }
 
         setProcessing(false)

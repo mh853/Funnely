@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { useToast } from '@/components/shared/Toast'
+import { trackEvent } from '@/lib/analytics/track'
 
 const CATEGORIES = [
   { value: 'technical', label: '기술 문의' },
@@ -67,6 +68,7 @@ export default function ContactForm() {
         throw new Error(data.error || '문의 전송에 실패했습니다.')
       }
 
+      trackEvent({ event: 'contact_submit_success', inquiry_type: formData.category })
       setSuccess(true)
       setTicketId(data.inquiryId)
       setFormData(initialFormData)

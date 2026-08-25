@@ -1,6 +1,9 @@
+'use client'
+
 import Link from 'next/link'
 import { config } from '@/lib/config'
 import { getKSTNow } from '@/lib/utils/date'
+import { trackEvent } from '@/lib/analytics/track'
 
 type NavItem = { name: string; href: string | null }
 
@@ -60,6 +63,11 @@ export default function MarketingFooter() {
                     {item.href ? (
                       <Link
                         href={item.href}
+                        onClick={
+                          item.href === '/contact'
+                            ? () => trackEvent({ event: 'contact_click', cta_location: 'footer' })
+                            : undefined
+                        }
                         className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                       >
                         {item.name}

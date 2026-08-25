@@ -16,6 +16,23 @@ import {
   DocumentTextIcon,
   PhotoIcon,
 } from '@heroicons/react/24/outline'
+import { trackEvent } from '@/lib/analytics/track'
+
+// feature.id(landing/db/analytics/schedule/pixel) → GTM 이벤트 값 매핑
+const FEATURE_CTA_LOCATION: Record<string, string> = {
+  landing: 'feature_landing_page',
+  db: 'feature_db_management',
+  analytics: 'feature_analytics',
+  schedule: 'feature_schedule',
+  pixel: 'feature_pixel_api',
+}
+const FEATURE_CLICK_NAME: Record<string, string> = {
+  landing: 'landing_page',
+  db: 'db_management',
+  analytics: 'traffic_analytics',
+  schedule: 'db_schedule',
+  pixel: 'pixel_api',
+}
 
 type SubFeature = {
   icon: React.ElementType
@@ -642,6 +659,7 @@ export default function FeatureShowcase() {
 
   const scrollToFeature = (index: number) => {
     setActiveIndex(index)
+    trackEvent({ event: 'feature_click', feature_name: FEATURE_CLICK_NAME[features[index].id] })
     sectionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -766,12 +784,14 @@ export default function FeatureShowcase() {
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
                     <Link
                       href="/auth/signup?plan=pro&trial=true"
+                      onClick={() => trackEvent({ event: 'free_trial_click', cta_location: FEATURE_CTA_LOCATION[feature.id], plan: 'pro', trial: true })}
                       className={`inline-flex items-center justify-center rounded-full bg-gradient-to-r ${feature.accentColor} px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all`}
                     >
                       7일 무료체험
                     </Link>
                     <Link
                       href="/auth/signup"
+                      onClick={() => trackEvent({ event: 'signup_click', cta_location: FEATURE_CTA_LOCATION[feature.id] })}
                       className="inline-flex items-center justify-center rounded-full border-2 border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:border-gray-400 transition-all"
                     >
                       회원가입

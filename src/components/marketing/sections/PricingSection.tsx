@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { CheckIcon, XMarkIcon, SparklesIcon } from '@heroicons/react/24/solid'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
+import { trackEvent } from '@/lib/analytics/track'
 
 type FeatureValue = boolean | string
 
@@ -251,7 +252,10 @@ export default function PricingSection() {
                     {plan.ctaVariant === 'custom' ? (
                       <button
                         type="button"
-                        onClick={() => setIsInquiryOpen(true)}
+                        onClick={() => {
+                          trackEvent({ event: 'contact_click', cta_location: 'pricing_custom' })
+                          setIsInquiryOpen(true)
+                        }}
                         className="block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all bg-gray-900 text-white hover:bg-gray-700 shadow-sm"
                       >
                         {plan.cta}
@@ -259,6 +263,17 @@ export default function PricingSection() {
                     ) : (
                       <Link
                         href={`/auth/signup?plan=${plan.id}&billing=${billingCycle}${plan.id === 'pro' ? '&trial=true' : ''}`}
+                        onClick={() => {
+                          const planPrice =
+                            billingCycle === 'yearly' && plan.priceYearly ? plan.priceYearly : plan.price
+                          trackEvent({
+                            event: 'plan_select',
+                            plan: plan.id.replace(/-/g, '_'),
+                            plan_price: planPrice,
+                            billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+                            trial: plan.id === 'pro',
+                          })
+                        }}
                         className={`block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all ${
                           plan.ctaVariant === 'primary'
                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md'

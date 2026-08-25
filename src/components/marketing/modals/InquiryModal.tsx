@@ -11,6 +11,7 @@ import {
   BuildingOfficeIcon,
   UserIcon
 } from '@heroicons/react/24/solid'
+import { trackEvent } from '@/lib/analytics/track'
 
 interface InquiryModalProps {
   isOpen: boolean
@@ -56,6 +57,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
         throw new Error(data.error || 'Failed to submit inquiry')
       }
 
+      trackEvent({ event: 'contact_submit_success', inquiry_type: inquiryType })
       setIsSuccess(true)
       setTimeout(() => {
         onClose()

@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/analytics/track'
 
 export default function MarketingHeader() {
   const pathname = usePathname()
@@ -124,7 +125,10 @@ export default function MarketingHeader() {
               )}
               <button
                 type="button"
-                onClick={() => setIsInquiryOpen(true)}
+                onClick={() => {
+                  trackEvent({ event: 'contact_click', cta_location: 'header' })
+                  setIsInquiryOpen(true)
+                }}
                 className="text-base font-semibold text-gray-700 hover:text-blue-600 transition-colors inline-flex items-center"
               >
                 고객센터
@@ -132,6 +136,7 @@ export default function MarketingHeader() {
               {!isLoggedIn && (
                 <Link
                   href="/auth/signup?plan=pro&trial=true"
+                  onClick={() => trackEvent({ event: 'free_trial_click', cta_location: 'header', plan: 'pro', trial: true })}
                   className="rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-2 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all inline-flex items-center"
                 >
                   7일 무료체험
@@ -206,7 +211,11 @@ export default function MarketingHeader() {
                   )}
                   <button
                     type="button"
-                    onClick={() => { setMobileMenuOpen(false); setIsInquiryOpen(true) }}
+                    onClick={() => {
+                      trackEvent({ event: 'contact_click', cta_location: 'header' })
+                      setMobileMenuOpen(false)
+                      setIsInquiryOpen(true)
+                    }}
                     className="block w-full text-left rounded-lg px-3 py-2.5 text-base font-semibold leading-7 text-gray-900 hover:bg-gray-50"
                   >
                     고객센터
@@ -214,6 +223,7 @@ export default function MarketingHeader() {
                   {!isLoggedIn && (
                     <Link
                       href="/auth/signup?plan=pro&trial=true"
+                      onClick={() => trackEvent({ event: 'free_trial_click', cta_location: 'header', plan: 'pro', trial: true })}
                       className="block rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-center text-base font-semibold text-white shadow-lg"
                     >
                       7일 무료체험

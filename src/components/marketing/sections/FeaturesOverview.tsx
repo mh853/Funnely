@@ -9,6 +9,7 @@ import {
   CalendarDaysIcon,
   SignalIcon,
 } from '@heroicons/react/24/outline'
+import { trackEvent } from '@/lib/analytics/track'
 
 const features = [
   {
@@ -19,6 +20,7 @@ const features = [
     features: ['이미지/영상 삽입', 'DB 수집 마감 타이머', '실시간 DB 수집현황', 'DB 수집 폼', '상담신청·전화연결 버튼'],
     isPro: false,
     anchor: 'feature-landing',
+    featureKey: 'landing_page',
   },
   {
     name: '실시간 DB 수집 및 관리',
@@ -28,6 +30,7 @@ const features = [
     features: ['DB 현황 리스트', 'DB 배분 (콜 담당자)', 'DB 수동 추가', '콜 결과 관리'],
     isPro: false,
     anchor: 'feature-db',
+    featureKey: 'db_management',
   },
   {
     name: 'DB예약 스케줄 관리',
@@ -37,6 +40,7 @@ const features = [
     features: ['DB 스케쥴 캘린더', '예약 스케쥴 관리', '월별·주간별 스케쥴 노트'],
     isPro: true,
     anchor: 'feature-schedule',
+    featureKey: 'db_schedule',
   },
   {
     name: '트래픽 분석',
@@ -46,6 +50,7 @@ const features = [
     features: ['실시간 트래픽 대시보드', '기기별 유입 분석', '유입경로별 전환율'],
     isPro: true,
     anchor: 'feature-analytics',
+    featureKey: 'traffic_analytics',
   },
   {
     name: '부서별/담당자별 성과 분석',
@@ -55,6 +60,7 @@ const features = [
     features: ['일별·월별 DB 현황', '담당자 성과 비교', '데일리 성과 측정'],
     isPro: true,
     anchor: 'feature-analytics',
+    featureKey: 'performance_report',
   },
   {
     name: '광고 픽셀 & API 연동',
@@ -64,6 +70,7 @@ const features = [
     features: ['광고 픽셀 연동', 'API 연동 가이드', '효율 및 전환 체크'],
     isPro: false,
     anchor: 'feature-pixel',
+    featureKey: 'pixel_api',
   },
 ]
 
@@ -116,6 +123,7 @@ export default function FeaturesOverview() {
               variants={item}
               className="group relative cursor-pointer"
               onClick={() => {
+                trackEvent({ event: 'feature_click', feature_name: feature.featureKey })
                 const el = document.getElementById(feature.anchor)
                 el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
               }}

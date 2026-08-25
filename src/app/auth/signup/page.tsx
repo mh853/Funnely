@@ -9,12 +9,7 @@ import { Suspense, useState, useEffect, useRef } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-
-declare global {
-  interface Window {
-    dataLayer: Record<string, unknown>[]
-  }
-}
+import { trackEvent } from '@/lib/analytics/track'
 
 // 가입 직후 자동 로그인 실패 시 표시할 한글 메시지 (login/page.tsx의 매핑과 동일한 기준)
 function getSignInErrorMessage(error: any): string {
@@ -146,17 +141,18 @@ function SignupPageContent() {
         throw new Error(data.error || '회원가입에 실패했습니다.')
       }
 
-      // GTM으로 가입 성공 퍼널 이벤트 전달 (노션 26번). 마케팅 페이지에서 요금제를 골라
-      // 들어온 경우(requiresPlanSetup) 실제 구독은 아직 생성되지 않고 이어지는 체험 여부
-      // 질문 화면에서 결정되므로, 이 시점엔 어떤 플랜/체험 여부인지 아직 확정되지 않았다
-      // - 그 경우 plan/trial 없이 method만 보낸다. 그 외(기존 동작)는 서버가 항상 프로
-      // 플랜 7일 무료체험을 부여하므로 고정값을 그대로 보낸다.
-      window.dataLayer = window.dataLayer || []
-      window.dataLayer.push(
-        data.requiresPlanSetup
-          ? { event: 'signup_success', method: 'email' }
-          : { event: 'signup_success', method: 'email', plan: 'pro', trial: true }
-      )
+      // GTM으로 가입 성공 퍼널 이벤트 전달 (노션 26번/30번). 마케팅 페이지에서 프로가 아닌
+      // 요금제를 골라 들어온 경우(requiresPlanSetup) 실제 체험 여부는 이어지는 plan-setup
+      // 화면에서 결정되므로 trial_started는 거기서 별도로 쏜다 - 여기선 아직 확정되지 않은
+      // 체험 상태를 true로 잘못 보내지 않도록 plan만 실어 보낸다. 그 외(프로 선택/무파라미터)는
+      // 서버가 이 시점에 이미 프로 7일 체험을 확정 부여하므로 signup_success와 trial_started를
+      // 같은 성공 처리 단계에서 함께 쏜다(노션 30번 8항이 명시적으로 허용하는 방식).
+      if (data.requiresPlanSetup) {
+        trackEvent({ event: 'signup_success', method: 'email', plan: data.requestedPlan ?? null, trial: false })
+      } else {
+        trackEvent({ event: 'signup_success', method: 'email', plan: 'pro', trial: true })
+        trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+      }
 
       // Successful signup - now sign in
       const supabase = createClient()

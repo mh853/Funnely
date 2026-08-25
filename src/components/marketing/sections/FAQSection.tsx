@@ -5,6 +5,7 @@ import Script from 'next/script'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
+import { trackEvent } from '@/lib/analytics/track'
 
 const faqs = [
   {
@@ -149,7 +150,10 @@ export default function FAQSection() {
             고객 지원팀이 언제든 도와드리겠습니다
           </p>
           <button
-            onClick={() => setIsInquiryModalOpen(true)}
+            onClick={() => {
+              trackEvent({ event: 'contact_click', cta_location: 'faq' })
+              setIsInquiryModalOpen(true)
+            }}
             className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all"
           >
             문의하기

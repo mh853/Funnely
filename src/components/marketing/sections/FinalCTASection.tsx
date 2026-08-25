@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { RocketLaunchIcon, CheckCircleIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
+import { trackEvent } from '@/lib/analytics/track'
 
 const benefits = [
   '7일 무료체험',
@@ -24,7 +25,7 @@ export default function FinalCTASection() {
         inquiryType="sales"
       />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 py-24 sm:py-32">
+      <section id="final-cta" className="relative overflow-hidden bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 py-24 sm:py-32">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-0 w-96 h-96 bg-white/10 rounded-full blur-3xl" />
@@ -73,6 +74,7 @@ export default function FinalCTASection() {
           >
             <Link
               href="/auth/signup?plan=pro&trial=true"
+              onClick={() => trackEvent({ event: 'free_trial_click', cta_location: 'final_cta', plan: 'pro', trial: true })}
               className="group relative inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-lg font-semibold text-blue-600 shadow-2xl hover:shadow-3xl transition-all hover:scale-110"
             >
               <RocketLaunchIcon className="h-6 w-6" />
@@ -83,7 +85,10 @@ export default function FinalCTASection() {
               </span>
             </Link>
             <button
-              onClick={() => setIsSalesModalOpen(true)}
+              onClick={() => {
+                trackEvent({ event: 'contact_click', cta_location: 'final_cta' })
+                setIsSalesModalOpen(true)
+              }}
               className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-lg font-semibold text-white hover:bg-white/20 transition-all"
             >
               상담하기

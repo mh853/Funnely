@@ -4,6 +4,17 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { XMarkIcon, CheckIcon } from '@heroicons/react/24/outline'
+import { trackEvent } from '@/lib/analytics/track'
+
+// industry.id(expo/single 등 내부 코드) → 노션 30번 개발요청서의 industry_click 값 매핑
+const INDUSTRY_CLICK_VALUE: Record<string, string> = {
+  education: 'education',
+  insurance: 'insurance',
+  hospital: 'hospital',
+  loan: 'loan',
+  expo: 'exhibition',
+  single: 'single_page',
+}
 
 type Industry = {
   id: string
@@ -180,7 +191,7 @@ export default function IndustrySection() {
         )}
       </AnimatePresence>
 
-      <section className="py-24 sm:py-32 bg-gradient-to-b from-white to-blue-50">
+      <section id="industry" className="py-24 sm:py-32 bg-gradient-to-b from-white to-blue-50">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           {/* Section header */}
           <motion.div
@@ -219,7 +230,10 @@ export default function IndustrySection() {
             {industries.map((industry) => (
               <button
                 key={industry.id}
-                onClick={() => setSelectedIndustry(industry)}
+                onClick={() => {
+                  trackEvent({ event: 'industry_click', industry: INDUSTRY_CLICK_VALUE[industry.id] })
+                  setSelectedIndustry(industry)
+                }}
                 className="inline-flex items-center gap-2 rounded-full border-2 border-gray-200 bg-white px-6 py-3 text-base font-semibold text-gray-700 shadow-sm hover:border-blue-500 hover:text-blue-600 hover:shadow-md transition-all"
               >
                 <span>{industry.emoji}</span>
@@ -248,12 +262,14 @@ export default function IndustrySection() {
           >
             <Link
               href="/auth/signup?plan=pro&trial=true"
+              onClick={() => trackEvent({ event: 'free_trial_click', cta_location: 'industry_section', plan: 'pro', trial: true })}
               className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-xl hover:shadow-2xl hover:scale-105 transition-all"
             >
               7일 무료체험
             </Link>
             <Link
               href="/auth/signup"
+              onClick={() => trackEvent({ event: 'signup_click', cta_location: 'industry_section' })}
               className="inline-flex items-center justify-center rounded-full border-2 border-gray-300 bg-white px-8 py-4 text-base font-semibold text-gray-900 hover:border-blue-600 hover:text-blue-600 transition-all"
             >
               회원가입

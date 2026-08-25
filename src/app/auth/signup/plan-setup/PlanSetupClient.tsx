@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { createClient } from '@/lib/supabase/client'
+import { trackEvent } from '@/lib/analytics/track'
 
 interface SelectedPlan {
   id: string
@@ -59,6 +60,15 @@ export default function PlanSetupClient({
         .single()
       if (insertError || !newSub) throw new Error(insertError?.message || '구독 생성에 실패했습니다.')
 
+      const planPrice = billingCycle === 'yearly' && selectedPlan.price_yearly ? selectedPlan.price_yearly : selectedPlan.price_monthly
+      trackEvent({
+        event: 'checkout_started',
+        plan: planSlug,
+        value: planPrice,
+        currency: 'KRW',
+        billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+      })
+
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       const failParams = new URLSearchParams({
         subscriptionId: (newSub as any).id,
@@ -94,6 +104,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
+      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || '무료 체험 시작 중 오류가 발생했습니다.')
@@ -119,6 +130,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
+      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       await tossPayments.requestBillingAuth('카드', {
