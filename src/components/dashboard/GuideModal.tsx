@@ -34,8 +34,10 @@ export default function GuideModal({ onClose, onDismissForever }: GuideModalProp
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-6">
-          <GuideContent hero={false} />
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-6">
+            <GuideContent hero={false} />
+          </div>
         </div>
 
         <div className="flex-shrink-0 border-t border-gray-100 px-6 py-3 flex items-center justify-between">
