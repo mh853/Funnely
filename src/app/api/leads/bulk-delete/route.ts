@@ -51,7 +51,23 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json({ success: true, deleted: deleted?.length || 0 })
+    const deletedCount = deleted?.length || 0
+
+    // 삭제 이력 기록 (설정 > DB 삭제 이력) - 실제 삭제된 건수(deletedCount)만 남기고
+    // 요청받은 ids.length는 쓰지 않는다(다른 회사 id가 섞여도 조용히 걸러지므로 다를 수 있음).
+    // 로그 실패가 삭제 자체를 막으면 안 되므로 에러는 삼킨다.
+    if (deletedCount > 0) {
+      const { error: logError } = await supabase.from('lead_deletion_logs').insert({
+        company_id: userProfile.company_id,
+        deleted_by: user.id,
+        deleted_count: deletedCount,
+      })
+      if (logError) {
+        console.error('Lead deletion log insert error:', logError)
+      }
+    }
+
+    return NextResponse.json({ success: true, deleted: deletedCount })
   } catch (error: any) {
     console.error('Bulk lead delete error:', error)
     return NextResponse.json(

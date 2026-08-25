@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import CompanySettingsForm from '@/components/settings/CompanySettingsForm'
 import CustomDomainManager from '@/components/settings/CustomDomainManager'
-import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon, GlobeAltIcon, BookOpenIcon } from '@heroicons/react/24/outline'
+import { KeyIcon, TagIcon, TableCellsIcon, Cog6ToothIcon, BuildingOffice2Icon, UserCircleIcon, CreditCardIcon, CurrencyDollarIcon, UsersIcon, ChartBarIcon, BellIcon, GlobeAltIcon, BookOpenIcon, TrashIcon } from '@heroicons/react/24/outline'
 import { formatDate } from '@/lib/utils/date'
 import { canUseCustomDomain } from '@/lib/subscription-access'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
@@ -162,7 +162,7 @@ export default async function SettingsPage() {
       )}
 
       {/* Quick Settings Links - 1행 그리드 */}
-      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-6' : 'grid-cols-1 sm:grid-cols-4'}`}>
+      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-7' : 'grid-cols-1 sm:grid-cols-4'}`}>
         {/* 사용 가이드 */}
         <Link
           href="/dashboard/guide"
@@ -264,6 +264,25 @@ export default async function SettingsPage() {
               <p className="text-xs text-gray-500 truncate">Google Sheets 자동 연동</p>
             </div>
             <svg className="h-4 w-4 text-gray-400 group-hover:text-purple-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
+
+        {/* DB 삭제 이력 - Admin Only */}
+        {isAdmin && (
+          <Link
+            href="/dashboard/settings/lead-deletion-logs"
+            className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-red-300 hover:bg-red-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+          >
+            <div className="flex-shrink-0 bg-red-100 rounded-lg p-2 group-hover:bg-red-200 transition-colors">
+              <TrashIcon className="h-5 w-5 text-red-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 truncate">DB 삭제 이력</h3>
+              <p className="text-xs text-gray-500 truncate">DB현황 삭제 계정/건수 조회</p>
+            </div>
+            <svg className="h-4 w-4 text-gray-400 group-hover:text-red-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </Link>
