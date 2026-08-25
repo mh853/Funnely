@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { escapeIlike } from '@/lib/utils/search'
+import { decryptPhone } from '@/lib/encryption/phone'
 
 /**
  * GET /api/admin/audit-logs
@@ -90,6 +91,20 @@ export async function GET(request: NextRequest) {
     // 응답 데이터 포맷팅
     const formattedLogs = (logs || []).map((log: any) => {
       const companyId = log.new_values?.companyId || null
+
+      // 리드 일괄삭제 로그의 전화번호는 leads 테이블과 동일하게 암호화된 채로 저장돼 있다
+      // (bulk-delete/route.ts 참고) - super_admin이 이 API로 조회하는 시점에만 복호화한다.
+      let metadata = log.new_values
+      if (Array.isArray(metadata?.deletedLeads)) {
+        metadata = {
+          ...metadata,
+          deletedLeads: metadata.deletedLeads.map((lead: any) => ({
+            ...lead,
+            phone: lead.phone ? decryptPhone(lead.phone) : lead.phone,
+          })),
+        }
+      }
+
       return {
         id: log.id,
         userId: log.user_id,
@@ -100,7 +115,7 @@ export async function GET(request: NextRequest) {
         action: log.action,
         entityType: log.resource_type,
         entityId: log.resource_id,
-        metadata: log.new_values,
+        metadata,
         ipAddress: log.ip_address,
         userAgent: log.user_agent,
         createdAt: log.created_at,

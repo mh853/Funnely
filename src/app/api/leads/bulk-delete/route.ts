@@ -1,6 +1,7 @@
 // 체크박스로 선택한 DB(리드)를 일괄 삭제하는 API - DB 현황의 선택 삭제 기능
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { createAuditLog, AUDIT_ACTIONS, ENTITY_TYPES } from '@/lib/admin/audit-middleware'
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,7 +42,7 @@ export async function POST(request: NextRequest) {
       .delete()
       .in('id', ids)
       .eq('company_id', userProfile.company_id)
-      .select('id')
+      .select('id, name, phone')
 
     if (error) {
       console.error('Bulk lead delete error:', error)
@@ -65,6 +66,21 @@ export async function POST(request: NextRequest) {
       if (logError) {
         console.error('Lead deletion log insert error:', logError)
       }
+
+      // 퍼널리 내부 admin(super_admin)용 상세 감사 로그 - 이름/전화번호까지 남긴다(분쟁 대응용).
+      // 전화번호는 leads 테이블에 저장된 형태 그대로(암호화된 상태) 기록하고, 조회 시점
+      // (/api/admin/audit-logs)에서만 복호화한다 - 로그에도 평문 전화번호를 영구 저장하지 않기 위함.
+      // 고객사 자신에게는 노출되지 않음(설정 페이지는 위 lead_deletion_logs만 사용, 건수만 표시).
+      await createAuditLog(request, {
+        userId: user.id,
+        companyId: userProfile.company_id,
+        action: AUDIT_ACTIONS.LEAD_BULK_DELETE,
+        entityType: ENTITY_TYPES.LEAD,
+        metadata: {
+          deletedCount,
+          deletedLeads: (deleted || []).map((lead) => ({ name: lead.name, phone: lead.phone })),
+        },
+      })
     }
 
     return NextResponse.json({ success: true, deleted: deletedCount })

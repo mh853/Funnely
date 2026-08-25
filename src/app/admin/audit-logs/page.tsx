@@ -133,6 +133,7 @@ export default function AuditLogsPage() {
       'lead.create': '리드 생성',
       'lead.update': '리드 수정',
       'lead.export': '리드 내보내기',
+      'lead.bulk_delete': '리드 일괄삭제',
       'admin.login': '관리자 로그인',
       'admin.logout': '관리자 로그아웃',
     }

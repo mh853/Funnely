@@ -82,6 +82,7 @@ export const AUDIT_ACTIONS = {
   LEAD_CREATE: 'lead.create',
   LEAD_UPDATE: 'lead.update',
   LEAD_DELETE: 'lead.delete',
+  LEAD_BULK_DELETE: 'lead.bulk_delete',
   LEAD_STATUS_CHANGE: 'lead.status_change',
   LEAD_BULK_UPDATE: 'lead.bulk_update',
   LEAD_EXPORT: 'lead.export',
