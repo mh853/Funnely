@@ -19,6 +19,18 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <head>
+        {/* Google tag (gtag.js) */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-2BNPPXME0R" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', 'G-2BNPPXME0R');`,
+          }}
+        />
+        {/* End Google tag (gtag.js) */}
         {/* Google Tag Manager */}
         <script
           dangerouslySetInnerHTML={{
