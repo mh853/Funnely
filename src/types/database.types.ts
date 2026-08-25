@@ -1,6 +1,6 @@
 /**
  * Database Types for Funnely
- * supabase gen types typescript --linked --schema public 로 재생성 (2026-08-15)
+ * supabase gen types typescript --linked --schema public 로 재생성 (2026-08-25)
  * 재생성 명령: npx supabase gen types typescript --linked --schema public > src/types/database.types.ts
  * 파일 하단의 수동유지 타입 블록은 재생성 후에도 다시 이어붙여야 한다.
  */
@@ -18,6 +18,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -895,6 +920,120 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      company_attribution: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          first_fbclid: string | null
+          first_gbraid: string | null
+          first_gclid: string | null
+          first_landing_page: string | null
+          first_msclkid: string | null
+          first_referrer: string | null
+          first_touch_at: string | null
+          first_utm_campaign: string | null
+          first_utm_content: string | null
+          first_utm_medium: string | null
+          first_utm_source: string | null
+          first_utm_term: string | null
+          first_wbraid: string | null
+          id: string
+          last_fbclid: string | null
+          last_gbraid: string | null
+          last_gclid: string | null
+          last_msclkid: string | null
+          last_touch_at: string | null
+          last_utm_campaign: string | null
+          last_utm_content: string | null
+          last_utm_medium: string | null
+          last_utm_source: string | null
+          last_utm_term: string | null
+          last_wbraid: string | null
+          signup_date: string
+          signup_plan: string | null
+          trial: boolean
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          first_fbclid?: string | null
+          first_gbraid?: string | null
+          first_gclid?: string | null
+          first_landing_page?: string | null
+          first_msclkid?: string | null
+          first_referrer?: string | null
+          first_touch_at?: string | null
+          first_utm_campaign?: string | null
+          first_utm_content?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          first_utm_term?: string | null
+          first_wbraid?: string | null
+          id?: string
+          last_fbclid?: string | null
+          last_gbraid?: string | null
+          last_gclid?: string | null
+          last_msclkid?: string | null
+          last_touch_at?: string | null
+          last_utm_campaign?: string | null
+          last_utm_content?: string | null
+          last_utm_medium?: string | null
+          last_utm_source?: string | null
+          last_utm_term?: string | null
+          last_wbraid?: string | null
+          signup_date?: string
+          signup_plan?: string | null
+          trial?: boolean
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          first_fbclid?: string | null
+          first_gbraid?: string | null
+          first_gclid?: string | null
+          first_landing_page?: string | null
+          first_msclkid?: string | null
+          first_referrer?: string | null
+          first_touch_at?: string | null
+          first_utm_campaign?: string | null
+          first_utm_content?: string | null
+          first_utm_medium?: string | null
+          first_utm_source?: string | null
+          first_utm_term?: string | null
+          first_wbraid?: string | null
+          id?: string
+          last_fbclid?: string | null
+          last_gbraid?: string | null
+          last_gclid?: string | null
+          last_msclkid?: string | null
+          last_touch_at?: string | null
+          last_utm_campaign?: string | null
+          last_utm_content?: string | null
+          last_utm_medium?: string | null
+          last_utm_source?: string | null
+          last_utm_term?: string | null
+          last_wbraid?: string | null
+          signup_date?: string
+          signup_plan?: string | null
+          trial?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_attribution_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "admin_company_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "company_attribution_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -2166,6 +2305,52 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lead_deletion_logs: {
+        Row: {
+          company_id: string
+          created_at: string | null
+          deleted_by: string | null
+          deleted_count: number
+          id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string | null
+          deleted_by?: string | null
+          deleted_count: number
+          id?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string | null
+          deleted_by?: string | null
+          deleted_count?: number
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_deletion_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "admin_company_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "lead_deletion_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_deletion_logs_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
@@ -4941,6 +5126,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       ad_platform: ["meta", "kakao", "google"],

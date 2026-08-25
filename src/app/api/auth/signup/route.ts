@@ -27,6 +27,61 @@ function createAdminClient() {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
+const ATTRIBUTION_MAX_LEN = 500
+const ATTRIBUTION_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid', 'gbraid', 'wbraid']
+const ATTRIBUTION_FIRST_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000
+const ATTRIBUTION_LAST_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
+
+function sanitizeAttributionValue(v: unknown): string | null {
+  if (typeof v !== 'string' || !v) return null
+  return v.slice(0, ATTRIBUTION_MAX_LEN)
+}
+
+// 클라이언트 localStorage에서 온 유입 경로 값을 그대로 insert에 spread하면 company_id 등
+// 임의 컬럼을 덮어쓸 위험이 있어, 알려진 필드만 하나씩 화이트리스트로 골라 담는다.
+// 오래 방치된 localStorage 값이 그대로 들어오지 않도록 신선도(TTL)도 여기서 필터링한다.
+function buildAttributionRow(
+  companyId: string,
+  firstAttribution: unknown,
+  lastAttribution: unknown,
+  signupPlan: string | null,
+  trial: boolean
+): Record<string, unknown> {
+  const row: Record<string, unknown> = {
+    company_id: companyId,
+    signup_plan: signupPlan,
+    trial,
+  }
+
+  const now = Date.now()
+
+  if (firstAttribution && typeof firstAttribution === 'object') {
+    const src = firstAttribution as Record<string, unknown>
+    const touchedAt = typeof src.touched_at === 'string' ? Date.parse(src.touched_at) : NaN
+    if (!Number.isNaN(touchedAt) && now - touchedAt <= ATTRIBUTION_FIRST_MAX_AGE_MS) {
+      for (const key of ATTRIBUTION_KEYS) {
+        row[`first_${key}`] = sanitizeAttributionValue(src[key])
+      }
+      row.first_landing_page = sanitizeAttributionValue(src.landing_page)
+      row.first_referrer = sanitizeAttributionValue(src.referrer)
+      row.first_touch_at = new Date(touchedAt).toISOString()
+    }
+  }
+
+  if (lastAttribution && typeof lastAttribution === 'object') {
+    const src = lastAttribution as Record<string, unknown>
+    const touchedAt = typeof src.touched_at === 'string' ? Date.parse(src.touched_at) : NaN
+    if (!Number.isNaN(touchedAt) && now - touchedAt <= ATTRIBUTION_LAST_MAX_AGE_MS) {
+      for (const key of ATTRIBUTION_KEYS) {
+        row[`last_${key}`] = sanitizeAttributionValue(src[key])
+      }
+      row.last_touch_at = new Date(touchedAt).toISOString()
+    }
+  }
+
+  return row
+}
+
 export async function POST(request: Request) {
   try {
     // 회원가입 API가 admin.createUser()로 GoTrue의 공개 가입 레이트리밋을 우회하고
@@ -41,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, password, fullName, companyName, businessNumber, phone, plan, billingCycle } = body
+    const { email, password, fullName, companyName, businessNumber, phone, plan, billingCycle, firstAttribution, lastAttribution } = body
 
     // 마케팅 페이지에서 프로가 아닌 특정 요금제를 골라 들어온 경우, 이 API는 계정/회사
     // 생성까지만 하고 구독 생성은 가입 직후 체험 여부를 묻는 화면(/auth/signup/plan-setup)에
@@ -164,6 +219,24 @@ export async function POST(request: Request) {
         { error: '사용자 프로필 생성에 실패했습니다.' },
         { status: 500 }
       )
+    }
+
+    // 3-1. 유입 경로(UTM/광고 클릭 ID) 저장 - 마케팅 분석용 부가 데이터라 실패해도
+    // 가입 자체를 막지 않는다 (lead_deletion_logs 등 기존 로그 insert와 동일한 방침).
+    try {
+      const attributionRow = buildAttributionRow(
+        (companyData as any).id,
+        firstAttribution,
+        lastAttribution,
+        deferSubscriptionSetup ? requestedPlanSlug : 'pro',
+        !deferSubscriptionSetup
+      )
+      const { error: attributionError } = await supabase.from('company_attribution').insert(attributionRow as any)
+      if (attributionError) {
+        console.error('Attribution insert error:', attributionError)
+      }
+    } catch (attributionErr) {
+      console.error('Attribution insert error:', attributionErr)
     }
 
     // 4. 프로 플랜 7일 무료체험 자동 부여 (체험 대상 플랜은 원래 '프로'로 통일돼 있었으나,

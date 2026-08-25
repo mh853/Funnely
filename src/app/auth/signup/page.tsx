@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { trackEvent } from '@/lib/analytics/track'
+import { readAttributionFromStorage, ATTRIBUTION_FIRST_KEY, ATTRIBUTION_LAST_KEY } from '@/lib/analytics/attribution'
 
 // 가입 직후 자동 로그인 실패 시 표시할 한글 메시지 (login/page.tsx의 매핑과 동일한 기준)
 function getSignInErrorMessage(error: any): string {
@@ -132,6 +133,8 @@ function SignupPageContent() {
           businessNumber: null,
           plan: requestedPlan,
           billingCycle: requestedBillingCycle,
+          firstAttribution: readAttributionFromStorage(ATTRIBUTION_FIRST_KEY),
+          lastAttribution: readAttributionFromStorage(ATTRIBUTION_LAST_KEY),
         }),
       })
 
