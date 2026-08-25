@@ -64,3 +64,11 @@ ds-bundle/
 !src/app/apple-icon.png
 !public/brand/
 !public/brand/*.png
+
+# 제품소개/교육자료 제작용 임시 산출물 (데모 계정 정보 포함, 커밋 금지)
+product-video/
+
+# 대시보드 사용 가이드 실제 자산 (위 스크린샷 무시 규칙에서 예외, public/guide는 실서비스 자산)
+!public/guide/
+!public/guide/screenshots/
+!public/guide/screenshots/*.png
