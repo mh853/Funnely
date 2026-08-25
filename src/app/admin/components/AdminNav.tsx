@@ -4,7 +4,7 @@ import { Fragment } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Dialog, Transition } from '@headlessui/react'
-import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt, X } from 'lucide-react'
+import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt, History, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -23,6 +23,7 @@ const navItems: NavItem[] = [
   { icon: BarChart3,       label: '분석',         href: '/admin/analytics' },
   { icon: HeadphonesIcon,  label: '문의',         href: '/admin/support' },
   { icon: MessageSquare,   label: '홈페이지 문의', href: '/admin/support/inquiries' },
+  { icon: History,         label: '감사 로그',    href: '/admin/audit-logs' },
 ]
 
 interface AdminNavProps {

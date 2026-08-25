@@ -255,6 +255,7 @@ export default function AuditLogsPage() {
               <option value="user.create">사용자 생성</option>
               <option value="user.update">사용자 수정</option>
               <option value="lead.export">리드 내보내기</option>
+              <option value="lead.bulk_delete">리드 일괄삭제</option>
               <option value="admin.login">관리자 로그인</option>
             </select>
           </div>
