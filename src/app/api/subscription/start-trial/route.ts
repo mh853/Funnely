@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
+import { PLAN_SLUG_TO_NAME } from '@/lib/subscription/plan-slugs'
 
 export async function POST(request: Request) {
   try {
@@ -15,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { subscriptionId, planId, billingCycle, companyId } = body
+    const { subscriptionId, planId, billingCycle, companyId, pendingPlanSlug, pendingBillingCycle } = body
 
     if (!planId) {
       return NextResponse.json({ error: '플랜 정보가 누락되었습니다.' }, { status: 400 })
@@ -81,11 +82,35 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '프로 플랜만 무료 체험이 가능합니다.' }, { status: 400 })
     }
 
+    // 신규가입 시 프로가 아닌 다른 요금제를 고르고도 "일단 프로 체험"을 선택한 경우,
+    // 체험이 끝나면 자동으로 원래 고른 요금제로 전환되도록 pending_plan_id에 저장해둔다
+    // (기존엔 "예약된 다운그레이드" 전용이었던 필드를 재사용 - toss-billing-payment 에지
+    // 함수가 결제 시점에 이 값을 읽어 실제 청구 대상을 결정한다). 'pro'거나 알 수 없는
+    // slug면 저장하지 않는다 - 프로 그대로 유지되는 게 기본 동작이므로 별도 예약이 필요 없다.
+    let pendingPlanId: string | null = null
+    if (typeof pendingPlanSlug === 'string' && pendingPlanSlug !== 'pro' && PLAN_SLUG_TO_NAME[pendingPlanSlug]) {
+      const { data: pendingPlan } = await serviceSupabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('name', PLAN_SLUG_TO_NAME[pendingPlanSlug])
+        .eq('is_active', true)
+        .limit(1)
+        .single() as { data: { id: string } | null }
+      pendingPlanId = pendingPlan?.id ?? null
+    }
+    const pendingFields = pendingPlanId
+      ? {
+          pending_plan_id: pendingPlanId,
+          pending_billing_cycle: pendingBillingCycle === 'yearly' ? 'yearly' : 'monthly',
+        }
+      : {}
+
     const now = new Date()
     const trialEndDate = new Date(now)
     trialEndDate.setDate(trialEndDate.getDate() + 7)
 
     const svc = serviceSupabase as any
+    let resultSubscriptionId: string = subscriptionId ?? ''
 
     if (subscriptionId) {
       // 기존 구독 업데이트
@@ -100,6 +125,7 @@ export async function POST(request: Request) {
           trial_start_date: now.toISOString(),
           trial_end_date: trialEndDate.toISOString(),
           has_used_trial: true,
+          ...pendingFields,
         })
         .eq('id', subscriptionId)
 
@@ -108,7 +134,7 @@ export async function POST(request: Request) {
       }
     } else if (companyId) {
       // 새 구독 생성
-      const { error } = await svc
+      const { data: inserted, error } = await svc
         .from('company_subscriptions')
         .insert({
           company_id: companyId,
@@ -120,16 +146,20 @@ export async function POST(request: Request) {
           trial_start_date: now.toISOString(),
           trial_end_date: trialEndDate.toISOString(),
           has_used_trial: true,
+          ...pendingFields,
         })
+        .select('id')
+        .single()
 
       if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 })
       }
+      resultSubscriptionId = inserted.id
     } else {
       return NextResponse.json({ error: '구독 정보가 누락되었습니다.' }, { status: 400 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, subscriptionId: resultSubscriptionId })
   } catch (error: any) {
     console.error('[Start Trial] 오류:', error)
     return NextResponse.json({ error: error.message || '서버 오류가 발생했습니다.' }, { status: 500 })

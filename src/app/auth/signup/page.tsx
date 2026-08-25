@@ -5,8 +5,8 @@
  * New user registration
  */
 
-import { useState, useEffect, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { Suspense, useState, useEffect, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 
@@ -53,8 +53,11 @@ function formatPhoneNumber(value: string): string {
   }
 }
 
-export default function SignupPage() {
+function SignupPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const requestedPlan = searchParams.get('plan')
+  const requestedBillingCycle = searchParams.get('billing') === 'yearly' ? 'yearly' : 'monthly'
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -132,6 +135,8 @@ export default function SignupPage() {
           phone: formData.phone || null,
           companyName: formData.companyName || null,
           businessNumber: null,
+          plan: requestedPlan,
+          billingCycle: requestedBillingCycle,
         }),
       })
 
@@ -141,16 +146,17 @@ export default function SignupPage() {
         throw new Error(data.error || '회원가입에 실패했습니다.')
       }
 
-      // GTM으로 가입 성공 퍼널 이벤트 전달 (노션 26번). plan/method/trial은 가입
-      // 폼에 선택지가 없는 구조적 상수라 API 응답이 아니라 여기서 고정값으로 보낸다
-      // - 서버는 항상 프로 플랜 7일 무료체험을 이메일 가입에 부여한다.
+      // GTM으로 가입 성공 퍼널 이벤트 전달 (노션 26번). 마케팅 페이지에서 요금제를 골라
+      // 들어온 경우(requiresPlanSetup) 실제 구독은 아직 생성되지 않고 이어지는 체험 여부
+      // 질문 화면에서 결정되므로, 이 시점엔 어떤 플랜/체험 여부인지 아직 확정되지 않았다
+      // - 그 경우 plan/trial 없이 method만 보낸다. 그 외(기존 동작)는 서버가 항상 프로
+      // 플랜 7일 무료체험을 부여하므로 고정값을 그대로 보낸다.
       window.dataLayer = window.dataLayer || []
-      window.dataLayer.push({
-        event: 'signup_success',
-        method: 'email',
-        plan: 'pro',
-        trial: true,
-      })
+      window.dataLayer.push(
+        data.requiresPlanSetup
+          ? { event: 'signup_success', method: 'email' }
+          : { event: 'signup_success', method: 'email', plan: 'pro', trial: true }
+      )
 
       // Successful signup - now sign in
       const supabase = createClient()
@@ -161,6 +167,15 @@ export default function SignupPage() {
 
       if (signInError) {
         setError(getSignInErrorMessage(signInError))
+        return
+      }
+
+      // 마케팅 페이지에서 프로가 아닌 요금제를 선택해 들어온 경우, 대시보드로 바로
+      // 보내지 않고 "프로 체험도 해보시겠어요?" 질문 화면을 먼저 거친다.
+      if (data.requiresPlanSetup && data.requestedPlan) {
+        router.push(
+          `/auth/signup/plan-setup?plan=${encodeURIComponent(data.requestedPlan)}&billing=${encodeURIComponent(data.requestedBillingCycle || 'monthly')}`
+        )
         return
       }
 
@@ -342,5 +357,13 @@ export default function SignupPage() {
 
       </div>
     </div>
+  )
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignupPageContent />
+    </Suspense>
   )
 }

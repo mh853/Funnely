@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
+import { convertTrialSubscriptionCore } from '@/lib/subscription/convert-trial-core'
 
 export async function POST(request: Request) {
   const supabase = await createClient()
@@ -33,11 +34,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '구독 정보를 찾을 수 없습니다.' }, { status: 404 })
   }
 
-  // 결제 실패 시 되돌릴 원래 상태. trial 사용자뿐 아니라 past_due/cancelled/expired
-  // 사용자도 기존 빌링키로 이 API를 타므로, 무조건 'trial'로 롤백하면 해지된 사용자가
-  // 실패한 결제 시도만으로 다시 체험 상태(=무료 이용 가능)가 되어버린다.
-  const rollbackStatus = currentSub.status
-
   // 사용자 권한 확인 - company_subscriptions RLS(company_subscriptions_admin, admin/owner만
   // 허용, manager 제외)와 서비스 롤 우회 경로의 인가 기준을 반드시 일치시켜야 한다.
   // company_id만 확인하면 marketing_staff 등 최하위 권한도 결제를 트리거할 수 있었다.
@@ -51,124 +47,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
   }
 
-  // 빌링키 확인 — 다른 구독에서 복사 필요한 경우
-  // billing_key만 복사하고 customer_key/card_info를 빠뜨리면 결제는 되지만(빌링키는 있음)
-  // 카드 정보 UI에는 "등록된 카드 없음"으로 보이는 불일치가 생기므로 세 값을 함께 복사한다.
-  let billingKey: string | null = currentSub.billing_key
-  let customerKey: string | null = currentSub.customer_key
-  let cardInfo: unknown = currentSub.card_info
-  if (!billingKey && billingKeySubscriptionId) {
-    const { data: sourceSubData } = await svc
-      .from('company_subscriptions')
-      .select('billing_key, customer_key, card_info')
-      .eq('id', billingKeySubscriptionId)
-      .eq('company_id', currentSub.company_id)
-      .maybeSingle()
-    billingKey = sourceSubData?.billing_key ?? null
-    customerKey = sourceSubData?.customer_key ?? null
-    cardInfo = sourceSubData?.card_info ?? null
+  const result = await convertTrialSubscriptionCore({
+    subscriptionId,
+    planId,
+    billingCycle,
+    billingKeySubscriptionId,
+    authHeader: `Bearer ${session.access_token}`,
+  })
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.error }, { status: result.status })
   }
-
-  if (!billingKey) {
-    return NextResponse.json({ error: '등록된 카드 정보가 없습니다.' }, { status: 400 })
-  }
-
-  // 구독 업데이트: 빌링키 설정 + 플랜/주기 반영 + 상태를 active로 전환
-  // toss-billing-payment 에지 함수가 trial 상태를 찾지 못하는 문제 해결
-  const updateData: Record<string, unknown> = {
-    billing_key: billingKey,
-    customer_key: customerKey,
-    card_info: cardInfo,
-    status: 'active',
-  }
-  // rollbackStatus가 past_due면 지금 유예기간이 실제로 진행 중인 것이므로(대시보드
-  // "결제 재시도" 버튼) grace_period_end를 건드리면 안 된다 - toss-billing-payment의
-  // isFirstFailure 판정이 이 값의 존재 여부로 "최초 실패"를 가리므로(57차 QA), 여기서
-  // 지우면 이어지는 재시도가 매번 "최초 실패"로 오판되어 유예기간이 계속 리셋된다.
-  // 그 외(trial/expired/cancelled에서 재구독)는 과거 past_due를 거쳤을 때 남은 stale한
-  // 값일 수 있어 비운다 - 안 비우면 재구독 후 결제가 다시 실패할 때 오래된 값을 그대로
-  // 재사용해 유예기간이 사실상 0일로 붕괴한다(58차 QA 확인).
-  if (rollbackStatus !== 'past_due') {
-    updateData.grace_period_end = null
-  }
-  if (planId) {
-    updateData.plan_id = planId
-    // 예약된 다운그레이드가 남아있으면 아래 mode 없는 결제 호출이 방금 선택한
-    // planId가 아니라 예전 예약 플랜 가격으로 청구하므로 함께 비운다.
-    updateData.pending_plan_id = null
-    updateData.pending_billing_cycle = null
-  }
-  if (billingCycle) updateData.billing_cycle = billingCycle
-
-  const { error: updateError } = await svc
-    .from('company_subscriptions')
-    .update(updateData)
-    .eq('id', subscriptionId)
-
-  if (updateError) {
-    return NextResponse.json({ error: '구독 업데이트에 실패했습니다.' }, { status: 500 })
-  }
-
-  // toss-billing-payment 에지 함수 호출
-  const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  try {
-    const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ subscriptionId }),
-    })
-
-    if (!payRes.ok) {
-      // 결제 실패 시 원래 상태로 롤백. 단, 위에서 이미 grace_period_end를 지운 채로
-      // active를 시도했다면(rollbackStatus가 past_due가 아니었던 경우) 에지 함수 내부의
-      // markPastDueBeforeTossCall이 이번 실패를 처리하며 grace_period_end를 새로 채워
-      // 넣었을 수 있다 - status만 원복하고 이 값을 그대로 두면, trial/expired/cancelled/
-      // suspended인데 grace_period_end만 남아있는 상태가 되어, 나중에 실제로 past_due에
-      // 진입할 때 isFirstFailure가 "이미 실패한 적 있음"으로 잘못 판정돼 유예기간이
-      // 새로 시작되지 않고 이 stale한 값을 그대로 재사용하게 된다.
-      const rollbackData: Record<string, unknown> = { status: rollbackStatus }
-      if (rollbackStatus !== 'past_due') {
-        rollbackData.grace_period_end = null
-      }
-      await svc
-        .from('company_subscriptions')
-        .update(rollbackData)
-        .eq('id', subscriptionId)
-
-      // 에지 함수가 JSON이 아닌 응답(게이트웨이 502/504 등)을 줄 수도 있으므로
-      // 파싱 실패가 아래 catch로 새어나가 중복 롤백을 유발하지 않도록 막는다.
-      let errorMessage = '결제에 실패했습니다.'
-      try {
-        const err = await payRes.json()
-        if (err?.error) errorMessage = err.error
-      } catch {
-        // 응답 본문을 읽지 못해도 기본 메시지로 진행
-      }
-      return NextResponse.json({ error: errorMessage }, { status: 500 })
-    }
-
-    return NextResponse.json({ success: true })
-  } catch (fetchError) {
-    // fetch 자체가 실패한 경우(네트워크 오류, 타임아웃 등): best-effort로 원래 상태 롤백
-    // (grace_period_end 처리는 위 !payRes.ok 분기와 동일한 이유로 필요)
-    try {
-      const rollbackData: Record<string, unknown> = { status: rollbackStatus }
-      if (rollbackStatus !== 'past_due') {
-        rollbackData.grace_period_end = null
-      }
-      await svc
-        .from('company_subscriptions')
-        .update(rollbackData)
-        .eq('id', subscriptionId)
-    } catch (rollbackError) {
-      // 롤백 실패가 원래 오류를 가리지 않도록 무시
-    }
-    return NextResponse.json(
-      { error: '결제 처리 중 오류가 발생했습니다. 다시 시도해주세요.' },
-      { status: 500 }
-    )
-  }
+  return NextResponse.json({ success: true })
 }

@@ -258,7 +258,7 @@ export default function PricingSection() {
                       </button>
                     ) : (
                       <Link
-                        href={`/auth/signup?plan=${plan.id}${plan.id === 'pro' ? '&trial=true' : ''}`}
+                        href={`/auth/signup?plan=${plan.id}&billing=${billingCycle}${plan.id === 'pro' ? '&trial=true' : ''}`}
                         className={`block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all ${
                           plan.ctaVariant === 'primary'
                             ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md'

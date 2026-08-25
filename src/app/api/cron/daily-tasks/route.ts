@@ -16,6 +16,7 @@ import { FROM_ADDRESS, MAX_RETRIES } from '@/lib/email/constants'
 import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 import { escapeHtml } from '@/lib/email/template-renderer'
 import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
+import { convertTrialSubscriptionCore } from '@/lib/subscription/convert-trial-core'
 
 /**
  * Unified daily tasks cron job
@@ -71,6 +72,26 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Subscription renewal error:', error)
       results.tasksExecuted.push({
         task: 'subscription_renewal',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task -1b: 체험 종료 + 카드 등록된 구독 자동전환 (만료 처리보다 먼저 실행해야
+    // 아래 checkSubscriptionExpiry가 이미 active로 바뀐 구독을 trial 만료로 잘못
+    // 처리하지 않는다)
+    console.log('[Cron] Running trial auto-conversion')
+    try {
+      const autoConvertResult = await autoConvertExpiredTrials(supabase)
+      results.tasksExecuted.push({
+        task: 'trial_auto_convert',
+        status: 'success',
+        ...autoConvertResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Trial auto-conversion error:', error)
+      results.tasksExecuted.push({
+        task: 'trial_auto_convert',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -883,6 +904,57 @@ async function processSubscriptionRenewals(supabase: any) {
   }
 
   return { attempted: (dueSubs || []).length, succeeded, failed }
+}
+
+// 체험 중 카드를 미리 등록해둔 구독(신규가입 시 "체험 후 자동전환" 선택)이 체험
+// 기간을 넘기면, 사용자가 아무것도 하지 않아도 pending_plan_id에 저장해둔 요금제로
+// 자동 결제/전환한다. 카드가 없는 체험은 그대로 두어 기존처럼 checkSubscriptionExpiry가
+// expired로 전환하고 이용을 제한한다.
+async function autoConvertExpiredTrials(supabase: any) {
+  const now = new Date().toISOString()
+
+  // pending_plan_id가 없는 카드등록된 체험은 건드리지 않는다 - 신규가입 "체험 후
+  // 자동전환" 경로로 시작한 체험이 아니라(예: 대시보드에서 카드만 등록/변경한 경우)
+  // pending_plan_id가 비어 있으면 결제 엣지 함수가 subscription.plan_id(프로)로
+  // 폴백해, 동의 없이 프로 정가가 청구된다.
+  const { data: expiredTrialsWithCard, error } = await supabase
+    .from('company_subscriptions')
+    .select('id, companies!inner(is_active, withdrawn_at)')
+    .eq('status', 'trial')
+    .lt('trial_end_date', now)
+    .not('billing_key', 'is', null)
+    .not('pending_plan_id', 'is', null)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+
+  if (error) {
+    console.error('[Trial Auto-Convert] 대상 조회 실패:', error)
+    return { attempted: 0, succeeded: 0, failed: 0 }
+  }
+
+  let succeeded = 0
+  let failed = 0
+
+  for (const sub of expiredTrialsWithCard || []) {
+    try {
+      const result = await convertTrialSubscriptionCore({
+        subscriptionId: sub.id,
+        authHeader: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+      })
+      if (result.ok) {
+        succeeded++
+        console.log(`[Trial Auto-Convert] 전환 성공: ${sub.id}`)
+      } else {
+        failed++
+        console.error(`[Trial Auto-Convert] 전환 실패: ${sub.id} (${result.error})`)
+      }
+    } catch (err) {
+      failed++
+      console.error(`[Trial Auto-Convert] 전환 처리 중 오류 (${sub.id}):`, err)
+    }
+  }
+
+  return { attempted: (expiredTrialsWithCard || []).length, succeeded, failed }
 }
 
 /**

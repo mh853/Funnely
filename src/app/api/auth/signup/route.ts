@@ -9,6 +9,7 @@ import type { Database } from '@/types/database.types'
 import { normalizePhone } from '@/lib/encryption/phone'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendTrialCreationFailureAlert } from '@/lib/email/send-trial-creation-failure-alert'
+import { isKnownPlanSlug } from '@/lib/subscription/plan-slugs'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -40,7 +41,17 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, password, fullName, companyName, businessNumber, phone } = body
+    const { email, password, fullName, companyName, businessNumber, phone, plan, billingCycle } = body
+
+    // 마케팅 페이지에서 프로가 아닌 특정 요금제를 골라 들어온 경우, 이 API는 계정/회사
+    // 생성까지만 하고 구독 생성은 가입 직후 체험 여부를 묻는 화면(/auth/signup/plan-setup)에
+    // 맡긴다. plan이 없거나 'pro'거나 알 수 없는 slug면 기존과 동일하게 이 API가 바로
+    // 7일 프로 체험을 부여한다(하위 호환 - plan 파라미터 없이 오는 요청도 여전히 존재).
+    const requestedPlanSlug: string | null = typeof plan === 'string' ? plan : null
+    // custom(협의 전용, 가격 0원)은 결제 플로우 대상이 아니므로 제외 - 이 slug로 들어오면
+    // 기존과 동일하게 프로 체험을 부여한다.
+    const deferSubscriptionSetup =
+      isKnownPlanSlug(requestedPlanSlug) && requestedPlanSlug !== 'pro' && requestedPlanSlug !== 'custom'
 
     // Validation
     if (!email || !password || !fullName || !companyName) {
@@ -155,50 +166,53 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. 프로 플랜 7일 무료체험 자동 부여 (체험 대상 플랜은 '프로'로 통일 — start-trial API 및
-    // 요금제 페이지의 "7일 무료체험" 배지와 일치시킴. 다른 플랜을 바꾸면 절대 안 된다.)
-    const { data: proPlan } = await supabase
-      .from('subscription_plans')
-      .select('id')
-      .eq('name', '프로')
-      .eq('is_active', true)
-      .limit(1)
-      .single()
+    // 4. 프로 플랜 7일 무료체험 자동 부여 (체험 대상 플랜은 원래 '프로'로 통일돼 있었으나,
+    // 마케팅 페이지에서 다른 요금제를 선택해 들어온 경우(deferSubscriptionSetup)는 이
+    // 단계를 건너뛰고 /auth/signup/plan-setup이 체험 여부를 물은 뒤 구독을 만든다.)
+    if (!deferSubscriptionSetup) {
+      const { data: proPlan } = await supabase
+        .from('subscription_plans')
+        .select('id')
+        .eq('name', '프로')
+        .eq('is_active', true)
+        .limit(1)
+        .single()
 
-    if (proPlan) {
-      const now = new Date()
-      const trialEnd = new Date(now)
-      trialEnd.setDate(trialEnd.getDate() + 7)
+      if (proPlan) {
+        const now = new Date()
+        const trialEnd = new Date(now)
+        trialEnd.setDate(trialEnd.getDate() + 7)
 
-      const { error: subError } = await supabase
-        .from('company_subscriptions')
-        .insert({
-          company_id: (companyData as any).id,
-          plan_id: proPlan.id,
-          status: 'trial',
-          billing_cycle: 'monthly',
-          trial_start_date: now.toISOString(),
-          trial_end_date: trialEnd.toISOString(),
-          has_used_trial: true,
-        } as any)
+        const { error: subError } = await supabase
+          .from('company_subscriptions')
+          .insert({
+            company_id: (companyData as any).id,
+            plan_id: proPlan.id,
+            status: 'trial',
+            billing_cycle: 'monthly',
+            trial_start_date: now.toISOString(),
+            trial_end_date: trialEnd.toISOString(),
+            has_used_trial: true,
+          } as any)
 
-      if (subError) {
-        console.error('Trial subscription creation error:', subError)
+        if (subError) {
+          console.error('Trial subscription creation error:', subError)
+          await sendTrialCreationFailureAlert({
+            companyId: (companyData as any).id,
+            companyName: (companyData as any).name,
+            userEmail: email,
+            reason: subError.message,
+          })
+        }
+      } else {
+        console.error('프로 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
         await sendTrialCreationFailureAlert({
           companyId: (companyData as any).id,
           companyName: (companyData as any).name,
           userEmail: email,
-          reason: subError.message,
+          reason: '프로 플랜을 찾을 수 없습니다 (subscription_plans 테이블 확인 필요)',
         })
       }
-    } else {
-      console.error('프로 플랜을 찾을 수 없습니다. subscription_plans 테이블을 확인하세요.')
-      await sendTrialCreationFailureAlert({
-        companyId: (companyData as any).id,
-        companyName: (companyData as any).name,
-        userEmail: email,
-        reason: '프로 플랜을 찾을 수 없습니다 (subscription_plans 테이블 확인 필요)',
-      })
     }
 
     // Success
@@ -209,6 +223,11 @@ export async function POST(request: Request) {
         id: authData.user.id,
         email: authData.user.email,
       },
+      companyId: (companyData as any).id,
+      // 클라이언트가 가입 직후 플랜 설정 화면으로 보낼지 판단하는 데 사용
+      requiresPlanSetup: deferSubscriptionSetup,
+      requestedPlan: deferSubscriptionSetup ? requestedPlanSlug : null,
+      requestedBillingCycle: deferSubscriptionSetup && typeof billingCycle === 'string' ? billingCycle : null,
     })
   } catch (error: any) {
     console.error('Signup error:', error)

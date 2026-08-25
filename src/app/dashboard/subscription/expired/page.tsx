@@ -52,6 +52,8 @@ export default function SubscriptionExpiredPage() {
         current_period_end: string | null
         grace_period_end: string | null
         trial_end_date: string | null
+        billing_key: string | null
+        pending_plan_id: string | null
         subscription_plans: { name: string; plan_type: string } | null
       }
 
@@ -63,6 +65,8 @@ export default function SubscriptionExpiredPage() {
           current_period_end,
           grace_period_end,
           trial_end_date,
+          billing_key,
+          pending_plan_id,
           subscription_plans!plan_id (
             name,
             plan_type
@@ -101,6 +105,27 @@ export default function SubscriptionExpiredPage() {
         ) ??
         subs.find(s => ['expired', 'cancelled', 'suspended'].includes(s.status)) ??
         null
+
+      // 신규가입 시 "체험 후 자동전환"을 선택해 카드를 미리 등록해둔 체험 구독이면,
+      // 크론이 아직 돌기 전이라도(최대 24시간 공백) 여기서 바로 전환을 시도한다 -
+      // pending_plan_id에 저장된 요금제로 결제 엣지 함수가 알아서 전환한다.
+      // pending_plan_id가 없으면(예: 대시보드에서 카드만 등록/변경한 체험) 시도하지
+      // 않는다 - 없으면 엣지 함수가 plan_id(프로)로 폴백해 동의 없는 청구가 된다.
+      if (blockedSub && blockedSub.status === 'trial' && blockedSub.billing_key && blockedSub.pending_plan_id) {
+        try {
+          const res = await fetch('/api/subscription/convert-trial', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ subscriptionId: blockedSub.id }),
+          })
+          if (res.ok) {
+            router.replace('/dashboard')
+            return
+          }
+        } catch {
+          // 자동전환 실패는 치명적이지 않음 - 아래 일반 만료 화면(플랜 선택 CTA)으로 진행
+        }
+      }
 
       if (blockedSub) {
         // trial 구독은 current_period_end가 아니라 trial_end_date에 만료일이 들어있다.
