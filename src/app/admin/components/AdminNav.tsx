@@ -4,7 +4,7 @@ import { Fragment } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Dialog, Transition } from '@headlessui/react'
-import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt, History, X } from 'lucide-react'
+import { LayoutDashboard, FileBarChart, Building2, HeadphonesIcon, MessageSquare, Users, CreditCard, BarChart3, Receipt, History, Mail, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { icon: Users,           label: '사용자 관리',  href: '/admin/users' },
   { icon: CreditCard,      label: '구독 관리',    href: '/admin/subscriptions' },
   { icon: Receipt,         label: '매출/결제',    href: '/admin/billing' },
+  { icon: Mail,            label: '결제 오픈 알림', href: '/admin/payment-launch-notify' },
   { icon: BarChart3,       label: '분석',         href: '/admin/analytics' },
   { icon: HeadphonesIcon,  label: '문의',         href: '/admin/support' },
   { icon: MessageSquare,   label: '홈페이지 문의', href: '/admin/support/inquiries' },

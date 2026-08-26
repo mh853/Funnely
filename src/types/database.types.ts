@@ -1,6 +1,6 @@
 /**
  * Database Types for Funnely
- * supabase gen types typescript --linked --schema public 로 재생성 (2026-08-25)
+ * supabase gen types typescript --linked --schema public 로 재생성 (2026-08-26)
  * 재생성 명령: npx supabase gen types typescript --linked --schema public > src/types/database.types.ts
  * 파일 하단의 수동유지 타입 블록은 재생성 후에도 다시 이어붙여야 한다.
  */
@@ -17,32 +17,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -3298,6 +3273,48 @@ export type Database = {
           },
         ]
       }
+      payment_launch_notify_signups: {
+        Row: {
+          admin_digest_sent_at: string | null
+          company_id: string | null
+          created_at: string | null
+          email: string
+          id: string
+          launch_email_sent_at: string | null
+        }
+        Insert: {
+          admin_digest_sent_at?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email: string
+          id?: string
+          launch_email_sent_at?: string | null
+        }
+        Update: {
+          admin_digest_sent_at?: string | null
+          company_id?: string | null
+          created_at?: string | null
+          email?: string
+          id?: string
+          launch_email_sent_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_launch_notify_signups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "admin_company_stats"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "payment_launch_notify_signups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_notifications: {
         Row: {
           body_html: string | null
@@ -5126,9 +5143,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       ad_platform: ["meta", "kakao", "google"],

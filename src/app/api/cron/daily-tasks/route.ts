@@ -295,6 +295,24 @@ export async function GET(request: NextRequest) {
       })
     }
 
+    // Task 10: 결제 정식 오픈 알림 신청 - 관리자 요약메일 (신규 신청이 있을 때만)
+    console.log('[Cron] Running payment launch notify digest')
+    try {
+      const notifyDigestResult = await sendPaymentLaunchNotifyDigest(supabase)
+      results.tasksExecuted.push({
+        task: 'payment_launch_notify_digest',
+        status: 'success',
+        ...notifyDigestResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Payment launch notify digest error:', error)
+      results.tasksExecuted.push({
+        task: 'payment_launch_notify_digest',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
     console.log(`[Cron] Daily tasks completed: ${results.tasksExecuted.length} tasks executed`)
 
     return NextResponse.json(results)
@@ -1852,6 +1870,92 @@ async function sendAdminReportDigest(supabase: any) {
     emailsSent,
     emailsFailed,
   }
+}
+
+/**
+ * 결제 정식 오픈 알림 신청자 중 아직 관리자에게 보고되지 않은 건만 요약메일로 발송한다.
+ * (노션 31번 항목 후속 - 신규 신청이 없으면 스킵해 매일 같은 내용의 스팸이 되지 않게 한다)
+ */
+async function sendPaymentLaunchNotifyDigest(supabase: any) {
+  const { data: pending, error } = await supabase
+    .from('payment_launch_notify_signups')
+    .select('id, email, created_at')
+    .is('admin_digest_sent_at', null)
+    .order('created_at', { ascending: true })
+
+  if (error) throw error
+  if (!pending || pending.length === 0) {
+    return { sent: false, reason: 'no_new_signups' }
+  }
+
+  const dashboardUrl = process.env.NEXT_PUBLIC_DOMAIN
+    ? process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '') + '/admin/payment-launch-notify'
+    : 'https://funnely.co.kr/admin/payment-launch-notify'
+
+  const listHtml = pending
+    .map((row: { email: string }) => `<li>${escapeHtml(row.email)}</li>`)
+    .join('')
+  const listText = pending.map((row: { email: string }) => `- ${row.email}`).join('\n')
+
+  const htmlContent = `
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background-color: #f9fafb; margin: 0; padding: 0; }
+    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    .header { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 24px; border-radius: 8px 8px 0 0; }
+    .header h1 { margin: 0; font-size: 18px; font-weight: 700; }
+    .content { background: #ffffff; padding: 24px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; }
+    ul { padding-left: 20px; color: #111827; font-size: 14px; line-height: 1.8; }
+    .button { display: inline-block; background: #d97706; color: white !important; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header"><h1>💳 결제 오픈 알림 신규 신청 ${pending.length}건</h1></div>
+    <div class="content">
+      <ul>${listHtml}</ul>
+      <a href="${dashboardUrl}" class="button">전체 목록 보기 →</a>
+    </div>
+  </div>
+</body>
+</html>`
+
+  const textContent = `결제 오픈 알림 신규 신청 ${pending.length}건\n\n${listText}\n\n전체 목록: ${dashboardUrl}`
+
+  const NOTIFICATION_RECIPIENTS = ['munong2@gmail.com', '1989comp@gmail.com']
+  const resend = new Resend(process.env.RESEND_API_KEY)
+  let emailsSent = 0
+  let emailsFailed = 0
+
+  for (const recipient of NOTIFICATION_RECIPIENTS) {
+    try {
+      const { error: sendError } = await resend.emails.send({
+        from: FROM_ADDRESS,
+        to: [recipient],
+        subject: `💳 [Funnely 어드민] 결제 오픈 알림 신규 신청 ${pending.length}건`,
+        html: htmlContent,
+        text: textContent,
+      })
+      if (sendError) throw sendError
+      emailsSent++
+    } catch (sendError) {
+      console.error(`[Payment Launch Notify Digest] Failed to send to ${recipient}:`, sendError)
+      emailsFailed++
+    }
+  }
+
+  if (emailsSent > 0) {
+    const ids = pending.map((row: { id: string }) => row.id)
+    await supabase
+      .from('payment_launch_notify_signups')
+      .update({ admin_digest_sent_at: new Date().toISOString() })
+      .in('id', ids)
+  }
+
+  return { sent: emailsSent > 0, newSignups: pending.length, emailsSent, emailsFailed }
 }
 
 // Generate HTML email for digest
