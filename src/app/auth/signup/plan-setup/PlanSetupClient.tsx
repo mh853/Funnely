@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { createClient } from '@/lib/supabase/client'
 import { trackEvent } from '@/lib/analytics/track'
+import PaymentApprovalNotice from '@/components/subscription/PaymentApprovalNotice'
 
 interface SelectedPlan {
   id: string
@@ -158,6 +159,8 @@ export default function PlanSetupClient({
               체험이 끝나면 자동으로 {selectedPlan.name} 플랜으로 전환됩니다. 카드 등록은 필요 없습니다.
             </p>
 
+            <PaymentApprovalNotice className="mb-4" />
+
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-2.5 rounded-lg text-sm mb-4">{error}</div>
             )}
@@ -190,6 +193,8 @@ export default function PlanSetupClient({
               카드를 지금 등록해두시면, 7일 체험이 끝난 뒤 별도 절차 없이 자동으로 {selectedPlan.name} 플랜 결제가 진행됩니다.
               등록하지 않으셔도 체험은 정상적으로 시작되며, 체험 종료 후 언제든 직접 플랜을 선택해 결제하실 수 있습니다.
             </p>
+
+            <PaymentApprovalNotice className="mb-4" />
 
             {error && (
               <div className="bg-red-50 text-red-600 px-4 py-2.5 rounded-lg text-sm mb-4">{error}</div>

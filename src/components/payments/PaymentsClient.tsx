@@ -7,6 +7,7 @@ import { XMarkIcon, DocumentTextIcon, CheckCircleIcon, ExclamationTriangleIcon, 
 import { formatDateTime, formatDate } from '@/lib/utils/date'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { useToast } from '@/components/shared/Toast'
+import PaymentApprovalNotice from '@/components/subscription/PaymentApprovalNotice'
 
 interface Transaction {
   id: string
@@ -241,6 +242,8 @@ export default function PaymentsClient({
               <h3 className="text-lg font-semibold text-gray-900">결제 수단</h3>
             </div>
           </div>
+
+          <PaymentApprovalNotice className="mb-4" />
 
           {subscription.billing_key && subscription.card_info ? (
             <div className="flex items-center justify-between">

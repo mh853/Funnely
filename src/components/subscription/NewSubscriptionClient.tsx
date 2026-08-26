@@ -11,6 +11,7 @@ import { useToast } from '@/components/shared/Toast'
 import { hasValidPlanAccess } from '@/lib/subscription-current'
 import { trackEvent } from '@/lib/analytics/track'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
+import PaymentApprovalNotice from '@/components/subscription/PaymentApprovalNotice'
 
 interface Plan {
   id: string
@@ -1177,6 +1178,7 @@ export default function NewSubscriptionClient({
                   * 다음 결제일부터는 {(billingCycle === 'monthly' ? upgradeModal.plan.price_monthly : upgradeModal.plan.price_yearly).toLocaleString()}원/{billingCycle === 'monthly' ? '월' : '연'}이 청구됩니다.
                 </p>
               )}
+              <PaymentApprovalNotice />
               <div className="flex gap-3">
                 <button
                   onClick={() => setUpgradeModal(null)}
@@ -1213,6 +1215,8 @@ export default function NewSubscriptionClient({
             : '프로 플랜은 7일 무료 체험 가능. 나머지 플랜은 카드 등록 후 즉시 결제됩니다.'}
         </p>
       </div>
+
+      <PaymentApprovalNotice className="mx-auto max-w-2xl" />
 
       {requestedPlan && (
         <div className="mx-auto max-w-2xl rounded-lg border border-indigo-200 bg-indigo-50 px-4 py-3 text-center text-sm text-indigo-900">
