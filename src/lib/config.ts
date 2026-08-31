@@ -17,7 +17,7 @@ export const config = {
     name: '트리플채널(3CH)',
     ceo: '최문호',
     registrationNumber: '809-24-00626',
-    address: '경기도 화성시 남양읍 고향의봄길 36',
+    address: '경기도 화성시 남양읍 고향의봄길 36 104동 303호',
     phone: '02-3436-1020',
     email: 'mh@3ch.kr' as string | null,
     // 통신판매업 신고번호는 사업장 주소 변경(화성시 이전) 신고가 완료되면 추가 예정
