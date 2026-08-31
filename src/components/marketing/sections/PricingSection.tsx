@@ -242,9 +242,14 @@ export default function PricingSection() {
                           )}
                         </>
                       ) : (
-                        <span className="text-3xl font-bold text-gray-900">
-                          {plan.priceLabel}
-                        </span>
+                        <>
+                          <span className="text-3xl font-bold text-gray-900">
+                            {plan.priceLabel}
+                          </span>
+                          <p className="mt-1 text-xs text-gray-500">
+                            카드결제(PG) 미지원 · 상담 후 별도 계약으로 진행
+                          </p>
+                        </>
                       )}
                     </div>
 
