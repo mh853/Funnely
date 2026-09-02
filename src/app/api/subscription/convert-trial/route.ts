@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   } = await supabase.auth.getSession()
   if (!session) return NextResponse.json({ error: '세션이 만료되었습니다.' }, { status: 401 })
 
-  const { subscriptionId, planId, billingCycle, billingKeySubscriptionId } =
+  const { subscriptionId, planId, billingCycle, billingKeySubscriptionId, discountToken } =
     await request.json()
   if (!subscriptionId)
     return NextResponse.json({ error: '구독 정보가 없습니다.' }, { status: 400 })
@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     planId,
     billingCycle,
     billingKeySubscriptionId,
+    discountToken,
     authHeader: `Bearer ${session.access_token}`,
   })
 

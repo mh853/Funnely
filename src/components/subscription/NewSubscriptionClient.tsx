@@ -47,12 +47,19 @@ interface CardInfo {
   ownerType?: string
 }
 
+interface DiscountInfo {
+  token: string
+  percent: number
+  expiresAt: string
+}
+
 interface NewSubscriptionClientProps {
   plans: Plan[]
   currentSubscription: CurrentSubscription | null
   companyId: string
   companyBillingKeySubscriptionId?: string | null
   companyCardInfo?: CardInfo | null
+  discountInfo?: DiscountInfo | null
 }
 
 function formatFeatures(plan: Plan): string[] {
@@ -100,6 +107,7 @@ export default function NewSubscriptionClient({
   companyId,
   companyBillingKeySubscriptionId,
   companyCardInfo,
+  discountInfo,
 }: NewSubscriptionClientProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -508,6 +516,8 @@ export default function NewSubscriptionClient({
               billingKeySubscriptionId: currentSubscription.billing_key
                 ? undefined
                 : companyBillingKeySubscriptionId,
+              // 만료 winback 이메일의 1회성 10% 할인 링크로 들어온 경우에만 전달 (노션 32번)
+              discountToken: discountInfo?.token,
             }),
           })
           const data = await res.json()
@@ -739,9 +749,13 @@ export default function NewSubscriptionClient({
             originalPlanId,
             originalBillingCycle,
           })
+          // 만료 winback 이메일의 1회성 10% 할인 링크로 들어온 경우, billing-success
+          // 페이지가 결제 시 그대로 엣지함수에 전달할 수 있도록 successUrl에 실어 보낸다.
+          const successParams = new URLSearchParams({ subscriptionId: currentSubscription.id })
+          if (discountInfo?.token) successParams.set('discount', discountInfo.token)
           await tossPayments.requestBillingAuth('카드', {
             customerKey: companyId,
-            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${currentSubscription.id}`,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?${successParams}`,
             failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
           })
           // requestBillingAuth는 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음
@@ -978,6 +992,18 @@ export default function NewSubscriptionClient({
 
   return (
     <div className="space-y-8">
+      {/* 만료 winback 이메일의 1회성 10% 할인 배너 (노션 32번) */}
+      {discountInfo && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">
+          <p className="font-semibold">
+            지금 결제하시면 10% 할인이 적용됩니다.
+          </p>
+          <p className="mt-1 text-sm text-emerald-700">
+            {formatDate(discountInfo.expiresAt)}까지 유효한 1회성 할인이며, 다음 정기결제부터는 정상가로 청구됩니다.
+          </p>
+        </div>
+      )}
+
       {/* 현재 구독 정보 */}
       {currentSubscription && (
         <div className={`rounded-xl p-6 text-white ${

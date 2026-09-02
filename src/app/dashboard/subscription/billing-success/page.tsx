@@ -63,6 +63,8 @@ function BillingSuccessContent() {
     const mode = searchParams.get('mode') ?? 'payment'
     const targetPlanId = searchParams.get('targetPlanId')
     const targetBillingCycle = searchParams.get('targetBillingCycle')
+    // 만료 winback 이메일의 1회성 10% 할인 링크로 들어온 경우에만 존재 (노션 32번)
+    const discountToken = searchParams.get('discount')
 
     if (!authKey || !customerKey || !subscriptionId) {
       setError('필수 파라미터가 누락되었습니다.')
@@ -138,7 +140,10 @@ function BillingSuccessContent() {
           const payRes = await fetch(`${baseUrl}/functions/v1/toss-billing-payment`, {
             method: 'POST',
             headers,
-            body: JSON.stringify({ subscriptionId }),
+            body: JSON.stringify({
+              subscriptionId,
+              ...(discountToken ? { discountToken } : {}),
+            }),
           })
           const payData = await payRes.json()
           if (!payRes.ok) {

@@ -3,7 +3,11 @@ import { redirect } from 'next/navigation'
 import NewSubscriptionClient from '@/components/subscription/NewSubscriptionClient'
 import { pickCurrentSubscription } from '@/lib/subscription-current'
 
-export default async function SubscriptionPage() {
+interface SubscriptionPageProps {
+  searchParams: Promise<{ discount?: string }>
+}
+
+export default async function SubscriptionPage({ searchParams }: SubscriptionPageProps) {
   const supabase = await createClient()
 
   const {
@@ -18,6 +22,28 @@ export default async function SubscriptionPage() {
 
   if (!userProfile?.company_id) {
     redirect('/dashboard')
+  }
+
+  // 만료 winback 이메일의 1회성 10% 할인 링크(?discount=token) 검증 - 서비스클라이언트로
+  // company_id 소속을 확인해야 다른 회사 토큰을 훔쳐써도 적용되지 않는다.
+  const { discount: discountToken } = await searchParams
+  let discountInfo: { token: string; percent: number; expiresAt: string } | null = null
+  if (discountToken) {
+    const svcForDiscount = createServiceClient() as any
+    const { data: grant } = await svcForDiscount
+      .from('discount_grants')
+      .select('token, discount_percent, expires_at, redeemed_at, company_id')
+      .eq('token', discountToken)
+      .maybeSingle()
+
+    if (
+      grant &&
+      grant.company_id === userProfile.company_id &&
+      !grant.redeemed_at &&
+      new Date(grant.expires_at) > new Date()
+    ) {
+      discountInfo = { token: grant.token, percent: grant.discount_percent, expiresAt: grant.expires_at }
+    }
   }
 
   // 구독 플랜 조회 (sort_order로 정렬)
@@ -70,6 +96,7 @@ export default async function SubscriptionPage() {
         companyId={userProfile.company_id}
         companyBillingKeySubscriptionId={companyBillingKeySubscriptionId}
         companyCardInfo={companyCardInfo}
+        discountInfo={discountInfo}
       />
     </div>
   )

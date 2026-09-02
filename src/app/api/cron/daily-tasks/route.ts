@@ -17,6 +17,14 @@ import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 import { escapeHtml } from '@/lib/email/template-renderer'
 import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
 import { convertTrialSubscriptionCore } from '@/lib/subscription/convert-trial-core'
+import {
+  buildExpiring2dEmail,
+  buildExpiringTodayEmail,
+  buildWinbackEmail,
+  buildDataDeletedEmail,
+  PLAN_SELECT_URL,
+  type LifecycleVariant,
+} from '@/lib/email/subscription-lifecycle-templates'
 
 /**
  * Unified daily tasks cron job
@@ -110,6 +118,60 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Subscription check error:', error)
       results.tasksExecuted.push({
         task: 'subscription_expiry_check',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 0b: 만료 2일전/당일/2일후/1개월후 이메일 (노션 32번)
+    console.log('[Cron] Running expiry lifecycle emails')
+    try {
+      const lifecycleResult = await sendExpiryLifecycleEmails(supabase)
+      results.tasksExecuted.push({
+        task: 'expiry_lifecycle_emails',
+        status: 'success',
+        ...lifecycleResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Expiry lifecycle emails error:', error)
+      results.tasksExecuted.push({
+        task: 'expiry_lifecycle_emails',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 0c: 만료 후 7일 뒤 회사 데이터 소프트 삭제 플래그 세팅 (노션 32번)
+    console.log('[Cron] Running soft delete of expired company data')
+    try {
+      const softDeleteResult = await softDeleteExpiredCompanyData(supabase)
+      results.tasksExecuted.push({
+        task: 'soft_delete_expired_company_data',
+        status: 'success',
+        ...softDeleteResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Soft delete error:', error)
+      results.tasksExecuted.push({
+        task: 'soft_delete_expired_company_data',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 0d: 소프트 삭제 30일 경과 회사 데이터 하드 삭제 (노션 32번)
+    console.log('[Cron] Running hard purge of deleted company data')
+    try {
+      const hardPurgeResult = await hardPurgeDeletedCompanyData(supabase)
+      results.tasksExecuted.push({
+        task: 'hard_purge_deleted_company_data',
+        status: 'success',
+        ...hardPurgeResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Hard purge error:', error)
+      results.tasksExecuted.push({
+        task: 'hard_purge_deleted_company_data',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -1188,29 +1250,9 @@ async function checkSubscriptionExpiry(supabase: any) {
           metadata: { subscription_id: sub.id },
         })
 
-        // 인앱 알림만으로는 대시보드에 다시 들어오기 전까지 접근이 막혔다는 사실 자체를
-        // 알 방법이 없었다 - payment_notifications에도 남겨 이메일로 안내되게 한다
-        // (실제 발송은 sendPaymentNotificationEmails가 처리).
-        const { data: admins } = await supabase
-          .from('users')
-          .select('email, full_name')
-          .eq('company_id', sub.company_id)
-          .in('role', ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'])
-
-        if (admins && admins.length > 0) {
-          for (const admin of admins) {
-            await supabase.from('payment_notifications').insert({
-              company_id: sub.company_id,
-              notification_type: 'subscription_expired',
-              recipient_email: admin.email,
-              recipient_name: admin.full_name,
-              subject: '[Funnely] 구독이 만료되었습니다',
-              body_text: `${admin.full_name}님, ${companyName}의 구독이 만료되어 대시보드 접근이 제한됩니다.\n\n서비스를 계속 이용하시려면 대시보드에서 플랜을 다시 선택해 주세요.`,
-              status: 'pending',
-            })
-          }
-        }
-
+        // 이메일 발송은 더 이상 여기서 하지 않는다 - sendExpiryLifecycleEmails의
+        // "당일" 메일(trial_expiring_today/sub_expiring_today)이 같은 자리를
+        // 대체한다(실제 삭제 예정 안내까지 포함한 더 정확한 문구). 인앱 알림만 유지.
         await supabase.from('notification_sent_logs').insert({
           subscription_id: sub.id,
           notification_type: 'subscription_expired',
@@ -1229,6 +1271,330 @@ async function checkSubscriptionExpiry(supabase: any) {
     expiredCount: expiredSubs?.length || 0,
     subscriptionsExpired,
   }
+}
+
+// 노션 32번: 만료 2일전/당일/2일후/1개월후 이메일 - 이미 알림을 보냈는지는
+// notification_sent_logs(subscription_id+notification_type+period_end)로 판별한다.
+async function getCompanyAdminsForNotify(supabase: any, companyId: string) {
+  const { data } = await supabase
+    .from('users')
+    .select('email, full_name')
+    .eq('company_id', companyId)
+    .in('role', ['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin'])
+  return data || []
+}
+
+async function markNotificationOnce(
+  supabase: any,
+  subscriptionId: string,
+  notificationType: string,
+  periodEnd: string
+): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from('notification_sent_logs')
+    .select('id')
+    .eq('subscription_id', subscriptionId)
+    .eq('notification_type', notificationType)
+    .eq('period_end', periodEnd)
+    .maybeSingle()
+  if (existing) return false
+
+  await supabase.from('notification_sent_logs').insert({
+    subscription_id: subscriptionId,
+    notification_type: notificationType,
+    period_end: periodEnd,
+  })
+  return true
+}
+
+async function queueLifecycleEmail(
+  supabase: any,
+  companyId: string,
+  notificationType: string,
+  content: { subject: string; text: string; html: string },
+  metadata: Record<string, unknown>
+) {
+  const admins = await getCompanyAdminsForNotify(supabase, companyId)
+  for (const admin of admins) {
+    await supabase.from('payment_notifications').insert({
+      company_id: companyId,
+      notification_type: notificationType,
+      recipient_email: admin.email,
+      recipient_name: admin.full_name,
+      subject: content.subject,
+      body_text: content.text,
+      body_html: content.html,
+      metadata,
+      status: 'pending',
+    })
+  }
+}
+
+/**
+ * 만료 2일전/당일 + 만료 2일후/1개월후(winback) 이메일 발송
+ * 대상 제외 규칙:
+ * - trial + billing_key + pending_plan_id: 자동전환 예정이므로 제외
+ * - active + billing_key: 정기갱신 크론(processSubscriptionRenewals)이 만료 전 처리하므로 제외
+ * - past_due: billing_key가 있어도 이미 결제가 한 번 실패한 상태라 제외하지 않음
+ */
+async function sendExpiryLifecycleEmails(supabase: any) {
+  let emailsQueued = 0
+
+  const preExpiryWindows: Array<{
+    offsetDays: number
+    trialType: string
+    subType: string
+    build: (variant: LifecycleVariant) => { subject: string; text: string; html: string }
+    includeAlreadyExpiredToday: boolean
+  }> = [
+    {
+      offsetDays: 2,
+      trialType: 'trial_expiring_2d',
+      subType: 'sub_expiring_2d',
+      build: buildExpiring2dEmail,
+      includeAlreadyExpiredToday: false,
+    },
+    {
+      offsetDays: 0,
+      trialType: 'trial_expiring_today',
+      subType: 'sub_expiring_today',
+      build: buildExpiringTodayEmail,
+      // 크론이 08:00 KST에 도는데 만료 시각이 이미 지난 당일 건은 앞선 Task
+      // (checkSubscriptionExpiry)가 이 실행 안에서 먼저 'expired'로 이미 바꿔놨을 수
+      // 있다 - 상태값이 바뀌었다는 이유로 "당일" 메일을 놓치지 않도록 expired도 포함한다.
+      includeAlreadyExpiredToday: true,
+    },
+  ]
+
+  for (const w of preExpiryWindows) {
+    const start = getKSTStartOfDay(w.offsetDays).toISOString()
+    const end = getKSTStartOfDay(w.offsetDays + 1).toISOString()
+    const trialStatuses = w.includeAlreadyExpiredToday ? ['trial', 'expired'] : ['trial']
+    const subStatuses = w.includeAlreadyExpiredToday
+      ? ['active', 'past_due', 'expired']
+      : ['active', 'past_due']
+
+    const { data: trialRows } = await supabase
+      .from('company_subscriptions')
+      .select(
+        'id, company_id, status, trial_end_date, current_period_start, billing_key, pending_plan_id, companies!inner(is_active, withdrawn_at)'
+      )
+      .in('status', trialStatuses)
+      .gte('trial_end_date', start)
+      .lt('trial_end_date', end)
+      .eq('companies.is_active', true)
+      .is('companies.withdrawn_at', null)
+
+    for (const sub of trialRows || []) {
+      // trial 기원이 아닌데 우연히 trial_end_date가 남아있는 경우(과거 체험 이력이
+      // 있던 유료 구독 등)는 아래 sub 분기가 담당하므로 건너뛴다.
+      if (sub.current_period_start) continue
+      if (sub.billing_key && sub.pending_plan_id) continue
+      const isNew = await markNotificationOnce(supabase, sub.id, w.trialType, sub.trial_end_date)
+      if (!isNew) continue
+      const content = w.build('trial')
+      await queueLifecycleEmail(supabase, sub.company_id, w.trialType, content, {
+        subscription_id: sub.id,
+      })
+      emailsQueued++
+    }
+
+    const { data: subRows } = await supabase
+      .from('company_subscriptions')
+      .select(
+        'id, company_id, status, current_period_end, billing_key, companies!inner(is_active, withdrawn_at)'
+      )
+      .in('status', subStatuses)
+      .gte('current_period_end', start)
+      .lt('current_period_end', end)
+      .eq('companies.is_active', true)
+      .is('companies.withdrawn_at', null)
+
+    for (const sub of subRows || []) {
+      if (sub.status === 'active' && sub.billing_key) continue
+      const isNew = await markNotificationOnce(supabase, sub.id, w.subType, sub.current_period_end)
+      if (!isNew) continue
+      const content = w.build('subscription')
+      await queueLifecycleEmail(supabase, sub.company_id, w.subType, content, {
+        subscription_id: sub.id,
+      })
+      emailsQueued++
+    }
+  }
+
+  // winback: 만료 2일후 / 1개월후 - 동일 본문, 1회성 10% 할인 그랜트를 함께 발급
+  const winbackWindows: Array<{
+    offsetDays: number
+    timing: '2d' | '1m'
+    trialType: string
+    subType: string
+  }> = [
+    { offsetDays: -2, timing: '2d', trialType: 'trial_winback_2d', subType: 'sub_winback_2d' },
+    { offsetDays: -30, timing: '1m', trialType: 'trial_winback_1m', subType: 'sub_winback_1m' },
+  ]
+
+  const { data: expiredRows } = await supabase
+    .from('company_subscriptions')
+    .select(
+      'id, company_id, trial_end_date, current_period_end, current_period_start, companies!inner(is_active, withdrawn_at)'
+    )
+    .eq('status', 'expired')
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+
+  for (const w of winbackWindows) {
+    const startMs = getKSTStartOfDay(w.offsetDays).getTime()
+    const endMs = getKSTStartOfDay(w.offsetDays + 1).getTime()
+
+    for (const sub of expiredRows || []) {
+      const isTrialOrigin = !sub.current_period_start
+      const relevantEnd = isTrialOrigin ? sub.trial_end_date : sub.current_period_end
+      if (!relevantEnd) continue
+      const t = new Date(relevantEnd).getTime()
+      if (t < startMs || t >= endMs) continue
+
+      const notifType = isTrialOrigin ? w.trialType : w.subType
+      const isNew = await markNotificationOnce(supabase, sub.id, notifType, relevantEnd)
+      if (!isNew) continue
+
+      // 1회성 10% 할인 그랜트 - 정기갱신 가격 잠금(company_subscription_price_locks)에는
+      // 전혀 반영되지 않고, 엣지함수가 이번 청구액에만 곱해 쓴다.
+      const token = crypto.randomBytes(24).toString('hex')
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
+      await supabase.from('discount_grants').insert({
+        company_id: sub.company_id,
+        subscription_id: sub.id,
+        token,
+        discount_percent: 10,
+        source: notifType,
+        expires_at: expiresAt,
+      })
+      const discountUrl = `${PLAN_SELECT_URL}?discount=${token}`
+
+      const content = buildWinbackEmail(isTrialOrigin ? 'trial' : 'subscription', w.timing, discountUrl)
+      await queueLifecycleEmail(supabase, sub.company_id, notifType, content, {
+        subscription_id: sub.id,
+        discount_token: token,
+      })
+      emailsQueued++
+    }
+  }
+
+  return { emailsQueued }
+}
+
+// 노션 32번: 만료 후 7일 뒤 회사 데이터 소프트 삭제 플래그 세팅 + 안내 메일.
+// 테이블마다 deleted_at을 두지 않고 companies.data_deleted_at 하나로 관리한다
+// (재구독 시 toss-billing-payment 엣지함수가 결제 성공 지점에서 이 값을 NULL로 복원).
+async function softDeleteExpiredCompanyData(supabase: any) {
+  const startMs = getKSTStartOfDay(-7).getTime()
+  const endMs = getKSTStartOfDay(-6).getTime()
+
+  const { data: expiredRows } = await supabase
+    .from('company_subscriptions')
+    .select(
+      'id, company_id, trial_end_date, current_period_end, current_period_start, companies!inner(is_active, withdrawn_at, data_deleted_at)'
+    )
+    .eq('status', 'expired')
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+    .is('companies.data_deleted_at', null)
+
+  let companiesMarked = 0
+  const processedCompanyIds = new Set<string>()
+
+  for (const sub of expiredRows || []) {
+    const isTrialOrigin = !sub.current_period_start
+    const relevantEnd = isTrialOrigin ? sub.trial_end_date : sub.current_period_end
+    if (!relevantEnd) continue
+    const t = new Date(relevantEnd).getTime()
+    if (t < startMs || t >= endMs) continue
+    if (processedCompanyIds.has(sub.company_id)) continue
+    processedCompanyIds.add(sub.company_id)
+
+    const notifType = isTrialOrigin ? 'trial_data_deleted' : 'sub_data_deleted'
+    const isNew = await markNotificationOnce(supabase, sub.id, notifType, relevantEnd)
+    if (!isNew) continue
+
+    const { error: flagError } = await supabase
+      .from('companies')
+      .update({ data_deleted_at: new Date().toISOString() })
+      .eq('id', sub.company_id)
+      .is('data_deleted_at', null)
+
+    if (flagError) {
+      console.error(`[DataDeletion] 삭제 플래그 세팅 실패 (company_id: ${sub.company_id}):`, flagError)
+      continue
+    }
+
+    const content = buildDataDeletedEmail(isTrialOrigin ? 'trial' : 'subscription')
+    await queueLifecycleEmail(supabase, sub.company_id, notifType, content, { subscription_id: sub.id })
+    companiesMarked++
+  }
+
+  return { companiesMarked }
+}
+
+// 노션 32번: 소프트 삭제(data_deleted_at) 후 30일이 지나도 재구독하지 않은 회사의
+// 실제 데이터를 하드 삭제한다. company_subscriptions/payment_*/company_activity_logs 등
+// 결제·감사 기록과, churn_records 등 Funnely 자체 내부 분석 테이블은 대상에서 제외 -
+// 자식 테이블부터 부모 순서로 지운다. 회사당 하나라도 실패하면 그 회사는 건너뛰고
+// 다음 크론에서 재시도한다(부분 삭제 상태로 남기지 않기 위해 전부 성공해야 완료 처리).
+const HARD_PURGE_TABLES = [
+  'lead_status_logs',
+  'reservation_date_logs',
+  'lead_notification_logs',
+  'lead_notification_queue',
+  'sheet_sync_logs',
+  'leads',
+  'generated_reports',
+  'landing_pages',
+  'external_collection_pages',
+  'sheet_sync_configs',
+  'tracking_pixels',
+  'form_templates',
+  'privacy_policies',
+  'performance_goals',
+  'ad_accounts',
+  'api_credentials',
+  'phone_blacklist',
+  'lead_statuses',
+  'support_tickets',
+  'company_custom_domains',
+] as const
+
+async function hardPurgeDeletedCompanyData(supabase: any) {
+  const cutoff = getKSTStartOfDay(-30).toISOString()
+
+  const { data: companies } = await supabase
+    .from('companies')
+    .select('id')
+    .not('data_deleted_at', 'is', null)
+    .lt('data_deleted_at', cutoff)
+
+  let companiesPurged = 0
+  let companiesFailed = 0
+
+  for (const company of companies || []) {
+    let allSucceeded = true
+    for (const table of HARD_PURGE_TABLES) {
+      const { error } = await supabase.from(table).delete().eq('company_id', company.id)
+      if (error) {
+        console.error(`[DataPurge] ${table} 삭제 실패 (company_id: ${company.id}):`, error)
+        allSucceeded = false
+        break
+      }
+    }
+
+    if (allSucceeded) {
+      companiesPurged++
+      console.log(`[DataPurge] 회사 데이터 하드 삭제 완료: ${company.id}`)
+    } else {
+      companiesFailed++
+    }
+  }
+
+  return { companiesPurged, companiesFailed }
 }
 
 /**
@@ -1472,11 +1838,14 @@ async function sendPaymentNotificationEmails(supabase: any) {
 
   for (const notif of pending) {
     try {
+      // body_html이 채워져 있으면(노션 32번 이후 신규 발송 경로) HTML로도 함께 보낸다 -
+      // 예전 발송 경로(구독 결제실패/갱신 등)는 body_html이 없어 계속 텍스트만 나간다.
       const { error: sendError } = await resend.emails.send({
         from: 'Funnely <noreply@funnely.co.kr>',
         to: [notif.recipient_email],
         subject: notif.subject,
         text: notif.body_text,
+        ...(notif.body_html ? { html: notif.body_html } : {}),
       })
 
       if (sendError) {

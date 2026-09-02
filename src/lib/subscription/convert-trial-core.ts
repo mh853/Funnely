@@ -12,6 +12,8 @@ export interface ConvertTrialParams {
   planId?: string | null
   billingCycle?: string | null
   billingKeySubscriptionId?: string | null
+  // 만료 winback 이메일의 1회성 10% 할인 토큰 (노션 32번) - 그대로 엣지함수에 전달만 한다.
+  discountToken?: string | null
   // toss-billing-payment 에지 함수 호출에 쓸 Authorization 헤더. 사용자 트리거 경로는
   // 로그인 세션 토큰(`Bearer ${session.access_token}`)을, 서버 트리거 경로(크론 등)는
   // 서비스 롤 키(`Bearer ${SUPABASE_SERVICE_ROLE_KEY}`)를 전달한다.
@@ -25,7 +27,7 @@ export type ConvertTrialResult =
 export async function convertTrialSubscriptionCore(
   params: ConvertTrialParams
 ): Promise<ConvertTrialResult> {
-  const { subscriptionId, planId, billingCycle, billingKeySubscriptionId, authHeader } = params
+  const { subscriptionId, planId, billingCycle, billingKeySubscriptionId, discountToken, authHeader } = params
   const svc = createServiceClient() as any
 
   const { data: currentSub } = await svc
@@ -99,7 +101,10 @@ export async function convertTrialSubscriptionCore(
         Authorization: authHeader,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ subscriptionId }),
+      body: JSON.stringify({
+        subscriptionId,
+        ...(discountToken ? { discountToken } : {}),
+      }),
     })
 
     if (!payRes.ok) {
