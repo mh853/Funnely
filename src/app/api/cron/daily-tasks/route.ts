@@ -1566,11 +1566,16 @@ const HARD_PURGE_TABLES = [
 async function hardPurgeDeletedCompanyData(supabase: any) {
   const cutoff = getKSTStartOfDay(-30).toISOString()
 
+  // data_purged_at IS NULL 게이트가 없으면 이미 삭제 완료된 회사도 data_deleted_at이
+  // 그대로 남아있어 다음날부터 매일 다시 골라져 이미 빈 테이블에 DELETE를 반복
+  // 실행하게 된다(타임라인 시뮬레이션 중 발견) - 완료 시 data_purged_at을 세팅해
+  // 재선택되지 않도록 막는다.
   const { data: companies } = await supabase
     .from('companies')
     .select('id')
     .not('data_deleted_at', 'is', null)
     .lt('data_deleted_at', cutoff)
+    .is('data_purged_at', null)
 
   let companiesPurged = 0
   let companiesFailed = 0
@@ -1587,6 +1592,15 @@ async function hardPurgeDeletedCompanyData(supabase: any) {
     }
 
     if (allSucceeded) {
+      const { error: markError } = await supabase
+        .from('companies')
+        .update({ data_purged_at: new Date().toISOString() })
+        .eq('id', company.id)
+      if (markError) {
+        // data_purged_at 마킹만 실패하면 다음 크론에서 이미 빈 테이블에 다시
+        // DELETE를 시도할 뿐이라(멱등) 실패로 카운트하지 않고 로그만 남긴다.
+        console.error(`[DataPurge] data_purged_at 마킹 실패 (company_id: ${company.id}):`, markError)
+      }
       companiesPurged++
       console.log(`[DataPurge] 회사 데이터 하드 삭제 완료: ${company.id}`)
     } else {
