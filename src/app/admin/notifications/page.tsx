@@ -59,6 +59,7 @@ const TYPE_ICONS: Record<string, any> = {
   support_reply: MessageSquare,
   new_support_ticket: Inbox,
   support_ticket_customer_reply: MessageSquare,
+  payment_launch_notify_signup: Bell,
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -75,6 +76,7 @@ const TYPE_COLORS: Record<string, string> = {
   support_reply: 'text-indigo-600 bg-indigo-50',
   new_support_ticket: 'text-blue-600 bg-blue-50',
   support_ticket_customer_reply: 'text-indigo-600 bg-indigo-50',
+  payment_launch_notify_signup: 'text-emerald-600 bg-emerald-50',
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -95,6 +97,7 @@ const TYPE_LABELS: Record<string, string> = {
   new_signup: '신규 회원가입',
   new_payment: '신규 결제',
   subscription_cancelled: '구독 취소',
+  payment_launch_notify_signup: '결제 오픈 알림 신청',
 }
 
 export default function NotificationsPage() {
