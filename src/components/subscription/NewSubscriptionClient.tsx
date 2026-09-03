@@ -1141,6 +1141,14 @@ export default function NewSubscriptionClient({
                       <li>• 취소 후 기간 내 재구독이 가능합니다.</li>
                     </ul>
                   </div>
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+                    <p className="text-sm font-bold text-red-700">
+                      이용 기간이 종료되고 7일이 지나면 리드·랜딩페이지 등 사용하시던 데이터가 삭제됩니다.
+                    </p>
+                    <p className="text-xs text-red-600 mt-1">
+                      그 전까지 다시 결제하시면 데이터를 그대로 복구해드릴 수 있습니다.
+                    </p>
+                  </div>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setCancelModalOpen(false)}

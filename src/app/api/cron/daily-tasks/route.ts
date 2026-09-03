@@ -1147,6 +1147,13 @@ async function checkSubscriptionExpiry(supabase: any) {
   }
 
   // 3. 만료된 구독 찾기 (active/past_due는 current_period_end, trial은 trial_end_date 기준)
+  //
+  // 'cancelled'도 포함해야 한다 - 구독취소는 즉시 접근을 막지 않고 이미 결제한
+  // 기간이 끝날 때까지는 계속 이용 가능하게 해주는데(cancel/route.ts), 기존
+  // 쿼리가 'active'/'past_due'만 봐서 취소된 구독은 기간이 다 지나도 status가
+  // 'cancelled'로 영원히 남아 데이터 삭제 파이프라인(softDeleteExpiredCompanyData,
+  // status='expired' 기준)을 절대 타지 못했다(노션 34번 문구 작업 중 발견 - "취소
+  // 시 데이터가 삭제됩니다" 안내를 넣으려면 실제로 삭제되게 만드는 게 먼저다).
   const [activeExpiredRes, trialExpiredRes] = await Promise.all([
     supabase
       .from('company_subscriptions')
@@ -1161,7 +1168,7 @@ async function checkSubscriptionExpiry(supabase: any) {
           name
         )
       `)
-      .in('status', ['active', 'past_due'])
+      .in('status', ['active', 'past_due', 'cancelled'])
       .lt('current_period_end', now.toISOString()),
     supabase
       .from('company_subscriptions')
@@ -1170,12 +1177,17 @@ async function checkSubscriptionExpiry(supabase: any) {
         company_id,
         status,
         trial_end_date,
+        current_period_start,
         companies (
           id,
           name
         )
       `)
-      .eq('status', 'trial')
+      .in('status', ['trial', 'cancelled'])
+      // 유료 전환 이력이 있는(current_period_start가 채워진) 취소 구독은 위
+      // active 쿼리가 current_period_end 기준으로 이미 담당한다 - 여기서는 한 번도
+      // 결제한 적 없이 체험 중에 취소한 경우만 trial_end_date 기준으로 잡는다.
+      .is('current_period_start', null)
       .lt('trial_end_date', now.toISOString()),
   ])
 
