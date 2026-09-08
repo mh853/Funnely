@@ -181,6 +181,17 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get('host') || ''
   const url = request.nextUrl.clone()
 
+  // www.funnely.co.kr → funnely.co.kr 영구 리다이렉트 (노션 35번 SEO).
+  // Vercel에 www 도메인이 리다이렉트 없이 같은 배포에 붙어 있어 두 호스트가
+  // 동일 콘텐츠를 200으로 서빙하고 있었다(중복 콘텐츠). canonical과 함께 apex로 통일.
+  const baseDomain = getBaseDomain()
+  if (hostname.split(':')[0] === `www.${baseDomain}`) {
+    // URL host setter는 포트를 유지하므로 hostname/port를 각각 지정한다
+    url.hostname = baseDomain
+    url.port = ''
+    return NextResponse.redirect(url, 308)
+  }
+
   // ============================================================
   // PHASE 0: Custom Domain Routing
   // funnely.co.kr 계열이 아닌 도메인 → 커스텀 도메인 처리
