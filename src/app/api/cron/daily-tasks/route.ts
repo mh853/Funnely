@@ -1498,8 +1498,16 @@ async function sendExpiryLifecycleEmails(supabase: any) {
 // 노션 32번: 만료 후 7일 뒤 회사 데이터 소프트 삭제 플래그 세팅 + 안내 메일.
 // 테이블마다 deleted_at을 두지 않고 companies.data_deleted_at 하나로 관리한다
 // (재구독 시 toss-billing-payment 엣지함수가 결제 성공 지점에서 이 값을 NULL로 복원).
+// 만료 데이터 삭제 정책(만료 7일 후 소프트삭제, 37일 후 하드삭제)이 시행된 시점(노션 32번 배포).
+// 이 시점 이전에 만료된 구독은 정책 공지 전 건이라 소급 삭제하지 않는다.
+const DATA_DELETION_POLICY_EFFECTIVE_AT = '2026-09-03T00:00:00+09:00'
+
 async function softDeleteExpiredCompanyData(supabase: any) {
-  const startMs = getKSTStartOfDay(-7).getTime()
+  // 만료 후 7일이 지난(KST 6일 전 자정 이전에 만료된) 미처리 회사를 전부 잡는다.
+  // 원래는 "정확히 7일 전 하루"만 보는 단일일 윈도우였는데, 배포 전에 윈도우가 지났거나
+  // 크론이 하루 빠지면 그 회사는 영원히 건너뛰어졌다(2026-09-08 확인). 중복 처리는
+  // markNotificationOnce와 companies.data_deleted_at IS NULL 조건이 막는다.
+  const policyStartMs = new Date(DATA_DELETION_POLICY_EFFECTIVE_AT).getTime()
   const endMs = getKSTStartOfDay(-6).getTime()
 
   const { data: expiredRows } = await supabase
@@ -1520,7 +1528,7 @@ async function softDeleteExpiredCompanyData(supabase: any) {
     const relevantEnd = isTrialOrigin ? sub.trial_end_date : sub.current_period_end
     if (!relevantEnd) continue
     const t = new Date(relevantEnd).getTime()
-    if (t < startMs || t >= endMs) continue
+    if (t < policyStartMs || t >= endMs) continue
     if (processedCompanyIds.has(sub.company_id)) continue
     processedCompanyIds.add(sub.company_id)
 
