@@ -2,6 +2,13 @@ import Link from 'next/link'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Meta Ads API 설정 가이드 | 퍼널리',
+  description: 'Facebook과 Instagram 광고를 퍼널리에 연동하기 위한 Meta for Developers 설정 방법을 안내합니다.',
+  alternates: { canonical: '/guides/meta-ads' },
+}
 
 export default function MetaAdsSetupGuide() {
   return (

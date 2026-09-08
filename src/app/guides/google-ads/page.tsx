@@ -2,6 +2,13 @@ import Link from 'next/link'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Google Ads API 설정 가이드 | 퍼널리',
+  description: 'Google 검색 광고 및 디스플레이 네트워크를 퍼널리에 연동하기 위한 Google Cloud 및 Google Ads 설정 방법을 안내합니다.',
+  alternates: { canonical: '/guides/google-ads' },
+}
 
 export default function GoogleAdsSetupGuide() {
   return (

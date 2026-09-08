@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Script from 'next/script'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
@@ -59,10 +58,10 @@ export default function FAQSection() {
 
   return (
     <>
-      <Script
-        id="faq-json-ld"
+      {/* next/script(afterInteractive)는 SSR HTML에 포함되지 않아 크롤러가 못 읽는다 - 인라인 script 사용 */}
+      <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd).replace(/</g, '\\u003c') }}
       />
       <InquiryModal
         isOpen={isInquiryModalOpen}

@@ -5,6 +5,7 @@ import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 export const metadata = {
   title: '이용약관 | 퍼널리',
   description: '퍼널리 서비스 이용약관',
+  alternates: { canonical: '/terms' },
 }
 
 export default function TermsPage() {

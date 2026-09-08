@@ -10,6 +10,15 @@ export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_DOMAIN || 'https://funnely.co.kr'),
   title: "퍼널리 - 비즈니스 성장 올인원 플랫폼",
   description: "랜딩페이지 제작부터 리드 관리, 트래픽 분석까지. 비즈니스 성장에 필요한 모든 것을 한 곳에서.",
+  // 하위 페이지 공통 Open Graph 기본값 - og:title/og:description은 각 페이지의
+  // title/description에서 자동으로 채워진다. 페이지가 openGraph를 직접 정의하면
+  // 이 객체는 병합되지 않고 통째로 대체되므로 그 경우 images까지 다시 명시해야 한다.
+  openGraph: {
+    type: "website",
+    siteName: "퍼널리",
+    locale: "ko_KR",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+  },
 };
 
 export default function RootLayout({

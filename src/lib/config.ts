@@ -6,7 +6,10 @@
 export const config = {
   app: {
     name: process.env.NEXT_PUBLIC_APP_NAME || 'Funnely',
-    domain: process.env.NEXT_PUBLIC_URL || 'https://funnely.kr',
+    // robots/sitemap/metadataBase와 같은 NEXT_PUBLIC_DOMAIN을 기준으로 한다.
+    // (이전의 NEXT_PUBLIC_URL은 프로덕션 값이 'https://https://...'로 잘못 들어가
+    // 랜딩페이지 OG 이미지 URL이 깨져 있었고, 폴백 funnely.kr은 DNS 미해석 도메인)
+    domain: (process.env.NEXT_PUBLIC_DOMAIN || 'https://funnely.co.kr').replace(/\/$/, ''),
   },
   features: {
     analytics: Boolean(process.env.NEXT_PUBLIC_GA_ID),

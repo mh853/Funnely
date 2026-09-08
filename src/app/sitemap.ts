@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '',
     '/privacy',
     '/terms',
+    '/contact',
     '/features/comparison',
     '/guides/google-ads',
     '/guides/kakao-moment',

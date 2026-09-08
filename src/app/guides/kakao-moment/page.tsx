@@ -2,6 +2,13 @@ import Link from 'next/link'
 import { ArrowLeftIcon, CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline'
 import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
+import type { Metadata } from 'next'
+
+export const metadata: Metadata = {
+  title: 'Kakao Moment API 설정 가이드 | 퍼널리',
+  description: '카카오 모먼트 광고를 퍼널리에 연동하기 위한 Kakao Developers 설정 방법을 안내합니다.',
+  alternates: { canonical: '/guides/kakao-moment' },
+}
 
 export default function KakaoMomentSetupGuide() {
   return (

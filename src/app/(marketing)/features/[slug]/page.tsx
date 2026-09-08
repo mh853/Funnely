@@ -37,6 +37,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `${feature.name} - 퍼널리`,
     description: feature.subtitle,
+    alternates: { canonical: `/features/${params.slug}` },
   }
 }
 

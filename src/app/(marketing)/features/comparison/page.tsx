@@ -11,6 +11,7 @@ import { SubscriptionPlan } from '@/types/subscription'
 export const metadata: Metadata = {
   title: '기능 비교표 - 퍼널리',
   description: '모든 플랜의 기능을 한눈에 비교하세요. 비즈니스 성장에 맞는 최적의 플랜을 선택하세요.',
+  alternates: { canonical: '/features/comparison' },
 }
 
 async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
