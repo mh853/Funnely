@@ -3273,48 +3273,6 @@ export type Database = {
           },
         ]
       }
-      payment_launch_notify_signups: {
-        Row: {
-          admin_digest_sent_at: string | null
-          company_id: string | null
-          created_at: string | null
-          email: string
-          id: string
-          launch_email_sent_at: string | null
-        }
-        Insert: {
-          admin_digest_sent_at?: string | null
-          company_id?: string | null
-          created_at?: string | null
-          email: string
-          id?: string
-          launch_email_sent_at?: string | null
-        }
-        Update: {
-          admin_digest_sent_at?: string | null
-          company_id?: string | null
-          created_at?: string | null
-          email?: string
-          id?: string
-          launch_email_sent_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "payment_launch_notify_signups_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "admin_company_stats"
-            referencedColumns: ["company_id"]
-          },
-          {
-            foreignKeyName: "payment_launch_notify_signups_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       payment_notifications: {
         Row: {
           body_html: string | null
