@@ -17,6 +17,7 @@ import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
 import { escapeHtml } from '@/lib/email/template-renderer'
 import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
 import { convertTrialSubscriptionCore } from '@/lib/subscription/convert-trial-core'
+import { recordCronRun, purgeOldCronRunLogs } from '@/lib/cron/run-log'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -45,6 +46,14 @@ import {
  * Note: All times stored in database are UTC. Frontend displays in user's timezone.
  */
 export async function GET(request: NextRequest) {
+  // 실행 이력 기록(cron_run_logs)을 위해 try 바깥에 둔다 - 예외로 중단돼도 catch에서 기록한다
+  const startedAt = new Date()
+  const results: any = {
+    timestamp: startedAt.toISOString(),
+    tasksExecuted: [],
+  }
+  let supabase: any = null
+
   try {
     // Verify cron secret
     const authHeader = request.headers.get('authorization')
@@ -53,16 +62,10 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const now = new Date()
-    const results: any = {
-      timestamp: now.toISOString(),
-      tasksExecuted: [],
-    }
-
     console.log('[Cron] Starting daily tasks at 23:00 UTC (08:00 KST)')
 
     // Supabase client
-    const supabase = createClient(
+    supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
@@ -377,9 +380,15 @@ export async function GET(request: NextRequest) {
 
     console.log(`[Cron] Daily tasks completed: ${results.tasksExecuted.length} tasks executed`)
 
+    await recordCronRun(supabase, 'daily-tasks', startedAt, results.tasksExecuted)
+    await purgeOldCronRunLogs(supabase)
+
     return NextResponse.json(results)
   } catch (error) {
     console.error('[Cron] Unexpected error:', error)
+    if (supabase) {
+      await recordCronRun(supabase, 'daily-tasks', startedAt, results.tasksExecuted, error)
+    }
     return NextResponse.json(
       {
         error: 'Internal server error',
