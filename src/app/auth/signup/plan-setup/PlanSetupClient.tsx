@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
-import { createClient } from '@/lib/supabase/client'
+import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
 import { trackEvent } from '@/lib/analytics/track'
 
 interface SelectedPlan {
@@ -46,19 +46,9 @@ export default function PlanSetupClient({
     setLoading(true)
     setError(null)
     try {
-      const supabase = createClient()
-      const { data: newSub, error: insertError } = await supabase
-        .from('company_subscriptions')
-        .insert({
-          company_id: companyId,
-          plan_id: selectedPlan.id,
-          status: 'active',
-          billing_cycle: billingCycle,
-          current_period_end: new Date().toISOString(),
-        } as any)
-        .select('id')
-        .single()
-      if (insertError || !newSub) throw new Error(insertError?.message || '구독 생성에 실패했습니다.')
+      // 구독 행 생성(current_period_end=now 포함)은 서버 API가 수행한다
+      // (노션 36번: 클라이언트의 company_subscriptions 직접 쓰기 제거).
+      const newSub = await prepareCheckout({ planId: selectedPlan.id, billingCycle })
 
       const planPrice = billingCycle === 'yearly' && selectedPlan.price_yearly ? selectedPlan.price_yearly : selectedPlan.price_monthly
       trackEvent({
@@ -71,12 +61,12 @@ export default function PlanSetupClient({
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       const failParams = new URLSearchParams({
-        subscriptionId: (newSub as any).id,
+        subscriptionId: newSub.subscriptionId,
         wasNewlyCreated: 'true',
       })
       await tossPayments.requestBillingAuth('카드', {
         customerKey: companyId,
-        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${(newSub as any).id}`,
+        successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${newSub.subscriptionId}`,
         failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
       })
       // requestBillingAuth가 페이지를 리다이렉트하므로 이후 코드는 실행되지 않음

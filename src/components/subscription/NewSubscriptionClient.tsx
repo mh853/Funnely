@@ -11,6 +11,7 @@ import { useToast } from '@/components/shared/Toast'
 import { hasValidPlanAccess } from '@/lib/subscription-current'
 import { trackEvent } from '@/lib/analytics/track'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
+import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
 
 interface Plan {
   id: string
@@ -600,24 +601,13 @@ export default function NewSubscriptionClient({
             if (!confirmed) return
           }
 
-          const { error } = await supabase
-            .from('company_subscriptions')
-            .update({
-              plan_id: plan.id,
-              status: 'active',
-              billing_cycle: 'monthly',
-              current_period_start: null,
-              current_period_end: null,
-              trial_start_date: null,
-              trial_end_date: null,
-              // 예약된 다운그레이드가 남아있으면 이후 결제(갱신/체험전환)가
-              // 방금 선택한 Free가 아니라 예전 예약 플랜 가격으로 청구되므로 함께 비운다.
-              pending_plan_id: null,
-              pending_billing_cycle: null,
-            })
-            .eq('id', currentSubscription.id)
-
-          if (error) throw new Error(error.message)
+          // status active·기간/체험 null·예약 다운그레이드(pending) 비움은 서버 API가
+          // 수행한다(노션 36번: 클라이언트의 company_subscriptions 직접 쓰기 제거).
+          await prepareCheckout({
+            planId: plan.id,
+            billingCycle: 'monthly',
+            subscriptionId: currentSubscription.id,
+          })
 
           toast.success('Free 플랜으로 변경되었습니다.')
           router.refresh()
@@ -715,21 +705,16 @@ export default function NewSubscriptionClient({
           // 채워, Step2 결제가 끝내 실행되지 못해도 daily-tasks 만료 쿼리가 정상
           // 매치해 다음 크론에서 자연히 만료 처리되도록 안전망을 추가한다(성공 시엔
           // 실제 결제 흐름이 이 값을 정상 주기로 덮어씀).
-          const originalPlanId = currentSubscription.subscription_plans.id
-          const originalBillingCycle = currentSubscription.billing_cycle
-
-          const { error: updateError } = await supabase
-            .from('company_subscriptions')
-            .update({
-              plan_id: plan.id,
-              billing_cycle: billingCycle,
-              current_period_end: new Date().toISOString(),
-              pending_plan_id: null,
-              pending_billing_cycle: null,
-            })
-            .eq('id', currentSubscription.id)
-
-          if (updateError) throw new Error(updateError.message)
+          //
+          // 위 선커밋(plan_id/billing_cycle/current_period_end=now/pending 비움)은 서버 API가
+          // 수행한다(노션 36번: 클라이언트 직접 쓰기 제거). 되돌리기용 원래 값도 서버가 돌려준다.
+          const prepared = await prepareCheckout({
+            planId: plan.id,
+            billingCycle,
+            subscriptionId: currentSubscription.id,
+          })
+          const originalPlanId = prepared.originalPlanId ?? currentSubscription.subscription_plans.id
+          const originalBillingCycle = prepared.originalBillingCycle ?? currentSubscription.billing_cycle
 
           trackEvent({
             event: 'checkout_started',
@@ -781,15 +766,14 @@ export default function NewSubscriptionClient({
           // 카드 등록 실패/취소 시 되돌릴 수 있도록 원래 값을 failUrl에 실어 보낸다
           // (59차 QA 확인, Critical - 위 isExistingUser 분기와 동일한 이유).
           // 뒤로가기/탭닫기로 failUrl 자체를 안 거치는 경우의 안전망(73차 QA)도 동일 적용.
-          const originalPlanId = currentSubscription.subscription_plans.id
-          const originalBillingCycle = currentSubscription.billing_cycle
-
-          const { error: updateError } = await supabase
-            .from('company_subscriptions')
-            .update({ plan_id: plan.id, billing_cycle: billingCycle, current_period_end: new Date().toISOString() })
-            .eq('id', currentSubscription.id)
-
-          if (updateError) throw new Error(updateError.message)
+          // 선커밋은 서버 API가 수행한다(노션 36번: 클라이언트 직접 쓰기 제거).
+          const prepared = await prepareCheckout({
+            planId: plan.id,
+            billingCycle,
+            subscriptionId: currentSubscription.id,
+          })
+          const originalPlanId = prepared.originalPlanId ?? currentSubscription.subscription_plans.id
+          const originalBillingCycle = prepared.originalBillingCycle ?? currentSubscription.billing_cycle
 
           trackEvent({
             event: 'checkout_started',
@@ -816,15 +800,7 @@ export default function NewSubscriptionClient({
       } else {
         // 구독 자체가 없는 경우 (예외 - 보통 회원가입 시 구독이 생성됨)
         if (isFree) {
-          const { error } = await supabase
-            .from('company_subscriptions')
-            .insert({
-              company_id: companyId,
-              plan_id: plan.id,
-              status: 'active',
-              billing_cycle: 'monthly',
-            })
-          if (error) throw new Error(error.message)
+          await prepareCheckout({ planId: plan.id, billingCycle: 'monthly' })
           router.refresh()
         } else if (plan.name === '프로') {
           // 프로 플랜 무료 체험
@@ -853,18 +829,8 @@ export default function NewSubscriptionClient({
           // 성공할 때 정상적인 결제 주기로 덮어써지고(에지 함수가 성공 시 항상
           // current_period_end를 다시 계산해 씀), 실패해 방치되면 다음 크론 실행 때
           // 자연히 만료 처리된다.
-          const { data: newSub, error } = await supabase
-            .from('company_subscriptions')
-            .insert({
-              company_id: companyId,
-              plan_id: plan.id,
-              status: 'active',
-              billing_cycle: billingCycle,
-              current_period_end: new Date().toISOString(),
-            })
-            .select('id')
-            .single()
-          if (error) throw new Error(error.message)
+          // 행 생성(current_period_end=now 포함)은 서버 API가 수행한다(노션 36번).
+          const newSub = await prepareCheckout({ planId: plan.id, billingCycle })
 
           trackEvent({
             event: 'checkout_started',
@@ -878,12 +844,12 @@ export default function NewSubscriptionClient({
             process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
           )
           const failParams = new URLSearchParams({
-            subscriptionId: newSub.id,
+            subscriptionId: newSub.subscriptionId,
             wasNewlyCreated: 'true',
           })
           await tossPayments.requestBillingAuth('카드', {
             customerKey: companyId,
-            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${newSub.id}`,
+            successUrl: `${window.location.origin}/dashboard/subscription/billing-success?subscriptionId=${newSub.subscriptionId}`,
             failUrl: `${window.location.origin}/dashboard/subscription/billing-fail?${failParams}`,
           })
         }
