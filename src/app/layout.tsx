@@ -19,6 +19,14 @@ export const metadata: Metadata = {
     locale: "ko_KR",
     images: [{ url: "/og-image.png", width: 1200, height: 630 }],
   },
+  // 검색엔진 사이트 소유권 확인 메타 (노션 39·40번). 구글 서치콘솔은 도메인 속성이라
+  // 메타가 아니라 Vercel DNS의 루트 TXT 레코드(google-site-verification=…)로 확인한다(38번).
+  verification: {
+    other: {
+      "naver-site-verification": "1864c764707fe83f0c2a0bf9d3a0d9e054c9860f",
+      "msvalidate.01": "75FD0FC4A830F7D63AE00F3A996B79A3",
+    },
+  },
 };
 
 export default function RootLayout({
