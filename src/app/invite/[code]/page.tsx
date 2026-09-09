@@ -1,5 +1,14 @@
 import { Suspense } from 'react'
+import type { Metadata } from 'next'
 import InviteAcceptClient from './InviteAcceptClient'
+
+// 팀 초대 수락 페이지 - 회원가입/로그인과 같은 인증 흐름이라 검색 색인 제외 (노션 37번)
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+}
 
 interface PageProps {
   params: Promise<{ code: string }>
