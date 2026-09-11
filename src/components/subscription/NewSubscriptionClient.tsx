@@ -10,6 +10,7 @@ import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { useToast } from '@/components/shared/Toast'
 import { hasValidPlanAccess } from '@/lib/subscription-current'
 import { trackEvent } from '@/lib/analytics/track'
+import { getBlogEventFields } from '@/lib/analytics/attribution'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
 import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
 
@@ -433,6 +434,7 @@ export default function NewSubscriptionClient({
           value: data.transaction.total_amount ?? upgradeModal.proratedTotal,
           currency: 'KRW',
           billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+          ...getBlogEventFields(),
         })
       }
       setUpgradeModal(null)
@@ -532,6 +534,7 @@ export default function NewSubscriptionClient({
               value: data.transaction.total_amount ?? (billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly),
               currency: 'KRW',
               billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+              ...getBlogEventFields(),
             })
           }
           toast.success(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
@@ -757,7 +760,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
 
           toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
@@ -811,7 +814,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
           toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
         } else {

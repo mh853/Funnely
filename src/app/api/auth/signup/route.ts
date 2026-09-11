@@ -10,6 +10,12 @@ import { normalizePhone } from '@/lib/encryption/phone'
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit'
 import { sendTrialCreationFailureAlert } from '@/lib/email/send-trial-creation-failure-alert'
 import { isKnownPlanSlug } from '@/lib/subscription/plan-slugs'
+import {
+  buildFirstAttributionFields,
+  buildLastAttributionFields,
+  buildFirstBlogFields,
+  buildLastBlogFields,
+} from '@/lib/analytics/attribution-server'
 
 // Create admin client with service role key
 function createAdminClient() {
@@ -27,59 +33,27 @@ function createAdminClient() {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-const ATTRIBUTION_MAX_LEN = 500
-const ATTRIBUTION_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'msclkid', 'gbraid', 'wbraid']
-const ATTRIBUTION_FIRST_MAX_AGE_MS = 180 * 24 * 60 * 60 * 1000
-const ATTRIBUTION_LAST_MAX_AGE_MS = 90 * 24 * 60 * 60 * 1000
-
-function sanitizeAttributionValue(v: unknown): string | null {
-  if (typeof v !== 'string' || !v) return null
-  return v.slice(0, ATTRIBUTION_MAX_LEN)
-}
-
-// 클라이언트 localStorage에서 온 유입 경로 값을 그대로 insert에 spread하면 company_id 등
-// 임의 컬럼을 덮어쓸 위험이 있어, 알려진 필드만 하나씩 화이트리스트로 골라 담는다.
-// 오래 방치된 localStorage 값이 그대로 들어오지 않도록 신선도(TTL)도 여기서 필터링한다.
+// 클라이언트 localStorage에서 온 유입 경로 값을 화이트리스트로만 골라 company_attribution
+// insert 행을 만든다. UTM/광고ID와 네이버 블로그 게시글은 별도 localStorage 트랙이라
+// 인자도 분리해서 받는다(노션 42/44번).
 function buildAttributionRow(
   companyId: string,
   firstAttribution: unknown,
   lastAttribution: unknown,
+  firstBlog: unknown,
+  lastBlog: unknown,
   signupPlan: string | null,
   trial: boolean
 ): Record<string, unknown> {
-  const row: Record<string, unknown> = {
+  return {
     company_id: companyId,
     signup_plan: signupPlan,
     trial,
+    ...buildFirstAttributionFields(firstAttribution),
+    ...buildLastAttributionFields(lastAttribution),
+    ...buildFirstBlogFields(firstBlog),
+    ...buildLastBlogFields(lastBlog),
   }
-
-  const now = Date.now()
-
-  if (firstAttribution && typeof firstAttribution === 'object') {
-    const src = firstAttribution as Record<string, unknown>
-    const touchedAt = typeof src.touched_at === 'string' ? Date.parse(src.touched_at) : NaN
-    if (!Number.isNaN(touchedAt) && now - touchedAt <= ATTRIBUTION_FIRST_MAX_AGE_MS) {
-      for (const key of ATTRIBUTION_KEYS) {
-        row[`first_${key}`] = sanitizeAttributionValue(src[key])
-      }
-      row.first_landing_page = sanitizeAttributionValue(src.landing_page)
-      row.first_referrer = sanitizeAttributionValue(src.referrer)
-      row.first_touch_at = new Date(touchedAt).toISOString()
-    }
-  }
-
-  if (lastAttribution && typeof lastAttribution === 'object') {
-    const src = lastAttribution as Record<string, unknown>
-    const touchedAt = typeof src.touched_at === 'string' ? Date.parse(src.touched_at) : NaN
-    if (!Number.isNaN(touchedAt) && now - touchedAt <= ATTRIBUTION_LAST_MAX_AGE_MS) {
-      for (const key of ATTRIBUTION_KEYS) {
-        row[`last_${key}`] = sanitizeAttributionValue(src[key])
-      }
-      row.last_touch_at = new Date(touchedAt).toISOString()
-    }
-  }
-
-  return row
 }
 
 export async function POST(request: Request) {
@@ -96,7 +70,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { email, password, fullName, companyName, businessNumber, phone, plan, billingCycle, firstAttribution, lastAttribution } = body
+    const { email, password, fullName, companyName, businessNumber, phone, plan, billingCycle, firstAttribution, lastAttribution, firstBlog, lastBlog } = body
 
     // 마케팅 페이지에서 프로가 아닌 특정 요금제를 골라 들어온 경우, 이 API는 계정/회사
     // 생성까지만 하고 구독 생성은 가입 직후 체험 여부를 묻는 화면(/auth/signup/plan-setup)에
@@ -228,6 +202,8 @@ export async function POST(request: Request) {
         (companyData as any).id,
         firstAttribution,
         lastAttribution,
+        firstBlog,
+        lastBlog,
         deferSubscriptionSetup ? requestedPlanSlug : 'pro',
         !deferSubscriptionSetup
       )

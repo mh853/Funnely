@@ -903,6 +903,11 @@ export type Database = {
         Row: {
           company_id: string
           created_at: string | null
+          first_ad_id: string | null
+          first_adgroup_id: string | null
+          first_blog_post_id: string | null
+          first_blog_referrer: string | null
+          first_campaign_id: string | null
           first_fbclid: string | null
           first_gbraid: string | null
           first_gclid: string | null
@@ -917,6 +922,11 @@ export type Database = {
           first_utm_term: string | null
           first_wbraid: string | null
           id: string
+          last_ad_id: string | null
+          last_adgroup_id: string | null
+          last_blog_post_id: string | null
+          last_blog_referrer: string | null
+          last_campaign_id: string | null
           last_fbclid: string | null
           last_gbraid: string | null
           last_gclid: string | null
@@ -935,6 +945,11 @@ export type Database = {
         Insert: {
           company_id: string
           created_at?: string | null
+          first_ad_id?: string | null
+          first_adgroup_id?: string | null
+          first_blog_post_id?: string | null
+          first_blog_referrer?: string | null
+          first_campaign_id?: string | null
           first_fbclid?: string | null
           first_gbraid?: string | null
           first_gclid?: string | null
@@ -949,6 +964,11 @@ export type Database = {
           first_utm_term?: string | null
           first_wbraid?: string | null
           id?: string
+          last_ad_id?: string | null
+          last_adgroup_id?: string | null
+          last_blog_post_id?: string | null
+          last_blog_referrer?: string | null
+          last_campaign_id?: string | null
           last_fbclid?: string | null
           last_gbraid?: string | null
           last_gclid?: string | null
@@ -967,6 +987,11 @@ export type Database = {
         Update: {
           company_id?: string
           created_at?: string | null
+          first_ad_id?: string | null
+          first_adgroup_id?: string | null
+          first_blog_post_id?: string | null
+          first_blog_referrer?: string | null
+          first_campaign_id?: string | null
           first_fbclid?: string | null
           first_gbraid?: string | null
           first_gclid?: string | null
@@ -981,6 +1006,11 @@ export type Database = {
           first_utm_term?: string | null
           first_wbraid?: string | null
           id?: string
+          last_ad_id?: string | null
+          last_adgroup_id?: string | null
+          last_blog_post_id?: string | null
+          last_blog_referrer?: string | null
+          last_campaign_id?: string | null
           last_fbclid?: string | null
           last_gbraid?: string | null
           last_gclid?: string | null

@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
 import { trackEvent } from '@/lib/analytics/track'
+import { getBlogEventFields } from '@/lib/analytics/attribution'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
 
 // payment_success는 transaction_id 기준으로 딱 1회만 쏴야 한다(노션 30번 14/18항) -
@@ -39,6 +40,7 @@ async function trackPaymentSuccessOnce(
     value,
     currency: 'KRW',
     billing_cycle: billingCycle,
+    ...getBlogEventFields(),
   })
   sessionStorage.setItem(trackedKey, '1')
 }

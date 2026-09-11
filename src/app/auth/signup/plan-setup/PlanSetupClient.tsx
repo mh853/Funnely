@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
 import { trackEvent } from '@/lib/analytics/track'
+import { getBlogEventFields } from '@/lib/analytics/attribution'
 
 interface SelectedPlan {
   id: string
@@ -94,7 +95,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || '무료 체험 시작 중 오류가 발생했습니다.')
@@ -120,7 +121,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       await tossPayments.requestBillingAuth('카드', {

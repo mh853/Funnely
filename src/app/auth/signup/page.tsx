@@ -10,7 +10,14 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { trackEvent } from '@/lib/analytics/track'
-import { readAttributionFromStorage, ATTRIBUTION_FIRST_KEY, ATTRIBUTION_LAST_KEY } from '@/lib/analytics/attribution'
+import {
+  readAttributionFromStorage,
+  ATTRIBUTION_FIRST_KEY,
+  ATTRIBUTION_LAST_KEY,
+  BLOG_ATTRIBUTION_FIRST_KEY,
+  BLOG_ATTRIBUTION_LAST_KEY,
+  getBlogEventFields,
+} from '@/lib/analytics/attribution'
 
 // 가입 직후 자동 로그인 실패 시 표시할 한글 메시지 (login/page.tsx의 매핑과 동일한 기준)
 function getSignInErrorMessage(error: any): string {
@@ -135,6 +142,8 @@ function SignupPageContent() {
           billingCycle: requestedBillingCycle,
           firstAttribution: readAttributionFromStorage(ATTRIBUTION_FIRST_KEY),
           lastAttribution: readAttributionFromStorage(ATTRIBUTION_LAST_KEY),
+          firstBlog: readAttributionFromStorage(BLOG_ATTRIBUTION_FIRST_KEY),
+          lastBlog: readAttributionFromStorage(BLOG_ATTRIBUTION_LAST_KEY),
         }),
       })
 
@@ -150,11 +159,12 @@ function SignupPageContent() {
       // 체험 상태를 true로 잘못 보내지 않도록 plan만 실어 보낸다. 그 외(프로 선택/무파라미터)는
       // 서버가 이 시점에 이미 프로 7일 체험을 확정 부여하므로 signup_success와 trial_started를
       // 같은 성공 처리 단계에서 함께 쏜다(노션 30번 8항이 명시적으로 허용하는 방식).
+      const blogEventFields = getBlogEventFields()
       if (data.requiresPlanSetup) {
-        trackEvent({ event: 'signup_success', method: 'email', plan: data.requestedPlan ?? null, trial: false })
+        trackEvent({ event: 'signup_success', method: 'email', plan: data.requestedPlan ?? null, trial: false, ...blogEventFields })
       } else {
-        trackEvent({ event: 'signup_success', method: 'email', plan: 'pro', trial: true })
-        trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7 })
+        trackEvent({ event: 'signup_success', method: 'email', plan: 'pro', trial: true, ...blogEventFields })
+        trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...blogEventFields })
       }
 
       // Successful signup - now sign in

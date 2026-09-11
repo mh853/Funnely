@@ -159,6 +159,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '구독 정보가 누락되었습니다.' }, { status: 400 })
     }
 
+    // 마케팅 페이지에서 프로 외 요금제를 선택해 가입한 경우, 가입 시점엔 체험 여부가
+    // 미확정이라 company_attribution.trial이 false로 저장돼 있다 - 여기서 체험이
+    // 실제로 시작됐으므로 true로 보정한다(노션 42번). 분석용 부가 데이터라 실패해도
+    // 체험 시작 자체를 막지 않는다.
+    try {
+      await serviceSupabase.from('company_attribution').update({ trial: true } as any).eq('company_id', profile.company_id)
+    } catch (attributionErr) {
+      console.error('[Start Trial] attribution trial 갱신 실패:', attributionErr)
+    }
+
     return NextResponse.json({ success: true, subscriptionId: resultSubscriptionId })
   } catch (error: any) {
     console.error('[Start Trial] 오류:', error)
