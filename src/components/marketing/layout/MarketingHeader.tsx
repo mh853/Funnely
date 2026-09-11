@@ -41,6 +41,9 @@ export default function MarketingHeader() {
     const element = document.getElementById(targetId)
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' })
+      // history.pushState로만 URL을 갱신 - location.hash를 직접 바꾸면 브라우저가 즉시
+      // 점프해버려서 smooth scroll과 충돌한다 (노션 43번)
+      history.pushState(null, '', href)
       setMobileMenuOpen(false)
     }
   }
