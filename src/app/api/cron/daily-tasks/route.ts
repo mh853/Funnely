@@ -1729,19 +1729,19 @@ async function sendAdminReportDigest(supabase: any) {
     await Promise.all([
       supabase
         .from('companies')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .gte('created_at', rangeStart)
         .lt('created_at', rangeEnd)
         .is('withdrawn_at', null),
       supabase
         .from('company_subscriptions')
-        .select('id', { count: 'exact', head: true })
+        .select('id, company_id')
         .eq('status', 'trial')
         .gte('created_at', rangeStart)
         .lt('created_at', rangeEnd),
       supabase
         .from('payment_transactions')
-        .select('total_amount')
+        .select('total_amount, company_id')
         .eq('status', 'success')
         .gte('approved_at', rangeStart)
         .lt('approved_at', rangeEnd),
@@ -1767,8 +1767,8 @@ async function sendAdminReportDigest(supabase: any) {
     if (res.error) throw res.error
   }
 
-  const signups = signupsRes.count || 0
-  const trials = trialsRes.count || 0
+  const signups = (signupsRes.data || []).length
+  const trials = (trialsRes.data || []).length
   const payments = (paymentsRes.data || []).length
   const revenue = (paymentsRes.data || []).reduce(
     (sum: number, r: { total_amount: number }) => sum + (r.total_amount || 0),
@@ -1780,6 +1780,38 @@ async function sendAdminReportDigest(supabase: any) {
 
   const totalActivity = signups + trials + payments + withdrawals + cancellations + tickets
 
+  // 노션 45번: 회원가입/무료체험/결제 건은 해당 계정(가입 시 생성되는 company_owner)의
+  // 이메일을 함께 노출한다. companies에는 로그인 이메일이 없어 users.company_id로 조인한다.
+  const signupCompanyIds = (signupsRes.data || []).map((c: { id: string }) => c.id)
+  const trialCompanyIds = (trialsRes.data || []).map((t: { company_id: string }) => t.company_id)
+  const paymentCompanyIds = (paymentsRes.data || []).map((p: { company_id: string }) => p.company_id)
+  const ownerLookupIds = Array.from(
+    new Set([...signupCompanyIds, ...trialCompanyIds, ...paymentCompanyIds])
+  )
+
+  const ownerEmailByCompanyId = new Map<string, string>()
+  if (ownerLookupIds.length > 0) {
+    const { data: ownerUsers, error: ownerUsersError } = await supabase
+      .from('users')
+      .select('company_id, email')
+      .in('company_id', ownerLookupIds)
+      .eq('role', 'company_owner')
+    if (ownerUsersError) throw ownerUsersError
+    for (const u of ownerUsers || []) {
+      ownerEmailByCompanyId.set(u.company_id, u.email)
+    }
+  }
+
+  const signupEmails = signupCompanyIds
+    .map((id: string) => ownerEmailByCompanyId.get(id))
+    .filter((e: string | undefined): e is string => !!e)
+  const trialEmails = trialCompanyIds
+    .map((id: string) => ownerEmailByCompanyId.get(id))
+    .filter((e: string | undefined): e is string => !!e)
+  const paymentEmails = paymentCompanyIds
+    .map((id: string) => ownerEmailByCompanyId.get(id))
+    .filter((e: string | undefined): e is string => !!e)
+
   if (totalActivity === 0) {
     return { sent: false, reason: 'no_activity', reportDate: reportDateLabel }
   }
@@ -1790,10 +1822,10 @@ async function sendAdminReportDigest(supabase: any) {
     ? process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '') + '/admin/reports'
     : 'https://funnely.co.kr/admin/reports'
 
-  const metrics = [
-    { emoji: '👤', label: '회원가입', value: `${signups}건` },
-    { emoji: '🎁', label: '무료체험', value: `${trials}건` },
-    { emoji: '💳', label: '결제', value: `${payments}건` },
+  const metrics: { emoji: string; label: string; value: string; emails?: string[] }[] = [
+    { emoji: '👤', label: '회원가입', value: `${signups}건`, emails: signupEmails },
+    { emoji: '🎁', label: '무료체험', value: `${trials}건`, emails: trialEmails },
+    { emoji: '💳', label: '결제', value: `${payments}건`, emails: paymentEmails },
     { emoji: '💰', label: '매출', value: `${revenue.toLocaleString('ko-KR')}원` },
     { emoji: '📤', label: '탈퇴', value: `${withdrawals}건` },
     { emoji: '🚫', label: '구독취소', value: `${cancellations}건` },
@@ -1801,13 +1833,19 @@ async function sendAdminReportDigest(supabase: any) {
   ]
 
   const htmlRows = metrics
-    .map(
-      (m) => `
+    .map((m) => {
+      const emailList =
+        m.emails && m.emails.length > 0
+          ? `<div class="email-list">${m.emails
+              .map((e) => `<div class="email-item">${escapeHtml(e)}</div>`)
+              .join('')}</div>`
+          : ''
+      return `
       <div class="info-row">
         <div class="label">${m.emoji} ${m.label}</div>
         <div class="value">${m.value}</div>
-      </div>`
-    )
+      </div>${emailList}`
+    })
     .join('')
 
   const htmlContent = `
@@ -1827,6 +1865,8 @@ async function sendAdminReportDigest(supabase: any) {
     .info-row:last-child { border-bottom: none; }
     .label { font-weight: 600; color: #374151; font-size: 14px; }
     .value { color: #111827; font-size: 16px; font-weight: 700; }
+    .email-list { padding: 0 0 12px 0; }
+    .email-item { font-size: 13px; color: #6b7280; padding: 2px 0 2px 24px; }
     .button { display: inline-block; background: #667eea; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 24px; text-align: center; }
     .footer { text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; line-height: 1.6; }
   </style>
@@ -1851,7 +1891,11 @@ async function sendAdminReportDigest(supabase: any) {
 </html>`
 
   const textContent = `📊 ${dateTitle} 일일 리포트\n\n${metrics
-    .map((m) => `${m.emoji} ${m.label}: ${m.value}`)
+    .map((m) => {
+      const emailLines =
+        m.emails && m.emails.length > 0 ? '\n' + m.emails.map((e) => `  - ${e}`).join('\n') : ''
+      return `${m.emoji} ${m.label}: ${m.value}${emailLines}`
+    })
     .join('\n')}\n\n어드민 리포트: ${dashboardUrl}`
 
   const REPORT_DIGEST_RECIPIENTS = ['munong2@gmail.com', '1989comp@gmail.com']
