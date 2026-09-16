@@ -5,6 +5,7 @@ import ContactForm from '@/components/marketing/contact/ContactForm'
 import MarketingHeader from '@/components/marketing/layout/MarketingHeader'
 import MarketingFooter from '@/components/marketing/layout/MarketingFooter'
 import Link from 'next/link'
+import type { ElementType } from 'react'
 import { QuestionMarkCircleIcon, BookOpenIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline'
 
 const quickLinks = [
@@ -30,12 +31,6 @@ const quickLinks = [
 ]
 
 export default function ContactPage() {
-  const handleClick = (e: React.MouseEvent<HTMLAnchorElement>, comingSoon?: boolean) => {
-    if (comingSoon) {
-      e.preventDefault()
-    }
-  }
-
   return (
     <>
       <MarketingHeader />
@@ -63,14 +58,18 @@ export default function ContactPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 max-w-5xl mx-auto">
-            {quickLinks.map((link) => (
-              <Link
+            {quickLinks.map((link) => {
+              // 준비 중 항목은 href="#" 링크 대신 비활성 카드로 렌더링 (빈 앵커 클릭 방지)
+              const cardClass = `relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm ${
+                link.comingSoon ? 'cursor-not-allowed' : 'hover:shadow-lg transition-all hover:scale-105'
+              }`
+              const CardTag: ElementType = link.comingSoon ? 'div' : Link
+              const cardProps = link.comingSoon ? { 'aria-disabled': true } : { href: link.href }
+              return (
+              <CardTag
                 key={link.name}
-                href={link.href}
-                className={`relative rounded-2xl border border-gray-200 bg-white p-8 shadow-sm hover:shadow-lg transition-all hover:scale-105 ${
-                  link.comingSoon ? 'cursor-not-allowed' : ''
-                }`}
-                onClick={(e) => handleClick(e, link.comingSoon)}
+                className={cardClass}
+                {...cardProps}
               >
                 {link.comingSoon && (
                   <div className="absolute top-4 right-4">
@@ -88,8 +87,9 @@ export default function ContactPage() {
                 <p className="text-sm text-gray-600">
                   {link.description}
                 </p>
-              </Link>
-            ))}
+              </CardTag>
+              )
+            })}
           </div>
         </div>
       </section>
