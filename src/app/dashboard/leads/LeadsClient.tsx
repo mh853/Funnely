@@ -21,6 +21,20 @@ function toLocalDateStr(date: Date): string {
   return `${y}-${m}-${d}`
 }
 
+// URL의 "YYYY-MM-DD"를 로컬 자정 Date로 파싱. new Date('YYYY-MM-DD')는 UTC 자정으로
+// 해석되어 UTC보다 늦은(미국 등) 타임존 브라우저에서는 로컬 getter로 읽으면 하루 전 날짜가
+// 되고, 그 값을 다시 URL에 쓰면서 필터가 매 렌더마다 하루씩 과거로 되감기던 문제의 원인.
+function parseLocalDateStr(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return new Date(dateStr)
+  return new Date(y, m - 1, d)
+}
+
+// URL 날짜 문자열을 state에 반영하되, 같은 날이면 기존 Date 객체를 유지해 identity churn을 막는다
+function syncDateState(setter: React.Dispatch<React.SetStateAction<Date | null>>, dateStr: string) {
+  setter((prev) => (prev && toLocalDateStr(prev) === dateStr ? prev : parseLocalDateStr(dateStr)))
+}
+
 interface TeamMember {
   id: string
   full_name: string
@@ -153,8 +167,8 @@ export default function LeadsClient({
   // 날짜 범위 상태 (Date 객체)
   const [startDate, setStartDate] = useState<Date | null>(() => {
     // 단일 날짜 필터가 가장 우선
-    if (urlSingleDate) return new Date(urlSingleDate)
-    if (urlStartDate) return new Date(urlStartDate)
+    if (urlSingleDate) return parseLocalDateStr(urlSingleDate)
+    if (urlStartDate) return parseLocalDateStr(urlStartDate)
     if (urlDateRange) {
       const now = new Date()
       switch (urlDateRange) {
@@ -169,8 +183,8 @@ export default function LeadsClient({
   })
   const [endDate, setEndDate] = useState<Date | null>(() => {
     // 단일 날짜 필터가 가장 우선
-    if (urlSingleDate) return new Date(urlSingleDate)
-    if (urlEndDate) return new Date(urlEndDate)
+    if (urlSingleDate) return parseLocalDateStr(urlSingleDate)
+    if (urlEndDate) return parseLocalDateStr(urlEndDate)
     if (urlDateRange === 'all') return null
     return new Date()
   })
@@ -184,14 +198,17 @@ export default function LeadsClient({
   const [paymentComplete, setPaymentComplete] = useState(urlPaymentComplete)
 
   // URL 파라미터가 변경될 때 (router.push 후) 필터 상태 동기화
+  // 날짜는 같은 날이면 기존 Date 객체를 그대로 유지한다. 매번 새 객체를 set하면
+  // updateFiltersInstantly(useCallback deps: startDate/endDate)가 재생성되고, 그것을 deps로
+  // 가진 셀렉트 필터 effect가 다시 router.push → URL 변경 → 이 effect 재실행으로 순환하며
+  // page=1 리셋·같은 URL 재푸시가 반복됐다(비KST 브라우저에선 UTC 파싱과 겹쳐 하루씩 되감김).
   useEffect(() => {
     // 단일 날짜 필터가 가장 우선
     if (urlSingleDate) {
-      const singleDate = new Date(urlSingleDate)
-      setStartDate(singleDate)
-      setEndDate(singleDate)
+      syncDateState(setStartDate, urlSingleDate)
+      syncDateState(setEndDate, urlSingleDate)
     } else if (urlStartDate) {
-      setStartDate(new Date(urlStartDate))
+      syncDateState(setStartDate, urlStartDate)
     } else if (urlDateRange) {
       const now = new Date()
       switch (urlDateRange) {
@@ -214,7 +231,7 @@ export default function LeadsClient({
       }
     }
     if (!urlSingleDate && urlEndDate) {
-      setEndDate(new Date(urlEndDate))
+      syncDateState(setEndDate, urlEndDate)
     }
     setLandingPageId(urlLandingPageId)
     setDeviceType(urlDeviceType)
