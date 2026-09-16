@@ -124,7 +124,7 @@ export async function convertTrialSubscriptionCore(
       return { ok: false, error: errorMessage, status: 500 }
     }
 
-    // GTM payment_success 이벤트(transaction_id 기준 중복방지)에 쓸 결제 정보를
+    // GTM purchase 이벤트(transaction_id 기준 중복방지)에 쓸 결제 정보를
     // 호출부로 그대로 전달한다 - 결제 성공 자체는 이미 반영됐으므로 파싱 실패로
     // 이 함수 전체를 실패 처리하지 않는다.
     let transaction: { id: string; total_amount: number } | null = null

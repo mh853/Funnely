@@ -5,11 +5,11 @@ import { Suspense, useEffect, useRef, useState } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackPurchase } from '@/lib/analytics/ga-events'
 import { getBlogEventFields } from '@/lib/analytics/attribution'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
 
-// payment_success는 transaction_id 기준으로 딱 1회만 쏴야 한다(노션 30번 14/18항) -
+// purchase는 transaction_id 기준으로 딱 1회만 쏴야 한다(노션 30번 14/18항, 46번 §15) -
 // 완료 페이지를 새로고침/재방문해도 같은 결제가 중복 집계되면 안 된다.
 async function trackPaymentSuccessOnce(
   supabase: ReturnType<typeof createClient>,
@@ -33,14 +33,12 @@ async function trackPaymentSuccessOnce(
     (billingCycle === 'annual' ? plan?.price_yearly : plan?.price_monthly) ??
     0
 
-  trackEvent({
-    event: 'payment_success',
+  trackPurchase({
     transaction_id: transaction.id,
-    plan: planNameToSlug(plan?.name) ?? plan?.name ?? null,
-    value,
-    currency: 'KRW',
+    plan_name: planNameToSlug(plan?.name) ?? plan?.name ?? null,
     billing_cycle: billingCycle,
-    ...getBlogEventFields(),
+    value,
+    extra: getBlogEventFields(),
   })
   sessionStorage.setItem(trackedKey, '1')
 }

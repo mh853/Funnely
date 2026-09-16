@@ -9,7 +9,7 @@ import { formatDate } from '@/lib/utils/date'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { useToast } from '@/components/shared/Toast'
 import { hasValidPlanAccess } from '@/lib/subscription-current'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackBeginCheckout, trackPurchase, trackTrialStart } from '@/lib/analytics/ga-events'
 import { getBlogEventFields } from '@/lib/analytics/attribution'
 import { planNameToSlug } from '@/lib/subscription/plan-slugs'
 import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
@@ -398,12 +398,10 @@ export default function NewSubscriptionClient({
       } = await supabase.auth.getSession()
       if (!session) throw new Error('로그인이 필요합니다.')
 
-      trackEvent({
-        event: 'checkout_started',
-        plan: planNameToSlug(upgradeModal.plan.name) ?? upgradeModal.plan.name,
-        value: upgradeModal.proratedTotal,
-        currency: 'KRW',
+      trackBeginCheckout({
+        plan_name: planNameToSlug(upgradeModal.plan.name) ?? upgradeModal.plan.name,
         billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+        value: upgradeModal.proratedTotal,
       })
 
       const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -425,16 +423,14 @@ export default function NewSubscriptionClient({
         throw new Error(data.error || '업그레이드 결제에 실패했습니다.')
       }
       // 차액이 100원 미만이면 결제 없이 플랜만 바뀐다(transaction 없음) - 이 경우
-      // payment_success를 쏘면 실제 매출 없는 전환이 매출로 잡히므로 제외한다.
+      // purchase를 쏘면 실제 매출 없는 전환이 매출로 잡히므로 제외한다.
       if (data.transaction?.id) {
-        trackEvent({
-          event: 'payment_success',
+        trackPurchase({
           transaction_id: data.transaction.id,
-          plan: planNameToSlug(upgradeModal.plan.name) ?? upgradeModal.plan.name,
-          value: data.transaction.total_amount ?? upgradeModal.proratedTotal,
-          currency: 'KRW',
+          plan_name: planNameToSlug(upgradeModal.plan.name) ?? upgradeModal.plan.name,
           billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
-          ...getBlogEventFields(),
+          value: data.transaction.total_amount ?? upgradeModal.proratedTotal,
+          extra: getBlogEventFields(),
         })
       }
       setUpgradeModal(null)
@@ -500,12 +496,10 @@ export default function NewSubscriptionClient({
           // 잠겨 있었다(2026-08-21 munong2 계정 라이브 재현 확인). 지금 실제로 이용
           // 권한이 없는 상태(isCurrentPlanUnpaid)는 상태값과 무관하게 항상 이 재결제
           // 경로로 보내 실제 갱신 결제(toss-billing-payment mode 없음)를 태운다.
-          trackEvent({
-            event: 'checkout_started',
-            plan: planNameToSlug(plan.name) ?? plan.name,
-            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
-            currency: 'KRW',
+          trackBeginCheckout({
+            plan_name: planNameToSlug(plan.name) ?? plan.name,
             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
           })
           const res = await fetch('/api/subscription/convert-trial', {
             method: 'POST',
@@ -527,14 +521,12 @@ export default function NewSubscriptionClient({
             throw new Error(data.error || '결제에 실패했습니다.')
           }
           if (data.transaction?.id) {
-            trackEvent({
-              event: 'payment_success',
+            trackPurchase({
               transaction_id: data.transaction.id,
-              plan: planNameToSlug(plan.name) ?? plan.name,
-              value: data.transaction.total_amount ?? (billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly),
-              currency: 'KRW',
+              plan_name: planNameToSlug(plan.name) ?? plan.name,
               billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
-              ...getBlogEventFields(),
+              value: data.transaction.total_amount ?? (billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly),
+              extra: getBlogEventFields(),
             })
           }
           toast.success(`${plan.name} 플랜 결제가 완료되었습니다.\n지금부터 구독이 시작됩니다.`)
@@ -547,12 +539,10 @@ export default function NewSubscriptionClient({
           // 등록(mode:'update', 결제 없음)까지만 먼저 진행하고, 그게 실제로 성공한
           // 뒤에만 billing-success 페이지가 convert-trial을 호출해 plan_id 전환+즉시
           // 결제+체험 종료를 원자적으로 처리한다 - 그 전까지는 구독 행을 전혀 건드리지 않는다.
-          trackEvent({
-            event: 'checkout_started',
-            plan: planNameToSlug(plan.name) ?? plan.name,
-            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
-            currency: 'KRW',
+          trackBeginCheckout({
+            plan_name: planNameToSlug(plan.name) ?? plan.name,
             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
           })
           const tossPayments = await loadTossPayments(
             process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!
@@ -719,12 +709,10 @@ export default function NewSubscriptionClient({
           const originalPlanId = prepared.originalPlanId ?? currentSubscription.subscription_plans.id
           const originalBillingCycle = prepared.originalBillingCycle ?? currentSubscription.billing_cycle
 
-          trackEvent({
-            event: 'checkout_started',
-            plan: planNameToSlug(plan.name) ?? plan.name,
-            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
-            currency: 'KRW',
+          trackBeginCheckout({
+            plan_name: planNameToSlug(plan.name) ?? plan.name,
             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
           })
 
           // 빌링키 없음 → 카드 등록 후 즉시 결제
@@ -760,7 +748,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
+          trackTrialStart({ plan_name: 'pro', trial_days: 7, extra: getBlogEventFields() })
 
           toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
@@ -778,12 +766,10 @@ export default function NewSubscriptionClient({
           const originalPlanId = prepared.originalPlanId ?? currentSubscription.subscription_plans.id
           const originalBillingCycle = prepared.originalBillingCycle ?? currentSubscription.billing_cycle
 
-          trackEvent({
-            event: 'checkout_started',
-            plan: planNameToSlug(plan.name) ?? plan.name,
-            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
-            currency: 'KRW',
+          trackBeginCheckout({
+            plan_name: planNameToSlug(plan.name) ?? plan.name,
             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
           })
 
           const tossPayments = await loadTossPayments(
@@ -814,7 +800,7 @@ export default function NewSubscriptionClient({
           })
           const data = await res.json()
           if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-          trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
+          trackTrialStart({ plan_name: 'pro', trial_days: 7, extra: getBlogEventFields() })
           toast.success('7일 무료 체험이 시작되었습니다!\n체험 기간이 끝나면 서비스 접근이 제한되니, 계속 이용하시려면 플랜을 선택해주세요.')
           router.refresh()
         } else {
@@ -835,12 +821,10 @@ export default function NewSubscriptionClient({
           // 행 생성(current_period_end=now 포함)은 서버 API가 수행한다(노션 36번).
           const newSub = await prepareCheckout({ planId: plan.id, billingCycle })
 
-          trackEvent({
-            event: 'checkout_started',
-            plan: planNameToSlug(plan.name) ?? plan.name,
-            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
-            currency: 'KRW',
+          trackBeginCheckout({
+            plan_name: planNameToSlug(plan.name) ?? plan.name,
             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+            value: billingCycle === 'monthly' ? plan.price_monthly : plan.price_yearly,
           })
 
           const tossPayments = await loadTossPayments(

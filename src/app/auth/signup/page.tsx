@@ -10,6 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { trackEvent } from '@/lib/analytics/track'
+import { trackTrialStart } from '@/lib/analytics/ga-events'
 import {
   readAttributionFromStorage,
   ATTRIBUTION_FIRST_KEY,
@@ -159,12 +160,14 @@ function SignupPageContent() {
       // 체험 상태를 true로 잘못 보내지 않도록 plan만 실어 보낸다. 그 외(프로 선택/무파라미터)는
       // 서버가 이 시점에 이미 프로 7일 체험을 확정 부여하므로 signup_success와 trial_started를
       // 같은 성공 처리 단계에서 함께 쏜다(노션 30번 8항이 명시적으로 허용하는 방식).
+      // signup_success는 노션 46번 §1에 따라 이벤트명·기존 파라미터를 그대로 유지하고
+      // signup_plan(=plan)만 추가한다. trial_started는 46번 §11/§16의 trial_start로 이름 변경.
       const blogEventFields = getBlogEventFields()
       if (data.requiresPlanSetup) {
-        trackEvent({ event: 'signup_success', method: 'email', plan: data.requestedPlan ?? null, trial: false, ...blogEventFields })
+        trackEvent({ event: 'signup_success', method: 'email', plan: data.requestedPlan ?? null, signup_plan: data.requestedPlan ?? null, trial: false, ...blogEventFields })
       } else {
-        trackEvent({ event: 'signup_success', method: 'email', plan: 'pro', trial: true, ...blogEventFields })
-        trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...blogEventFields })
+        trackEvent({ event: 'signup_success', method: 'email', plan: 'pro', signup_plan: 'pro', trial: true, ...blogEventFields })
+        trackTrialStart({ plan_name: 'pro', trial_days: 7, extra: blogEventFields })
       }
 
       // Successful signup - now sign in

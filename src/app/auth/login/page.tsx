@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
+import { trackLogin } from '@/lib/analytics/ga-events'
 
 // Loading spinner component
 function LoadingSpinner() {
@@ -114,6 +115,9 @@ function LoginForm() {
       })
 
       if (signInError) throw signInError
+
+      // 실제 인증 성공 시점에만 GA4 login 이벤트 (노션 46번 §12) - 버튼 클릭이 아니라 성공 기준
+      trackLogin({ method: 'email' })
 
       // Successful login - show success message
       setSuccess(true)

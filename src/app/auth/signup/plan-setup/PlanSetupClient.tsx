@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { loadTossPayments } from '@tosspayments/payment-sdk'
 import { prepareCheckout } from '@/lib/subscription/prepare-checkout'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackBeginCheckout, trackTrialStart } from '@/lib/analytics/ga-events'
 import { getBlogEventFields } from '@/lib/analytics/attribution'
 
 interface SelectedPlan {
@@ -52,12 +52,10 @@ export default function PlanSetupClient({
       const newSub = await prepareCheckout({ planId: selectedPlan.id, billingCycle })
 
       const planPrice = billingCycle === 'yearly' && selectedPlan.price_yearly ? selectedPlan.price_yearly : selectedPlan.price_monthly
-      trackEvent({
-        event: 'checkout_started',
-        plan: planSlug,
-        value: planPrice,
-        currency: 'KRW',
+      trackBeginCheckout({
+        plan_name: planSlug,
         billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+        value: planPrice,
       })
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
@@ -95,7 +93,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
+      trackTrialStart({ plan_name: 'pro', trial_days: 7, extra: getBlogEventFields() })
       router.push('/dashboard')
     } catch (err: any) {
       setError(err.message || '무료 체험 시작 중 오류가 발생했습니다.')
@@ -121,7 +119,7 @@ export default function PlanSetupClient({
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || '무료 체험 시작에 실패했습니다.')
-      trackEvent({ event: 'trial_started', plan: 'pro', trial_days: 7, ...getBlogEventFields() })
+      trackTrialStart({ plan_name: 'pro', trial_days: 7, extra: getBlogEventFields() })
 
       const tossPayments = await loadTossPayments(process.env.NEXT_PUBLIC_TOSS_CLIENT_KEY!)
       await tossPayments.requestBillingAuth('카드', {

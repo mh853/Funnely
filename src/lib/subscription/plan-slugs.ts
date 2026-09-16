@@ -13,7 +13,7 @@ export function isKnownPlanSlug(slug: string | null | undefined): slug is keyof 
   return !!slug && slug in PLAN_SLUG_TO_NAME
 }
 
-// GTM/GA4 이벤트(plan_select/checkout_started/payment_success 등)에 항상 영문 slug로
+// GTM/GA4 이벤트(select_plan/begin_checkout/purchase 등)에 항상 영문 slug로
 // 플랜을 실어 보내기 위한 역방향 매핑 - DB에서 막 조회한 한글 플랜명을 다시 slug로 되돌릴 때 사용.
 const NAME_TO_PLAN_SLUG: Record<string, string> = Object.fromEntries(
   Object.entries(PLAN_SLUG_TO_NAME).map(([slug, name]) => [name, slug])

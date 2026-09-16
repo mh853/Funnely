@@ -27,7 +27,7 @@ export function readAttributionFromStorage(key: string): Record<string, unknown>
   }
 }
 
-// GA4 전환 이벤트(signup_success/trial_started/payment_success)에 네이버 블로그
+// GA4 전환 이벤트(signup_success/trial_start/purchase)에 네이버 블로그
 // 게시글 ID를 함께 실어 보내기 위한 헬퍼 (노션 44번 §9/§10 - 첫 페이지뷰만이 아니라
 // 전환 이벤트에도 first/last blog_post_id를 붙여야 게시글별 성과 분석이 가능하다).
 export function getBlogEventFields(): { first_blog_post_id: string | null; last_blog_post_id: string | null } {
