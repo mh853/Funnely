@@ -11,13 +11,13 @@ const quickLinks = [
   {
     name: '자주 묻는 질문',
     description: '일반적인 질문과 답변을 확인하세요',
-    href: '/#faq',
+    href: '/#faq_0',
     icon: QuestionMarkCircleIcon,
   },
   {
     name: '기능 가이드',
     description: '퍼널리 기능 사용법을 알아보세요',
-    href: '/#features',
+    href: '/#features_0',
     icon: BookOpenIcon,
   },
   {

@@ -4,35 +4,48 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ChevronDownIcon } from '@heroicons/react/24/outline'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackCtaClick, trackFaqOpen } from '@/lib/analytics/ga-events'
 
+// id/name은 GA4 faq_open 파라미터(노션 46번 §9). 질문 순서·내용이 바뀌어도 id는 유지할 것.
 const faqs = [
   {
+    id: 'faq_1',
+    name: 'what_is_funnely',
     question: '퍼널리는 어떤 서비스인가요?',
     answer:
       '누구나 쉽게 홈페이지와 랜딩페이지를 제작할 수 있는 서비스입니다. 특히 DB수집을 많이 필요로 하는 업종에서 아웃바운드 콜, 예약, 방문까지의 과정을 한번에 관리할 수 있는 강점이 있습니다. 랜딩페이지 제작, DB 자동분배, DB 상태 관리, 리포트 등을 제공하여 마케팅 부서, 콜 부서, 관리자가 종합적으로 활용할 수 있는 서비스입니다.',
   },
   {
+    id: 'faq_2',
+    name: 'free_trial',
     question: '무료 체험 기간이 있나요?',
     answer:
       '네. 프로 요금제 7일 무료체험이 가능합니다. 신용카드 등록 없이 바로 무료체험이 가능하며, 체험 기간 동안 모든 기능을 제한 없이 사용하실 수 있습니다.',
   },
   {
+    id: 'faq_3',
+    name: 'landing_page_builder',
     question: '개발자 없이 랜딩페이지나 홈페이지를 만들 수 있나요?',
     answer:
       '네, 가능합니다. 퍼널리는 개발자 없이 쉽고 빠르게 홈페이지 혹은 랜딩페이지를 만들 수 있는 서비스입니다. DB 관리가 가능한 서비스이기 때문에 고객정보 관리가 필요한 경우 활용하시면 더욱 좋습니다.',
   },
   {
+    id: 'faq_4',
+    name: 'data_security',
     question: '데이터는 안전한가요?',
     answer:
       '모든 데이터는 암호화되어 저장되며, 회사별로 완전히 독립된 데이터베이스를 사용합니다. 전화번호 등 민감 정보는 자동으로 암호화됩니다.',
   },
   {
+    id: 'faq_5',
+    name: 'customization',
     question: '커스터마이징 가능한가요?',
     answer:
       '네, 가능합니다. 커스터마이징은 기업 및 조직의 활용에 맞추어 제작되기 때문에 별도의 협의가 필요합니다. 커스터마이징 진행이 필요하신 경우, 고객센터로 문의를 남겨주시기 바랍니다.',
   },
   {
+    id: 'faq_6',
+    name: 'cancellation_policy',
     question: '구독 취소 정책은 어떻게 되나요?',
     answer:
       '언제든지 구독을 취소할 수 있습니다. 취소하더라도 이미 결제한 기간이 만료될 때까지 서비스를 정상적으로 이용하실 수 있습니다. 기간 만료 후에는 서비스 접근이 제한됩니다. 별도의 환불은 제공되지 않습니다.',
@@ -67,9 +80,11 @@ export default function FAQSection() {
         isOpen={isInquiryModalOpen}
         onClose={() => setIsInquiryModalOpen(false)}
         inquiryType="general"
+        leadType="general"
+        sectionId="faq_0"
       />
 
-      <section id="faq" className="py-24 sm:py-32 bg-white">
+      <section id="faq_0" className="py-24 sm:py-32 bg-white">
       <div className="mx-auto max-w-4xl px-6 lg:px-8">
         {/* Section header */}
         <div className="text-center mb-16">
@@ -97,7 +112,11 @@ export default function FAQSection() {
             >
               <dt>
                 <button
-                  onClick={() => setOpenIndex(openIndex === index ? null : index)}
+                  onClick={() => {
+                    const opening = openIndex !== index
+                    setOpenIndex(opening ? index : null)
+                    if (opening) trackFaqOpen({ faq_id: faq.id, faq_name: faq.name, section_id: 'faq_0' })
+                  }}
                   className="flex w-full items-start justify-between text-left p-6 hover:bg-gray-50 transition-colors"
                 >
                   <span className="text-lg font-semibold text-gray-900 pr-4">
@@ -150,7 +169,7 @@ export default function FAQSection() {
           </p>
           <button
             onClick={() => {
-              trackEvent({ event: 'contact_click', cta_location: 'faq' })
+              trackCtaClick({ button_id: 'faq_contact', button_name: 'contact', button_type: 'contact', section_id: 'faq_0' })
               setIsInquiryModalOpen(true)
             }}
             className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-3 text-base font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all"

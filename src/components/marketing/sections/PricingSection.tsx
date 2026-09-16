@@ -5,7 +5,7 @@ import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { CheckIcon, XMarkIcon, SparklesIcon } from '@heroicons/react/24/solid'
 import InquiryModal from '@/components/marketing/modals/InquiryModal'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackBillingCycleChange, trackCtaClick, trackSelectPlan } from '@/lib/analytics/ga-events'
 
 type FeatureValue = boolean | string
 
@@ -129,15 +129,24 @@ export default function PricingSection() {
   const [isInquiryOpen, setIsInquiryOpen] = useState(false)
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly')
 
+  // 토글 값이 실제로 바뀔 때만 billing_cycle_change (노션 46번 §8) - 이미 선택된 쪽을 다시 눌러도 안 쏜다
+  const changeBillingCycle = (next: 'monthly' | 'yearly') => {
+    if (next === billingCycle) return
+    setBillingCycle(next)
+    trackBillingCycleChange({ billing_cycle: next === 'yearly' ? 'annual' : 'monthly', section_id: 'pricing_0' })
+  }
+
   return (
     <>
       <InquiryModal
         isOpen={isInquiryOpen}
         onClose={() => setIsInquiryOpen(false)}
         inquiryType="sales"
+        leadType="custom_plan"
+        sectionId="pricing_0"
       />
 
-      <section id="pricing" className="py-24 sm:py-32 bg-gradient-to-b from-gray-50 to-white">
+      <section id="pricing_0" className="py-24 sm:py-32 bg-gradient-to-b from-gray-50 to-white">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           {/* Section header */}
           <div className="mx-auto max-w-2xl text-center mb-16">
@@ -158,7 +167,7 @@ export default function PricingSection() {
             <div className="inline-flex items-center rounded-full bg-gray-100 p-1">
               <button
                 type="button"
-                onClick={() => setBillingCycle('monthly')}
+                onClick={() => changeBillingCycle('monthly')}
                 className={`rounded-full px-5 py-2 text-sm font-semibold transition-all ${
                   billingCycle === 'monthly'
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -169,7 +178,7 @@ export default function PricingSection() {
               </button>
               <button
                 type="button"
-                onClick={() => setBillingCycle('yearly')}
+                onClick={() => changeBillingCycle('yearly')}
                 className={`flex items-center gap-2 rounded-full px-5 py-2 text-sm font-semibold transition-all ${
                   billingCycle === 'yearly'
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -258,7 +267,17 @@ export default function PricingSection() {
                       <button
                         type="button"
                         onClick={() => {
-                          trackEvent({ event: 'contact_click', cta_location: 'pricing_custom' })
+                          trackCtaClick({
+                            button_id: 'pricing_custom_contact',
+                            button_name: 'contact',
+                            button_type: 'contact',
+                            section_id: 'pricing_0',
+                          })
+                          trackSelectPlan({
+                            plan_name: 'custom',
+                            billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
+                            section_id: 'pricing_0',
+                          })
                           setIsInquiryOpen(true)
                         }}
                         className="block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all bg-gray-900 text-white hover:bg-gray-700 shadow-sm"
@@ -269,14 +288,20 @@ export default function PricingSection() {
                       <Link
                         href={`/auth/signup?plan=${plan.id}&billing=${billingCycle}${plan.id === 'pro' ? '&trial=true' : ''}`}
                         onClick={() => {
-                          const planPrice =
-                            billingCycle === 'yearly' && plan.priceYearly ? plan.priceYearly : plan.price
-                          trackEvent({
-                            event: 'plan_select',
-                            plan: plan.id.replace(/-/g, '_'),
-                            plan_price: planPrice,
+                          // 노션 46번 §5/§8: 버튼 클릭(cta_click)과 요금제 관심(select_plan)을 함께 전달
+                          const planName = plan.id.replace(/-/g, '_')
+                          const href = `/auth/signup?plan=${plan.id}&billing=${billingCycle}${plan.id === 'pro' ? '&trial=true' : ''}`
+                          trackCtaClick({
+                            button_id: `pricing_${planName}_start`,
+                            button_name: 'start',
+                            button_type: 'plan',
+                            section_id: 'pricing_0',
+                            destination_url: href,
+                          })
+                          trackSelectPlan({
+                            plan_name: planName,
                             billing_cycle: billingCycle === 'yearly' ? 'annual' : 'monthly',
-                            trial: plan.id === 'pro',
+                            section_id: 'pricing_0',
                           })
                         }}
                         className={`block w-full rounded-full py-2.5 text-center text-sm font-semibold transition-all ${

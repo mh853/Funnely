@@ -3,28 +3,38 @@
 import Link from 'next/link'
 import { config } from '@/lib/config'
 import { getKSTNow } from '@/lib/utils/date'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackCtaClick } from '@/lib/analytics/ga-events'
 
-type NavItem = { name: string; href: string | null }
+// buttonId/buttonName은 GA4 cta_click 파라미터 (노션 46번 §6 Footer)
+type NavItem = { name: string; href: string | null; buttonId: string; buttonName: string }
 
 const navigation = {
   product: [
-    { name: '기능 소개', href: '/#features' },
-  ],
+    { name: '기능 소개', href: '/#features_0', buttonId: 'footer_features', buttonName: 'features' },
+  ] as NavItem[],
   company: [] as NavItem[],
   support: [
-    { name: 'FAQ', href: '/#faq' },
-    { name: '문의하기', href: '/contact' },
-  ],
+    { name: 'FAQ', href: '/#faq_0', buttonId: 'footer_faq', buttonName: 'faq' },
+    { name: '문의하기', href: '/contact', buttonId: 'footer_contact', buttonName: 'contact' },
+  ] as NavItem[],
   legal: [
-    { name: '개인정보처리방침', href: '/privacy' },
-    { name: '이용약관', href: '/terms' },
-  ],
+    { name: '개인정보처리방침', href: '/privacy', buttonId: 'footer_privacy', buttonName: 'privacy' },
+    { name: '이용약관', href: '/terms', buttonId: 'footer_terms', buttonName: 'terms' },
+  ] as NavItem[],
 }
+
+const trackFooterClick = (item: NavItem) =>
+  trackCtaClick({
+    button_id: item.buttonId,
+    button_name: item.buttonName,
+    button_type: 'link',
+    section_id: 'footer_0',
+    destination_url: item.href ?? undefined,
+  })
 
 export default function MarketingFooter() {
   return (
-    <footer className="bg-gray-900" aria-labelledby="footer-heading">
+    <footer id="footer_0" className="bg-gray-900" aria-labelledby="footer-heading">
       <h2 id="footer-heading" className="sr-only">
         Footer
       </h2>
@@ -46,7 +56,8 @@ export default function MarketingFooter() {
                 {navigation.product.map((item) => (
                   <li key={item.name}>
                     <a
-                      href={item.href}
+                      href={item.href ?? undefined}
+                      onClick={() => trackFooterClick(item)}
                       className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                     >
                       {item.name}
@@ -63,11 +74,7 @@ export default function MarketingFooter() {
                     {item.href ? (
                       <Link
                         href={item.href}
-                        onClick={
-                          item.href === '/contact'
-                            ? () => trackEvent({ event: 'contact_click', cta_location: 'footer' })
-                            : undefined
-                        }
+                        onClick={() => trackFooterClick(item)}
                         className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                       >
                         {item.name}
@@ -88,6 +95,7 @@ export default function MarketingFooter() {
                   <li key={item.name}>
                     <Link
                       href={item.href!}
+                      onClick={() => trackFooterClick(item)}
                       className="text-sm leading-6 text-gray-400 hover:text-white transition-colors"
                     >
                       {item.name}

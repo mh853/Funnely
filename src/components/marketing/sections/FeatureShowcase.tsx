@@ -16,21 +16,21 @@ import {
   DocumentTextIcon,
   PhotoIcon,
 } from '@heroicons/react/24/outline'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackCtaClick } from '@/lib/analytics/ga-events'
 
-// feature.id(landing/db/analytics/schedule/pixel) → GTM 이벤트 값 매핑
-const FEATURE_CTA_LOCATION: Record<string, string> = {
-  landing: 'feature_landing_page',
-  db: 'feature_db_management',
-  analytics: 'feature_analytics',
-  schedule: 'feature_schedule',
-  pixel: 'feature_pixel_api',
+// feature.id(landing/db/analytics/schedule/pixel) → 노션 46번 앵커 id(features_1~5) / section_name 매핑
+const FEATURE_SECTION_ID: Record<string, string> = {
+  landing: 'features_1',
+  db: 'features_2',
+  analytics: 'features_3',
+  schedule: 'features_4',
+  pixel: 'features_5',
 }
-const FEATURE_CLICK_NAME: Record<string, string> = {
-  landing: 'landing_page',
+const FEATURE_SECTION_NAME: Record<string, string> = {
+  landing: 'landing_page_builder',
   db: 'db_management',
   analytics: 'traffic_analytics',
-  schedule: 'db_schedule',
+  schedule: 'schedule_management',
   pixel: 'pixel_api',
 }
 
@@ -659,7 +659,14 @@ export default function FeatureShowcase() {
 
   const scrollToFeature = (index: number) => {
     setActiveIndex(index)
-    trackEvent({ event: 'feature_click', feature_name: FEATURE_CLICK_NAME[features[index].id] })
+    const featureId = features[index].id
+    trackCtaClick({
+      button_id: `features_nav_${index + 1}`,
+      button_name: FEATURE_SECTION_NAME[featureId],
+      button_type: 'nav',
+      section_id: FEATURE_SECTION_ID[featureId],
+      destination_url: `/#${FEATURE_SECTION_ID[featureId]}`,
+    })
     sectionRefs.current[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
@@ -728,7 +735,7 @@ export default function FeatureShowcase() {
               <div
                 key={feature.id}
                 ref={(el) => { sectionRefs.current[index] = el }}
-                id={`feature-${feature.id}`}
+                id={FEATURE_SECTION_ID[feature.id]}
               >
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
@@ -784,14 +791,30 @@ export default function FeatureShowcase() {
                   <div className="mt-8 flex flex-col sm:flex-row gap-3">
                     <Link
                       href="/auth/signup?plan=pro&trial=true"
-                      onClick={() => trackEvent({ event: 'free_trial_click', cta_location: FEATURE_CTA_LOCATION[feature.id], plan: 'pro', trial: true })}
+                      onClick={() =>
+                        trackCtaClick({
+                          button_id: `${FEATURE_SECTION_ID[feature.id]}_free_trial`,
+                          button_name: 'free_trial',
+                          button_type: 'trial',
+                          section_id: FEATURE_SECTION_ID[feature.id],
+                          destination_url: '/auth/signup?plan=pro&trial=true',
+                        })
+                      }
                       className={`inline-flex items-center justify-center rounded-full bg-gradient-to-r ${feature.accentColor} px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl hover:scale-105 transition-all`}
                     >
                       7일 무료체험
                     </Link>
                     <Link
                       href="/auth/signup"
-                      onClick={() => trackEvent({ event: 'signup_click', cta_location: FEATURE_CTA_LOCATION[feature.id] })}
+                      onClick={() =>
+                        trackCtaClick({
+                          button_id: `${FEATURE_SECTION_ID[feature.id]}_signup`,
+                          button_name: 'signup',
+                          button_type: 'signup',
+                          section_id: FEATURE_SECTION_ID[feature.id],
+                          destination_url: '/auth/signup',
+                        })
+                      }
                       className="inline-flex items-center justify-center rounded-full border-2 border-gray-300 bg-white px-6 py-3 text-sm font-semibold text-gray-700 hover:border-gray-400 transition-all"
                     >
                       회원가입

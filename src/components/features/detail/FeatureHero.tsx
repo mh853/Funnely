@@ -41,7 +41,7 @@ export default function FeatureHero({ icon, iconGradient, title, subtitle, isPro
               <span className="mx-2">/</span>
             </li>
             <li>
-              <Link href="/#features" className="hover:text-blue-600 transition-colors">
+              <Link href="/#features_0" className="hover:text-blue-600 transition-colors">
                 기능
               </Link>
             </li>

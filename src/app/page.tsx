@@ -7,6 +7,7 @@ import IndustrySection from '@/components/marketing/sections/IndustrySection'
 import PricingSection from '@/components/marketing/sections/PricingSection'
 import FAQSection from '@/components/marketing/sections/FAQSection'
 import FinalCTASection from '@/components/marketing/sections/FinalCTASection'
+import SectionViewTracker from '@/components/marketing/SectionViewTracker'
 import { config } from '@/lib/config'
 
 export const metadata = {
@@ -67,7 +68,7 @@ const softwareApplicationJsonLd = {
     lowPrice: 19000,
     highPrice: 490000,
     offerCount: 4,
-    url: `${SITE_URL}/#pricing`,
+    url: `${SITE_URL}/#pricing_0`,
   },
   publisher: { '@id': `${SITE_URL}/#organization` },
 }
@@ -84,6 +85,7 @@ export default function MarketingHomePage() {
         dangerouslySetInnerHTML={{ __html: toJsonLd(softwareApplicationJsonLd) }}
       />
       <MarketingHeader />
+      <SectionViewTracker />
       <main>
         <HeroSection />
         <FeaturesOverview />

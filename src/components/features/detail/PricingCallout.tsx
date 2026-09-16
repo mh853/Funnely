@@ -30,7 +30,7 @@ export default function PricingCallout({ message, note, isPro = false }: Pricing
           )}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
-              href="#pricing"
+              href="/#pricing_0"
               className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-8 py-4 text-base font-semibold text-blue-600 shadow-xl hover:shadow-2xl transition-all hover:scale-105"
             >
               요금제 자세히 보기

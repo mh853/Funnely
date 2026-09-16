@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion'
 import Link from 'next/link'
 import { SparklesIcon, ChartBarIcon } from '@heroicons/react/24/outline'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackCtaClick } from '@/lib/analytics/ga-events'
 
 const heroFeatures = [
   {
@@ -40,7 +40,7 @@ const heroFeatures = [
 
 export default function HeroSection() {
   return (
-    <section id="hero" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pt-32 pb-20 sm:pt-40 sm:pb-24">
+    <section id="hero_0" className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 pt-32 pb-20 sm:pt-40 sm:pb-24">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[1000px] rounded-full bg-gradient-to-r from-blue-400/20 to-purple-400/20 blur-3xl" />
@@ -92,7 +92,15 @@ export default function HeroSection() {
           >
             <Link
               href="/auth/signup?plan=pro&trial=true"
-              onClick={() => trackEvent({ event: 'free_trial_click', cta_location: 'hero', plan: 'pro', trial: true })}
+              onClick={() =>
+                trackCtaClick({
+                  button_id: 'hero_free_trial',
+                  button_name: 'free_trial',
+                  button_type: 'trial',
+                  section_id: 'hero_0',
+                  destination_url: '/auth/signup?plan=pro&trial=true',
+                })
+              }
               className="group relative inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 px-8 py-4 text-base font-semibold text-white shadow-xl hover:shadow-2xl transition-all hover:scale-105"
             >
               7일 무료체험
@@ -103,7 +111,15 @@ export default function HeroSection() {
             </Link>
             <Link
               href="/auth/signup"
-              onClick={() => trackEvent({ event: 'signup_click', cta_location: 'hero' })}
+              onClick={() =>
+                trackCtaClick({
+                  button_id: 'hero_signup',
+                  button_name: 'signup',
+                  button_type: 'signup',
+                  section_id: 'hero_0',
+                  destination_url: '/auth/signup',
+                })
+              }
               className="inline-flex items-center justify-center gap-2 rounded-full border-2 border-gray-300 bg-white px-8 py-4 text-base font-semibold text-gray-900 hover:border-blue-600 hover:text-blue-600 transition-all"
             >
               회원가입

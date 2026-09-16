@@ -11,15 +11,18 @@ import {
   BuildingOfficeIcon,
   UserIcon
 } from '@heroicons/react/24/solid'
-import { trackEvent } from '@/lib/analytics/track'
+import { trackGenerateLead } from '@/lib/analytics/ga-events'
 
 interface InquiryModalProps {
   isOpen: boolean
   onClose: () => void
   inquiryType: 'general' | 'sales'
+  // GA4 generate_lead 파라미터 (노션 46번 §10): 어느 위치의 문의인지 - 예) 요금제 커스터마이징 → custom_plan / pricing_0
+  leadType?: string
+  sectionId?: string
 }
 
-export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryModalProps) {
+export default function InquiryModal({ isOpen, onClose, inquiryType, leadType, sectionId }: InquiryModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -57,7 +60,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType }: InquiryMo
         throw new Error(data.error || 'Failed to submit inquiry')
       }
 
-      trackEvent({ event: 'contact_submit_success', inquiry_type: inquiryType })
+      trackGenerateLead({ lead_type: leadType ?? inquiryType, section_id: sectionId })
       setIsSuccess(true)
       setTimeout(() => {
         onClose()
