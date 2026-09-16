@@ -15,6 +15,14 @@ function toLocalDateStr(date: Date): string {
   const d = String(date.getDate()).padStart(2, '0')
   return `${y}-${m}-${d}`
 }
+
+// "YYYY-MM-DD"를 로컬 자정 Date로 파싱 (new Date('YYYY-MM-DD')는 UTC 자정이라
+// UTC보다 늦은 타임존 브라우저에서 toLocaleDateString이 하루 전 날짜를 표시함)
+function parseLocalDateStr(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  if (!y || !m || !d) return new Date(dateStr)
+  return new Date(y, m - 1, d)
+}
 import {
   XMarkIcon,
   ChevronDownIcon,
@@ -1659,7 +1667,7 @@ export default function ReservationsClient({
                 <div className="space-y-6">
                   {sortedDates.map((date) => {
                     const dateLeads = leadsByDate[date]
-                    const dateObj = new Date(date)
+                    const dateObj = parseLocalDateStr(date)
                     const formattedDate = dateObj.toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: 'long',
@@ -1755,7 +1763,7 @@ export default function ReservationsClient({
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-bold">
-                    {new Date(selectedDateForModal).toLocaleDateString('ko-KR', {
+                    {parseLocalDateStr(selectedDateForModal).toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
@@ -2063,7 +2071,7 @@ export default function ReservationsClient({
                 <div>
                   <h3 className="text-lg font-bold">예약 스케줄 입력</h3>
                   <p className="text-sm text-emerald-100">
-                    {scheduleInputDate && new Date(scheduleInputDate).toLocaleDateString('ko-KR', {
+                    {scheduleInputDate && parseLocalDateStr(scheduleInputDate).toLocaleDateString('ko-KR', {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
