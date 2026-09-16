@@ -54,7 +54,7 @@ const industries: Industry[] = [
     emoji: '🏥',
     headline: '○○ 병원 온라인 예약',
     subheadline: '전화 없이 간편하게 예약하세요. 당일 예약 가능.',
-    features: ['예약 스케쥴 연동', '상담신청 버튼', '신청완료 페이지'],
+    features: ['예약 스케줄 연동', '상담신청 버튼', '신청완료 페이지'],
     formFields: ['이름', '연락처', '희망 진료과'],
     ctaText: '진료 예약하기',
   },

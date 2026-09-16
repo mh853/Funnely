@@ -19,7 +19,7 @@ const heroFeatures = [
   {
     number: '3',
     name: 'DB예약 스케줄 관리',
-    description: '캘린더로 관리하는 DB 스케쥴. 예약, 방문 스케쥴 별도 관리 가능.',
+    description: '캘린더로 관리하는 DB 스케줄. 예약, 방문 스케줄 별도 관리 가능.',
   },
   {
     number: '4',

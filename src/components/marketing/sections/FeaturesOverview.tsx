@@ -36,10 +36,10 @@ const features = [
   },
   {
     name: 'DB예약 스케줄 관리',
-    description: '캘린더로 관리하는 DB 스케쥴. 예약, 방문 스케쥴 별도 관리가 가능합니다.',
+    description: '캘린더로 관리하는 DB 스케줄. 예약, 방문 스케줄 별도 관리가 가능합니다.',
     icon: CalendarDaysIcon,
     iconColor: 'from-green-500 to-emerald-500',
-    features: ['DB 스케쥴 캘린더', '예약 스케쥴 관리', '월별·주간별 스케쥴 노트'],
+    features: ['DB 스케줄 캘린더', '예약 스케줄 관리', '월별·주간별 스케줄 노트'],
     isPro: true,
     anchor: 'features_4',
     buttonId: 'features_card_4_detail',

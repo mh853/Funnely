@@ -92,7 +92,7 @@ const features: Feature[] = [
       { icon: ChartBarIcon, title: 'DB 현황', description: '랜딩페이지로 수집된 DB 리스트를 확인할 수 있습니다. 수집된 DB 항목, 콜 담당자, 상담 담당자, 콜 결과 등 확인이 가능합니다.' },
       { icon: UsersIcon, title: 'DB 배분', description: '수집된 DB를 콜 담당자에게 임의로 배분합니다.' },
       { icon: DocumentTextIcon, title: 'DB 수동 추가', description: '퍼널리 이외의 방법으로 수집된 DB는 수동추가 기능 이용이 가능합니다.' },
-      { icon: CheckCircleIcon, title: '결과 처리', description: '상담 결과를 선택하여 스케쥴을 관리할 수 있습니다.' },
+      { icon: CheckCircleIcon, title: '결과 처리', description: '상담 결과를 선택하여 스케줄을 관리할 수 있습니다.' },
     ],
   },
   {
@@ -116,19 +116,19 @@ const features: Feature[] = [
   {
     id: 'schedule',
     number: '04',
-    name: '콜센터 스케쥴 관리',
-    headline: 'DB 스케쥴부터 예약까지\n한 번에 관리',
+    name: '콜센터 스케줄 관리',
+    headline: 'DB 스케줄부터 예약까지\n한 번에 관리',
     description:
-      '실시간으로 수집된 DB를 간편하게 관리하실 수 있습니다. DB 스케쥴, 예약 스케쥴, 자동 콜 DB 분배, DB 리포트 등 아웃바운드 콜, 상담예약 과정까지 한번에 관리하실 수 있습니다.',
+      '실시간으로 수집된 DB를 간편하게 관리하실 수 있습니다. DB 스케줄, 예약 스케줄, 자동 콜 DB 분배, DB 리포트 등 아웃바운드 콜, 상담예약 과정까지 한번에 관리하실 수 있습니다.',
     accentColor: 'from-green-500 to-emerald-500',
     bgFrom: 'from-green-50',
     bgTo: 'to-emerald-50',
     mockType: 'schedule',
     subFeatures: [
-      { icon: CalendarDaysIcon, title: 'DB 스케쥴', description: '상담전, 추가상담 필요한 DB 위주로 DB 스케쥴에서 한번에 확인이 가능합니다.' },
-      { icon: DocumentTextIcon, title: '월별·주간 스케쥴 노트', description: '월별, 주간별 스케쥴 노트를 통해 간편하게 관리 가능합니다.' },
-      { icon: CheckCircleIcon, title: '예약 스케쥴', description: '상담 예약이 완료된 DB에 대해서 예약 스케쥴로 관리할 수 있습니다.' },
-      { icon: UsersIcon, title: '방문·내원 스케쥴', description: '추가 상담, 예약 방문, 내원 등의 스케쥴 관리가 필요하신 경우 활용하시면 좋습니다.' },
+      { icon: CalendarDaysIcon, title: 'DB 스케줄', description: '상담전, 추가상담 필요한 DB 위주로 DB 스케줄에서 한번에 확인이 가능합니다.' },
+      { icon: DocumentTextIcon, title: '월별·주간 스케줄 노트', description: '월별, 주간별 스케줄 노트를 통해 간편하게 관리 가능합니다.' },
+      { icon: CheckCircleIcon, title: '예약 스케줄', description: '상담 예약이 완료된 DB에 대해서 예약 스케줄로 관리할 수 있습니다.' },
+      { icon: UsersIcon, title: '방문·내원 스케줄', description: '추가 상담, 예약 방문, 내원 등의 스케줄 관리가 필요하신 경우 활용하시면 좋습니다.' },
     ],
   },
   {
@@ -567,8 +567,8 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
         </div>
         <div className="grid grid-cols-2 gap-2 px-3 py-2 border-t border-gray-100">
           {[
-            { label: 'DB 스케쥴', count: 12, color: 'bg-blue-50 text-blue-700' },
-            { label: '예약 스케쥴', count: 8, color: 'bg-green-50 text-green-700' },
+            { label: 'DB 스케줄', count: 12, color: 'bg-blue-50 text-blue-700' },
+            { label: '예약 스케줄', count: 8, color: 'bg-green-50 text-green-700' },
           ].map((s) => (
             <div key={s.label} className={`rounded-xl p-2.5 ${s.color}`}>
               <p className="text-xs font-medium">{s.label}</p>
