@@ -162,7 +162,7 @@ export default async function SettingsPage() {
       )}
 
       {/* Quick Settings Links - 1행 그리드 */}
-      <div className={`grid gap-3 ${isAdmin ? 'grid-cols-1 sm:grid-cols-7' : 'grid-cols-1 sm:grid-cols-4'}`}>
+      <div className={`grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 ${isAdmin ? 'xl:grid-cols-7' : ''}`}>
         {/* 사용 가이드 */}
         <Link
           href="/dashboard/guide"
