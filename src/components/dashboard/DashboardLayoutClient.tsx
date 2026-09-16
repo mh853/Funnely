@@ -28,6 +28,8 @@ interface DashboardLayoutClientProps {
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
 const GUIDE_DISMISSED_KEY_PREFIX = 'funnely-guide-dismissed-'
+// X로 닫은 것은 브라우저 세션 동안만 기억 (새로고침·URL 직접 이동으로 레이아웃이 다시 마운트돼도 재등장 방지)
+const GUIDE_CLOSED_SESSION_KEY_PREFIX = 'funnely-guide-closed-'
 
 export default function DashboardLayoutClient({
   user,
@@ -56,10 +58,18 @@ export default function DashboardLayoutClient({
   useEffect(() => {
     if (!user?.id) return
     const dismissed = localStorage.getItem(GUIDE_DISMISSED_KEY_PREFIX + user.id)
-    if (!dismissed) {
+    const closedThisSession = sessionStorage.getItem(GUIDE_CLOSED_SESSION_KEY_PREFIX + user.id)
+    if (!dismissed && !closedThisSession) {
       setGuideModalOpen(true)
     }
   }, [user?.id])
+
+  const closeGuideForSession = () => {
+    if (user?.id) {
+      sessionStorage.setItem(GUIDE_CLOSED_SESSION_KEY_PREFIX + user.id, '1')
+    }
+    setGuideModalOpen(false)
+  }
 
   const dismissGuideForever = () => {
     if (user?.id) {
@@ -89,7 +99,7 @@ export default function DashboardLayoutClient({
         <TrialExpiredModal onDismiss={() => setTrialModalDismissed(true)} />
       )}
       {showGuideModal && (
-        <GuideModal onClose={() => setGuideModalOpen(false)} onDismissForever={dismissGuideForever} />
+        <GuideModal onClose={closeGuideForSession} onDismissForever={dismissGuideForever} />
       )}
       <Sidebar
         userProfile={userProfile}
