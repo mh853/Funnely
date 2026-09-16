@@ -389,6 +389,15 @@ export default function CalendarView({
     setShowDayDetailModal(true)
   }
 
+  // 새 일정 추가 - EventModal은 생성 모드(event 없음 + date)를 이미 지원했지만
+  // 어디에서도 selectedDate를 채워 열어주지 않아 DB 스케줄을 새로 만들 경로가 없었다
+  const openCreateEventModal = (date: Date) => {
+    setSelectedEvent(null)
+    setSelectedDate(date)
+    setShowDayDetailModal(false)
+    setShowEventModal(true)
+  }
+
   // Handle event click
   const handleEventClick = (event: any, e: React.MouseEvent) => {
     e.stopPropagation()
@@ -621,7 +630,14 @@ export default function CalendarView({
                 </button>
               </div>
             </div>
-
+            <button
+              type="button"
+              onClick={() => openCreateEventModal(new Date())}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
+            >
+              <PlusIcon className="h-4 w-4" />
+              일정 추가
+            </button>
           </div>
         </div>
       )}
@@ -763,16 +779,26 @@ export default function CalendarView({
                 이번달
               </button>
             </div>
-            <button
-              onClick={() => {
-                const newDate = new Date(weekStartDate)
-                newDate.setDate(newDate.getDate() + 7)
-                setWeekStartDate(newDate)
-              }}
-              className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
-            >
-              <ChevronRightIcon className="h-5 w-5 text-gray-600" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => openCreateEventModal(new Date())}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
+              >
+                <PlusIcon className="h-4 w-4" />
+                일정 추가
+              </button>
+              <button
+                onClick={() => {
+                  const newDate = new Date(weekStartDate)
+                  newDate.setDate(newDate.getDate() + 7)
+                  setWeekStartDate(newDate)
+                }}
+                className="p-2 hover:bg-white rounded-lg transition shadow-sm border border-gray-200"
+              >
+                <ChevronRightIcon className="h-5 w-5 text-gray-600" />
+              </button>
+            </div>
           </div>
 
           {/* Weekly List Grid */}
@@ -966,14 +992,24 @@ export default function CalendarView({
                     일정 {selectedDayData.events.length}개 · DB신청 {selectedDayData.leads.length}개
                   </p>
                 </div>
-                <button
-                  onClick={() => setShowDayDetailModal(false)}
-                  className="p-2 hover:bg-white/20 rounded-full transition"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openCreateEventModal(new Date(year, month, selectedDayData.day))}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-white/20 hover:bg-white/30 rounded-lg transition"
+                  >
+                    <PlusIcon className="h-4 w-4" />
+                    일정 추가
+                  </button>
+                  <button
+                    onClick={() => setShowDayDetailModal(false)}
+                    className="p-2 hover:bg-white/20 rounded-full transition"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
             </div>
 
