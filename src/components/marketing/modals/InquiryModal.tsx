@@ -330,7 +330,7 @@ export default function InquiryModal({ isOpen, onClose, inquiryType, leadType, s
                           <p className="text-sm text-gray-700">
                             {isSales
                               ? '담당자가 영업일 기준 1일 이내에 연락드립니다. 빠른 상담을 원하시면 연락처를 꼭 남겨주세요.'
-                              : '접수된 문의는 영업일 기준 2-3일 이내에 답변드립니다. 긴급한 문의는 채팅 상담을 이용해주세요.'}
+                              : '접수된 문의는 영업일 기준 24시간 이내에 답변드립니다.'}
                           </p>
                         </div>
                       </div>
