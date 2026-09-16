@@ -302,22 +302,20 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
   const handleFormSubmit = async () => {
     setSubmitError(null)
 
-    // 필수 필드 검증
+    // 필수 필드 검증 - 첫 오류에서 멈추면 빈 폼 제출 시 이름→전화→동의 순으로 한 번에
+    // 하나씩만 보여 여러 번 제출을 반복해야 했다. 누락된 항목을 모두 모아 한 번에 보여준다.
+    const errors: string[] = []
     if (collectName && !nameInput.trim()) {
-      setSubmitError('이름을 입력해주세요')
-      return
+      errors.push('이름을 입력해주세요')
     }
     if (collectPhone) {
       const phoneDigits = phoneInput.replace(/[^0-9]/g, '')
       if (!phoneDigits) {
-        setSubmitError('전화번호를 입력해주세요')
-        return
-      }
-      // 값이 비어있지 않기만 하면 통과하던 검증이라 "123" 같은 값도 그대로
-      // 리드로 저장되고 있었다. 국내 전화번호(휴대폰/유선) 자릿수만 확인한다.
-      if (phoneDigits.length < 9 || phoneDigits.length > 11) {
-        setSubmitError('올바른 전화번호를 입력해주세요')
-        return
+        errors.push('전화번호를 입력해주세요')
+      } else if (phoneDigits.length < 9 || phoneDigits.length > 11) {
+        // 값이 비어있지 않기만 하면 통과하던 검증이라 "123" 같은 값도 그대로
+        // 리드로 저장되고 있었다. 국내 전화번호(휴대폰/유선) 자릿수만 확인한다.
+        errors.push('올바른 전화번호를 입력해주세요')
       }
     }
     // 커스텀 필드 필수 검증
@@ -326,13 +324,15 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         const fieldKey = field.id || field.question
         const value = customFieldValues[fieldKey]
         if (!value || !value.trim()) {
-          setSubmitError(`${field.question}을(를) 입력해주세요`)
-          return
+          errors.push(`${field.question}을(를) 입력해주세요`)
         }
       }
     }
     if (landingPage.require_privacy_consent && !privacyConsent) {
-      setSubmitError('개인정보 수집 및 이용에 동의해주세요')
+      errors.push('개인정보 수집 및 이용에 동의해주세요')
+    }
+    if (errors.length > 0) {
+      setSubmitError(errors.join('\n'))
       return
     }
 
@@ -656,7 +656,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
         return (
           <div key={section.id} className="space-y-8">
             {showError && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+              <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center whitespace-pre-line">
                 {submitError}
               </div>
             )}
@@ -1142,7 +1142,7 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
 
               {/* 에러 메시지 - Submit 버튼 바로 위 */}
               {submitError && (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center">
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600 text-center whitespace-pre-line">
                   {submitError}
                 </div>
               )}
