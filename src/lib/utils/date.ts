@@ -57,6 +57,38 @@ export function isTodayKST(date: Date): boolean {
 }
 
 /**
+ * new Date(y, m, d)처럼 브라우저 로컬 달력값으로 만든 "셀 날짜"를 'YYYY-MM-DD'로 변환한다.
+ * 이런 Date는 실제 인스턴트가 아니라 달력 좌표이므로 toKSTDateStr(+9h 후 UTC 게터)에
+ * 넣으면 UTC+9보다 앞선 타임존(호주 등) 브라우저에서 하루 전 문자열이 나와 일정이
+ * 다음 날 셀로 밀려 보였다. 로컬 게터로 그대로 읽어야 한다.
+ */
+export function toCalendarDateStr(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
+/** 로컬 달력 셀 날짜가 KST 기준 오늘인지 (isTodayKST는 실제 타임스탬프용) */
+export function isCalendarDateTodayKST(date: Date): boolean {
+  return toCalendarDateStr(date) === toKSTDateStr(new Date())
+}
+
+/** 실제 타임스탬프를 KST 벽시계 'HH:mm'으로. 브라우저 타임존과 무관하게 한국 시각을 보여준다 */
+export function formatKSTTime(date: string | Date | number | null | undefined): string {
+  if (!date) return '-'
+  const d = new Date(date)
+  if (isNaN(d.getTime())) return '-'
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000)
+  return `${String(kst.getUTCHours()).padStart(2, '0')}:${String(kst.getUTCMinutes()).padStart(2, '0')}`
+}
+
+/** 실제 타임스탬프를 datetime-local 입력값('YYYY-MM-DDTHH:mm')으로, KST 벽시계 기준 */
+export function toKSTDateTimeLocalStr(date: Date): string {
+  return `${toKSTDateStr(date)}T${formatKSTTime(date)}`
+}
+
+/**
  * "YYYY-MM-DD" 문자열이 나타내는 KST 캘린더 하루를 [시작, 다음날 시작) UTC 인스턴트
  * 범위로 변환한다. TIMESTAMPTZ 컬럼을 특정 KST 날짜로 필터링할 때 new Date(dateStr)를
  * 직접 쓰면 UTC 자정으로 해석되어 9시간 어긋나므로(day 필터가 KST 기준 하루가 아니라

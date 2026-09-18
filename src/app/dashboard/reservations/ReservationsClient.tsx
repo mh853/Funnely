@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { decryptPhone } from '@/lib/encryption/phone'
-import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
+import { formatDateTime, formatDate, formatTime, toKSTDateStr, isCalendarDateTodayKST } from '@/lib/utils/date'
 import { getLeadStatusCategoryMap, getCodesForCategory } from '@/lib/leadStatusCategory'
 import { sanitizeRowsForSpreadsheet } from '@/lib/utils/spreadsheet-sanitize'
 
@@ -1334,7 +1334,7 @@ export default function ReservationsClient({
                   calendarCurrentMonth.getMonth(),
                   day
                 )
-                const isToday = isTodayKST(dateObj)
+                const isToday = isCalendarDateTodayKST(dateObj)
                 const dayOfWeek = dateObj.getDay()
 
                 // 최대 3개 표시, 나머지는 "더보기"
@@ -1442,7 +1442,7 @@ export default function ReservationsClient({
                   시간
                 </div>
                 {getWeekDays().map((day, idx) => {
-                  const isToday = isTodayKST(day)
+                  const isToday = isCalendarDateTodayKST(day)
                   const dayOfWeek = day.getDay()
                   const leadCount = getLeadCountForDay(day)
                   return (
@@ -1487,7 +1487,7 @@ export default function ReservationsClient({
 
                     {/* Day Cells */}
                     {getWeekDays().map((day, dayIdx) => {
-                      const isToday = isTodayKST(day)
+                      const isToday = isCalendarDateTodayKST(day)
                       const leadsInSlot = getLeadsForTimeSlot(day, timeSlot)
                       const dateStr = getLocalDateString(day)
                       const slotId = `${dateStr}-${timeSlot}`
@@ -1977,7 +1977,7 @@ export default function ReservationsClient({
                           day
                         )
                       : null
-                    const isToday = dateObj && isTodayKST(dateObj)
+                    const isToday = dateObj && isCalendarDateTodayKST(dateObj)
                     const dayOfWeek = dateObj ? dateObj.getDay() : -1
 
                     return (

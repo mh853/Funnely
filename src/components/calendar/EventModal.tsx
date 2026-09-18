@@ -4,6 +4,7 @@ import { useState, useEffect, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import { Dialog, Transition } from '@headlessui/react'
 import { XMarkIcon, TrashIcon, ChevronDownIcon } from '@heroicons/react/24/outline'
+import { toKSTDateTimeLocalStr } from '@/lib/utils/date'
 
 interface EventModalProps {
   event?: any
@@ -41,6 +42,9 @@ export default function EventModal({
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // window.confirm() 대신 인라인 확인 - 브라우저 자동화(QA 봇)가 confirm 대화상자에서 멈춰
+  // "삭제가 안 된다"고 보고했고, 실제 사용자에게도 모달 안에서 확인하는 편이 자연스럽다
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -59,12 +63,15 @@ export default function EventModal({
       const startTime = new Date(event.start_time)
       const endTime = new Date(event.end_time)
 
+      // 저장은 항상 KST(+09:00)이고 캘린더 셀도 KST로 배치되므로, 편집 폼도 브라우저
+      // 타임존이 아니라 KST 벽시계를 보여줘야 한다 - 로컬 게터로 읽으면 미국 브라우저에서
+      // "7일 17:00"으로 보이는 일정이 캘린더에는 8일 09:00에 놓여 어긋났다(그록봇 재검증)
       setFormData({
         title: event.title,
         description: event.description || '',
         event_type: event.event_type,
-        start_time: formatDateTimeLocal(startTime),
-        end_time: formatDateTimeLocal(endTime),
+        start_time: toKSTDateTimeLocalStr(startTime),
+        end_time: toKSTDateTimeLocalStr(endTime),
         // calendar_events.assigned_to는 배열(UUID[]) 컬럼이라 DB에서 내려온 값도
         // 배열이다 - 단일 select에 쓰려면 첫 번째 담당자만 꺼내야 한다
         assigned_to: (Array.isArray(event.assigned_to) ? event.assigned_to[0] : event.assigned_to) || currentUserId,
@@ -146,7 +153,8 @@ export default function EventModal({
   }
 
   const handleDelete = async () => {
-    if (!event || !confirm('정말로 이 일정을 삭제하시겠습니까?')) return
+    if (!event) return
+    setConfirmingDelete(false)
 
     setLoading(true)
     setError(null)
@@ -241,8 +249,10 @@ export default function EventModal({
                     <div className="flex items-center gap-2">
                       {event && (
                         <button
-                          onClick={handleDelete}
+                          type="button"
+                          onClick={() => setConfirmingDelete(true)}
                           disabled={loading}
+                          aria-label="일정 삭제"
                           className="p-2 hover:bg-white/20 rounded-full transition disabled:opacity-50"
                         >
                           <TrashIcon className="h-5 w-5" />
@@ -258,6 +268,28 @@ export default function EventModal({
                   </div>
                 </div>
 
+                {confirmingDelete && (
+                  <div className="mx-6 mt-4 rounded-lg bg-red-50 border border-red-200 p-3 flex items-center justify-between gap-3">
+                    <p className="text-sm text-red-800">이 일정을 삭제할까요?</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingDelete(false)}
+                        className="px-3 py-1.5 text-sm text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                      >
+                        취소
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDelete}
+                        disabled={loading}
+                        className="px-3 py-1.5 text-sm text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                      >
+                        삭제
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {error && (
                   <div className="mx-6 mt-4 rounded-lg bg-red-50 border border-red-200 p-3">
                     <p className="text-sm text-red-800">{error}</p>

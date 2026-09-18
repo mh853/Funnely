@@ -14,7 +14,7 @@ import {
 } from '@heroicons/react/24/outline'
 import EventModal from './EventModal'
 import { createClient } from '@/lib/supabase/client'
-import { formatDateTime, formatDate, formatTime, toKSTDateStr, isTodayKST } from '@/lib/utils/date'
+import { formatDateTime, formatDate, formatKSTTime, toKSTDateStr, toCalendarDateStr, isCalendarDateTodayKST } from '@/lib/utils/date'
 import { decryptPhone } from '@/lib/encryption/phone'
 import UnifiedDetailModal from '@/components/shared/UnifiedDetailModal'
 import ScheduleRegistrationModal from '@/components/shared/ScheduleRegistrationModal'
@@ -349,14 +349,16 @@ export default function CalendarView({
   // 서버(UTC) 첫 렌더와 클라이언트(KST) 하이드레이션이 UTC 15:00~23:59(=KST 익일
   // 00:00~08:59) 구간의 레코드를 다른 날짜 셀에 배치할 수 있었다(87차 QA). 이 값들과
   // targetDate(이미 KST 로컬 달력값으로 구성됨)를 toKSTDateStr 문자열 비교로 통일한다.
+  // 단, 셀 날짜(new Date(year, month, day))는 달력 좌표라 toCalendarDateStr로 읽어야 한다 -
+  // toKSTDateStr에 넣으면 UTC+9보다 앞선 타임존 브라우저에서 하루 밀린다(그록봇 재검증).
   const getEventsForDay = (day: number) => {
-    const targetDateStr = toKSTDateStr(new Date(year, month, day))
+    const targetDateStr = toCalendarDateStr(new Date(year, month, day))
     return events.filter((event) => toKSTDateStr(new Date(event.start_time)) === targetDateStr)
   }
 
   // Get leads for a specific day (by contract_completed_at for contract_completed status, otherwise preferred_date or created_at)
   const getLeadsForDay = (day: number) => {
-    const targetDateStr = toKSTDateStr(new Date(year, month, day))
+    const targetDateStr = toCalendarDateStr(new Date(year, month, day))
     // 필터링된 localLeads 사용
     return localLeads.filter((lead) => {
       // For contract_completed status, use contract_completed_at date
@@ -377,7 +379,7 @@ export default function CalendarView({
   // Check if day is today
   // 월간뷰만 실행환경 로컬타임존(new Date())으로 비교하고 있었다 - 같은 파일의
   // 주간뷰(780,838)는 이미 isTodayKST로 하이드레이션 불일치를 막고 있음.
-  const isToday = (day: number) => isTodayKST(new Date(year, month, day))
+  const isToday = (day: number) => isCalendarDateTodayKST(new Date(year, month, day))
 
   // Handle day click - open day detail modal to show all items
   const handleDayClick = (day: number) => {
@@ -603,8 +605,8 @@ export default function CalendarView({
 
       {/* Header - 월별 캘린더 전용 */}
       {viewMode === 'calendar' && (
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6 border-b border-gray-200">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center space-x-4">
               <h2 className="text-lg font-semibold text-gray-900">
                 {currentDate.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
@@ -702,7 +704,7 @@ export default function CalendarView({
                           EVENT_COLORS[event.event_type as keyof typeof EVENT_COLORS]
                         }`}
                       >
-                        {formatTime(event.start_time)}{' '}
+                        {formatKSTTime(event.start_time)}{' '}
                         {event.title}
                       </div>
                     ))}
@@ -748,7 +750,7 @@ export default function CalendarView({
       {viewMode === 'list' && (
         <div className="p-4">
           {/* Week Navigation */}
-          <div className="flex items-center justify-between mb-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg p-4">
             <button
               onClick={() => {
                 const newDate = new Date(weekStartDate)
@@ -817,7 +819,7 @@ export default function CalendarView({
                     days.push(day)
                   }
                   return days.map((day, idx) => {
-                    const isToday = isTodayKST(day)
+                    const isToday = isCalendarDateTodayKST(day)
                     const dayOfWeek = day.getDay()
                     const dayLeads = localLeads.filter(lead => {
                       const leadDate = lead.preferred_date || lead.created_at
@@ -876,7 +878,7 @@ export default function CalendarView({
                         days.push(day)
                       }
                       return days.map((day, dayIdx) => {
-                        const isToday = isTodayKST(day)
+                        const isToday = isCalendarDateTodayKST(day)
                         const slotHour = parseInt(timeSlot.split(':')[0])
                         const slotId = `${getLocalDateString(day)}-${timeSlot}`
                         const isDropTarget = dragOverSlot === slotId
@@ -918,7 +920,7 @@ export default function CalendarView({
                                 draggable
                                 tabIndex={0}
                                 role="button"
-                                aria-label={`${lead.name}, ${lead.preferred_time || formatTime(lead.created_at)}, 상세보기`}
+                                aria-label={`${lead.name}, ${lead.preferred_time || formatKSTTime(lead.created_at)}, 상세보기`}
                                 onDragStart={(e) => handleDragStart(e, lead)}
                                 onDragEnd={handleDragEnd}
                                 onClick={(e) => handleLeadClick(lead, e)}
@@ -934,7 +936,7 @@ export default function CalendarView({
                               >
                                 <div className="font-medium truncate overflow-hidden text-ellipsis">{lead.name}</div>
                                 <div className="text-[10px] opacity-75 truncate overflow-hidden text-ellipsis">
-                                  {lead.preferred_time || formatTime(lead.created_at)}
+                                  {lead.preferred_time || formatKSTTime(lead.created_at)}
                                 </div>
                               </div>
                             ))}
@@ -1038,7 +1040,7 @@ export default function CalendarView({
                         <div className="flex items-center justify-between">
                           <span className="font-medium">{event.title}</span>
                           <span className="text-xs">
-                            {formatTime(event.start_time)}
+                            {formatKSTTime(event.start_time)}
                           </span>
                         </div>
                         {event.description && (
