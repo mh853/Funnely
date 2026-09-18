@@ -80,6 +80,8 @@ export default function UnifiedDetailModal({
   // 상태 변경
   const [currentStatus, setCurrentStatus] = useState<string>('')
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  // 예약 취소는 window.confirm() 대신 인라인 확인(브라우저 자동화가 confirm에서 멈춰 "취소가 안 된다"고 보고)
+  const [confirmingCancel, setConfirmingCancel] = useState(false)
 
   // 콜/상담 담당자, 상태 변경은 전부 같은 expectedUpdatedAt을 공유한다.
   // 개별 로딩 플래그로만 버튼을 잠그면 두 요청이 동시에 in-flight 상태에서
@@ -421,8 +423,7 @@ export default function UnifiedDetailModal({
   // 예약 취소 처리
   const handleCancelReservation = async () => {
     if (!lead) return
-
-    if (!confirm('예약을 취소하시겠습니까?')) return
+    setConfirmingCancel(false)
 
     setUpdatingStatus(true)
     try {
@@ -762,6 +763,28 @@ export default function UnifiedDetailModal({
                               {/* 예약일 */}
                               <div>
                                 <span className="text-xs font-medium text-gray-500 block mb-1">예약일</span>
+                                {confirmingCancel && reservationDate && (
+                                  <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2">
+                                    <span className="text-sm text-red-800">예약을 취소할까요? 상태가 추가상담 필요로 바뀝니다.</span>
+                                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => setConfirmingCancel(false)}
+                                        className="px-2.5 py-1 text-xs text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+                                      >
+                                        닫기
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={handleCancelReservation}
+                                        disabled={isMutatingLead}
+                                        className="px-2.5 py-1 text-xs text-white bg-red-600 rounded-md hover:bg-red-700 disabled:opacity-50"
+                                      >
+                                        예약 취소
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
                                 <div className="flex items-center justify-between bg-gray-50 px-3 py-2 rounded-lg border border-gray-200">
                                   {reservationDate ? (
                                     <>
@@ -783,7 +806,7 @@ export default function UnifiedDetailModal({
                                           <PencilIcon className="h-4 w-4" />
                                         </button>
                                         <button
-                                          onClick={handleCancelReservation}
+                                          onClick={() => setConfirmingCancel(true)}
                                           disabled={isMutatingLead}
                                           className="p-1.5 text-red-600 hover:bg-red-100 rounded-md transition disabled:opacity-50"
                                           title="예약 취소"
