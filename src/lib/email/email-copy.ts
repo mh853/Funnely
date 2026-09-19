@@ -203,6 +203,53 @@ export function buildImmediatePlanChangeEmail(v: PaymentVars): EmailContent {
   }
 }
 
+export interface PlanChangeFailedVars {
+  recipientName?: string | null
+  planName: string
+  previousPlanName?: string | null
+  amount: number
+  failureReason: string
+  cardLabel?: string | null
+}
+
+/** 즉시 플랜 변경 결제 실패. 유예기간·자동 재시도 없음, 플랜은 그대로 */
+export function buildImmediatePlanChangeFailedEmail(v: PlanChangeFailedVars): EmailContent {
+  const title = '플랜 변경 결제에 실패했습니다'
+  const lead = `${escapeHtml(v.planName)} 플랜으로 변경하기 위한 결제가 승인되지 않았습니다. 등록된 카드의 한도, 유효기간, 분실 여부를 확인해 주세요.`
+  const status = v.previousPlanName
+    ? `플랜은 변경되지 않았고, 현재 ${escapeHtml(v.previousPlanName)} 플랜이 그대로 유지됩니다. 자동으로 다시 시도하지 않으니, 결제 수단을 확인하신 뒤 대시보드에서 다시 변경해 주세요.`
+    : '플랜은 변경되지 않았고 현재 플랜이 그대로 유지됩니다. 자동으로 다시 시도하지 않으니, 결제 수단을 확인하신 뒤 대시보드에서 다시 변경해 주세요.'
+  const rows: Array<[string, string]> = []
+  if (v.previousPlanName) rows.push(['현재 플랜', escapeHtml(v.previousPlanName)])
+  rows.push(['변경하려던 플랜', escapeHtml(v.planName)])
+  rows.push(['결제 시도 금액', `${formatWon(v.amount)} <span style="font-weight:400;color:${EMAIL_BRAND.muted};">(부가세 포함)</span>`])
+  rows.push(['실패 사유', escapeHtml(v.failureReason)])
+  if (v.cardLabel) rows.push(['결제 수단', escapeHtml(v.cardLabel)])
+  return {
+    subject: `${SUBJECT_PREFIX} ${title}`,
+    html: renderEmailShell({
+      title,
+      preheader: '플랜은 변경되지 않았습니다. 결제 수단을 확인해 주세요',
+      bodyHtml: greeting(v.recipientName) + paragraph(lead) + infoTable(rows) + callout(status, 'danger'),
+      cta: { label: '결제 수단 확인하고 다시 시도하기', url: SUBSCRIPTION_URL, tone: 'danger' },
+      footerNote: SUBSCRIPTION_FOOTER,
+    }),
+    text: textLines([
+      `${displayName(v.recipientName)}, ${v.planName} 플랜으로 변경하기 위한 결제가 승인되지 않았습니다. 등록된 카드의 한도, 유효기간, 분실 여부를 확인해 주세요.`,
+      '',
+      v.previousPlanName ? `현재 플랜: ${v.previousPlanName}` : null,
+      `변경하려던 플랜: ${v.planName}`,
+      `결제 시도 금액: ${formatWon(v.amount)} (부가세 포함)`,
+      `실패 사유: ${v.failureReason}`,
+      v.cardLabel ? `결제 수단: ${v.cardLabel}` : null,
+      '',
+      status.replace(/<[^>]+>/g, ''),
+      '',
+      `구독 관리: ${SUBSCRIPTION_URL}`,
+    ]),
+  }
+}
+
 export interface PaymentFailedVars {
   recipientName?: string | null
   planName: string
@@ -515,8 +562,11 @@ export function buildPasswordResetTemplate(): EmailContent {
 // ───────────────────────── 내부 알림(운영자 수신) ─────────────────────────
 
 export interface InquiryReceivedVars {
+  /** 예: "영업 상담" */
+  inquiryTypeLabel: string
+  subject: string
   name: string
-  phone: string
+  phone?: string | null
   email?: string | null
   company?: string | null
   message: string
@@ -527,15 +577,18 @@ export interface InquiryReceivedVars {
 /** 홈페이지 문의 접수 → 운영자 */
 export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent {
   const title = '홈페이지 문의가 접수되었습니다'
+  const safeSubject = v.subject.replace(/[\r\n]/g, ' ')
   const rows: Array<[string, string]> = [
+    ['유형', escapeHtml(v.inquiryTypeLabel)],
+    ['제목', escapeHtml(safeSubject)],
     ['이름', escapeHtml(v.name)],
-    ['연락처', escapeHtml(v.phone)],
   ]
+  if (v.phone) rows.push(['연락처', escapeHtml(v.phone)])
   if (v.email) rows.push(['이메일', escapeHtml(v.email)])
   if (v.company) rows.push(['회사', escapeHtml(v.company)])
   rows.push(['접수 시각', escapeHtml(v.createdAt)])
   return {
-    subject: `${INTERNAL_PREFIX} 홈페이지 문의 접수 - ${v.name.replace(/[\r\n]/g, ' ')}`,
+    subject: `${INTERNAL_PREFIX} 홈페이지 문의 [${v.inquiryTypeLabel}] - ${safeSubject}`,
     html: renderEmailShell({
       title,
       preheader: v.message.slice(0, 80),
@@ -546,8 +599,9 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
     }),
     text: textLines([
       title,
+      `[${v.inquiryTypeLabel}] ${safeSubject}`,
       `이름: ${v.name}`,
-      `연락처: ${v.phone}`,
+      v.phone ? `연락처: ${v.phone}` : null,
       v.email ? `이메일: ${v.email}` : null,
       v.company ? `회사: ${v.company}` : null,
       `접수 시각: ${v.createdAt}`,
@@ -561,7 +615,7 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
 
 export interface TicketCustomerReplyVars {
   companyName: string
-  customerName: string
+  customerName?: string | null
   ticketSubject: string
   message: string
   adminUrl: string
@@ -571,11 +625,9 @@ export interface TicketCustomerReplyVars {
 export function buildTicketCustomerReplyEmail(v: TicketCustomerReplyVars): EmailContent {
   const safeSubject = v.ticketSubject.replace(/[\r\n]/g, ' ')
   const title = '고객이 문의에 답글을 남겼습니다'
-  const rows: Array<[string, string]> = [
-    ['회사', escapeHtml(v.companyName)],
-    ['고객', escapeHtml(v.customerName)],
-    ['문의 제목', escapeHtml(safeSubject)],
-  ]
+  const rows: Array<[string, string]> = [['회사', escapeHtml(v.companyName)]]
+  if (v.customerName) rows.push(['고객', escapeHtml(v.customerName)])
+  rows.push(['문의 제목', escapeHtml(safeSubject)])
   return {
     subject: `${INTERNAL_PREFIX} 고객 답글 - "${safeSubject}"`,
     html: renderEmailShell({
@@ -589,7 +641,7 @@ export function buildTicketCustomerReplyEmail(v: TicketCustomerReplyVars): Email
     text: textLines([
       title,
       `회사: ${v.companyName}`,
-      `고객: ${v.customerName}`,
+      v.customerName ? `고객: ${v.customerName}` : null,
       `문의 제목: ${safeSubject}`,
       '',
       v.message,
@@ -617,7 +669,7 @@ export function buildTrialCreationFailedEmail(v: TrialCreationFailedVars): Email
     ['가입 이메일', escapeHtml(v.email)],
     ['실패 사유', escapeHtml(v.reason)],
   ]
-  if (v.userId) rows.push(['사용자 ID', escapeHtml(v.userId)])
+  if (v.userId) rows.push(['회사 ID', escapeHtml(v.userId)])
   return {
     subject: `${INTERNAL_PREFIX} 무료체험 구독 생성 실패 - ${v.companyName.replace(/[\r\n]/g, ' ')}`,
     html: renderEmailShell({
@@ -635,7 +687,7 @@ export function buildTrialCreationFailedEmail(v: TrialCreationFailedVars): Email
       `회사: ${v.companyName}`,
       `가입 이메일: ${v.email}`,
       `실패 사유: ${v.reason}`,
-      v.userId ? `사용자 ID: ${v.userId}` : null,
+      v.userId ? `회사 ID: ${v.userId}` : null,
       '',
       `어드민: ${v.adminUrl}`,
     ]),

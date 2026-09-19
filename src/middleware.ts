@@ -169,6 +169,7 @@ const PUBLIC_API_PREFIXES = [
   '/api/landing-pages/view',
   '/api/landing-pages/timer-expired',
   '/api/cron/',
+  '/api/internal/',
   '/api/revalidate',
   '/api/sheets/sync',
 ]
