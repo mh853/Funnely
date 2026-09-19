@@ -14,7 +14,6 @@ import type { Subscription } from '@/types/revenue'
 import { Resend } from 'resend'
 import { FROM_ADDRESS, MAX_RETRIES } from '@/lib/email/constants'
 import { decryptPhone, encryptPhone } from '@/lib/encryption/phone'
-import { escapeHtml } from '@/lib/email/template-renderer'
 import { toKSTDateStr, getKSTStartOfDay } from '@/lib/utils/date'
 import {
   processSubscriptionRenewals,
@@ -27,9 +26,13 @@ import {
   buildExpiringTodayEmail,
   buildWinbackEmail,
   buildDataDeletedEmail,
-  PLAN_SELECT_URL,
-  type LifecycleVariant,
-} from '@/lib/email/subscription-lifecycle-templates'
+  buildLeadDigestEmail,
+  buildAdminDailyReportEmail,
+  SUBSCRIPTION_URL,
+  type EmailContent,
+  type LifecycleVars,
+} from '@/lib/email/email-copy'
+import { sendPendingPaymentNotifications } from '@/lib/email/payment-notification-sender'
 
 /**
  * Unified daily tasks cron job
@@ -933,11 +936,12 @@ async function queueLifecycleEmail(
   supabase: any,
   companyId: string,
   notificationType: string,
-  content: { subject: string; text: string; html: string },
+  build: (recipientName: string | null) => EmailContent,
   metadata: Record<string, unknown>
 ) {
   const admins = await getCompanyAdminsForNotify(supabase, companyId)
   for (const admin of admins) {
+    const content = build(admin.full_name ?? null)
     await supabase.from('payment_notifications').insert({
       company_id: companyId,
       notification_type: notificationType,
@@ -966,7 +970,7 @@ async function sendExpiryLifecycleEmails(supabase: any) {
     offsetDays: number
     trialType: string
     subType: string
-    build: (variant: LifecycleVariant) => { subject: string; text: string; html: string }
+    build: (vars: LifecycleVars) => EmailContent
     includeAlreadyExpiredToday: boolean
   }> = [
     {
@@ -1014,10 +1018,13 @@ async function sendExpiryLifecycleEmails(supabase: any) {
       if (sub.billing_key && sub.pending_plan_id) continue
       const isNew = await markNotificationOnce(supabase, sub.id, w.trialType, sub.trial_end_date)
       if (!isNew) continue
-      const content = w.build('trial')
-      await queueLifecycleEmail(supabase, sub.company_id, w.trialType, content, {
-        subscription_id: sub.id,
-      })
+      await queueLifecycleEmail(
+        supabase,
+        sub.company_id,
+        w.trialType,
+        (name) => w.build({ variant: 'trial', recipientName: name, expiresAt: sub.trial_end_date }),
+        { subscription_id: sub.id }
+      )
       emailsQueued++
     }
 
@@ -1036,10 +1043,14 @@ async function sendExpiryLifecycleEmails(supabase: any) {
       if (sub.status === 'active' && sub.billing_key) continue
       const isNew = await markNotificationOnce(supabase, sub.id, w.subType, sub.current_period_end)
       if (!isNew) continue
-      const content = w.build('subscription')
-      await queueLifecycleEmail(supabase, sub.company_id, w.subType, content, {
-        subscription_id: sub.id,
-      })
+      await queueLifecycleEmail(
+        supabase,
+        sub.company_id,
+        w.subType,
+        (name) =>
+          w.build({ variant: 'subscription', recipientName: name, expiresAt: sub.current_period_end }),
+        { subscription_id: sub.id }
+      )
       emailsQueued++
     }
   }
@@ -1091,13 +1102,21 @@ async function sendExpiryLifecycleEmails(supabase: any) {
         source: notifType,
         expires_at: expiresAt,
       })
-      const discountUrl = `${PLAN_SELECT_URL}?discount=${token}`
+      const discountUrl = `${SUBSCRIPTION_URL}?discount=${token}`
 
-      const content = buildWinbackEmail(isTrialOrigin ? 'trial' : 'subscription', w.timing, discountUrl)
-      await queueLifecycleEmail(supabase, sub.company_id, notifType, content, {
-        subscription_id: sub.id,
-        discount_token: token,
-      })
+      await queueLifecycleEmail(
+        supabase,
+        sub.company_id,
+        notifType,
+        (name) =>
+          buildWinbackEmail({
+            variant: isTrialOrigin ? 'trial' : 'subscription',
+            timing: w.timing,
+            recipientName: name,
+            discountUrl,
+          }),
+        { subscription_id: sub.id, discount_token: token }
+      )
       emailsQueued++
     }
   }
@@ -1157,8 +1176,13 @@ async function softDeleteExpiredCompanyData(supabase: any) {
       continue
     }
 
-    const content = buildDataDeletedEmail(isTrialOrigin ? 'trial' : 'subscription')
-    await queueLifecycleEmail(supabase, sub.company_id, notifType, content, { subscription_id: sub.id })
+    await queueLifecycleEmail(
+      supabase,
+      sub.company_id,
+      notifType,
+      (name) => buildDataDeletedEmail({ variant: isTrialOrigin ? 'trial' : 'subscription', recipientName: name }),
+      { subscription_id: sub.id }
+    )
     companiesMarked++
   }
 
@@ -1318,7 +1342,7 @@ async function sendLeadDigestEmails(supabase: any) {
         number: index + 1,
         name: leadData.name,
         phone: leadData.phone ? decryptPhone(leadData.phone) : leadData.phone,
-        email: leadData.email || '미입력',
+        email: leadData.email || null,
         landingPageTitle: leadData.landing_page_title || '알 수 없음',
         deviceType: leadData.device_type || 'pc',
         createdAt: new Date(leadData.created_at).toLocaleString('ko-KR', {
@@ -1332,18 +1356,14 @@ async function sendLeadDigestEmails(supabase: any) {
     const failedRecipients: string[] = []
     for (const recipientEmail of recipientEmails) {
       try {
-        const htmlContent = generateDigestEmailHTML(companyName, leadItems, dashboardUrl)
-        const textContent = generateDigestEmailText(companyName, leadItems, dashboardUrl)
-
-        // 본문 생성기(generateDigestEmailHTML)는 escapeHtml을 쓰지만 제목은 원본
-        // companyName(회원가입 시 자유입력)을 그대로 써서 개행문자로 헤더 인젝션이
-        // 가능했다(81차 QA, 73차 백로그 항목 재확인).
+        // 제목의 개행 제거(헤더 인젝션 방지)와 본문 escape는 빌더 안에서 처리한다.
+        const digest = buildLeadDigestEmail({ companyName, leads: leadItems, dashboardUrl })
         const { data: emailData, error: emailError } = await resend.emails.send({
-          from: 'Funnely <noreply@funnely.co.kr>',
+          from: FROM_ADDRESS,
           to: [recipientEmail],
-          subject: `📊 [${companyName.replace(/[\r\n]/g, ' ')}] ${leadItems.length}건의 새로운 상담 신청`,
-          html: htmlContent,
-          text: textContent,
+          subject: digest.subject,
+          html: digest.html,
+          text: digest.text,
         })
 
         if (emailError) {
@@ -1451,83 +1471,10 @@ async function sendLeadDigestEmails(supabase: any) {
  * retry_count 패턴(최대 3회, 다음 크론에서 재시도)을 적용한다.
  */
 async function sendPaymentNotificationEmails(supabase: any) {
-  console.log('[Payment Notifications] Starting email processing')
-
-  const { data: pending, error: queryError } = await supabase
-    .from('payment_notifications')
-    .select('*')
-    .eq('status', 'pending')
-    .lt('retry_count', 3)
-    .order('created_at', { ascending: true })
-
-  if (queryError) {
-    throw new Error(`결제 알림 조회 실패: ${queryError.message}`)
-  }
-
-  if (!pending || pending.length === 0) {
-    console.log('[Payment Notifications] No pending notifications')
-    return {
-      totalNotifications: 0,
-      emailsSent: 0,
-      emailsFailed: 0,
-      message: 'No pending payment notifications',
-    }
-  }
-
-  console.log(`[Payment Notifications] Found ${pending.length} pending notifications`)
-
-  const resend = new Resend(process.env.RESEND_API_KEY)
-  let emailsSent = 0
-  let emailsFailed = 0
-
-  for (const notif of pending) {
-    try {
-      // body_html이 채워져 있으면(노션 32번 이후 신규 발송 경로) HTML로도 함께 보낸다 -
-      // 예전 발송 경로(구독 결제실패/갱신 등)는 body_html이 없어 계속 텍스트만 나간다.
-      const { error: sendError } = await resend.emails.send({
-        from: 'Funnely <noreply@funnely.co.kr>',
-        to: [notif.recipient_email],
-        subject: notif.subject,
-        text: notif.body_text,
-        ...(notif.body_html ? { html: notif.body_html } : {}),
-      })
-
-      if (sendError) {
-        throw sendError
-      }
-
-      await supabase
-        .from('payment_notifications')
-        .update({ status: 'sent', sent_at: new Date().toISOString() })
-        .eq('id', notif.id)
-
-      emailsSent++
-      console.log(`[Payment Notifications] Sent to ${notif.recipient_email} (${notif.notification_type})`)
-    } catch (error) {
-      console.error(`[Payment Notifications] Failed to send to ${notif.recipient_email}:`, error)
-
-      const nextRetryCount = (notif.retry_count || 0) + 1
-      await supabase
-        .from('payment_notifications')
-        .update({
-          // 3회 미만이면 status는 pending으로 유지해 다음 크론이 위 쿼리(.lt('retry_count', 3))로
-          // 다시 집어가도록 하고, 3회를 채우면 그때 비로소 최종 실패로 마킹한다.
-          status: nextRetryCount >= 3 ? 'failed' : 'pending',
-          retry_count: nextRetryCount,
-          error_message: error instanceof Error ? error.message : 'Unknown error',
-        })
-        .eq('id', notif.id)
-
-      emailsFailed++
-    }
-  }
-
-  return {
-    totalNotifications: pending.length,
-    emailsSent,
-    emailsFailed,
-    message: `Processed ${pending.length} payment notifications`,
-  }
+  console.log('[Payment Notifications] Starting email processing (cron fallback)')
+  // 결제 직후에는 엣지 함수가 /api/internal/payment-notifications/send를 불러 즉시 보내고,
+  // 그때 실패했거나 즉시 발송이 꺼져 있던 행을 여기서 거둔다. 렌더링·재시도 규칙은 공용 모듈.
+  return sendPendingPaymentNotifications(supabase)
 }
 
 /**
@@ -1822,81 +1769,20 @@ async function sendAdminReportDigest(supabase: any) {
     ? process.env.NEXT_PUBLIC_DOMAIN.replace(/\/$/, '') + '/admin/reports'
     : 'https://funnely.co.kr/admin/reports'
 
-  const metrics: { emoji: string; label: string; value: string; emails?: string[] }[] = [
-    { emoji: '👤', label: '회원가입', value: `${signups}건`, emails: signupEmails },
-    { emoji: '🎁', label: '무료체험', value: `${trials}건`, emails: trialEmails },
-    { emoji: '💳', label: '결제', value: `${payments}건`, emails: paymentEmails },
-    { emoji: '💰', label: '매출', value: `${revenue.toLocaleString('ko-KR')}원` },
-    { emoji: '📤', label: '탈퇴', value: `${withdrawals}건` },
-    { emoji: '🚫', label: '구독취소', value: `${cancellations}건` },
-    { emoji: '💬', label: '문의', value: `${tickets}건` },
-  ]
-
-  const htmlRows = metrics
-    .map((m) => {
-      const emailList =
-        m.emails && m.emails.length > 0
-          ? `<div class="email-list">${m.emails
-              .map((e) => `<div class="email-item">${escapeHtml(e)}</div>`)
-              .join('')}</div>`
-          : ''
-      return `
-      <div class="info-row">
-        <div class="label">${m.emoji} ${m.label}</div>
-        <div class="value">${m.value}</div>
-      </div>${emailList}`
-    })
-    .join('')
-
-  const htmlContent = `
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background-color: #f9fafb; margin: 0; padding: 0; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-    .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px 8px 0 0; text-align: center; }
-    .header h1 { margin: 0 0 10px 0; font-size: 22px; font-weight: 700; }
-    .header p { margin: 0; font-size: 14px; opacity: 0.95; }
-    .content { background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
-    .info-row { padding: 12px 0; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center; }
-    .info-row:last-child { border-bottom: none; }
-    .label { font-weight: 600; color: #374151; font-size: 14px; }
-    .value { color: #111827; font-size: 16px; font-weight: 700; }
-    .email-list { padding: 0 0 12px 0; }
-    .email-item { font-size: 13px; color: #6b7280; padding: 2px 0 2px 24px; }
-    .button { display: inline-block; background: #667eea; color: white !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin-top: 24px; text-align: center; }
-    .footer { text-align: center; padding: 20px; color: #9ca3af; font-size: 12px; line-height: 1.6; }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>📊 ${dateTitle} 일일 리포트</h1>
-      <p>어제 하루 퍼널리 서비스 현황입니다</p>
-    </div>
-    <div class="content">
-      ${htmlRows}
-      <div style="text-align: center;">
-        <a href="${dashboardUrl}" class="button">어드민 리포트에서 자세히 보기 →</a>
-      </div>
-    </div>
-    <div class="footer">
-      <p>이 이메일은 전날 신규 활동이 1건 이상 있을 때 매일 아침 자동 발송됩니다.</p>
-    </div>
-  </div>
-</body>
-</html>`
-
-  const textContent = `📊 ${dateTitle} 일일 리포트\n\n${metrics
-    .map((m) => {
-      const emailLines =
-        m.emails && m.emails.length > 0 ? '\n' + m.emails.map((e) => `  - ${e}`).join('\n') : ''
-      return `${m.emoji} ${m.label}: ${m.value}${emailLines}`
-    })
-    .join('\n')}\n\n어드민 리포트: ${dashboardUrl}`
+  const report = buildAdminDailyReportEmail({
+    dateLabel: dateTitle,
+    totalActivity,
+    dashboardUrl,
+    metrics: [
+      { label: '회원가입', value: `${signups}건`, emails: signupEmails },
+      { label: '무료체험', value: `${trials}건`, emails: trialEmails },
+      { label: '결제', value: `${payments}건`, emails: paymentEmails },
+      { label: '매출', value: `${revenue.toLocaleString('ko-KR')}원` },
+      { label: '탈퇴', value: `${withdrawals}건` },
+      { label: '구독취소', value: `${cancellations}건` },
+      { label: '문의', value: `${tickets}건` },
+    ],
+  })
 
   const REPORT_DIGEST_RECIPIENTS = ['munong2@gmail.com', '1989comp@gmail.com']
   const resend = new Resend(process.env.RESEND_API_KEY)
@@ -1908,9 +1794,9 @@ async function sendAdminReportDigest(supabase: any) {
       const { error } = await resend.emails.send({
         from: FROM_ADDRESS,
         to: [recipient],
-        subject: `📊 [Funnely 어드민] ${dateTitle} 리포트 - 신규 ${totalActivity}건`,
-        html: htmlContent,
-        text: textContent,
+        subject: report.subject,
+        html: report.html,
+        text: report.text,
       })
       if (error) throw error
       emailsSent++
@@ -1927,187 +1813,4 @@ async function sendAdminReportDigest(supabase: any) {
     emailsSent,
     emailsFailed,
   }
-}
-
-// Generate HTML email for digest
-function generateDigestEmailHTML(
-  companyName: string,
-  leads: Array<{
-    number: number
-    name: string
-    phone: string
-    email: string
-    landingPageTitle: string
-    deviceType: string
-    createdAt: string
-  }>,
-  dashboardUrl: string
-): string {
-  const currentTime = new Date().toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
-  const deviceIcons = {
-    pc: '🖥️',
-    mobile: '📱',
-    tablet: '📲',
-  }
-
-  const leadsHTML = leads
-    .map(
-      (lead) => `
-    <tr style="border-bottom: 1px solid #e5e7eb;">
-      <td style="padding: 16px; text-align: center; font-weight: 600; color: #6366f1;">${lead.number}</td>
-      <td style="padding: 16px;">
-        <div style="font-weight: 600; color: #111827; margin-bottom: 4px;">${escapeHtml(lead.name)}</div>
-        <div style="color: #6b7280; font-size: 14px;">${escapeHtml(lead.phone)}</div>
-      </td>
-      <td style="padding: 16px; color: #374151;">${escapeHtml(lead.email)}</td>
-      <td style="padding: 16px; color: #374151;">${escapeHtml(lead.landingPageTitle)}</td>
-      <td style="padding: 16px; text-align: center;">${deviceIcons[lead.deviceType as keyof typeof deviceIcons] || deviceIcons.pc}</td>
-      <td style="padding: 16px; color: #6b7280; font-size: 14px;">${escapeHtml(lead.createdAt)}</td>
-    </tr>
-  `
-    )
-    .join('')
-
-  return `
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>상담 신청 알림</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f9fafb;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 20px;">
-    <tr>
-      <td align="center">
-        <table width="100%" style="max-width: 800px; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); padding: 32px; text-align: center; border-radius: 12px 12px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 700;">📊 상담 신청 알림</h1>
-              <p style="margin: 8px 0 0 0; color: #e0e7ff; font-size: 16px;">${escapeHtml(companyName)}</p>
-            </td>
-          </tr>
-
-          <!-- Summary -->
-          <tr>
-            <td style="padding: 32px 32px 24px 32px;">
-              <div style="background-color: #f0f9ff; border-left: 4px solid #6366f1; padding: 16px 20px; border-radius: 8px; margin-bottom: 24px;">
-                <p style="margin: 0; font-size: 16px; color: #1e40af;">
-                  <strong>${currentTime}</strong> 기준<br>
-                  새로운 상담 신청이 <strong style="color: #6366f1; font-size: 24px;">${leads.length}건</strong> 접수되었습니다.
-                </p>
-              </div>
-
-              <!-- Leads Table -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
-                <thead>
-                  <tr style="background-color: #f9fafb;">
-                    <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; width: 60px;">순번</th>
-                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">고객명/연락처</th>
-                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">이메일</th>
-                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">랜딩페이지</th>
-                    <th style="padding: 16px; text-align: center; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb; width: 60px;">기기</th>
-                    <th style="padding: 16px; text-align: left; font-weight: 600; color: #374151; border-bottom: 2px solid #e5e7eb;">신청일시</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${leadsHTML}
-                </tbody>
-              </table>
-            </td>
-          </tr>
-
-          <!-- CTA Button -->
-          <tr>
-            <td style="padding: 0 32px 32px 32px; text-align: center;">
-              <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); color: #ffffff; text-decoration: none; padding: 16px 48px; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(99, 102, 241, 0.3);">
-                대시보드에서 상세 확인하기 →
-              </a>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background-color: #f9fafb; text-align: center; border-radius: 0 0 12px 12px; border-top: 1px solid #e5e7eb;">
-              <p style="margin: 0; color: #6b7280; font-size: 14px;">
-                이 이메일은 <strong>${escapeHtml(companyName)}</strong>의 리드 알림 시스템에서 자동 발송되었습니다.<br>
-                매일 오전 8시에 새로운 상담 신청을 정리하여 보내드립니다.
-              </p>
-              <p style="margin: 16px 0 0 0; color: #9ca3af; font-size: 12px;">
-                Powered by <strong>Funnely</strong>
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-  `
-}
-
-// Generate plain text email for digest
-function generateDigestEmailText(
-  companyName: string,
-  leads: Array<{
-    number: number
-    name: string
-    phone: string
-    email: string
-    landingPageTitle: string
-    deviceType: string
-    createdAt: string
-  }>,
-  dashboardUrl: string
-): string {
-  const currentTime = new Date().toLocaleString('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
-  const leadsText = leads
-    .map(
-      (lead) => `
-${lead.number}. ${lead.name} (${lead.phone})
-   이메일: ${lead.email}
-   랜딩페이지: ${lead.landingPageTitle}
-   기기: ${lead.deviceType}
-   신청일시: ${lead.createdAt}
-`
-    )
-    .join('\n')
-
-  return `
-📊 [${companyName}] 상담 신청 알림
-
-${currentTime} 기준
-새로운 상담 신청이 ${leads.length}건 접수되었습니다.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${leadsText}
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-대시보드에서 상세 정보를 확인하세요:
-${dashboardUrl}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-이 이메일은 ${companyName}의 리드 알림 시스템에서 자동 발송되었습니다.
-매일 오전 8시에 새로운 상담 신청을 정리하여 보내드립니다.
-
-Powered by Funnely
-  `
 }
