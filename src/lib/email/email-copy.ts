@@ -544,7 +544,8 @@ export function buildTicketAdminReplyEmail(v: TicketAdminReplyVars): EmailConten
 export function buildPasswordResetTemplate(): EmailContent {
   const title = '비밀번호 재설정 안내'
   const lead = `${BRAND} 계정의 비밀번호 재설정을 요청하셨습니다. 아래 버튼을 눌러 새 비밀번호를 설정해 주세요.`
-  const expiry = '보안을 위해 이 링크는 일정 시간이 지나면 만료됩니다. 만료된 경우 로그인 화면에서 다시 요청해 주세요.'
+  // Supabase 대시보드 Authentication > Sign In / Providers > Email > Email OTP expiration = 3600초 (2026-09-19 확인)
+  const expiry = '보안을 위해 이 링크는 1시간이 지나면 만료됩니다. 만료된 경우 로그인 화면에서 다시 요청해 주세요.'
   const ignore = '본인이 요청하지 않으셨다면 이 메일을 무시하셔도 됩니다. 비밀번호는 변경되지 않습니다.'
   return {
     subject: `${SUBJECT_PREFIX} ${title}`,
