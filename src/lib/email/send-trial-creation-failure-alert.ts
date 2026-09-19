@@ -2,6 +2,9 @@
 // 이전에는 console.error만 남아 Vercel 로그를 직접 보지 않는 한 아무도 모른 채
 // 지나갔고, 가입은 성공했지만 구독이 없어 대시보드가 잠긴 사용자가 발생했다.
 import { Resend } from 'resend'
+import { config } from '@/lib/config'
+import { FROM_ADDRESS } from '@/lib/email/constants'
+import { buildTrialCreationFailedEmail } from '@/lib/email/email-copy'
 
 let resend: Resend | null = null
 
@@ -32,20 +35,21 @@ export async function sendTrialCreationFailureAlert(data: TrialCreationFailureDa
     return
   }
 
-  const { companyId, companyName, userEmail, reason } = data
+  const content = buildTrialCreationFailedEmail({
+    companyName: data.companyName,
+    email: data.userEmail,
+    reason: data.reason,
+    userId: data.companyId,
+    adminUrl: `${config.app.domain}/admin/companies/${data.companyId}`,
+  })
 
   try {
     const { error } = await client.emails.send({
-      from: 'Funnely <noreply@funnely.co.kr>',
+      from: FROM_ADDRESS,
       to: NOTIFICATION_RECIPIENTS,
-      subject: `[Funnely] 무료체험 구독 생성 실패 - ${companyName}`,
-      text: `회원가입은 성공했지만 무료체험 구독 생성에 실패해 대시보드가 잠긴 사용자가 있습니다.
-
-회사: ${companyName} (${companyId})
-가입자 이메일: ${userEmail}
-실패 사유: ${reason}
-
-company_subscriptions 테이블에 수동으로 구독을 추가해주세요.`,
+      subject: content.subject,
+      html: content.html,
+      text: content.text,
     })
 
     if (error) {

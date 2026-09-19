@@ -13,7 +13,7 @@ async function notifyTicketReply(
 ) {
   const { data: ticket } = await supabase
     .from('support_tickets')
-    .select('company_id, subject, created_by:users!support_tickets_created_by_user_id_fkey(email)')
+    .select('company_id, subject, created_by:users!support_tickets_created_by_user_id_fkey(email, full_name)')
     .eq('id', ticketId)
     .maybeSingle()
 
@@ -33,11 +33,13 @@ async function notifyTicketReply(
     if (error) console.error('[Support Reply API] 인앱 알림 생성 실패:', error)
   })
 
-  const creatorEmail = (ticket.created_by as unknown as { email: string } | null)?.email
+  const creator = ticket.created_by as unknown as { email: string; full_name: string | null } | null
+  const creatorEmail = creator?.email
   if (creatorEmail) {
     try {
       await sendTicketReplyNotificationEmail({
         recipientEmail: creatorEmail,
+        recipientName: creator?.full_name ?? null,
         ticketSubject: ticket.subject,
         replyMessage,
         dashboardUrl,
