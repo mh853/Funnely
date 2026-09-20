@@ -21,6 +21,7 @@ import {
   checkSubscriptionExpiry,
 } from '@/lib/subscription/billing-tasks'
 import { recordCronRun, purgeOldCronRunLogs } from '@/lib/cron/run-log'
+import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -592,6 +593,61 @@ async function calculateHealthScores(supabase: any) {
   }
 }
 
+// 이 횟수만큼 연속 실패하면 설정을 자동으로 끈다(하루 1회 동기화 기준 1주).
+const SHEET_SYNC_AUTO_DISABLE_AFTER = 7
+
+/**
+ * 같은 시트가 SHEET_SYNC_AUTO_DISABLE_AFTER회 연속 실패했으면 설정을 비활성화하고 회사에 알린다.
+ * 테스트 가입 회사가 만든 설정이 69일 동안 매일 실패 로그만 쌓은 사례가 있었다(2026-09-20 확인).
+ * 실패 판정은 sheet_sync_logs(회사+스프레드시트 기준) 최근 N건이 모두 error_message를 가졌는지로 한다.
+ * 고객은 설정 화면의 활성/비활성 토글로 다시 켤 수 있다.
+ */
+async function disableSheetSyncAfterRepeatedFailures(supabase: any, config: any): Promise<boolean> {
+  try {
+    const { data: recent } = await supabase
+      .from('sheet_sync_logs')
+      .select('error_message')
+      .eq('company_id', config.company_id)
+      .eq('spreadsheet_id', config.spreadsheet_id)
+      .order('created_at', { ascending: false })
+      .limit(SHEET_SYNC_AUTO_DISABLE_AFTER)
+
+    const rows = (recent || []) as Array<{ error_message: string | null }>
+    if (rows.length < SHEET_SYNC_AUTO_DISABLE_AFTER || rows.some((r) => !r.error_message)) {
+      return false
+    }
+
+    const { error: updateError } = await supabase
+      .from('sheet_sync_configs')
+      .update({ is_active: false, updated_at: new Date().toISOString() })
+      .eq('id', config.id)
+    if (updateError) {
+      console.error('Failed to auto-disable sheet sync config:', updateError)
+      return false
+    }
+
+    await supabase.from('notifications').insert({
+      company_id: config.company_id,
+      title: '구글 시트 동기화가 중지되었습니다',
+      message: `"${config.sheet_name || 'Sheet1'}" 시트 동기화가 ${SHEET_SYNC_AUTO_DISABLE_AFTER}일 연속 실패해 자동으로 꺼졌습니다. 시트 공유 상태와 탭 이름을 확인한 뒤 설정에서 다시 활성화해주세요.`,
+      type: 'sheet_sync_disabled',
+      metadata: {
+        sheet_sync_config_id: config.id,
+        spreadsheet_id: config.spreadsheet_id,
+        sheet_name: config.sheet_name,
+        consecutive_failures: SHEET_SYNC_AUTO_DISABLE_AFTER,
+      },
+    })
+    console.warn(
+      `[Sheets Sync] Auto-disabled config ${config.id} (${config.spreadsheet_id}) after ${SHEET_SYNC_AUTO_DISABLE_AFTER} consecutive failures`
+    )
+    return true
+  } catch (err) {
+    console.error('disableSheetSyncAfterRepeatedFailures error:', err)
+    return false
+  }
+}
+
 /**
  * Sync Google Sheets for all active configs
  */
@@ -616,9 +672,39 @@ async function syncGoogleSheets(supabase: any) {
     return { message: 'No active sync configs', synced: 0 }
   }
 
+  // 대시보드 접근이 막힌 회사(구독 만료·정지, 기간 지난 취소, 체험 종료)의 시트는 동기화하지
+  // 않는다. 위 필터는 회사 비활성화/탈퇴만 걸러서, 체험이 두 달 전에 끝난 테스트 회사의 죽은
+  // 시트 설정이 매일 실패하며 돌고 있었다. 판정은 미들웨어와 같은 pickCurrentSubscription +
+  // hasValidPlanAccess를 써서(한 회사에 구독 행이 여러 개인 경우 포함) 화면과 기준을 맞춘다.
+  const companyIds = Array.from(new Set(configs.map((c: any) => c.company_id)))
+  const { data: subRows, error: subError } = await supabase
+    .from('company_subscriptions')
+    .select('company_id, status, current_period_end, trial_end_date, cancelled_at, grace_period_end')
+    .in('company_id', companyIds)
+    .order('created_at', { ascending: false })
+  if (subError) {
+    throw new Error(`Failed to fetch subscriptions for sheet sync: ${subError.message}`)
+  }
+  const subsByCompany = new Map<string, any[]>()
+  for (const row of subRows || []) {
+    const list = subsByCompany.get(row.company_id) ?? []
+    list.push(row)
+    subsByCompany.set(row.company_id, list)
+  }
+
   const results = []
 
   for (const config of configs) {
+    const currentSub = pickCurrentSubscription(subsByCompany.get(config.company_id) ?? [])
+    if (!hasValidPlanAccess(currentSub)) {
+      results.push({
+        spreadsheetId: config.spreadsheet_id,
+        status: 'skipped',
+        reason: `subscription_${currentSub?.status ?? 'missing'}`,
+      })
+      continue
+    }
+
     try {
       // Check if sync is due
       const now = new Date()
@@ -845,6 +931,16 @@ async function syncGoogleSheets(supabase: any) {
         })
       } catch (logError) {
         console.error('Failed to write sheet_sync_logs error entry:', logError)
+      }
+
+      // 연속 실패가 한계에 닿았으면 설정을 끄고 "중지" 알림만 남긴다(아래 일반 실패 알림은 생략).
+      if (await disableSheetSyncAfterRepeatedFailures(supabase, config)) {
+        results.push({
+          spreadsheetId: config.spreadsheet_id,
+          status: 'disabled',
+          error: syncError.message,
+        })
+        continue
       }
 
       // sheet_sync_logs에만 실패가 쌓이고 회사 관리자에게는 아무 알림도 가지 않아
