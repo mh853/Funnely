@@ -7,11 +7,18 @@ import { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials } fro
 
 interface PlatformState {
   credentials: MetaCredentials | KakaoCredentials | GoogleCredentials
-  status: { exists: boolean; validated: boolean }
+  status: PlatformStatus
+}
+
+interface PlatformStatus {
+  exists: boolean
+  validated: boolean
+  needsReentry?: boolean
 }
 
 interface AppState {
   loading: boolean
+  forbidden: boolean
   saving: boolean
   companyId: string | null
   message: { type: 'success' | 'error'; text: string } | null
@@ -25,6 +32,7 @@ interface AppState {
 
 const initialState: AppState = {
   loading: true,
+  forbidden: false,
   saving: false,
   companyId: null,
   message: null,
@@ -87,6 +95,11 @@ export default function ApiCredentialsPage() {
       if (!userProfile) throw new Error('사용자 정보를 찾을 수 없습니다.')
 
       const response = await fetch('/api/settings/api-credentials')
+      // 저장된 시크릿은 관리자만 열람·수정할 수 있다 - 오류 대신 안내 화면을 보여준다.
+      if (response.status === 403) {
+        updateState({ forbidden: true })
+        return
+      }
       if (!response.ok) {
         const data = await response.json().catch(() => ({}))
         throw new Error(data.error || '인증 정보를 불러오는데 실패했습니다.')
@@ -100,9 +113,10 @@ export default function ApiCredentialsPage() {
         const platform = cred.platform as ApiPlatform
         if (!updates.platforms) updates.platforms = { ...state.platforms }
 
+        // 빈 객체(복호화 실패)나 일부 키만 있는 값이어도 입력칸이 항상 문자열을 갖도록 기본값과 합친다.
         updates.platforms[platform] = {
-          credentials: cred.credentials,
-          status: { exists: cred.exists, validated: cred.validated }
+          credentials: { ...initialState.platforms[platform].credentials, ...cred.credentials },
+          status: { exists: cred.exists, validated: cred.validated, needsReentry: cred.needsReentry }
         }
       })
 
@@ -143,7 +157,7 @@ export default function ApiCredentialsPage() {
           ...prev.platforms,
           [platform]: {
             ...prev.platforms[platform],
-            status: { exists: true, validated: false }
+            status: { exists: true, validated: false, needsReentry: false }
           }
         }
       }))
@@ -210,6 +224,12 @@ export default function ApiCredentialsPage() {
         아래 정보를 저장해도 실제 광고 계정 연동 기능은 아직 준비 중입니다. 연동 기능이 열리면 별도로 안내드립니다.
       </div>
 
+      {state.forbidden ? (
+        <div className="mb-6 p-4 rounded-lg bg-yellow-50 border-l-4 border-yellow-400 text-sm text-yellow-700">
+          광고 플랫폼 API 인증 정보는 회사 관리자만 확인하고 수정할 수 있습니다.
+        </div>
+      ) : (
+      <>
       {/* Meta Ads */}
       <PlatformCard
         platform="meta"
@@ -254,6 +274,8 @@ export default function ApiCredentialsPage() {
         onUpdate={(creds) => updatePlatformCredentials('google', creds)}
         onSave={() => saveCredentials('google')}
       />
+      </>
+      )}
 
       {/* Help Section */}
       <div className="mt-8 p-6 bg-blue-50 border border-blue-200 rounded-lg">
@@ -276,7 +298,7 @@ interface PlatformCardProps {
   color: 'blue' | 'yellow' | 'red'
   guideLink: string
   credentials: MetaCredentials | KakaoCredentials | GoogleCredentials
-  status: { exists: boolean; validated: boolean }
+  status: PlatformStatus
   expanded: boolean
   saving: boolean
   onToggle: () => void
@@ -328,8 +350,8 @@ const PlatformCard = React.memo(({
   }
 
   const colors = colorClasses[color]
-  const statusText = status.validated ? '✓ 연동됨' : status.exists ? '설정됨' : '미설정'
-  const statusColor = status.validated ? 'text-green-600' : status.exists ? 'text-blue-600' : 'text-gray-400'
+  const statusText = status.validated ? '✓ 연동됨' : status.needsReentry ? '재입력 필요' : status.exists ? '설정됨' : '미설정'
+  const statusColor = status.validated ? 'text-green-600' : status.needsReentry ? 'text-amber-600' : status.exists ? 'text-blue-600' : 'text-gray-400'
 
   return (
     <div className={`mb-4 border ${colors.border} rounded-lg overflow-hidden`}>

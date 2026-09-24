@@ -6,7 +6,12 @@ import { createClient } from '@/lib/supabase/server'
 import { encryptCredentials, decryptCredentials } from '@/lib/encryption/credentials'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 
-const VALID_PLATFORMS = ['meta', 'kakao', 'google']
+// 플랫폼별로 저장할 수 있는 키 - 이 목록 밖의 값은 버리고, 모두 비어 있지 않은 문자열이어야 한다.
+const PLATFORM_FIELDS: Record<string, string[]> = {
+  meta: ['app_id', 'app_secret'],
+  kakao: ['rest_api_key', 'javascript_key'],
+  google: ['client_id', 'client_secret', 'developer_token'],
+}
 
 export async function GET() {
   try {
@@ -44,12 +49,18 @@ export async function GET() {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    const decrypted = (credentials || []).map((cred: any) => ({
-      platform: cred.platform,
-      credentials: decryptCredentials(cred.credentials),
-      exists: true,
-      validated: !!cred.last_validated_at,
-    }))
+    const decrypted = (credentials || []).map((cred: any) => {
+      const plain = decryptCredentials(cred.credentials)
+      return {
+        platform: cred.platform,
+        credentials: plain,
+        exists: true,
+        validated: !!cred.last_validated_at,
+        // 암호화 키가 바뀌기 전(예전 공유 키 폴백 시절)에 저장된 값은 현재 키로 복호화되지
+        // 않아 빈 객체가 된다 - "설정됨"으로 보이지만 실제로는 쓸 수 없으므로 재입력을 안내한다.
+        needsReentry: Object.keys(plain).length === 0,
+      }
+    })
 
     return NextResponse.json({ credentials: decrypted })
   } catch (error: any) {
@@ -87,8 +98,18 @@ export async function PUT(request: NextRequest) {
     const body = await request.json()
     const { platform, credentials } = body
 
-    if (!platform || !VALID_PLATFORMS.includes(platform) || !credentials) {
+    const fields = PLATFORM_FIELDS[platform]
+    if (!fields || !credentials || typeof credentials !== 'object') {
       return NextResponse.json({ error: '잘못된 요청입니다.' }, { status: 400 })
+    }
+
+    const sanitized: Record<string, string> = {}
+    for (const field of fields) {
+      const value = typeof credentials[field] === 'string' ? credentials[field].trim() : ''
+      if (!value) {
+        return NextResponse.json({ error: '모든 항목을 입력해주세요.' }, { status: 400 })
+      }
+      sanitized[field] = value
     }
 
     const { error } = await supabase
@@ -97,7 +118,7 @@ export async function PUT(request: NextRequest) {
         {
           company_id: userProfile.company_id,
           platform,
-          credentials: encryptCredentials(credentials),
+          credentials: encryptCredentials(sanitized),
           is_active: true,
         } as any,
         { onConflict: 'company_id,platform' }
