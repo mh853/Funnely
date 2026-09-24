@@ -21,12 +21,13 @@ export default function TrackingPixelsClient({
   const supabase = createClient()
   const toast = useToast()
   const [saving, setSaving] = useState(false)
-  const [hasRecord, setHasRecord] = useState(!!initialData)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
 
   // Form state
   const [facebookPixelId, setFacebookPixelId] = useState(initialData?.facebook_pixel_id || '')
   const [googleAnalyticsId, setGoogleAnalyticsId] = useState(initialData?.google_analytics_id || '')
   const [googleAdsId, setGoogleAdsId] = useState(initialData?.google_ads_id || '')
+  const [googleAdsLabel, setGoogleAdsLabel] = useState(initialData?.google_ads_conversion_label || '')
   const [kakaoPixelId, setKakaoPixelId] = useState(initialData?.kakao_pixel_id || '')
   const [naverPixelId, setNaverPixelId] = useState(initialData?.naver_pixel_id || '')
   const [tiktokPixelId, setTiktokPixelId] = useState(initialData?.tiktok_pixel_id || '')
@@ -40,18 +41,30 @@ export default function TrackingPixelsClient({
     // 형식을 검증해 따옴표/꺾쇠괄호 등 안전하지 않은 문자가 섞이지 않도록 막는다
     // (렌더링 쪽에도 동일한 화이트리스트 검증이 있지만, 잘못된 값을 애초에 저장하지
     // 않도록 여기서도 막아 사용자에게 즉시 피드백을 준다).
-    const fieldsToCheck: [string, string][] = [
-      ['페이스북 픽셀 ID', facebookPixelId],
-      ['Google Analytics ID', googleAnalyticsId],
-      ['Google Ads ID', googleAdsId],
-      ['카카오 픽셀 ID', kakaoPixelId],
-      ['네이버 픽셀 ID', naverPixelId],
-      ['틱톡 픽셀 ID', tiktokPixelId],
-      ['당근마켓 픽셀 ID', karrotPixelId],
-    ]
-    const invalidField = fieldsToCheck.find(([, value]) => value && !isValidPixelId(value))
-    if (invalidField) {
-      toast.error(`${invalidField[0]}에 영문자, 숫자, 하이픈(-), 언더스코어(_)만 입력할 수 있습니다.`)
+    // 복사-붙여넣기로 앞뒤 공백이 섞이면 화이트리스트에 걸려 원인을 알기 어려우므로 먼저 다듬는다.
+    // 어떤 칸이 잘못됐는지 바로 보이도록 토스트 하나 대신 칸마다 오류를 표시한다.
+    const values: Record<string, string> = {
+      facebook_pixel_id: facebookPixelId.trim(),
+      google_analytics_id: googleAnalyticsId.trim(),
+      google_ads_id: googleAdsId.trim(),
+      google_ads_conversion_label: googleAdsLabel.trim(),
+      kakao_pixel_id: kakaoPixelId.trim(),
+      naver_pixel_id: naverPixelId.trim(),
+      tiktok_pixel_id: tiktokPixelId.trim(),
+      karrot_pixel_id: karrotPixelId.trim(),
+    }
+    const errors: Record<string, string> = {}
+    for (const [key, value] of Object.entries(values)) {
+      if (value && !isValidPixelId(value)) {
+        errors[key] = '영문자, 숫자, 하이픈(-), 언더스코어(_)만 입력할 수 있습니다.'
+      }
+    }
+    if (values.google_analytics_id.toUpperCase().startsWith('AW-')) {
+      errors.google_analytics_id = 'AW-로 시작하는 값은 구글 애즈 ID입니다. 아래 Google Ads 칸에 입력해주세요.'
+    }
+    setFieldErrors(errors)
+    if (Object.keys(errors).length > 0) {
+      toast.error('입력값을 확인해주세요.')
       return
     }
 
@@ -60,35 +73,18 @@ export default function TrackingPixelsClient({
     try {
       const pixelData = {
         company_id: companyId,
-        facebook_pixel_id: facebookPixelId || null,
-        google_analytics_id: googleAnalyticsId || null,
-        google_ads_id: googleAdsId || null,
-        kakao_pixel_id: kakaoPixelId || null,
-        naver_pixel_id: naverPixelId || null,
-        tiktok_pixel_id: tiktokPixelId || null,
-        karrot_pixel_id: karrotPixelId || null,
+        ...Object.fromEntries(Object.entries(values).map(([key, value]) => [key, value || null])),
         is_active: isActive,
       }
 
-      if (hasRecord) {
-        // Update existing record
-        const { data: updated, error } = await supabase
-          .from('tracking_pixels')
-          .update(pixelData)
-          .eq('company_id', companyId)
-          .select('company_id')
+      // 회사당 1행(UNIQUE company_id)이라 upsert 하나로 첫 저장/수정을 모두 처리한다.
+      const { data: saved, error } = await supabase
+        .from('tracking_pixels')
+        .upsert(pixelData as any, { onConflict: 'company_id' })
+        .select('company_id')
 
-        if (error) throw error
-        if (!updated || updated.length === 0) throw new Error('업데이트 권한이 없습니다.')
-      } else {
-        // Insert new record
-        const { error } = await supabase
-          .from('tracking_pixels')
-          .insert([pixelData])
-
-        if (error) throw error
-        setHasRecord(true)
-      }
+      if (error) throw error
+      if (!saved || saved.length === 0) throw new Error('저장 권한이 없습니다.')
 
       toast.success('픽셀 설정이 저장되었습니다!')
     } catch (error) {
@@ -146,13 +142,14 @@ export default function TrackingPixelsClient({
             value={facebookPixelId}
             onChange={(e) => setFacebookPixelId(e.target.value)}
             placeholder="예: 123456789012345"
-            maxLength={20}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Meta 이벤트 관리자 {'>'} 데이터 소스 {'>'} 픽셀에서 확인
           </p>
+          <FieldError message={fieldErrors.facebook_pixel_id} />
         </div>
 
         {/* Google Analytics */}
@@ -173,13 +170,19 @@ export default function TrackingPixelsClient({
             value={googleAnalyticsId}
             onChange={(e) => setGoogleAnalyticsId(e.target.value)}
             placeholder="예: G-XXXXXXXXXX"
-            maxLength={20}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Google Analytics {'>'} 관리 {'>'} 데이터 스트림에서 확인
           </p>
+          <FieldError message={fieldErrors.google_analytics_id} />
+          {!fieldErrors.google_analytics_id && googleAnalyticsId.trim().toUpperCase().startsWith('AW-') && (
+            <p className="mt-1 text-xs text-amber-600">
+              AW-로 시작하는 값은 구글 애즈 ID입니다. 아래 Google Ads 칸에 입력해주세요.
+            </p>
+          )}
         </div>
 
         {/* Google Ads */}
@@ -195,15 +198,39 @@ export default function TrackingPixelsClient({
           <input
             type="text"
             value={googleAdsId}
-            onChange={(e) => setGoogleAdsId(e.target.value)}
+            onChange={(e) => {
+              // 구글 애즈 태그의 send_to 값(`AW-ID/라벨`)을 통째로 붙여넣으면 ID와 라벨로 나눠 담는다.
+              const [id, label] = e.target.value.split('/')
+              setGoogleAdsId(id)
+              if (label !== undefined) setGoogleAdsLabel(label)
+            }}
             placeholder="예: AW-123456789"
-            maxLength={20}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
+          <FieldError message={fieldErrors.google_ads_id} />
+          <label className="block text-sm font-medium text-gray-700 mt-3 mb-2">
+            전환 라벨
+          </label>
+          <input
+            type="text"
+            value={googleAdsLabel}
+            onChange={(e) => setGoogleAdsLabel(e.target.value)}
+            placeholder="예: AbC-D_efG-h12_34-567"
+            maxLength={64}
+            readOnly={!canEdit}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
+          />
+          <FieldError message={fieldErrors.google_ads_conversion_label} />
           <p className="mt-1 text-xs text-gray-500">
-            Google Ads {'>'} 도구 및 설정 {'>'} 전환에서 확인
+            Google Ads {'>'} 목표 {'>'} 전환 {'>'} 전환 액션 {'>'} 태그 설정의 send_to 값(AW-ID/라벨)을 ID 칸에 붙여넣으면 자동으로 나눠집니다
           </p>
+          {googleAdsId.trim() && !googleAdsLabel.trim() && (
+            <p className="mt-1 text-xs text-amber-600">
+              전환 라벨이 없으면 신청 완료 전환이 구글 애즈에 집계되지 않습니다
+            </p>
+          )}
         </div>
 
         {/* Kakao Pixel */}
@@ -221,13 +248,14 @@ export default function TrackingPixelsClient({
             value={kakaoPixelId}
             onChange={(e) => setKakaoPixelId(e.target.value)}
             placeholder="예: 1234567890"
-            maxLength={20}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             Kakao Moment {'>'} 픽셀 관리에서 확인
           </p>
+          <FieldError message={fieldErrors.kakao_pixel_id} />
         </div>
 
         {/* Naver Pixel */}
@@ -245,13 +273,14 @@ export default function TrackingPixelsClient({
             value={naverPixelId}
             onChange={(e) => setNaverPixelId(e.target.value)}
             placeholder="예: s_123abc"
-            maxLength={20}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
-            네이버 검색광고 {'>'} 도구 {'>'} 전환추적에서 확인
+            네이버 검색광고 {'>'} 도구 {'>'} 전환추적에서 확인 (s_로 시작하는 공통 인증키)
           </p>
+          <FieldError message={fieldErrors.naver_pixel_id} />
         </div>
 
         {/* TikTok Pixel */}
@@ -269,13 +298,14 @@ export default function TrackingPixelsClient({
             value={tiktokPixelId}
             onChange={(e) => setTiktokPixelId(e.target.value)}
             placeholder="예: C1234ABCD5EFGH67IJKL"
-            maxLength={30}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             TikTok Ads Manager {'>'} Assets {'>'} Events에서 확인
           </p>
+          <FieldError message={fieldErrors.tiktok_pixel_id} />
         </div>
 
         {/* Karrot Market Pixel */}
@@ -293,13 +323,14 @@ export default function TrackingPixelsClient({
             value={karrotPixelId}
             onChange={(e) => setKarrotPixelId(e.target.value)}
             placeholder="예: karrot_12345"
-            maxLength={30}
+            maxLength={64}
             readOnly={!canEdit}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent read-only:bg-gray-50 read-only:text-gray-500"
           />
           <p className="mt-1 text-xs text-gray-500">
             당근마켓 비즈니스 {'>'} 광고 관리 {'>'} 전환 추적에서 확인
           </p>
+          <FieldError message={fieldErrors.karrot_pixel_id} />
         </div>
 
         {/* Active Toggle */}
@@ -352,4 +383,9 @@ export default function TrackingPixelsClient({
       </div>
     </div>
   )
+}
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null
+  return <p className="mt-1 text-xs text-red-600">{message}</p>
 }

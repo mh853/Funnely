@@ -4529,6 +4529,7 @@ export type Database = {
           created_at: string | null
           facebook_pixel_id: string | null
           google_ads_id: string | null
+          google_ads_conversion_label: string | null
           google_analytics_id: string | null
           id: string
           is_active: boolean | null
@@ -4543,6 +4544,7 @@ export type Database = {
           created_at?: string | null
           facebook_pixel_id?: string | null
           google_ads_id?: string | null
+          google_ads_conversion_label?: string | null
           google_analytics_id?: string | null
           id?: string
           is_active?: boolean | null
@@ -4557,6 +4559,7 @@ export type Database = {
           created_at?: string | null
           facebook_pixel_id?: string | null
           google_ads_id?: string | null
+          google_ads_conversion_label?: string | null
           google_analytics_id?: string | null
           id?: string
           is_active?: boolean | null

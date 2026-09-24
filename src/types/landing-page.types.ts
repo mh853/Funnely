@@ -444,6 +444,7 @@ export interface TrackingPixels {
   facebook_pixel_id?: string;
   google_analytics_id?: string;
   google_ads_id?: string;
+  google_ads_conversion_label?: string;
   kakao_pixel_id?: string;
   naver_pixel_id?: string;
   tiktok_pixel_id?: string;
