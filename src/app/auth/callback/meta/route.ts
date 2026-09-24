@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/encryption/credentials'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { META_OAUTH_STATE_COOKIE, exchangeCodeForToken, isMetaConfigured, listAdAccounts } from '@/lib/ads/meta'
+import { META_OAUTH_STATE_COOKIE, exchangeCodeForToken, isMetaConfigured, isMetaEnabledForCompany, listAdAccounts } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 
 // 첫 연결 직후 최근 30일 성과까지 받아오므로 기본 시간보다 넉넉하게 둔다
@@ -49,6 +49,9 @@ export async function GET(request: NextRequest) {
     .maybeSingle()
   if (!userProfile?.company_id || !isAdminOrLegacyOwner(userProfile)) {
     return redirectWith(request, 'error', '광고 계정 연결은 회사 관리자만 할 수 있습니다.')
+  }
+  if (!isMetaEnabledForCompany(userProfile.company_id)) {
+    return redirectWith(request, 'error', 'Meta 연동이 아직 준비되지 않았습니다.')
   }
 
   try {

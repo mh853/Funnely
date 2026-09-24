@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { isMetaConfigured } from '@/lib/ads/meta'
+import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
@@ -49,7 +49,7 @@ export default async function AdPerformancePage({
   if (!userProfile?.company_id) redirect('/auth/login')
 
   const canManage = isAdminOrLegacyOwner(userProfile)
-  const configured = isMetaConfigured()
+  const configured = isMetaEnabledForCompany(userProfile.company_id)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
 

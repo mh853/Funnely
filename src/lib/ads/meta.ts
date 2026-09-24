@@ -34,6 +34,17 @@ export function isMetaConfigured() {
 }
 
 /**
+ * 이 회사에 Meta 광고 성과 기능을 열지. 앱 검수(ads_read 고급 액세스) 전에는 앱 역할이 있는 사람만
+ * 로그인할 수 있어, META_ADS_PILOT_COMPANY_IDS(쉼표 구분 회사 id)가 있으면 그 회사에만 보여준다.
+ * 검수가 끝나면 이 환경변수를 지워 모든 회사에 연다.
+ */
+export function isMetaEnabledForCompany(companyId: string | null | undefined) {
+  if (!isMetaConfigured() || !companyId) return false
+  const pilot = (process.env.META_ADS_PILOT_COMPANY_IDS || '').split(',').map((id) => id.trim()).filter(Boolean)
+  return pilot.length === 0 || pilot.includes(companyId)
+}
+
+/**
  * 로그인 다이얼로그와 코드 교환에 쓰는 redirect_uri - Meta는 두 값이 글자 단위로 같아야 하고
  * 앱에 등록된 URI와도 정확히 일치해야 하므로, 요청 origin(커스텀 도메인·www·프리뷰)이 아닌
  * 고정 도메인에서 만든다.

@@ -3,7 +3,7 @@ import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { META_OAUTH_STATE_COOKIE, buildMetaAuthUrl, isMetaConfigured } from '@/lib/ads/meta'
+import { META_OAUTH_STATE_COOKIE, buildMetaAuthUrl, isMetaConfigured, isMetaEnabledForCompany } from '@/lib/ads/meta'
 
 function backToPerformance(request: NextRequest, error: string) {
   return NextResponse.redirect(
@@ -39,6 +39,9 @@ export async function GET(
     .maybeSingle()
   if (!userProfile || !isAdminOrLegacyOwner(userProfile)) {
     return backToPerformance(request, '광고 계정 연결은 회사 관리자만 할 수 있습니다.')
+  }
+  if (!isMetaEnabledForCompany(userProfile.company_id)) {
+    return backToPerformance(request, 'Meta 연동이 아직 준비되지 않았습니다.')
   }
 
   // CSRF 방지 - 콜백에서 쿼리의 state와 이 쿠키 값이 같은지 확인한다.

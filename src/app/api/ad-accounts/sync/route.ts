@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { isMetaConfigured } from '@/lib/ads/meta'
+import { isMetaConfigured, isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 
 export const maxDuration = 300
@@ -27,6 +27,9 @@ export async function POST() {
     .maybeSingle()
   if (!userProfile?.company_id || !isAdminOrLegacyOwner(userProfile)) {
     return NextResponse.json({ error: '회사 관리자만 동기화할 수 있습니다.' }, { status: 403 })
+  }
+  if (!isMetaEnabledForCompany(userProfile.company_id)) {
+    return NextResponse.json({ error: 'Meta 연동이 아직 준비되지 않았습니다.' }, { status: 503 })
   }
 
   const admin = createServiceClient() as any
