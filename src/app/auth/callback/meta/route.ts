@@ -1,205 +1,98 @@
-import { createClient } from '@/lib/supabase/server'
+// Meta 로그인 다이얼로그에서 돌아오는 콜백 - state 검증, 장기 토큰 교환, 광고 계정 저장 후 첫 동기화
 import { NextRequest, NextResponse } from 'next/server'
-import { decryptCredentials, encryptToken } from '@/lib/encryption/credentials'
-import { AD_INTEGRATION_ENABLED } from '@/lib/feature-flags/disabled-features'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+import { encryptToken } from '@/lib/encryption/credentials'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
+import { META_OAUTH_STATE_COOKIE, exchangeCodeForToken, isMetaConfigured, listAdAccounts } from '@/lib/ads/meta'
+import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
+
+// 첫 연결 직후 최근 30일 성과까지 받아오므로 기본 시간보다 넉넉하게 둔다
+export const maxDuration = 300
+
+function redirectWith(request: NextRequest, key: 'error' | 'connected', value: string) {
+  const response = NextResponse.redirect(
+    new URL(`/dashboard/ad-performance?${key}=${encodeURIComponent(value)}`, request.url)
+  )
+  response.cookies.delete(META_OAUTH_STATE_COOKIE)
+  return response
+}
 
 export async function GET(request: NextRequest) {
-  if (!AD_INTEGRATION_ENABLED) {
-    return NextResponse.redirect(
-      new URL('/dashboard?error=현재 준비 중인 기능입니다.', request.url)
-    )
-  }
-
   const searchParams = request.nextUrl.searchParams
   const code = searchParams.get('code')
-  const error = searchParams.get('error')
-  const errorDescription = searchParams.get('error_description')
+  const state = searchParams.get('state')
+  const expectedState = request.cookies.get(META_OAUTH_STATE_COOKIE)?.value
 
-  // Handle OAuth errors
-  if (error) {
-    console.error('Meta OAuth error:', error, errorDescription)
-    return NextResponse.redirect(
-      new URL(
-        `/dashboard/ad-accounts?error=${encodeURIComponent(
-          errorDescription || '인증에 실패했습니다.'
-        )}`,
-        request.url
-      )
-    )
+  if (searchParams.get('error')) {
+    // 사용자가 권한 동의를 취소한 경우 등
+    return redirectWith(request, 'error', 'Meta 연결이 취소되었습니다.')
+  }
+  if (!code || !state || !expectedState || state !== expectedState) {
+    return redirectWith(request, 'error', '연결 요청이 만료되었거나 올바르지 않습니다. 다시 시도해주세요.')
+  }
+  if (!isMetaConfigured()) {
+    return redirectWith(request, 'error', 'Meta 연동이 아직 준비되지 않았습니다.')
   }
 
-  if (!code) {
-    return NextResponse.redirect(
-      new URL('/dashboard/ad-accounts?error=인증 코드를 받지 못했습니다.', request.url)
-    )
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
+  }
+
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('company_id, role, simple_role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!userProfile?.company_id || !isAdminOrLegacyOwner(userProfile)) {
+    return redirectWith(request, 'error', '광고 계정 연결은 회사 관리자만 할 수 있습니다.')
   }
 
   try {
-    const supabase = await createClient()
-
-    // Get current user
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.redirect(new URL('/auth/login', request.url))
+    const token = await exchangeCodeForToken(code)
+    const accounts = await listAdAccounts(token.accessToken)
+    if (accounts.length === 0) {
+      return redirectWith(request, 'error', '이 Meta 계정으로 접근할 수 있는 광고 계정이 없습니다.')
     }
 
-    // Get user profile
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('company_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
-      return NextResponse.redirect(
-        new URL('/dashboard/ad-accounts?error=사용자 정보를 찾을 수 없습니다.', request.url)
+    // 쓰기는 앱 코드에서 관리자 확인을 마친 뒤 서비스 롤로 한다 (ad_accounts RLS는 옛 role 기준)
+    const admin = createServiceClient() as any
+    const { data: saved, error } = await admin
+      .from('ad_accounts')
+      .upsert(
+        accounts.map((account) => ({
+          company_id: userProfile.company_id,
+          platform: 'meta',
+          account_id: account.id, // act_123 형태 (예전 연동과 같은 키로 덮어쓴다)
+          account_name: account.name || account.id,
+          access_token: encryptToken(token.accessToken),
+          token_expires_at: token.expiresAt,
+          is_active: account.account_status === 1,
+          created_by: user.id,
+          metadata: {
+            currency: account.currency,
+            timezone: account.timezone_name,
+            account_status: account.account_status,
+            needs_reconnect: false,
+            last_sync_error: null,
+          },
+        })),
+        { onConflict: 'company_id,platform,account_id' }
       )
+      .select('id, company_id, account_id, access_token, token_expires_at, metadata, is_active')
+    if (error) throw new Error(`광고 계정 저장 실패: ${error.message}`)
+
+    // 연결 직후 화면이 비어 있지 않도록 최근 30일을 바로 가져온다 (실패해도 연결 자체는 유지)
+    for (const account of saved || []) {
+      if (account.is_active) await syncMetaAdAccount(admin, account, 30)
     }
 
-    // Check permission (company_owner, company_admin, hospital_owner, hospital_admin for backward compat)
-    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
-      return NextResponse.redirect(
-        new URL('/dashboard/ad-accounts?error=권한이 없습니다.', request.url)
-      )
-    }
-
-    // Get Meta credentials from database
-    const { data: credentialData, error: credError } = await supabase
-      .from('api_credentials')
-      .select('credentials')
-      .eq('company_id', userProfile.company_id)
-      .eq('platform', 'meta')
-      .single()
-
-    if (credError || !credentialData) {
-      console.error('Meta credentials not found:', credError)
-      return NextResponse.redirect(
-        new URL('/dashboard/ad-accounts?error=Meta API 인증 정보가 설정되지 않았습니다.', request.url)
-      )
-    }
-
-    const credentials = decryptCredentials(credentialData.credentials) as { app_id: string; app_secret: string }
-
-    // Build redirect URI (must match the one used in connect)
-    const baseUrl = new URL(request.url).origin
-    const redirectUri = `${baseUrl}/auth/callback/meta`
-
-    // Exchange code for access token
-    const tokenParams = new URLSearchParams({
-      client_id: credentials.app_id,
-      client_secret: credentials.app_secret,
-      redirect_uri: redirectUri,
-      code: code,
-    })
-
-    console.log('Exchanging code for token...')
-    const tokenResponse = await fetch(
-      `https://graph.facebook.com/v18.0/oauth/access_token?${tokenParams.toString()}`,
-      { method: 'GET' }
-    )
-
-    if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json()
-      console.error('Token exchange failed:', errorData)
-      throw new Error(errorData.error?.message || '토큰 교환에 실패했습니다.')
-    }
-
-    const tokenData = await tokenResponse.json()
-    const { access_token, expires_in } = tokenData
-
-    console.log('Token received, fetching ad accounts...')
-
-    // Get ad accounts from Meta
-    const adAccountsResponse = await fetch(
-      `https://graph.facebook.com/v18.0/me/adaccounts?access_token=${access_token}&fields=id,name,account_status,currency,timezone_name`
-    )
-
-    if (!adAccountsResponse.ok) {
-      const errorData = await adAccountsResponse.json()
-      console.error('Ad accounts fetch failed:', errorData)
-      throw new Error(errorData.error?.message || '광고 계정 정보를 가져오지 못했습니다.')
-    }
-
-    const adAccountsData = await adAccountsResponse.json()
-    const adAccounts = adAccountsData.data || []
-
-    console.log(`Found ${adAccounts.length} ad accounts`)
-
-    if (adAccounts.length === 0) {
-      return NextResponse.redirect(
-        new URL('/dashboard/ad-accounts?error=연결된 광고 계정이 없습니다. Meta Business에서 광고 계정을 먼저 생성해주세요.', request.url)
-      )
-    }
-
-    // Store ad accounts in database
-    for (const account of adAccounts) {
-      const expiresAt = new Date(Date.now() + (expires_in || 5184000) * 1000).toISOString()
-
-      // account.id는 "act_123456789" 형식
-      // Check if account already exists
-      const { data: existingAccount } = await supabase
-        .from('ad_accounts')
-        .select('id')
-        .eq('company_id', userProfile.company_id)
-        .eq('platform', 'meta')
-        .eq('account_id', account.id)
-        .single()
-
-      const accountData = {
-        company_id: userProfile.company_id,
-        platform: 'meta' as const,
-        account_id: account.id,
-        account_name: account.name || account.id,
-        is_active: account.account_status === 1,
-        // access_token은 실제 Meta Graph API 토큰이라 그대로 저장하면 안 된다
-        // (api_credentials의 app_id/app_secret은 이미 암호화 컬럼으로 옮겨져
-        // 있었는데 이 사용자별 OAuth 토큰만 그 리팩터링에서 빠져 있었음)
-        access_token: encryptToken(access_token),
-        token_expires_at: expiresAt,
-        metadata: {
-          currency: account.currency,
-          timezone: account.timezone_name,
-        },
-      }
-
-      let upsertError
-      if (existingAccount) {
-        // Update existing
-        const { error } = await supabase
-          .from('ad_accounts')
-          .update(accountData)
-          .eq('id', existingAccount.id)
-        upsertError = error
-      } else {
-        // Insert new
-        const { error } = await supabase
-          .from('ad_accounts')
-          .insert(accountData)
-        upsertError = error
-      }
-
-      if (upsertError) {
-        console.error('Failed to save ad account:', upsertError)
-      }
-    }
-
-    console.log('Ad accounts saved successfully')
-
-    return NextResponse.redirect(
-      new URL(`/dashboard/ad-accounts?success=${encodeURIComponent(`${adAccounts.length}개의 광고 계정이 연동되었습니다.`)}`, request.url)
-    )
-  } catch (error: any) {
-    console.error('Meta OAuth callback error:', error)
-    return NextResponse.redirect(
-      new URL(
-        `/dashboard/ad-accounts?error=${encodeURIComponent(
-          error.message || '계정 연동에 실패했습니다.'
-        )}`,
-        request.url
-      )
-    )
+    return redirectWith(request, 'connected', String(accounts.length))
+  } catch (error) {
+    console.error('[Meta callback] error:', error)
+    return redirectWith(request, 'error', 'Meta 광고 계정 연결에 실패했습니다. 잠시 후 다시 시도해주세요.')
   }
 }

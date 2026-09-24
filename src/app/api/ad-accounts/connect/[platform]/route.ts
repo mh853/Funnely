@@ -1,148 +1,56 @@
-import { createClient } from '@/lib/supabase/server'
+// 광고 계정 연결 시작 - 퍼널리 Meta 앱의 로그인 다이얼로그로 보낸다 (카카오·구글은 준비 중)
+import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
-import type { ApiPlatform, MetaCredentials, KakaoCredentials, GoogleCredentials } from '@/types/database.types'
-import { decryptCredentials } from '@/lib/encryption/credentials'
-import { AD_INTEGRATION_ENABLED, FEATURE_DISABLED_RESPONSE } from '@/lib/feature-flags/disabled-features'
+import { createClient } from '@/lib/supabase/server'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
+import { META_OAUTH_STATE_COOKIE, buildMetaAuthUrl, isMetaConfigured } from '@/lib/ads/meta'
 
+function backToPerformance(request: NextRequest, error: string) {
+  return NextResponse.redirect(
+    new URL(`/dashboard/ad-performance?error=${encodeURIComponent(error)}`, request.url)
+  )
+}
+
+// 버튼이 이 주소로 바로 이동(GET)하면 state 쿠키를 심고 Meta로 302 한다.
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> }
 ) {
-  if (!AD_INTEGRATION_ENABLED) {
-    return NextResponse.json(FEATURE_DISABLED_RESPONSE, { status: 503 })
+  const { platform } = await params
+  if (platform !== 'meta') {
+    return backToPerformance(request, '현재 Meta 광고 계정만 연결할 수 있습니다.')
+  }
+  if (!isMetaConfigured()) {
+    return backToPerformance(request, 'Meta 연동이 아직 준비되지 않았습니다.')
   }
 
-  try {
-    const { platform: platformParam } = await params
-    const supabase = await createClient()
-
-    // Check authentication
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 })
-    }
-
-    // Get user profile
-    const { data: userProfile } = await supabase
-      .from('users')
-      .select('company_id, role')
-      .eq('id', user.id)
-      .single()
-
-    if (!userProfile) {
-      return NextResponse.json({ error: '사용자 정보를 찾을 수 없습니다.' }, { status: 404 })
-    }
-
-    // Check permission (company_owner, company_admin, hospital_owner, hospital_admin for backward compat)
-    if (!['company_owner', 'company_admin', 'hospital_owner', 'hospital_admin', 'marketing_manager'].includes(userProfile.role)) {
-      return NextResponse.json({ error: '권한이 없습니다.' }, { status: 403 })
-    }
-
-    const platform = platformParam as ApiPlatform
-
-    // Validate platform
-    if (!['meta', 'kakao', 'google'].includes(platform)) {
-      return NextResponse.json({ error: '지원하지 않는 플랫폼입니다.' }, { status: 400 })
-    }
-
-    // Load credentials from database
-    const { data: credentialData, error: credError } = await supabase
-      .from('api_credentials')
-      .select('credentials, is_active')
-      .eq('company_id', userProfile.company_id)
-      .eq('platform', platform)
-      .single()
-
-    if (credError || !credentialData) {
-      return NextResponse.json(
-        {
-          error: `${platform.toUpperCase()} API 인증 정보가 설정되지 않았습니다. 설정 페이지에서 먼저 API 인증 정보를 입력해주세요.`,
-          needsSetup: true,
-          setupUrl: '/dashboard/settings/api-credentials'
-        },
-        { status: 400 }
-      )
-    }
-
-    if (!credentialData.is_active) {
-      return NextResponse.json(
-        { error: 'API 인증 정보가 비활성화되었습니다.' },
-        { status: 400 }
-      )
-    }
-
-    // Generate OAuth URL based on platform
-    let authUrl: string
-    const decryptedCredentials = decryptCredentials(credentialData.credentials)
-
-    switch (platform) {
-      case 'meta':
-        authUrl = generateMetaAuthUrl(request, decryptedCredentials as any)
-        break
-      case 'kakao':
-        authUrl = generateKakaoAuthUrl(request, decryptedCredentials as any)
-        break
-      case 'google':
-        authUrl = generateGoogleAuthUrl(request, decryptedCredentials as any)
-        break
-      default:
-        return NextResponse.json({ error: '지원하지 않는 플랫폼입니다.' }, { status: 400 })
-    }
-
-    return NextResponse.json({ authUrl })
-  } catch (error: any) {
-    console.error('Connect ad account error:', error)
-    return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 })
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) {
+    return NextResponse.redirect(new URL('/auth/login', request.url))
   }
-}
 
-function generateMetaAuthUrl(request: NextRequest, credentials: MetaCredentials): string {
-  const baseUrl = new URL(request.url).origin
-  const redirectUri = `${baseUrl}/auth/callback/meta`
+  const { data: userProfile } = await supabase
+    .from('users')
+    .select('company_id, role, simple_role')
+    .eq('id', user.id)
+    .maybeSingle()
+  if (!userProfile || !isAdminOrLegacyOwner(userProfile)) {
+    return backToPerformance(request, '광고 계정 연결은 회사 관리자만 할 수 있습니다.')
+  }
 
-  const scope = 'ads_management,ads_read'
-
-  const params = new URLSearchParams({
-    client_id: credentials.app_id,
-    redirect_uri: redirectUri,
-    scope: scope,
-    response_type: 'code',
+  // CSRF 방지 - 콜백에서 쿼리의 state와 이 쿠키 값이 같은지 확인한다.
+  // Meta에서 돌아오는 요청은 다른 사이트에서 온 최상위 GET이라 sameSite는 lax여야 쿠키가 실린다.
+  const state = crypto.randomBytes(24).toString('hex')
+  const response = NextResponse.redirect(buildMetaAuthUrl(state))
+  response.cookies.set(META_OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    path: '/',
+    maxAge: 10 * 60,
   })
-
-  return `https://www.facebook.com/v18.0/dialog/oauth?${params.toString()}`
-}
-
-function generateKakaoAuthUrl(request: NextRequest, credentials: KakaoCredentials): string {
-  const baseUrl = new URL(request.url).origin
-  const redirectUri = `${baseUrl}/auth/callback/kakao`
-
-  const params = new URLSearchParams({
-    client_id: credentials.rest_api_key,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: 'moment',
-  })
-
-  return `https://kauth.kakao.com/oauth/authorize?${params.toString()}`
-}
-
-function generateGoogleAuthUrl(request: NextRequest, credentials: GoogleCredentials): string {
-  const baseUrl = new URL(request.url).origin
-  const redirectUri = `${baseUrl}/auth/callback/google`
-
-  const scope = 'https://www.googleapis.com/auth/adwords'
-
-  const params = new URLSearchParams({
-    client_id: credentials.client_id,
-    redirect_uri: redirectUri,
-    response_type: 'code',
-    scope: scope,
-    access_type: 'offline',
-    prompt: 'consent',
-  })
-
-  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`
+  return response
 }

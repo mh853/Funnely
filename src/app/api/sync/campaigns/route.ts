@@ -1,7 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
+import { AD_INTEGRATION_ENABLED, FEATURE_DISABLED_RESPONSE } from '@/lib/feature-flags/disabled-features'
 
+// 옛 동기화 스텁 - 실제 Meta 동기화는 /api/ad-accounts/sync로 옮겨졌다(없는 컬럼을 참조해 동작하지 않음)
 export async function POST(request: NextRequest) {
+  if (!AD_INTEGRATION_ENABLED) {
+    return NextResponse.json(FEATURE_DISABLED_RESPONSE, { status: 503 })
+  }
+
   try {
     const supabase = await createClient()
 
