@@ -3,6 +3,7 @@ import { createClient, getCachedUser, getCachedUserProfile, getCachedCompanySubs
 import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
+import { isMetaConfigured } from '@/lib/ads/meta'
 
 export const metadata: Metadata = {
   robots: {
@@ -85,6 +86,7 @@ export default async function DashboardLayout({
       subscriptionStatus={subscriptionStatus}
       currentPlanName={currentPlanName}
       trialDDay={trialDDay}
+      showAdPerformance={isMetaConfigured()}
     >
       {children}
     </DashboardLayoutClient>

@@ -31,6 +31,7 @@ interface SidebarProps {
   onToggleCollapse?: () => void
   planFeatures?: { [key: string]: boolean } // 플랜별 기능 권한
   subscriptionStatus?: string | null
+  showAdPerformance?: boolean
 }
 
 const navigation = [
@@ -42,6 +43,7 @@ const navigation = [
   // [임시 비활성화] 캠페인, 광고 계정 - 나중에 복원 시 주석 해제
   // { name: '캠페인', href: '/dashboard/campaigns', icon: MegaphoneIcon },
   // { name: '광고 계정', href: '/dashboard/ad-accounts', icon: ChartBarIcon },
+  { name: '광고 성과', href: '/dashboard/ad-performance', icon: ChartBarIcon, requiredFeature: 'dashboard' },
   { name: '트래픽 분석', href: '/dashboard/analytics', icon: PresentationChartLineIcon, requiredFeature: 'traffic_analytics' },
   { name: 'DB 리포트', href: '/dashboard/reports', icon: DocumentTextIcon, requiredFeature: 'db_report' },
   { name: '기술 지원', href: '/dashboard/support', icon: ChatBubbleLeftRightIcon, requiredFeature: 'dashboard' },
@@ -53,7 +55,7 @@ const navigation = [
   { name: 'DB 블랙리스트', href: '/dashboard/blacklist', icon: ShieldExclamationIcon, requiredFeature: 'dashboard' },
 ]
 
-export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {}, subscriptionStatus }: SidebarProps) {
+export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen, collapsed = false, onToggleCollapse, planFeatures = {}, subscriptionStatus, showAdPerformance = false }: SidebarProps) {
   const pathname = usePathname()
   const [upgradeModalOpen, setUpgradeModalOpen] = useState(false)
   const [selectedFeature, setSelectedFeature] = useState<'트래픽 분석' | 'DB 리포트' | 'DB 스케줄' | '예약 스케줄'>('트래픽 분석')
@@ -70,7 +72,9 @@ export default function Sidebar({ userProfile, mobileMenuOpen, setMobileMenuOpen
   const isSubscriptionExpired = ['expired', 'cancelled', 'canceled'].includes(subscriptionStatus ?? '')
 
   // 플랜 기능에 따라 메뉴 비활성화 처리 (필터링하지 않고 모두 표시)
-  const processedNavigation = navigation.map(item => {
+  const processedNavigation = navigation
+    .filter(item => item.href !== '/dashboard/ad-performance' || showAdPerformance)
+    .map(item => {
     const featureBlocked = item.requiredFeature ? planFeatures[item.requiredFeature] !== true : false
     let disabledReason: string | undefined
 

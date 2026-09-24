@@ -24,6 +24,8 @@ interface DashboardLayoutClientProps {
   subscriptionStatus?: string | null
   currentPlanName?: string | null
   trialDDay?: string | null
+  // 퍼널리 Meta 앱 환경변수가 설정된 경우에만 '광고 성과' 메뉴를 보여준다
+  showAdPerformance?: boolean
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
@@ -40,6 +42,7 @@ export default function DashboardLayoutClient({
   subscriptionStatus,
   currentPlanName,
   trialDDay,
+  showAdPerformance = false,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -109,6 +112,7 @@ export default function DashboardLayoutClient({
         onToggleCollapse={toggleSidebar}
         planFeatures={planFeatures}
         subscriptionStatus={subscriptionStatus}
+        showAdPerformance={showAdPerformance}
       />
       <div className={`transition-all duration-300 ${sidebarCollapsed ? 'lg:pl-20' : 'lg:pl-[200px]'}`}>
         <Header
