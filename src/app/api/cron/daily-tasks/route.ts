@@ -22,6 +22,8 @@ import {
 } from '@/lib/subscription/billing-tasks'
 import { recordCronRun, purgeOldCronRunLogs } from '@/lib/cron/run-log'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
+import { isMetaConfigured } from '@/lib/ads/meta'
+import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -237,6 +239,24 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Sheets sync error:', error)
       results.tasksExecuted.push({
         task: 'sheets_sync',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 3b: Meta 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
+    console.log('[Cron] Running Meta ad performance sync')
+    try {
+      const metaResult = await syncMetaAdPerformance(supabase)
+      results.tasksExecuted.push({
+        task: 'meta_ads_sync',
+        status: 'success',
+        ...metaResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Meta ads sync error:', error)
+      results.tasksExecuted.push({
+        task: 'meta_ads_sync',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -651,6 +671,63 @@ async function disableSheetSyncAfterRepeatedFailures(supabase: any, config: any)
 /**
  * Sync Google Sheets for all active configs
  */
+/**
+ * 연결된 Meta 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
+ * 시트 동기화와 같은 기준(pickCurrentSubscription + hasValidPlanAccess)으로 건너뛰고,
+ * 한 계정의 토큰 만료·오류가 다른 계정 동기화를 막지 않도록 계정별로 결과만 모은다.
+ */
+async function syncMetaAdPerformance(supabase: any) {
+  if (!isMetaConfigured()) {
+    return { message: 'Meta app not configured', synced: 0 }
+  }
+
+  const { data: accounts, error } = await supabase
+    .from('ad_accounts')
+    .select('id, company_id, account_id, access_token, token_expires_at, metadata, companies!inner(is_active, withdrawn_at)')
+    .eq('platform', 'meta')
+    .eq('is_active', true)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+  if (error) {
+    throw new Error(`Failed to fetch ad accounts: ${error.message}`)
+  }
+  if (!accounts || accounts.length === 0) {
+    return { message: 'No connected Meta ad accounts', synced: 0 }
+  }
+
+  const companyIds = Array.from(new Set(accounts.map((a: any) => a.company_id)))
+  const { data: subRows, error: subError } = await supabase
+    .from('company_subscriptions')
+    .select('company_id, status, current_period_end, trial_end_date, cancelled_at, grace_period_end')
+    .in('company_id', companyIds)
+    .order('created_at', { ascending: false })
+  if (subError) {
+    throw new Error(`Failed to fetch subscriptions for Meta sync: ${subError.message}`)
+  }
+  const subsByCompany = new Map<string, any[]>()
+  for (const row of subRows || []) {
+    const list = subsByCompany.get(row.company_id) ?? []
+    list.push(row)
+    subsByCompany.set(row.company_id, list)
+  }
+
+  const accountResults = []
+  for (const account of accounts) {
+    if (!hasValidPlanAccess(pickCurrentSubscription(subsByCompany.get(account.company_id) ?? []))) {
+      accountResults.push({ accountId: account.account_id, status: 'skipped_no_access' })
+      continue
+    }
+    accountResults.push(await syncMetaAdAccount(supabase, account, 7))
+  }
+
+  return {
+    synced: accountResults.filter((r: any) => r.status === 'success').length,
+    needsReconnect: accountResults.filter((r: any) => r.status === 'needs_reconnect').length,
+    failed: accountResults.filter((r: any) => r.status === 'error').length,
+    accounts: accountResults,
+  }
+}
+
 async function syncGoogleSheets(supabase: any) {
   // Get active sync configs
   // processSubscriptionRenewals와 동일하게 회사가 비활성화(is_active=false)되거나
