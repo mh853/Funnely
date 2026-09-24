@@ -139,7 +139,7 @@ export default async function AdPerformancePage({
             <p className="text-xs text-gray-500 mt-0.5">연결한 Meta 광고 계정의 캠페인별 성과를 확인합니다</p>
           </div>
         </div>
-        {accounts && accounts.length > 0 && (
+        {configured && accounts && accounts.length > 0 && (
           <div className="flex gap-2">
             {PERIODS.map((p) => (
               <Link
@@ -182,7 +182,7 @@ export default async function AdPerformancePage({
         />
       )}
 
-      {accounts && accounts.length > 0 && (
+      {configured && accounts && accounts.length > 0 && (
         <>
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {summaryCards.map((card) => (
