@@ -840,15 +840,9 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
               `,
             }}
           />
-          <noscript>
-            <img
-              height="1"
-              width="1"
-              style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${facebookPixelId}&ev=PageView&noscript=1`}
-              alt=""
-            />
-          </noscript>
+          {/* noscript용 <img> 픽셀은 두지 않는다 - React가 SSR 시 이 이미지를 <link rel="preload">로
+              뽑아내 JS가 켜진 브라우저에서도 요청이 나가, fbq의 PageView와 합쳐 방문 1회에
+              PageView가 2번 집계되고 있었다(라이브 확인). */}
         </>
       )}
 
@@ -926,12 +920,22 @@ function PublicLandingPageContent({ landingPage, initialRef }: PublicLandingPage
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              !function(a,b,c,d,e,f,g){a.NaverPixel=e,a[e]||(a[e]=function(){(a[e].q=a[e].q||[]).push(arguments)}),
-              a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
-              f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
-              "https://wcs.naver.net/wcslog.js","naver_pixel");
-              naver_pixel('init', '${naverPixelId}');
-              naver_pixel('track', 'PageView');
+              // 네이버 공식 공통 스크립트(naver.github.io/conversion-tracking) - wcslog.js 로드 후
+              // 사이트 식별자(wa)를 넣고 유입 쿠키 도메인 설정(inflow) → 페이지뷰 전송(wcs_do).
+              // 예전 naver_pixel('init'/'track') 호출은 wcslog.js에 없는 API라 아무것도 전송되지 않았다.
+              (function() {
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'https://wcs.naver.net/wcslog.js';
+                script.onload = function() {
+                  if (!window.wcs) return;
+                  window.wcs_add = window.wcs_add || {};
+                  window.wcs_add['wa'] = '${naverPixelId}';
+                  window.wcs.inflow(location.hostname.replace(/^www\\./, ''));
+                  window.wcs_do();
+                };
+                document.head.appendChild(script);
+              })();
             `,
           }}
         />

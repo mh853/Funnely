@@ -9,6 +9,7 @@ interface CompletionTrackerProps {
     facebook_pixel_id?: string
     google_analytics_id?: string
     google_ads_id?: string
+    google_ads_conversion_label?: string
     kakao_pixel_id?: string
     tiktok_pixel_id?: string
     naver_pixel_id?: string
@@ -55,6 +56,7 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
   const facebookPixelId = isValidPixelId(trackingPixels?.facebook_pixel_id) ? trackingPixels.facebook_pixel_id : null
   const googleAnalyticsId = isValidPixelId(trackingPixels?.google_analytics_id) ? trackingPixels.google_analytics_id : null
   const googleAdsId = isValidPixelId(trackingPixels?.google_ads_id) ? trackingPixels.google_ads_id : null
+  const googleAdsLabel = isValidPixelId(trackingPixels?.google_ads_conversion_label) ? trackingPixels.google_ads_conversion_label : null
   const naverPixelId = isValidPixelId(trackingPixels?.naver_pixel_id) ? trackingPixels.naver_pixel_id : null
   const kakaoPixelId = isValidPixelId(trackingPixels?.kakao_pixel_id) ? trackingPixels.kakao_pixel_id : null
   const tiktokPixelId = isValidPixelId(trackingPixels?.tiktok_pixel_id) ? trackingPixels.tiktok_pixel_id : null
@@ -84,15 +86,8 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
               `,
             }}
           />
-          <noscript>
-            <img
-              height="1"
-              width="1"
-              style={{ display: 'none' }}
-              src={`https://www.facebook.com/tr?id=${facebookPixelId}&ev=PageView&noscript=1`}
-              alt=""
-            />
-          </noscript>
+          {/* noscript <img>는 두지 않는다 - 이 컴포넌트는 JS로만 렌더되는데, React가 만든
+              <noscript> 안 이미지도 실제로 요청돼 PageView가 한 번 더 집계될 수 있다. */}
         </>
       )}
 
@@ -112,11 +107,7 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config', '${googleAnalyticsId}');
-                gtag('event', 'conversion', {
-                  'send_to': '${googleAnalyticsId}',
-                  'event_category': 'registration',
-                  'event_label': 'complete'
-                });
+                gtag('event', 'generate_lead', { 'send_to': '${googleAnalyticsId}' });
               `,
             }}
           />
@@ -139,7 +130,7 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
                 function gtag(){dataLayer.push(arguments);}
                 gtag('js', new Date());
                 gtag('config', '${googleAdsId}');
-                gtag('event', 'conversion', { 'send_to': '${googleAdsId}' });
+                ${googleAdsLabel ? `gtag('event', 'conversion', { 'send_to': '${googleAdsId}/${googleAdsLabel}' });` : ''}
               `,
             }}
           />
@@ -153,13 +144,21 @@ export default function CompletionTracker({ trackingPixels, completionToken }: C
           strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
-              !function(a,b,c,d,e,f,g){a.NaverPixel=e,a[e]||(a[e]=function(){(a[e].q=a[e].q||[]).push(arguments)}),
-              a[e].l=+new Date,f=b.createElement(c),g=b.getElementsByTagName(c)[0],f.async=1,
-              f.src=d,g.parentNode.insertBefore(f,g)}(window,document,"script",
-              "https://wcs.naver.net/wcslog.js","naver_pixel");
-              naver_pixel('init', '${naverPixelId}');
-              naver_pixel('track', 'PageView');
-              naver_pixel('track', 'CompleteRegistration');
+              // 네이버 공식 스크립트 - 공통(wa/inflow/wcs_do) 후 전환(wcs.trans, 상담·신청 완료 = lead)
+              (function() {
+                var script = document.createElement('script');
+                script.type = 'text/javascript';
+                script.src = 'https://wcs.naver.net/wcslog.js';
+                script.onload = function() {
+                  if (!window.wcs) return;
+                  window.wcs_add = window.wcs_add || {};
+                  window.wcs_add['wa'] = '${naverPixelId}';
+                  window.wcs.inflow(location.hostname.replace(/^www\\./, ''));
+                  window.wcs_do();
+                  window.wcs.trans({ type: 'lead' });
+                };
+                document.head.appendChild(script);
+              })();
             `,
           }}
         />
