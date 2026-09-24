@@ -174,7 +174,7 @@ export default async function AdPerformancePage({
             id: a.id,
             name: a.account_name,
             accountId: a.account_id,
-            isActive: a.is_active,
+            isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
             needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
             lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
             lastSyncError: a.metadata?.last_sync_error ?? null,

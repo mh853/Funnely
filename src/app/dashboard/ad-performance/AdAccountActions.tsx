@@ -106,12 +106,13 @@ export default function AdAccountActions({ canManage, accounts }: { canManage: b
                 <p className="text-xs mt-0.5">
                   {a.needsReconnect ? (
                     <span className="text-amber-600">재연결 필요 — {a.lastSyncError || '연결이 만료되었습니다'}</span>
-                  ) : !a.isActive ? (
-                    <span className="text-gray-500">Meta에서 비활성 상태인 광고 계정입니다</span>
                   ) : a.lastSyncError ? (
                     <span className="text-red-600">최근 동기화 실패 — {a.lastSyncError}</span>
                   ) : (
-                    <span className="text-gray-500">{a.lastSyncedAt ? `마지막 동기화 ${a.lastSyncedAt}` : '아직 동기화 전'}</span>
+                    <span className="text-gray-500">
+                      {a.lastSyncedAt ? `마지막 동기화 ${a.lastSyncedAt}` : '아직 동기화 전'}
+                      {!a.isActive && ' · Meta에서 비활성 상태인 계정(지난 성과만 조회)'}
+                    </span>
                   )}
                 </p>
               </div>

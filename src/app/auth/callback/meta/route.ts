@@ -73,7 +73,9 @@ export async function GET(request: NextRequest) {
           account_name: account.name || account.id,
           access_token: encryptToken(token.accessToken),
           token_expires_at: token.expiresAt,
-          is_active: account.account_status === 1,
+          // Meta에서 비활성(결제 문제·정지 등)인 계정도 지난 성과는 조회되므로 동기화 대상에 둔다.
+          // Meta 쪽 상태는 metadata.account_status로 화면에 따로 표시한다.
+          is_active: true,
           created_by: user.id,
           metadata: {
             currency: account.currency,
@@ -90,7 +92,7 @@ export async function GET(request: NextRequest) {
 
     // 연결 직후 화면이 비어 있지 않도록 최근 30일을 바로 가져온다 (실패해도 연결 자체는 유지)
     for (const account of saved || []) {
-      if (account.is_active) await syncMetaAdAccount(admin, account, 30)
+      await syncMetaAdAccount(admin, account, 30)
     }
 
     return redirectWith(request, 'connected', String(accounts.length))
