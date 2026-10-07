@@ -72,6 +72,10 @@ function textLines(lines: Array<string | null | undefined | false>): string {
 const SUBSCRIPTION_FOOTER =
   `이 메일은 ${BRAND} 구독과 결제에 관한 안내로, 계정 관리자에게 자동 발송됩니다.`
 
+// 토스페이먼츠가 2026-09-30부터 영수증 링크에 본인 확인 화면을 먼저 띄움. 결제 요청에 구매자명·이메일을 넘기지 않아 카드·승인 정보 방식만 가능
+const RECEIPT_AUTH_NOTE =
+  '영수증을 열면 토스페이먼츠의 본인 확인 화면이 먼저 표시됩니다. 결제에 사용한 카드번호 또는 승인 정보(승인번호·결제 금액·결제일)를 입력하시면 영수증을 확인하실 수 있습니다.'
+
 // ───────────────────────── 결제 ─────────────────────────
 
 export interface PaymentVars {
@@ -115,6 +119,7 @@ function paymentText(v: PaymentVars, lead: string, amountLabel = '결제 금액'
     '',
     `구독 관리: ${SUBSCRIPTION_URL}`,
     v.receiptUrl ? `영수증: ${v.receiptUrl}` : null,
+    v.receiptUrl ? RECEIPT_AUTH_NOTE : null,
   ])
 }
 
@@ -133,7 +138,7 @@ export function buildPaymentFirstEmail(v: PaymentVars): EmailContent {
       bodyHtml: greeting(v.recipientName) + paragraph(lead) + infoTable(paymentRows(v)) + paragraph(AUTO_RENEW_NOTE),
       cta: { label: '대시보드 바로가기', url: DASHBOARD_URL },
       secondaryLink: v.receiptUrl ? { label: '영수증 보기', url: v.receiptUrl } : undefined,
-      footerNote: SUBSCRIPTION_FOOTER,
+      footerNote: v.receiptUrl ? `${SUBSCRIPTION_FOOTER}<br>${RECEIPT_AUTH_NOTE}` : SUBSCRIPTION_FOOTER,
     }),
     text: paymentText(v, `${BRAND} 구독 결제가 정상적으로 완료되었습니다. ${AUTO_RENEW_NOTE}`),
   }
@@ -151,7 +156,7 @@ export function buildSubscriptionRenewedEmail(v: PaymentVars): EmailContent {
       bodyHtml: greeting(v.recipientName) + paragraph(lead) + infoTable(paymentRows(v)) + paragraph(AUTO_RENEW_NOTE),
       cta: { label: '구독 관리', url: SUBSCRIPTION_URL },
       secondaryLink: v.receiptUrl ? { label: '영수증 보기', url: v.receiptUrl } : undefined,
-      footerNote: SUBSCRIPTION_FOOTER,
+      footerNote: v.receiptUrl ? `${SUBSCRIPTION_FOOTER}<br>${RECEIPT_AUTH_NOTE}` : SUBSCRIPTION_FOOTER,
     }),
     text: paymentText(v, `${BRAND} 구독이 정상적으로 갱신되었습니다. ${AUTO_RENEW_NOTE}`),
   }
@@ -177,7 +182,7 @@ export function buildScheduledPlanChangeAppliedEmail(v: PaymentVars): EmailConte
       bodyHtml: greeting(v.recipientName) + paragraph(lead) + infoTable(planChangeRows(v, '결제 금액')) + paragraph(AUTO_RENEW_NOTE),
       cta: { label: '구독 관리', url: SUBSCRIPTION_URL },
       secondaryLink: v.receiptUrl ? { label: '영수증 보기', url: v.receiptUrl } : undefined,
-      footerNote: SUBSCRIPTION_FOOTER,
+      footerNote: v.receiptUrl ? `${SUBSCRIPTION_FOOTER}<br>${RECEIPT_AUTH_NOTE}` : SUBSCRIPTION_FOOTER,
     }),
     text: paymentText(v, `예약하신 플랜 변경이 이번 결제일에 적용되었습니다. 오늘부터 ${v.planName} 플랜으로 이용하실 수 있습니다.`),
   }
@@ -197,7 +202,7 @@ export function buildImmediatePlanChangeEmail(v: PaymentVars): EmailContent {
       bodyHtml: greeting(v.recipientName) + paragraph(lead) + infoTable(planChangeRows(v, '이번 결제 금액')) + paragraph(note),
       cta: { label: '대시보드 바로가기', url: DASHBOARD_URL },
       secondaryLink: v.receiptUrl ? { label: '영수증 보기', url: v.receiptUrl } : undefined,
-      footerNote: SUBSCRIPTION_FOOTER,
+      footerNote: v.receiptUrl ? `${SUBSCRIPTION_FOOTER}<br>${RECEIPT_AUTH_NOTE}` : SUBSCRIPTION_FOOTER,
     }),
     text: paymentText(v, `요청하신 플랜 변경이 완료되었습니다. ${note}`, '이번 결제 금액'),
   }

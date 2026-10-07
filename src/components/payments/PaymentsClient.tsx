@@ -494,6 +494,12 @@ export default function PaymentsClient({
                             토스 영수증 보기
                           </a>
                         )}
+                        {selectedTransaction.receipt_url && (
+                          <p className="text-xs text-gray-500 leading-relaxed">
+                            영수증을 열면 토스페이먼츠의 본인 확인 화면이 먼저 표시됩니다. 결제에 사용한 카드번호
+                            또는 승인 정보(승인번호·결제 금액·결제일)를 입력하시면 확인하실 수 있습니다.
+                          </p>
+                        )}
 
                         {!selectedTransaction.tax_invoice_requested && (
                           <button
