@@ -9,7 +9,8 @@ type CampaignStatus = 'active' | 'paused' | 'ended'
 function mapStatus(status?: string, servingStatus?: string): CampaignStatus {
   // 종료일이 지난 캠페인은 status가 ENABLED로 남아도 serving_status가 ENDED가 된다
   if (status === 'REMOVED' || servingStatus === 'ENDED') return 'ended'
-  if (status === 'ENABLED' && servingStatus === 'SERVING') return 'active'
+  // 시작 전(PENDING)·검토 중이어도 사용 설정된 캠페인은 Meta의 ACTIVE처럼 '게재 중'으로 본다
+  if (status === 'ENABLED') return 'active'
   return 'paused'
 }
 
