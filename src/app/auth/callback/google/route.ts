@@ -72,7 +72,12 @@ export async function GET(request: NextRequest) {
 
     const accounts = await listConnectableAccounts(token.accessToken)
     if (accounts.length === 0) {
-      return redirectWith(request, 'error', '이 구글 계정으로 접근할 수 있는 광고 계정이 없습니다.')
+      // 운영 중지(해지)된 계정은 API로 조회되지 않아 목록에서 빠진다
+      return redirectWith(
+        request,
+        'error',
+        '이 구글 계정으로 연결할 수 있는 광고 계정이 없습니다. 운영 중지된 계정은 구글 광고에서 재활성화한 뒤 다시 연결해주세요.'
+      )
     }
 
     // 쓰기는 앱 코드에서 관리자 확인을 마친 뒤 서비스 롤로 한다 (ad_accounts RLS는 옛 role 기준)
