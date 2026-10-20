@@ -4,6 +4,7 @@ import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
+import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 
 export const metadata: Metadata = {
   robots: {
@@ -86,7 +87,9 @@ export default async function DashboardLayout({
       subscriptionStatus={subscriptionStatus}
       currentPlanName={currentPlanName}
       trialDDay={trialDDay}
-      showAdPerformance={isMetaEnabledForCompany(userProfile?.company_id)}
+      showAdPerformance={
+        isMetaEnabledForCompany(userProfile?.company_id) || isGoogleAdsEnabledForCompany(userProfile?.company_id)
+      }
     >
       {children}
     </DashboardLayoutClient>

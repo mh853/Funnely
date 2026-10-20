@@ -1,5 +1,5 @@
 'use client'
-// 광고 성과 화면의 Meta 계정 연결·지금 동기화·연결 해제 버튼과 계정 상태 목록
+// 광고 성과 화면의 플랫폼별(Meta·구글) 계정 연결·지금 동기화·연결 해제 버튼과 계정 상태 목록
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -14,7 +14,18 @@ interface AccountItem {
   lastSyncError: string | null
 }
 
-export default function AdAccountActions({ canManage, accounts }: { canManage: boolean; accounts: AccountItem[] }) {
+const PLATFORM_LABEL = { meta: 'Meta', google: '구글' } as const
+
+export default function AdAccountActions({
+  platform,
+  canManage,
+  accounts,
+}: {
+  platform: 'meta' | 'google'
+  canManage: boolean
+  accounts: AccountItem[]
+}) {
+  const label = PLATFORM_LABEL[platform]
   const router = useRouter()
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -25,7 +36,11 @@ export default function AdAccountActions({ canManage, accounts }: { canManage: b
     setSyncing(true)
     setMessage(null)
     try {
-      const res = await fetch('/api/ad-accounts/sync', { method: 'POST' })
+      const res = await fetch('/api/ad-accounts/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ platform }),
+      })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || '동기화에 실패했습니다.')
       const failed = (data.results || []).filter((r: any) => r.status !== 'success').length
@@ -58,7 +73,7 @@ export default function AdAccountActions({ canManage, accounts }: { canManage: b
     <div className="bg-white rounded-xl border border-gray-200 p-4 space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-gray-900">Meta 광고 계정</h2>
+          <h2 className="text-sm font-semibold text-gray-900">{label} 광고 계정</h2>
           <p className="text-xs text-gray-500 mt-0.5">
             {accounts.length === 0
               ? '광고 계정을 연결하면 캠페인별 광고비·노출·클릭·전환을 확인할 수 있습니다'
@@ -76,12 +91,12 @@ export default function AdAccountActions({ canManage, accounts }: { canManage: b
                 {syncing ? '불러오는 중...' : '지금 동기화'}
               </button>
             )}
-            {/* 서버 라우트가 state 쿠키를 심고 Meta 로그인으로 바로 보낸다 */}
+            {/* 서버 라우트가 state 쿠키를 심고 Meta 로그인·Google 동의 화면으로 바로 보낸다 */}
             <a
-              href="/api/ad-accounts/connect/meta"
+              href={`/api/ad-accounts/connect/${platform}`}
               className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
             >
-              {accounts.length === 0 ? 'Meta 광고 계정 연결' : anyNeedsReconnect ? '다시 연결' : '계정 추가·다시 연결'}
+              {accounts.length === 0 ? `${label} 광고 계정 연결` : anyNeedsReconnect ? '다시 연결' : '계정 추가·다시 연결'}
             </a>
           </div>
         ) : (
@@ -111,7 +126,7 @@ export default function AdAccountActions({ canManage, accounts }: { canManage: b
                   ) : (
                     <span className="text-gray-500">
                       {a.lastSyncedAt ? `마지막 동기화 ${a.lastSyncedAt}` : '아직 동기화 전'}
-                      {!a.isActive && ' · Meta에서 비활성 상태인 계정(지난 성과만 조회)'}
+                      {!a.isActive && ` · ${label}에서 비활성 상태인 계정(지난 성과만 조회)`}
                     </span>
                   )}
                 </p>

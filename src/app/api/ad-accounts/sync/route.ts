@@ -1,16 +1,19 @@
-// 회사에 연결된 Meta 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일)
-import { NextResponse } from 'next/server'
+// 회사에 연결된 Meta·구글 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 플랫폼별)
+import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { isMetaConfigured, isMetaEnabledForCompany } from '@/lib/ads/meta'
+import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
+import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
+import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 
 export const maxDuration = 300
 
-export async function POST() {
-  if (!isMetaConfigured()) {
-    return NextResponse.json({ error: 'Meta 연동이 아직 준비되지 않았습니다.' }, { status: 503 })
-  }
+export async function POST(request: NextRequest) {
+  // 본문이 없던 예전 화면 요청은 Meta로 본다
+  const body = await request.json().catch(() => ({}))
+  const platform = body?.platform === 'google' ? 'google' : 'meta'
+  const label = platform === 'google' ? '구글 광고' : 'Meta'
 
   const supabase = await createClient()
   const {
@@ -28,16 +31,18 @@ export async function POST() {
   if (!userProfile?.company_id || !isAdminOrLegacyOwner(userProfile)) {
     return NextResponse.json({ error: '회사 관리자만 동기화할 수 있습니다.' }, { status: 403 })
   }
-  if (!isMetaEnabledForCompany(userProfile.company_id)) {
-    return NextResponse.json({ error: 'Meta 연동이 아직 준비되지 않았습니다.' }, { status: 503 })
+  const enabled =
+    platform === 'google' ? isGoogleAdsEnabledForCompany(userProfile.company_id) : isMetaEnabledForCompany(userProfile.company_id)
+  if (!enabled) {
+    return NextResponse.json({ error: `${label} 연동이 아직 준비되지 않았습니다.` }, { status: 503 })
   }
 
   const admin = createServiceClient() as any
   const { data: accounts, error } = await admin
     .from('ad_accounts')
-    .select('id, company_id, account_id, access_token, token_expires_at, metadata')
+    .select('id, company_id, account_id, access_token, refresh_token, token_expires_at, metadata')
     .eq('company_id', userProfile.company_id)
-    .eq('platform', 'meta')
+    .eq('platform', platform)
     .eq('is_active', true)
   if (error) {
     return NextResponse.json({ error: '광고 계정을 불러오지 못했습니다.' }, { status: 500 })
@@ -45,7 +50,7 @@ export async function POST() {
 
   const results = []
   for (const account of accounts || []) {
-    results.push(await syncMetaAdAccount(admin, account, 30))
+    results.push(platform === 'google' ? await syncGoogleAdAccount(admin, account, 30) : await syncMetaAdAccount(admin, account, 30))
   }
   return NextResponse.json({ results })
 }

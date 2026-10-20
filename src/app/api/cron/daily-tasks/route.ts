@@ -24,6 +24,8 @@ import { recordCronRun, purgeOldCronRunLogs } from '@/lib/cron/run-log'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import { isMetaConfigured } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
+import { isGoogleAdsConfigured } from '@/lib/ads/google'
+import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -244,22 +246,24 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Task 3b: Meta 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
-    console.log('[Cron] Running Meta ad performance sync')
-    try {
-      const metaResult = await syncMetaAdPerformance(supabase)
-      results.tasksExecuted.push({
-        task: 'meta_ads_sync',
-        status: 'success',
-        ...metaResult,
-      })
-    } catch (error) {
-      console.error('[Cron] Meta ads sync error:', error)
-      results.tasksExecuted.push({
-        task: 'meta_ads_sync',
-        status: 'error',
-        error: error instanceof Error ? error.message : 'Unknown error',
-      })
+    // Task 3b: Meta·구글 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
+    for (const platform of ['meta', 'google'] as const) {
+      console.log(`[Cron] Running ${platform} ad performance sync`)
+      try {
+        const adResult = await syncAdPerformance(supabase, platform)
+        results.tasksExecuted.push({
+          task: `${platform}_ads_sync`,
+          status: 'success',
+          ...adResult,
+        })
+      } catch (error) {
+        console.error(`[Cron] ${platform} ads sync error:`, error)
+        results.tasksExecuted.push({
+          task: `${platform}_ads_sync`,
+          status: 'error',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        })
+      }
     }
 
     // Task 4: Detect Growth Opportunities
@@ -672,19 +676,19 @@ async function disableSheetSyncAfterRepeatedFailures(supabase: any, config: any)
  * Sync Google Sheets for all active configs
  */
 /**
- * 연결된 Meta 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
+ * 연결된 Meta·구글 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
  * 시트 동기화와 같은 기준(pickCurrentSubscription + hasValidPlanAccess)으로 건너뛰고,
  * 한 계정의 토큰 만료·오류가 다른 계정 동기화를 막지 않도록 계정별로 결과만 모은다.
  */
-async function syncMetaAdPerformance(supabase: any) {
-  if (!isMetaConfigured()) {
-    return { message: 'Meta app not configured', synced: 0 }
+async function syncAdPerformance(supabase: any, platform: 'meta' | 'google') {
+  if (!(platform === 'google' ? isGoogleAdsConfigured() : isMetaConfigured())) {
+    return { message: `${platform} app not configured`, synced: 0 }
   }
 
   const { data: accounts, error } = await supabase
     .from('ad_accounts')
-    .select('id, company_id, account_id, access_token, token_expires_at, metadata, companies!inner(is_active, withdrawn_at)')
-    .eq('platform', 'meta')
+    .select('id, company_id, account_id, access_token, refresh_token, token_expires_at, metadata, companies!inner(is_active, withdrawn_at)')
+    .eq('platform', platform)
     .eq('is_active', true)
     .eq('companies.is_active', true)
     .is('companies.withdrawn_at', null)
@@ -692,7 +696,7 @@ async function syncMetaAdPerformance(supabase: any) {
     throw new Error(`Failed to fetch ad accounts: ${error.message}`)
   }
   if (!accounts || accounts.length === 0) {
-    return { message: 'No connected Meta ad accounts', synced: 0 }
+    return { message: `No connected ${platform} ad accounts`, synced: 0 }
   }
 
   const companyIds = Array.from(new Set(accounts.map((a: any) => a.company_id)))
@@ -702,7 +706,7 @@ async function syncMetaAdPerformance(supabase: any) {
     .in('company_id', companyIds)
     .order('created_at', { ascending: false })
   if (subError) {
-    throw new Error(`Failed to fetch subscriptions for Meta sync: ${subError.message}`)
+    throw new Error(`Failed to fetch subscriptions for ${platform} ads sync: ${subError.message}`)
   }
   const subsByCompany = new Map<string, any[]>()
   for (const row of subRows || []) {
@@ -717,7 +721,9 @@ async function syncMetaAdPerformance(supabase: any) {
       accountResults.push({ accountId: account.account_id, status: 'skipped_no_access' })
       continue
     }
-    accountResults.push(await syncMetaAdAccount(supabase, account, 7))
+    accountResults.push(
+      platform === 'google' ? await syncGoogleAdAccount(supabase, account, 7) : await syncMetaAdAccount(supabase, account, 7)
+    )
   }
 
   return {

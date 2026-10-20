@@ -1,20 +1,23 @@
-// 연결된 Meta 광고 계정의 캠페인별 성과(광고비·노출·클릭·전환)를 기간별로 조회하는 페이지
+// 연결된 Meta·구글 광고 계정의 캠페인별 성과(광고비·노출·클릭·전환)를 기간별로 조회하는 페이지
 import { createClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
+import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
 
 const PERIODS = [7, 30] as const
+const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글' }
 
 interface CampaignSummary {
   id: string
   name: string
   status: string
+  platform: string
   accountName: string
   spend: number
   impressions: number
@@ -30,9 +33,9 @@ function formatKSTDateTime(dateStr: string) {
 export default async function AdPerformancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ days?: string; error?: string; connected?: string }>
+  searchParams: Promise<{ days?: string; error?: string; connected?: string; platform?: string }>
 }) {
-  const { days: daysParam, error, connected } = await searchParams
+  const { days: daysParam, error, connected, platform: connectedPlatform } = await searchParams
   const days = PERIODS.includes(Number(daysParam) as any) ? Number(daysParam) : 30
 
   const supabase = await createClient()
@@ -49,15 +52,19 @@ export default async function AdPerformancePage({
   if (!userProfile?.company_id) redirect('/auth/login')
 
   const canManage = isAdminOrLegacyOwner(userProfile)
-  const configured = isMetaEnabledForCompany(userProfile.company_id)
+  const enabledPlatforms = [
+    ...(isMetaEnabledForCompany(userProfile.company_id) ? ['meta' as const] : []),
+    ...(isGoogleAdsEnabledForCompany(userProfile.company_id) ? ['google' as const] : []),
+  ]
+  const configured = enabledPlatforms.length > 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
 
   const { data: accounts } = await db
     .from('ad_accounts')
-    .select('id, account_id, account_name, is_active, token_expires_at, metadata')
+    .select('id, platform, account_id, account_name, is_active, token_expires_at, metadata')
     .eq('company_id', userProfile.company_id)
-    .eq('platform', 'meta')
+    .in('platform', enabledPlatforms)
     .order('created_at', { ascending: true })
 
   const until = toKSTDateStr(new Date())
@@ -69,8 +76,9 @@ export default async function AdPerformancePage({
     for (let from = 0; ; from += 1000) {
       const { data } = await db
         .from('campaign_metrics')
-        .select('impressions, clicks, spend, conversions, campaigns!inner(id, name, status, ad_accounts!inner(company_id, account_name))')
+        .select('impressions, clicks, spend, conversions, campaigns!inner(id, name, status, ad_accounts!inner(company_id, platform, account_name))')
         .eq('campaigns.ad_accounts.company_id', userProfile.company_id)
+        .in('campaigns.ad_accounts.platform', enabledPlatforms)
         .gte('date', since)
         .lte('date', until)
         .range(from, from + 999)
@@ -86,6 +94,7 @@ export default async function AdPerformancePage({
       id: c.id,
       name: c.name,
       status: c.status,
+      platform: c.ad_accounts?.platform ?? '',
       accountName: c.ad_accounts?.account_name ?? '',
       spend: 0,
       impressions: 0,
@@ -136,7 +145,7 @@ export default async function AdPerformancePage({
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">광고 성과</h1>
-            <p className="text-xs text-gray-500 mt-0.5">연결한 Meta 광고 계정의 캠페인별 성과를 확인합니다</p>
+            <p className="text-xs text-gray-500 mt-0.5">연결한 광고 계정의 캠페인별 성과를 확인합니다</p>
           </div>
         </div>
         {configured && accounts && accounts.length > 0 && (
@@ -159,27 +168,33 @@ export default async function AdPerformancePage({
       {error && <div className="p-4 rounded-lg bg-red-50 text-sm text-red-700">{error}</div>}
       {connected && (
         <div className="p-4 rounded-lg bg-green-50 text-sm text-green-800">
-          Meta 광고 계정 {connected}개가 연결되었습니다. 최근 30일 성과를 불러왔습니다.
+          {connectedPlatform === 'google' ? '구글' : 'Meta'} 광고 계정 {connected}개가 연결되었습니다. 최근 30일 성과를 불러왔습니다.
         </div>
       )}
 
       {!configured ? (
         <div className="p-6 rounded-xl bg-white border border-gray-200 text-sm text-gray-600">
-          Meta 광고 성과 연동을 준비 중입니다. 준비가 끝나면 이 화면에서 광고 계정을 연결할 수 있습니다.
+          광고 성과 연동을 준비 중입니다. 준비가 끝나면 이 화면에서 광고 계정을 연결할 수 있습니다.
         </div>
       ) : (
-        <AdAccountActions
-          canManage={canManage}
-          accounts={(accounts || []).map((a: any) => ({
-            id: a.id,
-            name: a.account_name,
-            accountId: a.account_id,
-            isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
-            needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
-            lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
-            lastSyncError: a.metadata?.last_sync_error ?? null,
-          }))}
-        />
+        enabledPlatforms.map((platform) => (
+          <AdAccountActions
+            key={platform}
+            platform={platform}
+            canManage={canManage}
+            accounts={(accounts || [])
+              .filter((a: any) => a.platform === platform)
+              .map((a: any) => ({
+                id: a.id,
+                name: a.account_name,
+                accountId: a.account_id,
+                isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
+                needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
+                lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
+                lastSyncError: a.metadata?.last_sync_error ?? null,
+              }))}
+          />
+        ))
       )}
 
       {configured && accounts && accounts.length > 0 && (
@@ -220,7 +235,11 @@ export default async function AdPerformancePage({
                     <tr key={c.id}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-900">{c.name}</p>
-                        {accounts.length > 1 && <p className="text-xs text-gray-500">{c.accountName}</p>}
+                        {accounts.length > 1 && (
+                          <p className="text-xs text-gray-500">
+                            {PLATFORM_LABEL[c.platform] ?? c.platform} · {c.accountName}
+                          </p>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-gray-600">{statusLabel[c.status] ?? c.status}</td>
                       <td className="px-4 py-3 text-right">{money(c.spend)}</td>
@@ -237,8 +256,8 @@ export default async function AdPerformancePage({
             </table>
           </div>
           <p className="text-xs text-gray-500">
-            성과는 매일 오전 8시에 최근 7일치를 다시 받아오며, Meta 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
-            전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트 기준입니다.
+            성과는 매일 오전 8시에 최근 7일치를 다시 받아오며, 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
+            Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
           </p>
         </>
       )}
