@@ -155,6 +155,8 @@ export interface MetaCampaign {
   name: string
   effective_status?: string
   objective?: string
+  // 소속 광고 세트들의 종료 시각을 합친 값(읽기 전용, 없을 수 있음)
+  stop_time?: string
 }
 
 // ad_accounts.account_id는 예전 연동부터 `act_123` 형태로 저장돼 있어 두 형태를 모두 받는다
@@ -165,7 +167,7 @@ function actPath(accountId: string) {
 export function listCampaigns(accessToken: string, accountId: string) {
   return graphFetchAll<MetaCampaign>(
     `${actPath(accountId)}/campaigns`,
-    { fields: 'id,name,effective_status,objective', limit: '200' },
+    { fields: 'id,name,effective_status,objective,stop_time', limit: '200' },
     accessToken
   )
 }

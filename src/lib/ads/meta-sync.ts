@@ -21,7 +21,9 @@ export interface AdAccountRow {
   metadata: Record<string, any> | null
 }
 
-function mapStatus(effectiveStatus?: string): 'active' | 'paused' | 'ended' {
+function mapStatus(effectiveStatus?: string, stopTime?: string): 'active' | 'paused' | 'ended' {
+  // 광고 세트 종료일이 지나도 캠페인 effective_status는 ACTIVE로 남아, 광고 관리자의 '완료됨'은 stop_time으로 판단한다
+  if (stopTime && new Date(stopTime).getTime() <= Date.now()) return 'ended'
   if (effectiveStatus === 'ACTIVE') return 'active'
   if (effectiveStatus === 'ARCHIVED' || effectiveStatus === 'DELETED') return 'ended'
   return 'paused'
@@ -71,7 +73,7 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
     // 인사이트엔 있지만 캠페인 목록엔 없는(삭제된) 캠페인도 성과는 보여야 하므로 함께 저장한다
     const campaignRows = new Map<string, { name: string; status: 'active' | 'paused' | 'ended'; objective: string | null }>()
     for (const c of campaigns) {
-      campaignRows.set(c.id, { name: c.name, status: mapStatus(c.effective_status), objective: c.objective || null })
+      campaignRows.set(c.id, { name: c.name, status: mapStatus(c.effective_status, c.stop_time), objective: c.objective || null })
     }
     for (const i of insights) {
       if (!campaignRows.has(i.campaign_id)) {
