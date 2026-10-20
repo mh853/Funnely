@@ -67,6 +67,13 @@ export default async function AdPerformancePage({
     .in('platform', enabledPlatforms)
     .order('created_at', { ascending: true })
 
+  const latestSyncedAt: string | null =
+    (accounts || [])
+      .map((a: any) => a.metadata?.last_synced_at as string | undefined)
+      .filter(Boolean)
+      .sort()
+      .pop() ?? null
+
   const until = toKSTDateStr(new Date())
   const since = toKSTDateStr(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000))
 
@@ -177,24 +184,25 @@ export default async function AdPerformancePage({
           광고 성과 연동을 준비 중입니다. 준비가 끝나면 이 화면에서 광고 계정을 연결할 수 있습니다.
         </div>
       ) : (
-        enabledPlatforms.map((platform) => (
-          <AdAccountActions
-            key={platform}
-            platform={platform}
-            canManage={canManage}
-            accounts={(accounts || [])
-              .filter((a: any) => a.platform === platform)
-              .map((a: any) => ({
-                id: a.id,
-                name: a.account_name,
-                accountId: a.account_id,
-                isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
-                needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
-                lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
-                lastSyncError: a.metadata?.last_sync_error ?? null,
-              }))}
-          />
-        ))
+        <AdAccountActions
+          platforms={enabledPlatforms}
+          canManage={canManage}
+          // 플랫폼 순서(Meta → 구글)로 묶어 보여준다
+          accounts={(accounts || [])
+            .slice()
+            .sort((a: any, b: any) => enabledPlatforms.indexOf(a.platform) - enabledPlatforms.indexOf(b.platform))
+            .map((a: any) => ({
+              id: a.id,
+              platform: a.platform,
+              name: a.account_name,
+              accountId: a.account_id,
+              isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
+              needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
+              lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
+              lastSyncError: a.metadata?.last_sync_error ?? null,
+            }))}
+          latestSyncedAt={latestSyncedAt ? formatKSTDateTime(latestSyncedAt) : null}
+        />
       )}
 
       {configured && accounts && accounts.length > 0 && (
