@@ -7,10 +7,11 @@ import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
+import { HISTORY_DAYS, syncDaysFor } from '@/lib/ads/sync-window'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
+import { PRESETS, resolvePeriod } from './period'
 
-const PERIODS = [7, 30] as const
 const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글' }
 
 interface CampaignSummary {
@@ -33,10 +34,12 @@ function formatKSTDateTime(dateStr: string) {
 export default async function AdPerformancePage({
   searchParams,
 }: {
-  searchParams: Promise<{ days?: string; error?: string; connected?: string; platform?: string }>
+  searchParams: Promise<{ days?: string; range?: string; from?: string; to?: string; error?: string; connected?: string; platform?: string }>
 }) {
-  const { days: daysParam, error, connected, platform: connectedPlatform } = await searchParams
-  const days = PERIODS.includes(Number(daysParam) as any) ? Number(daysParam) : 30
+  const params = await searchParams
+  const { error, connected, platform: connectedPlatform } = params
+  const period = resolvePeriod(params)
+  const { since, until } = period
 
   const supabase = await createClient()
   const {
@@ -74,8 +77,16 @@ export default async function AdPerformancePage({
       .sort()
       .pop() ?? null
 
-  const until = toKSTDateStr(new Date())
-  const since = toKSTDateStr(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000))
+  // 받아 둔 과거 성과의 시작일 - 이보다 이른 기간을 고르면 안내한다
+  const historySince: string | null =
+    (accounts || [])
+      .map((a: any) => a.metadata?.history_since as string | undefined)
+      .filter(Boolean)
+      .sort()[0] ?? null
+  // 동기화 대상(활성·연결 유효) 계정 중 1년치를 아직 못 받은 계정 - 배포 전 연결했거나 1년치 동기화가 실패한 경우
+  const historyPending = (accounts || []).some(
+    (a: any) => a.is_active && !a.metadata?.needs_reconnect && !isTokenExpired(a) && syncDaysFor(a, 0) === HISTORY_DAYS
+  )
 
   // 캠페인 수 × 일수가 한 번에 받을 수 있는 행 수(1000)를 넘을 수 있어 나눠서 받는다
   const metrics: any[] = []
@@ -155,27 +166,12 @@ export default async function AdPerformancePage({
             <p className="text-xs text-gray-500 mt-0.5">연결한 광고 계정의 캠페인별 성과를 확인합니다</p>
           </div>
         </div>
-        {configured && accounts && accounts.length > 0 && (
-          <div className="flex gap-2">
-            {PERIODS.map((p) => (
-              <Link
-                key={p}
-                href={`/dashboard/ad-performance?days=${p}`}
-                className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
-                  p === days ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                최근 {p}일
-              </Link>
-            ))}
-          </div>
-        )}
       </div>
 
       {error && <div className="p-4 rounded-lg bg-red-50 text-sm text-red-700">{error}</div>}
       {connected && (
         <div className="p-4 rounded-lg bg-green-50 text-sm text-green-800">
-          {connectedPlatform === 'google' ? '구글' : 'Meta'} 광고 계정 {connected}개가 연결되었습니다. 최근 30일 성과를 불러왔습니다.
+          {connectedPlatform === 'google' ? '구글' : 'Meta'} 광고 계정 {connected}개가 연결되었습니다. 최근 1년 성과를 불러왔습니다.
         </div>
       )}
 
@@ -207,6 +203,61 @@ export default async function AdPerformancePage({
 
       {configured && accounts && accounts.length > 0 && (
         <>
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2">
+              {PRESETS.map((p) => (
+                <Link
+                  key={p.key}
+                  href={`/dashboard/ad-performance${p.href}`}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border ${
+                    p.key === period.key ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  {p.label}
+                </Link>
+              ))}
+            </div>
+            {/* 서버 컴포넌트 그대로 GET으로 다시 그린다 */}
+            <form action="/dashboard/ad-performance" className="flex flex-wrap items-center gap-2 text-sm">
+              <input
+                type="date"
+                name="from"
+                defaultValue={since}
+                max={until}
+                required
+                aria-label="시작일"
+                className={`px-2 py-1.5 rounded-lg border ${period.key === 'custom' ? 'border-indigo-600' : 'border-gray-300'}`}
+              />
+              <span className="text-gray-500">~</span>
+              <input
+                type="date"
+                name="to"
+                defaultValue={until}
+                max={toKSTDateStr(new Date())}
+                required
+                aria-label="종료일"
+                className={`px-2 py-1.5 rounded-lg border ${period.key === 'custom' ? 'border-indigo-600' : 'border-gray-300'}`}
+              />
+              <button type="submit" className="px-3 py-1.5 rounded-lg font-medium border border-gray-300 text-gray-700 hover:bg-gray-50">
+                조회
+              </button>
+            </form>
+          </div>
+
+          {((historySince && since < historySince) || historyPending) && (
+            <div className="p-3 rounded-lg bg-amber-50 text-sm text-amber-800 space-y-1">
+              {historySince && since < historySince && (
+                <p>{historySince} 이전 성과는 받아오지 않았습니다. 광고 계정을 연결할 때 최근 1년 성과를 받아옵니다.</p>
+              )}
+              {historyPending && (
+                <p>
+                  일부 계정은 과거 1년 성과를 아직 받지 않았습니다. 다음 날 오전 자동 동기화 때 받아옵니다
+                  {canManage ? " ('지금 동기화'를 누르면 바로 받아옵니다)" : ''}.
+                </p>
+              )}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {summaryCards.map((card) => (
               <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4">
@@ -235,7 +286,7 @@ export default async function AdPerformancePage({
                 {campaigns.length === 0 ? (
                   <tr>
                     <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
-                      최근 {days}일 동안 집계된 광고 성과가 없습니다
+                      선택한 기간({period.label})에 집계된 광고 성과가 없습니다
                     </td>
                   </tr>
                 ) : (
@@ -264,7 +315,7 @@ export default async function AdPerformancePage({
             </table>
           </div>
           <p className="text-xs text-gray-500">
-            성과는 매일 오전 8시에 최근 7일치를 다시 받아오며, 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
+            광고 계정을 연결할 때 최근 1년 성과를 받아오고, 이후 매일 오전 8시에 최근 7일치를 다시 받아옵니다. 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
             Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
           </p>
         </>

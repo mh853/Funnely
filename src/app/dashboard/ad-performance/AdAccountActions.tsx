@@ -58,7 +58,7 @@ export default function AdAccountActions({
       setMessage(
         failed > 0
           ? { type: 'error', text: `${failed}개 계정을 동기화하지 못했습니다. 계정 관리에서 상태를 확인해주세요.` }
-          : { type: 'success', text: '최근 30일 성과를 다시 불러왔습니다.' }
+          : { type: 'success', text: '최신 성과를 다시 불러왔습니다.' }
       )
       if (failed > 0) setExpanded(true)
       router.refresh()
