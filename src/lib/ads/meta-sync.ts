@@ -88,11 +88,14 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
       impressions: insights.reduce((sum, i) => sum + (Number(i.impressions) || 0), 0),
       spend: insights.reduce((sum, i) => sum + (Number(i.spend) || 0), 0),
     }))
-    // 행동(actions)은 있는데 노출·비용 필드가 통째로 빠진 응답이 와서 실제 성과를 0으로 덮어쓴 적이 있다.
-    // 그런 응답은 저장하지 않고, 받은 필드를 오류로 남긴다.
-    const incomplete = insights.find((i) => i.impressions === undefined && i.spend === undefined)
+    // 2026-10-21 행동(링크 클릭 8 등)은 그대로인데 노출·비용이 0인 응답이 와서 실제 성과를 0으로 덮어썼다.
+    // 노출 없이 행동이 있을 수는 없으므로 그런 응답은 저장하지 않고, Meta가 보낸 원래 값을 오류로 남긴다.
+    const incomplete = insights.find((i) => !(Number(i.impressions) > 0) && (i.actions?.length ?? 0) > 0)
     if (incomplete) {
-      throw new Error(`Meta가 노출·비용 없이 성과를 보냈습니다 (받은 필드: ${Object.keys(incomplete).join(', ')})`)
+      const { date_start, impressions, clicks, spend, reach } = incomplete
+      throw new Error(
+        `Meta가 노출·비용 없이 성과를 보냈습니다 (${JSON.stringify({ date_start, impressions, clicks, spend, reach, fields: Object.keys(incomplete) })})`
+      )
     }
 
     // 인사이트엔 있지만 캠페인 목록엔 없는(삭제된) 캠페인도 성과는 보여야 하므로 함께 저장한다
