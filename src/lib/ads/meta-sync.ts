@@ -1,7 +1,7 @@
 // 연결된 Meta 광고 계정 1개의 캠페인·일자별 성과를 가져와 campaigns / campaign_metrics에 저장
 import { decryptToken } from '@/lib/encryption/credentials'
-import { toKSTDateStr } from '@/lib/utils/date'
 import { MetaApiError, getCampaignDailyInsights, listCampaigns, type MetaCampaignInsight } from './meta'
+import { mergeHistorySince, splitRange, syncRange } from './sync-window'
 
 // 전환으로 셀 action_type - 퍼널리 랜딩 픽셀은 CompleteRegistration, Meta 리드 양식은 lead로 잡힌다.
 // 실제 키는 첫 실데이터 동기화(raw_data.actions)로 확인해 조정한다.
@@ -41,6 +41,14 @@ function countConversions(actions: MetaCampaignInsight['actions']) {
   return Array.from(values.values()).reduce((sum, v) => sum + v, 0)
 }
 
+/** 1년치는 수천 행이 될 수 있어 500행씩 나눠 저장한다 */
+export async function upsertMetricRows(supabase: any, rows: Record<string, any>[]) {
+  for (let i = 0; i < rows.length; i += 500) {
+    const { error } = await supabase.from('campaign_metrics').upsert(rows.slice(i, i + 500), { onConflict: 'campaign_id,date' })
+    if (error) throw new Error(`성과 저장 실패: ${error.message}`)
+  }
+}
+
 export function isTokenExpired(account: Pick<AdAccountRow, 'token_expires_at'>) {
   return !!account.token_expires_at && new Date(account.token_expires_at).getTime() <= Date.now()
 }
@@ -61,14 +69,15 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
   }
 
   const token = decryptToken(account.access_token) || ''
-  const until = toKSTDateStr(new Date())
-  const since = toKSTDateStr(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000))
+  const { since, until } = syncRange(days)
 
   try {
-    const [campaigns, insights] = await Promise.all([
-      listCampaigns(token, account.account_id),
-      getCampaignDailyInsights(token, account.account_id, since, until),
-    ])
+    const campaigns = await listCampaigns(token, account.account_id)
+    // 1년치를 한 번에 요청하면 큰 계정에서 데이터량 오류가 날 수 있어 90일씩 나눠 받는다
+    const insights: MetaCampaignInsight[] = []
+    for (const chunk of splitRange(since, until, 90)) {
+      insights.push(...(await getCampaignDailyInsights(token, account.account_id, chunk.since, chunk.until)))
+    }
 
     // 인사이트엔 있지만 캠페인 목록엔 없는(삭제된) 캠페인도 성과는 보여야 하므로 함께 저장한다
     const campaignRows = new Map<string, { name: string; status: 'active' | 'paused' | 'ended'; objective: string | null }>()
@@ -124,14 +133,14 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
         }
       })
 
-    if (metricRows.length > 0) {
-      const { error } = await supabase
-        .from('campaign_metrics')
-        .upsert(metricRows, { onConflict: 'campaign_id,date' })
-      if (error) throw new Error(`성과 저장 실패: ${error.message}`)
-    }
+    await upsertMetricRows(supabase, metricRows)
 
-    await saveMetadata({ last_synced_at: new Date().toISOString(), last_sync_error: null, needs_reconnect: false })
+    await saveMetadata({
+      last_synced_at: new Date().toISOString(),
+      last_sync_error: null,
+      needs_reconnect: false,
+      history_since: mergeHistorySince(metadata.history_since, since),
+    })
     return { accountId: account.account_id, status: 'success' as const, campaigns: campaignRows.size, days: metricRows.length }
   } catch (error) {
     const needsReconnect = error instanceof MetaApiError && error.needsReconnect

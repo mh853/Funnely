@@ -13,6 +13,7 @@ import {
   listConnectableAccounts,
 } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
+import { HISTORY_DAYS } from '@/lib/ads/sync-window'
 
 // 첫 연결 직후 최근 30일 성과까지 받아오므로 기본 시간보다 넉넉하게 둔다
 export const maxDuration = 300
@@ -110,9 +111,9 @@ export async function GET(request: NextRequest) {
       .select('id, company_id, account_id, access_token, refresh_token, token_expires_at, metadata, is_active')
     if (error) throw new Error(`광고 계정 저장 실패: ${error.message}`)
 
-    // 연결 직후 화면이 비어 있지 않도록 최근 30일을 바로 가져온다 (실패해도 연결 자체는 유지)
+    // 연결 직후 기간을 바꿔 봐도 비어 있지 않도록 최근 1년을 바로 가져온다 (실패해도 연결 자체는 유지)
     for (const account of saved || []) {
-      await syncGoogleAdAccount(admin, account, 30)
+      await syncGoogleAdAccount(admin, account, HISTORY_DAYS)
     }
 
     return redirectWith(request, 'connected', String(accounts.length))

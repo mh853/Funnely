@@ -1,8 +1,8 @@
 // 연결된 구글 광고 계정 1개의 캠페인·일자별 성과를 가져와 campaigns / campaign_metrics에 저장
 import { decryptToken } from '@/lib/encryption/credentials'
-import { toKSTDateStr } from '@/lib/utils/date'
 import { GoogleAdsApiError, getCampaignDailyMetrics, listCampaigns, refreshAccessToken } from './google'
-import type { AdAccountRow } from './meta-sync'
+import { upsertMetricRows, type AdAccountRow } from './meta-sync'
+import { mergeHistorySince, syncRange } from './sync-window'
 
 type CampaignStatus = 'active' | 'paused' | 'ended'
 
@@ -31,8 +31,8 @@ export async function syncGoogleAdAccount(supabase: any, account: AdAccountRow &
   }
 
   const loginCustomerId: string | null = metadata.login_customer_id || null
-  const until = toKSTDateStr(new Date())
-  const since = toKSTDateStr(new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000))
+  // 구글은 1년치도 searchStream 한 번(=1 op)이라 나누지 않는다
+  const { since, until } = syncRange(days)
 
   try {
     const token = await refreshAccessToken(refreshToken)
@@ -98,12 +98,14 @@ export async function syncGoogleAdAccount(supabase: any, account: AdAccountRow &
         }
       })
 
-    if (metricRows.length > 0) {
-      const { error } = await supabase.from('campaign_metrics').upsert(metricRows, { onConflict: 'campaign_id,date' })
-      if (error) throw new Error(`성과 저장 실패: ${error.message}`)
-    }
+    await upsertMetricRows(supabase, metricRows)
 
-    await saveMetadata({ last_synced_at: new Date().toISOString(), last_sync_error: null, needs_reconnect: false })
+    await saveMetadata({
+      last_synced_at: new Date().toISOString(),
+      last_sync_error: null,
+      needs_reconnect: false,
+      history_since: mergeHistorySince(metadata.history_since, since),
+    })
     return { accountId: account.account_id, status: 'success' as const, campaigns: campaignRows.size, days: metricRows.length }
   } catch (error) {
     const apiError = error instanceof GoogleAdsApiError ? error : null

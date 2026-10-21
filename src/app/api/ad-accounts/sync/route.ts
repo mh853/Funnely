@@ -1,4 +1,4 @@
-// 회사에 연결된 Meta·구글 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 플랫폼별)
+// 회사에 연결된 Meta·구글 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 과거 1년을 아직 안 받은 계정은 1년, 플랫폼별)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
@@ -6,6 +6,7 @@ import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
+import { syncDaysFor } from '@/lib/ads/sync-window'
 
 export const maxDuration = 300
 
@@ -50,7 +51,8 @@ export async function POST(request: NextRequest) {
 
   const results = []
   for (const account of accounts || []) {
-    results.push(platform === 'google' ? await syncGoogleAdAccount(admin, account, 30) : await syncMetaAdAccount(admin, account, 30))
+    const days = syncDaysFor(account, 30)
+    results.push(platform === 'google' ? await syncGoogleAdAccount(admin, account, days) : await syncMetaAdAccount(admin, account, days))
   }
   return NextResponse.json({ results })
 }

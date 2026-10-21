@@ -26,6 +26,7 @@ import { isMetaConfigured } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import { isGoogleAdsConfigured } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
+import { syncDaysFor } from '@/lib/ads/sync-window'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -721,8 +722,10 @@ async function syncAdPerformance(supabase: any, platform: 'meta' | 'google') {
       accountResults.push({ accountId: account.account_id, status: 'skipped_no_access' })
       continue
     }
+    // 과거 1년을 아직 안 받은 계정(이 기능 배포 전 연결 등)은 이번에 1년치를 받는다
+    const days = syncDaysFor(account, 7)
     accountResults.push(
-      platform === 'google' ? await syncGoogleAdAccount(supabase, account, 7) : await syncMetaAdAccount(supabase, account, 7)
+      platform === 'google' ? await syncGoogleAdAccount(supabase, account, days) : await syncMetaAdAccount(supabase, account, days)
     )
   }
 
