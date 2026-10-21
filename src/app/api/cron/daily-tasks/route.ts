@@ -723,7 +723,7 @@ async function syncAdPerformance(supabase: any, platform: 'meta' | 'google') {
       continue
     }
     // 과거 1년을 아직 안 받은 계정(이 기능 배포 전 연결 등)은 이번에 1년치를 받는다
-    const days = syncDaysFor(account, 7)
+    const days = syncDaysFor(account, 7, platform)
     accountResults.push(
       platform === 'google' ? await syncGoogleAdAccount(supabase, account, days) : await syncMetaAdAccount(supabase, account, days)
     )

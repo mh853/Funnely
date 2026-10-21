@@ -85,7 +85,7 @@ export default async function AdPerformancePage({
       .sort()[0] ?? null
   // 동기화 대상(활성·연결 유효) 계정 중 1년치를 아직 못 받은 계정 - 배포 전 연결했거나 1년치 동기화가 실패한 경우
   const historyPending = (accounts || []).some(
-    (a: any) => a.is_active && !a.metadata?.needs_reconnect && !isTokenExpired(a) && syncDaysFor(a, 0) === HISTORY_DAYS
+    (a: any) => a.is_active && !a.metadata?.needs_reconnect && !isTokenExpired(a) && syncDaysFor(a, 0, a.platform) === HISTORY_DAYS
   )
 
   // 캠페인 수 × 일수가 한 번에 받을 수 있는 행 수(1000)를 넘을 수 있어 나눠서 받는다
