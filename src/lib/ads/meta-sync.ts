@@ -78,6 +78,16 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
     for (const chunk of splitRange(since, until, 90)) {
       insights.push(...(await getCampaignDailyInsights(token, account.account_id, chunk.since, chunk.until)))
     }
+    // 2026-10-21 실제 성과가 0으로 저장된 일이 있어, 받은 응답의 모양(행 수·필드·합계)을 남겨 둔다
+    console.log('[meta-sync]', JSON.stringify({
+      account: account.account_id,
+      since,
+      until,
+      rows: insights.length,
+      fields: insights[0] ? Object.keys(insights[0]) : [],
+      impressions: insights.reduce((sum, i) => sum + (Number(i.impressions) || 0), 0),
+      spend: insights.reduce((sum, i) => sum + (Number(i.spend) || 0), 0),
+    }))
 
     // 인사이트엔 있지만 캠페인 목록엔 없는(삭제된) 캠페인도 성과는 보여야 하므로 함께 저장한다
     const campaignRows = new Map<string, { name: string; status: 'active' | 'paused' | 'ended'; objective: string | null }>()
