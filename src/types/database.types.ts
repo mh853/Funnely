@@ -4979,7 +4979,7 @@ export type Database = {
       is_super_admin_via_role_assignment: { Args: never; Returns: boolean }
     }
     Enums: {
-      ad_platform: "meta" | "kakao" | "google"
+      ad_platform: "meta" | "kakao" | "google" | "naver"
       budget_type: "daily" | "lifetime"
       campaign_status: "active" | "paused" | "ended" | "draft"
       event_type: "consultation" | "callback" | "meeting" | "task" | "reminder"
@@ -5136,7 +5136,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      ad_platform: ["meta", "kakao", "google"],
+      ad_platform: ["meta", "kakao", "google", "naver"],
       budget_type: ["daily", "lifetime"],
       campaign_status: ["active", "paused", "ended", "draft"],
       event_type: ["consultation", "callback", "meeting", "task", "reminder"],
