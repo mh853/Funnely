@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const results = []
   for (const account of accounts || []) {
-    const days = syncDaysFor(account, 30, platform)
+    const days = syncDaysFor(account, 30)
     results.push(platform === 'google' ? await syncGoogleAdAccount(admin, account, days) : await syncMetaAdAccount(admin, account, days))
   }
   return NextResponse.json({ results })

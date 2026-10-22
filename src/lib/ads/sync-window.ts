@@ -15,9 +15,7 @@ export function syncRange(days: number) {
 }
 
 /** metadata.history_since(받아 둔 가장 이른 날짜)가 1년 범위를 덮지 못하면 1년치를 받는다 */
-export function syncDaysFor(account: { metadata: Record<string, any> | null }, defaultDays: number, platform: string) {
-  // 2026-10-21 Meta 동기화가 실제 성과를 0으로 덮어쓴 원인을 확인할 때까지 Meta는 1년치를 받지 않는다
-  if (platform === 'meta') return defaultDays
+export function syncDaysFor(account: { metadata: Record<string, any> | null }, defaultDays: number) {
   const historySince: string | undefined = account.metadata?.history_since
   return !historySince || historySince > syncRange(HISTORY_DAYS).since ? HISTORY_DAYS : defaultDays
 }
