@@ -5,6 +5,7 @@ import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
+import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 
 export const metadata: Metadata = {
   robots: {
@@ -88,7 +89,9 @@ export default async function DashboardLayout({
       currentPlanName={currentPlanName}
       trialDDay={trialDDay}
       showAdPerformance={
-        isMetaEnabledForCompany(userProfile?.company_id) || isGoogleAdsEnabledForCompany(userProfile?.company_id)
+        isMetaEnabledForCompany(userProfile?.company_id) ||
+        isGoogleAdsEnabledForCompany(userProfile?.company_id) ||
+        isNaverAdsEnabledForCompany(userProfile?.company_id)
       }
     >
       {children}

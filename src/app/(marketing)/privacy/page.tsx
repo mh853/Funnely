@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <main className="pt-32 pb-20">
         <div className="mx-auto max-w-3xl px-6 lg:px-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">개인정보처리방침</h1>
-          <p className="text-sm text-gray-500 mb-10">최종 업데이트: 2026년 10월 20일</p>
+          <p className="text-sm text-gray-500 mb-10">최종 업데이트: 2026년 10월 22일</p>
 
           <div className="prose prose-gray max-w-none space-y-10 text-gray-700 leading-relaxed">
 
@@ -131,7 +131,30 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">8. 이용자의 권리</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">8. 네이버 검색광고 계정 연동</h2>
+              <p>
+                회사 관리자가 &quot;광고 성과&quot; 화면에서 네이버 검색광고 계정 연결을 요청하고, 네이버 광고주센터에서 퍼널리 네이버
+                ID를 &quot;운영 조회&quot; 권한으로 초대하면, 퍼널리는 그 권한으로 네이버 검색광고 API를 통해 아래 정보를 받습니다.
+                광고주의 API 키나 비밀번호는 받지 않습니다.
+              </p>
+              <ul className="mt-3 list-disc pl-6 space-y-1">
+                <li>수집 항목: 검색광고 고객 ID, 광고 계정 이름·번호, 퍼널리에 부여된 권한, 캠페인 이름·유형·상태, 캠페인별 일자 성과(광고비(VAT 포함), 노출, 클릭, 전환 수, 전환 매출)</li>
+                <li>이용 목적: 연결한 회사의 구성원에게 광고 성과를 보여주고 퍼널리에 접수된 리드와 비교할 수 있도록 하기 위함. 조회만 하며 광고·예산을 만들거나 수정하지 않고, 다른 회사나 제3자에게 제공하거나 광고 목적으로 사용하지 않습니다.</li>
+                <li>보유 기간: 연결을 해제할 때까지. 연결을 해제하면 동기화된 성과 데이터를 즉시 삭제합니다.</li>
+              </ul>
+              <p className="mt-3">네이버 광고 연동 데이터 삭제 방법</p>
+              <ul className="mt-3 list-disc pl-6 space-y-1">
+                <li>퍼널리 대시보드 → 광고 성과 → 연결된 계정의 &quot;연결 해제&quot; 버튼 (즉시 삭제)</li>
+                <li>네이버 광고주센터 → 광고 계정 관리 → 설정 → 권한 관리에서 퍼널리 네이버 ID의 권한 해제 (이후 동기화가 중단됩니다)</li>
+                <li>
+                  퍼널리에 로그인할 수 없는 경우, {config.business.phone}
+                  {config.business.email && <> 또는 {config.business.email}</>}로 삭제를 요청하시면 확인 후 지체 없이 삭제합니다.
+                </li>
+              </ul>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">9. 이용자의 권리</h2>
               <p>이용자는 언제든지 아래의 권리를 행사할 수 있습니다.</p>
               <ul className="mt-3 list-disc pl-6 space-y-1">
                 <li>개인정보 열람 요청</li>
@@ -145,7 +168,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">9. 쿠키 사용</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">10. 쿠키 사용</h2>
               <p>
                 회사는 서비스 제공을 위해 쿠키를 사용합니다. 브라우저 설정을 통해 쿠키 사용을 거부할 수 있으나,
                 일부 서비스 기능이 제한될 수 있습니다.
@@ -153,7 +176,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">10. 개인정보 보호책임자</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">11. 개인정보 보호책임자</h2>
               <p>
                 개인정보 보호 관련 문의, 불만, 피해구제 등에 관한 사항은 아래 담당자에게 연락하시기 바랍니다.
               </p>
@@ -164,7 +187,7 @@ export default function PrivacyPage() {
             </section>
 
             <section>
-              <h2 className="text-xl font-semibold text-gray-900 mb-3">11. 개인정보처리방침 변경</h2>
+              <h2 className="text-xl font-semibold text-gray-900 mb-3">12. 개인정보처리방침 변경</h2>
               <p>
                 이 개인정보처리방침은 법령, 정책 또는 보안기술의 변경에 따라 내용이 변경될 수 있습니다.
                 변경 시 서비스 내 공지사항을 통해 안내드립니다.

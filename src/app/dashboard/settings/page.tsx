@@ -11,6 +11,7 @@ import AccountDeletionSection from '@/components/settings/AccountDeletionSection
 import { isAdminUser, isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
+import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 
 export default async function SettingsPage() {
   const supabase = await createClient()
@@ -128,7 +129,9 @@ export default async function SettingsPage() {
     !!activePlan &&
     !(activePlan.name === 'Free' && activePlan.price_monthly === 0)
   const adPerformanceEnabled =
-    isMetaEnabledForCompany(userProfile.company_id) || isGoogleAdsEnabledForCompany(userProfile.company_id)
+    isMetaEnabledForCompany(userProfile.company_id) ||
+    isGoogleAdsEnabledForCompany(userProfile.company_id) ||
+    isNaverAdsEnabledForCompany(userProfile.company_id)
 
   return (
     <div className="px-4 space-y-6">

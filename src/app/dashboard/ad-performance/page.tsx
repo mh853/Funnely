@@ -6,13 +6,14 @@ import { ChartBarIcon } from '@heroicons/react/24/outline'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
+import { getNaverAdsInviteId, isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { HISTORY_DAYS, syncDaysFor } from '@/lib/ads/sync-window'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
 import { PRESETS, resolvePeriod } from './period'
 
-const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글' }
+const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글', naver: '네이버' }
 
 interface CampaignSummary {
   id: string
@@ -58,6 +59,7 @@ export default async function AdPerformancePage({
   const enabledPlatforms = [
     ...(isMetaEnabledForCompany(userProfile.company_id) ? ['meta' as const] : []),
     ...(isGoogleAdsEnabledForCompany(userProfile.company_id) ? ['google' as const] : []),
+    ...(isNaverAdsEnabledForCompany(userProfile.company_id) ? ['naver' as const] : []),
   ]
   const configured = enabledPlatforms.length > 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -194,10 +196,13 @@ export default async function AdPerformancePage({
               accountId: a.account_id,
               isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
               needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
+              // 네이버는 퍼널리 관리자 승인 전까지 pending, 거절되면 rejected (Meta·구글은 값 없음)
+              approval: a.metadata?.approval ?? null,
               lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
               lastSyncError: a.metadata?.last_sync_error ?? null,
             }))}
           latestSyncedAt={latestSyncedAt ? formatKSTDateTime(latestSyncedAt) : null}
+          naverInviteId={getNaverAdsInviteId()}
         />
       )}
 
@@ -317,6 +322,7 @@ export default async function AdPerformancePage({
           <p className="text-xs text-gray-500">
             광고 계정을 연결할 때 최근 1년 성과를 받아오고, 이후 매일 오전 8시에 최근 7일치를 다시 받아옵니다. 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
             Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
+            {enabledPlatforms.includes('naver') && ' 네이버 광고비는 네이버 검색광고가 보고한 VAT 포함 금액입니다.'}
           </p>
         </>
       )}

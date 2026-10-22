@@ -26,6 +26,8 @@ import { isMetaConfigured } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import { isGoogleAdsConfigured } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
+import { isNaverAdsConfigured } from '@/lib/ads/naver'
+import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 import {
   buildExpiring2dEmail,
@@ -247,8 +249,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Task 3b: Meta·구글 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
-    for (const platform of ['meta', 'google'] as const) {
+    // Task 3b: Meta·구글·네이버 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
+    for (const platform of ['meta', 'google', 'naver'] as const) {
       console.log(`[Cron] Running ${platform} ad performance sync`)
       try {
         const adResult = await syncAdPerformance(supabase, platform)
@@ -677,12 +679,18 @@ async function disableSheetSyncAfterRepeatedFailures(supabase: any, config: any)
  * Sync Google Sheets for all active configs
  */
 /**
- * 연결된 Meta·구글 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
+ * 연결된 Meta·구글·네이버 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
  * 시트 동기화와 같은 기준(pickCurrentSubscription + hasValidPlanAccess)으로 건너뛰고,
  * 한 계정의 토큰 만료·오류가 다른 계정 동기화를 막지 않도록 계정별로 결과만 모은다.
  */
-async function syncAdPerformance(supabase: any, platform: 'meta' | 'google') {
-  if (!(platform === 'google' ? isGoogleAdsConfigured() : isMetaConfigured())) {
+const AD_SYNC = {
+  meta: { configured: isMetaConfigured, sync: syncMetaAdAccount },
+  google: { configured: isGoogleAdsConfigured, sync: syncGoogleAdAccount },
+  naver: { configured: isNaverAdsConfigured, sync: syncNaverAdAccount },
+}
+
+async function syncAdPerformance(supabase: any, platform: keyof typeof AD_SYNC) {
+  if (!AD_SYNC[platform].configured()) {
     return { message: `${platform} app not configured`, synced: 0 }
   }
 
@@ -724,9 +732,7 @@ async function syncAdPerformance(supabase: any, platform: 'meta' | 'google') {
     }
     // 과거 1년을 아직 안 받은 계정(이 기능 배포 전 연결 등)은 이번에 1년치를 받는다
     const days = syncDaysFor(account, 7)
-    accountResults.push(
-      platform === 'google' ? await syncGoogleAdAccount(supabase, account, days) : await syncMetaAdAccount(supabase, account, days)
-    )
+    accountResults.push(await AD_SYNC[platform].sync(supabase, account, days))
   }
 
   return {

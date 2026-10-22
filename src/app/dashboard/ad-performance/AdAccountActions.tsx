@@ -1,10 +1,10 @@
 'use client'
-// 광고 성과 화면 상단의 연결 계정 한 줄 요약과, 펼치면 보이는 플랫폼별(Meta·구글) 계정 목록·연결·동기화·연결 해제
+// 광고 성과 화면 상단의 연결 계정 한 줄 요약과, 펼치면 보이는 플랫폼별(Meta·구글·네이버) 계정 목록·연결·동기화·연결 해제
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Platform = 'meta' | 'google'
+type Platform = 'meta' | 'google' | 'naver'
 
 interface AccountItem {
   id: string
@@ -15,29 +15,39 @@ interface AccountItem {
   needsReconnect: boolean
   lastSyncedAt: string | null
   lastSyncError: string | null
+  approval: 'pending' | 'approved' | 'rejected' | null
 }
 
-const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: '구글' }
+const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: '구글', naver: '네이버' }
+
+// 네이버 연결 요청이 승인 전·거절이면 '연결된 계정'으로 세지 않는다
+const isConnected = (a: AccountItem) => a.approval !== 'pending' && a.approval !== 'rejected'
 
 export default function AdAccountActions({
   platforms,
   canManage,
   accounts,
   latestSyncedAt,
+  naverInviteId,
 }: {
   platforms: Platform[]
   canManage: boolean
   accounts: AccountItem[]
   latestSyncedAt: string | null
+  naverInviteId: string
 }) {
   const router = useRouter()
-  const reconnectCount = accounts.filter((a) => a.needsReconnect).length
-  const errorCount = accounts.filter((a) => !a.needsReconnect && a.lastSyncError).length
+  const connected = accounts.filter(isConnected)
+  const reconnectCount = connected.filter((a) => a.needsReconnect).length
+  const errorCount = connected.filter((a) => !a.needsReconnect && a.lastSyncError).length
   // 연결이 없거나 손볼 계정이 있으면 처음부터 펼쳐 둔다
   const [expanded, setExpanded] = useState(accounts.length === 0 || reconnectCount > 0 || errorCount > 0)
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
+  const [naverFormOpen, setNaverFormOpen] = useState(false)
+  const [naverCustomerId, setNaverCustomerId] = useState('')
+  const [naverSubmitting, setNaverSubmitting] = useState(false)
 
   const handleSync = async () => {
     setSyncing(true)
@@ -45,7 +55,7 @@ export default function AdAccountActions({
     try {
       let failed = 0
       // 연결된 계정이 있는 플랫폼만 차례로 동기화한다
-      for (const platform of platforms.filter((p) => accounts.some((a) => a.platform === p))) {
+      for (const platform of platforms.filter((p) => connected.some((a) => a.platform === p))) {
         const res = await fetch('/api/ad-accounts/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -69,6 +79,26 @@ export default function AdAccountActions({
     }
   }
 
+  const handleNaverRequest = async () => {
+    setNaverSubmitting(true)
+    setMessage(null)
+    const res = await fetch('/api/ad-accounts/connect/naver', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId: naverCustomerId }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setNaverSubmitting(false)
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error || '연결 요청에 실패했습니다.' })
+      return
+    }
+    setNaverFormOpen(false)
+    setNaverCustomerId('')
+    setMessage({ type: 'success', text: '연결 요청을 받았습니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.' })
+    router.refresh()
+  }
+
   const handleDisconnect = async (id: string) => {
     setMessage(null)
     const res = await fetch(`/api/ad-accounts/${id}`, { method: 'DELETE' })
@@ -87,7 +117,7 @@ export default function AdAccountActions({
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
           <span className="font-semibold text-gray-900">연결된 계정</span>
           <span className="text-gray-600">
-            {platforms.map((p) => `${PLATFORM_LABEL[p]} ${accounts.filter((a) => a.platform === p).length}`).join(' · ')}
+            {platforms.map((p) => `${PLATFORM_LABEL[p]} ${connected.filter((a) => a.platform === p).length}`).join(' · ')}
           </span>
           {latestSyncedAt && <span className="text-xs text-gray-500">마지막 동기화 {latestSyncedAt}</span>}
           {reconnectCount > 0 && (
@@ -98,7 +128,7 @@ export default function AdAccountActions({
           )}
         </div>
         <div className="flex gap-2 shrink-0">
-          {canManage && accounts.length > 0 && (
+          {canManage && connected.length > 0 && (
             <button
               onClick={handleSync}
               disabled={syncing}
@@ -145,7 +175,11 @@ export default function AdAccountActions({
                         {a.name !== a.accountId && <span className="ml-1 text-xs text-gray-400">({a.accountId})</span>}
                       </p>
                       <p className="text-xs mt-0.5">
-                        {a.needsReconnect ? (
+                        {a.approval === 'pending' ? (
+                          <span className="text-blue-600">승인 대기 — 퍼널리에서 네이버 초대를 확인하고 있습니다</span>
+                        ) : a.approval === 'rejected' ? (
+                          <span className="text-red-600">연결이 승인되지 않았습니다 — 퍼널리 고객센터로 문의해주세요</span>
+                        ) : a.needsReconnect ? (
                           <span className="text-amber-600">재연결 필요 — {a.lastSyncError || '연결이 만료되었습니다'}</span>
                         ) : a.lastSyncError ? (
                           <span className="text-red-600">최근 동기화 실패 — {a.lastSyncError}</span>
@@ -184,6 +218,18 @@ export default function AdAccountActions({
               {/* 서버 라우트가 state 쿠키를 심고 Meta 로그인·Google 동의 화면으로 바로 보낸다 */}
               {platforms.map((p) => {
                 const platformAccounts = accounts.filter((a) => a.platform === p)
+                // 네이버는 OAuth가 없어 초대 안내와 고객 ID 입력 폼을 펼친다
+                if (p === 'naver') {
+                  return (
+                    <button
+                      key={p}
+                      onClick={() => setNaverFormOpen((v) => !v)}
+                      className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      + {platformAccounts.length === 0 ? '네이버 계정 연결' : '네이버 계정 추가'}
+                    </button>
+                  )
+                }
                 const label =
                   platformAccounts.length === 0
                     ? `${PLATFORM_LABEL[p]} 계정 연결`
@@ -200,6 +246,38 @@ export default function AdAccountActions({
                   </a>
                 )
               })}
+            </div>
+          )}
+
+          {canManage && naverFormOpen && (
+            <div className="mt-3 p-4 rounded-lg bg-gray-50 text-sm space-y-3">
+              <p className="font-medium text-gray-900">네이버 검색광고 계정 연결</p>
+              <ol className="list-decimal pl-5 space-y-1 text-gray-700">
+                <li>
+                  네이버 광고주센터에서 [광고 계정 관리] → 연결할 계정 → [설정] → [권한 관리] → [회원 초대]로 이동합니다.
+                </li>
+                <li>
+                  네이버 ID <span className="font-mono font-semibold">{naverInviteId || '(준비 중)'}</span>를 <b>운영 조회</b> 권한으로 초대합니다.
+                </li>
+                <li>아래에 검색광고 고객 ID(숫자)를 입력하고 연결을 요청합니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.</li>
+              </ol>
+              <div className="flex flex-wrap gap-2">
+                <input
+                  value={naverCustomerId}
+                  onChange={(e) => setNaverCustomerId(e.target.value)}
+                  inputMode="numeric"
+                  placeholder="검색광고 고객 ID"
+                  aria-label="네이버 검색광고 고객 ID"
+                  className="px-3 py-2 rounded-lg border border-gray-300 w-48"
+                />
+                <button
+                  onClick={handleNaverRequest}
+                  disabled={naverSubmitting || !naverCustomerId.trim()}
+                  className="px-3 py-2 rounded-lg font-medium bg-blue-600 text-white disabled:opacity-50"
+                >
+                  {naverSubmitting ? '요청 중...' : '연결 요청'}
+                </button>
+              </div>
             </div>
           )}
         </div>

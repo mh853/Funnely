@@ -1,4 +1,4 @@
-// 회사에 연결된 Meta·구글 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 과거 1년을 아직 안 받은 계정은 1년, 플랫폼별)
+// 회사에 연결된 Meta·구글·네이버 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 과거 1년을 아직 안 받은 계정은 1년, 플랫폼별)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
@@ -6,15 +6,23 @@ import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
+import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
+import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 
 export const maxDuration = 300
 
+const PLATFORMS = {
+  meta: { label: 'Meta', enabledFor: isMetaEnabledForCompany, sync: syncMetaAdAccount },
+  google: { label: '구글 광고', enabledFor: isGoogleAdsEnabledForCompany, sync: syncGoogleAdAccount },
+  naver: { label: '네이버 광고', enabledFor: isNaverAdsEnabledForCompany, sync: syncNaverAdAccount },
+}
+
 export async function POST(request: NextRequest) {
   // 본문이 없던 예전 화면 요청은 Meta로 본다
   const body = await request.json().catch(() => ({}))
-  const platform = body?.platform === 'google' ? 'google' : 'meta'
-  const label = platform === 'google' ? '구글 광고' : 'Meta'
+  const platform: keyof typeof PLATFORMS = Object.prototype.hasOwnProperty.call(PLATFORMS, body?.platform) ? body.platform : 'meta'
+  const { label, enabledFor, sync } = PLATFORMS[platform]
 
   const supabase = await createClient()
   const {
@@ -32,8 +40,7 @@ export async function POST(request: NextRequest) {
   if (!userProfile?.company_id || !isAdminOrLegacyOwner(userProfile)) {
     return NextResponse.json({ error: '회사 관리자만 동기화할 수 있습니다.' }, { status: 403 })
   }
-  const enabled =
-    platform === 'google' ? isGoogleAdsEnabledForCompany(userProfile.company_id) : isMetaEnabledForCompany(userProfile.company_id)
+  const enabled = enabledFor(userProfile.company_id)
   if (!enabled) {
     return NextResponse.json({ error: `${label} 연동이 아직 준비되지 않았습니다.` }, { status: 503 })
   }
@@ -52,7 +59,7 @@ export async function POST(request: NextRequest) {
   const results = []
   for (const account of accounts || []) {
     const days = syncDaysFor(account, 30)
-    results.push(platform === 'google' ? await syncGoogleAdAccount(admin, account, days) : await syncMetaAdAccount(admin, account, days))
+    results.push(await sync(admin, account, days))
   }
   return NextResponse.json({ results })
 }
