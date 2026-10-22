@@ -40,8 +40,10 @@ export default function AdAccountActions({
   const connected = accounts.filter(isConnected)
   const reconnectCount = connected.filter((a) => a.needsReconnect).length
   const errorCount = connected.filter((a) => !a.needsReconnect && a.lastSyncError).length
-  // 연결이 없거나 손볼 계정이 있으면 처음부터 펼쳐 둔다
-  const [expanded, setExpanded] = useState(accounts.length === 0 || reconnectCount > 0 || errorCount > 0)
+  // 연결이 없거나 손볼 계정·승인 대기 요청이 있으면 처음부터 펼쳐 둔다
+  const [expanded, setExpanded] = useState(
+    connected.length === 0 || reconnectCount > 0 || errorCount > 0 || accounts.some((a) => a.approval === 'pending')
+  )
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)

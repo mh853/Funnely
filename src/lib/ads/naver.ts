@@ -29,11 +29,16 @@ function secretKey() {
   return process.env.NAVER_SEARCHAD_SECRET_KEY || ''
 }
 
+/** 키를 발급한 퍼널리 광고계정의 CUSTOMER_ID - 광고주를 지정하지 않는 호출(/ad-accounts)에도 X-Customer로 보낸다 */
+function ownerCustomerId() {
+  return process.env.NAVER_SEARCHAD_CUSTOMER_ID || ''
+}
+
 /** 퍼널리 검색광고 API 키 환경변수가 실제 값으로 설정돼 있는지 (placeholder는 미설정 취급) */
 export function isNaverAdsConfigured() {
   const key = apiKey()
   const secret = secretKey()
-  return !!key && !!secret && !key.startsWith('your') && !secret.startsWith('your')
+  return !!key && !!secret && !!ownerCustomerId() && !key.startsWith('your') && !secret.startsWith('your')
 }
 
 /**
@@ -66,7 +71,7 @@ async function naverFetch(path: string, query: Record<string, string> = {}, cust
     'X-API-KEY': apiKey(),
     'X-Signature': signRequest(timestamp, 'GET', path, secretKey()),
   }
-  if (customerId) headers['X-Customer'] = customerId
+  headers['X-Customer'] = customerId || ownerCustomerId()
   const res = await fetch(url, { headers, cache: 'no-store' })
   const json = await res.json().catch(() => ({}))
   if (!res.ok) {
