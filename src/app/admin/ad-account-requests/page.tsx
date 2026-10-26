@@ -44,7 +44,7 @@ export default async function AdAccountRequestsPage() {
           <thead className="bg-gray-50 text-gray-600">
             <tr>
               <th className="px-4 py-3 text-left font-medium">요청 회사</th>
-              <th className="px-4 py-3 text-left font-medium">고객 ID</th>
+              <th className="px-4 py-3 text-left font-medium">광고계정 ID</th>
               <th className="px-4 py-3 text-left font-medium">네이버 광고계정(퍼널리에서 보이는 이름·권한)</th>
               <th className="px-4 py-3 text-left font-medium">상태</th>
               <th className="px-4 py-3 text-left font-medium">요청일</th>
@@ -65,7 +65,12 @@ export default async function AdAccountRequestsPage() {
                 return (
                   <tr key={r.id}>
                     <td className="px-4 py-3 text-gray-900">{r.companies?.name ?? '-'}</td>
-                    <td className="px-4 py-3 font-mono">{r.account_id}</td>
+                    <td className="px-4 py-3 font-mono">
+                      {g?.adAccountNo ?? r.metadata?.ad_account_no ?? r.account_id}
+                      {(g?.customerId ?? r.account_id) !== String(g?.adAccountNo ?? r.metadata?.ad_account_no ?? r.account_id) && (
+                        <span className="block text-xs text-gray-400">API 고객 ID {g?.customerId ?? r.account_id}</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">
                       {g ? (
                         <span>

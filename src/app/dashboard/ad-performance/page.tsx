@@ -199,7 +199,8 @@ export default async function AdPerformancePage({
               id: a.id,
               platform: a.platform,
               name: a.account_name,
-              accountId: a.account_id,
+              // 네이버는 고객이 광고주센터에서 보는 광고계정 ID(계정 이름 옆 숫자)로 보여준다. account_id는 API용 CUSTOMER_ID라 고객에게 낯설다.
+              accountId: a.platform === 'naver' ? String(a.metadata?.ad_account_no ?? a.account_id) : a.account_id,
               isActive: a.metadata?.account_status == null || a.metadata.account_status === 1,
               needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
               // 네이버는 퍼널리 관리자 승인 전까지 pending, 거절되면 rejected (Meta·구글은 값 없음)
