@@ -28,6 +28,7 @@ import { isGoogleAdsConfigured } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 import { isNaverAdsConfigured } from '@/lib/ads/naver'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
+import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 import {
   buildExpiring2dEmail,
@@ -693,6 +694,9 @@ async function syncAdPerformance(supabase: any, platform: keyof typeof AD_SYNC) 
   if (!AD_SYNC[platform].configured()) {
     return { message: `${platform} app not configured`, synced: 0 }
   }
+  // 퍼널리가 초대를 수락한 네이버 대기 요청은 연결하고 이번 동기화에서 1년치를 받는다
+  // (네이버 조회가 실패해도 이미 연결된 계정 동기화는 계속한다)
+  if (platform === 'naver') await autoApprovePendingNaver(supabase).catch((e) => console.error('[Cron] naver auto-approve error:', e))
 
   const { data: accounts, error } = await supabase
     .from('ad_accounts')

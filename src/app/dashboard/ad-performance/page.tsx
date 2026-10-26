@@ -1,5 +1,5 @@
 // 연결된 Meta·구글 광고 계정의 캠페인별 성과(광고비·노출·클릭·전환)를 기간별로 조회하는 페이지
-import { createClient, getCachedUser } from '@/lib/supabase/server'
+import { createClient, createServiceClient, getCachedUser } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ChartBarIcon } from '@heroicons/react/24/outline'
@@ -7,6 +7,7 @@ import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { getNaverAdsInviteId, isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
+import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { HISTORY_DAYS, syncDaysFor } from '@/lib/ads/sync-window'
 import { toKSTDateStr } from '@/lib/utils/date'
@@ -64,6 +65,11 @@ export default async function AdPerformancePage({
   const configured = enabledPlatforms.length > 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = supabase as any
+
+  // 퍼널리가 네이버 초대를 수락했으면 화면을 여는 시점에 연결해 둔다 (1년치는 '지금 동기화'나 다음 크론이 받는다)
+  if (enabledPlatforms.includes('naver')) {
+    await autoApprovePendingNaver(createServiceClient(), userProfile.company_id).catch(() => [])
+  }
 
   const { data: accounts } = await db
     .from('ad_accounts')

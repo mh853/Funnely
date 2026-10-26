@@ -1,8 +1,9 @@
-// 네이버 광고계정 연결 요청 승인·거절 (슈퍼 관리자) - 승인하면 네이버 광고계정 이름을 받아 넣고 과거 1년 성과를 바로 동기화한다
+// 네이버 광고계정 연결 요청 승인·거절 (슈퍼 관리자) - 자동 연결을 기다리지 않고 바로 승인하면 과거 1년 성과까지 즉시 동기화한다
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
 import { findGrantedAccount, listGrantedAdAccounts } from '@/lib/ads/naver'
+import { approveNaverAccount } from '@/lib/ads/naver-approval'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { HISTORY_DAYS } from '@/lib/ads/sync-window'
 
@@ -47,27 +48,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: '퍼널리 네이버 계정에서 이 광고계정이 보이지 않습니다. 초대를 먼저 수락해주세요.' }, { status: 409 })
   }
 
-  // 고객이 광고계정 번호를 넣었어도 API 호출(X-Customer)에 쓰는 CUSTOMER_ID로 바꿔 저장한다
-  const { data: duplicate } = await admin
-    .from('ad_accounts')
-    .select('id')
-    .eq('platform', 'naver')
-    .eq('account_id', granted.customerId)
-    .eq('is_active', true)
-    .neq('id', id)
-  if (duplicate?.length) {
-    return NextResponse.json({ error: '이 광고계정은 이미 다른 연결로 승인돼 있습니다.' }, { status: 409 })
+  const approved = await approveNaverAccount(admin, account, granted, adminUser.user.id)
+  if (!approved.account) {
+    return NextResponse.json({ error: approved.error }, { status: approved.status })
   }
 
-  const metadata = { ...account.metadata, approval: 'approved', role: granted.roleName, ad_account_no: granted.adAccountNo, ...reviewed }
-  const { error } = await admin
-    .from('ad_accounts')
-    .update({ account_id: granted.customerId, is_active: true, account_name: granted.name || granted.customerId, metadata })
-    .eq('id', id)
-  if (error) {
-    return NextResponse.json({ error: '승인을 저장하지 못했습니다.' }, { status: 500 })
-  }
-
-  const result = await syncNaverAdAccount(admin, { ...account, account_id: granted.customerId, metadata }, HISTORY_DAYS)
+  const result = await syncNaverAdAccount(admin, approved.account, HISTORY_DAYS)
   return NextResponse.json({ success: true, sync: result })
 }

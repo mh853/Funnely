@@ -1,8 +1,9 @@
-// 네이버 검색광고 계정 연결 요청 - 고객이 입력한 CUSTOMER_ID를 '승인 대기'로 저장하고, 퍼널리 관리자가 초대 수락·회사 대조 후 승인한다
+// 네이버 검색광고 계정 연결 요청 - 고객이 입력한 번호를 '승인 대기'로 저장하고, 퍼널리 네이버 ID가 초대를 수락해 계정이 보이면 자동 연결한다
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
 import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
+import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -71,5 +72,8 @@ export async function POST(request: NextRequest) {
   if (error) {
     return NextResponse.json({ error: '연결 요청을 저장하지 못했습니다.' }, { status: 500 })
   }
-  return NextResponse.json({ success: true })
+
+  // 퍼널리가 초대를 이미 수락해 둔 계정이면 바로 연결한다. 네이버 조회가 실패해도 요청은 저장됐으니 대기로 둔다.
+  const approved = await autoApprovePendingNaver(admin, userProfile.company_id).catch(() => [])
+  return NextResponse.json({ success: true, approved: approved.length > 0 })
 }

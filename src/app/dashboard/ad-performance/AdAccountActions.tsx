@@ -97,7 +97,11 @@ export default function AdAccountActions({
     }
     setNaverFormOpen(false)
     setNaverCustomerId('')
-    setMessage({ type: 'success', text: '연결 요청을 받았습니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.' })
+    setMessage(
+      data.approved
+        ? { type: 'success', text: "연결됐습니다. '지금 동기화'를 누르면 최근 1년 성과를 받아옵니다." }
+        : { type: 'success', text: '연결 요청을 받았습니다. 퍼널리가 네이버 초대를 수락하면 자동으로 연결됩니다.' }
+    )
     router.refresh()
   }
 
@@ -178,7 +182,7 @@ export default function AdAccountActions({
                       </p>
                       <p className="text-xs mt-0.5">
                         {a.approval === 'pending' ? (
-                          <span className="text-blue-600">승인 대기 — 퍼널리에서 네이버 초대를 확인하고 있습니다</span>
+                          <span className="text-blue-600">연결 대기 — 퍼널리가 네이버 초대를 수락하면 자동으로 연결됩니다</span>
                         ) : a.approval === 'rejected' ? (
                           <span className="text-red-600">연결이 승인되지 않았습니다 — 퍼널리 고객센터로 문의해주세요</span>
                         ) : a.needsReconnect ? (
@@ -261,7 +265,7 @@ export default function AdAccountActions({
                 <li>
                   네이버 ID <span className="font-mono font-semibold">{naverInviteId || '(준비 중)'}</span>를 <b>운영 조회</b> 권한으로 초대합니다.
                 </li>
-                <li>[광고 계정 관리]에서 광고계정 이름 옆 괄호 안 숫자(광고계정 ID)를 아래에 입력하고 연결을 요청합니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.</li>
+                <li>[광고 계정 관리]에서 광고계정 이름 옆 괄호 안 숫자(광고계정 ID)를 아래에 입력하고 연결을 요청합니다. 퍼널리가 초대를 수락하면 자동으로 연결됩니다.</li>
               </ol>
               <div className="flex flex-wrap gap-2">
                 <input

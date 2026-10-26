@@ -8,6 +8,7 @@ import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
+import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 
 export const maxDuration = 300
@@ -46,6 +47,8 @@ export async function POST(request: NextRequest) {
   }
 
   const admin = createServiceClient() as any
+  // 퍼널리가 초대를 수락한 대기 요청은 여기서 연결해 이번 동기화에 1년치까지 받는다
+  if (platform === 'naver') await autoApprovePendingNaver(admin, userProfile.company_id).catch(() => [])
   const { data: accounts, error } = await admin
     .from('ad_accounts')
     .select('id, company_id, account_id, access_token, refresh_token, token_expires_at, metadata')

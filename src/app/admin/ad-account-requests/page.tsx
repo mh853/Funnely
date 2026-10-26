@@ -34,7 +34,7 @@ export default async function AdAccountRequestsPage() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">네이버 광고계정 연결 요청</h1>
         <p className="text-sm text-gray-500 mt-1">
-          네이버 광고주센터의 [초대 받은 광고 계정]에서 초대를 수락한 뒤, 광고계정 이름이 요청한 회사와 맞는지 확인하고 승인하세요.
+          네이버 광고주센터의 [초대 받은 광고 계정]에서 초대를 수락하면, 고객이 광고 성과 화면을 열거나 다음 자동 동기화 때 자동으로 연결됩니다. 바로 연결하고 1년치까지 받으려면 승인을 누르세요. 광고계정 이름이 요청한 회사와 다르면 거절하세요.
         </p>
       </div>
       {grantedError && <div className="p-3 rounded-lg bg-amber-50 text-sm text-amber-800">{grantedError}</div>}
