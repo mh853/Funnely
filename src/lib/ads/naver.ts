@@ -109,9 +109,12 @@ export async function listGrantedAdAccounts(): Promise<NaverAdAccount[]> {
   return accounts
 }
 
-/** 진단용(임시): /ad-accounts 첫 페이지 원본 응답 - 응답 모양을 실계정으로 확인한 뒤 지운다 */
-export function fetchAdAccountsRaw() {
-  return naverFetch('/ad-accounts', { page: '0', size: '1000' })
+/**
+ * 고객이 입력한 번호로 권한 받은 계정을 찾는다. 광고주센터 화면의 계정 이름 옆 숫자는 광고계정 번호(adAccountNo)이고
+ * API 호출에 쓰는 CUSTOMER_ID(masterCustomerId)와 다르다(10-26 블루온 2446390 ↔ 4287326 확인). 둘 다 받는다.
+ */
+export function findGrantedAccount(accounts: NaverAdAccount[], enteredId: string) {
+  return accounts.find((a) => a.customerId === enteredId || String(a.adAccountNo) === enteredId)
 }
 
 export interface NaverCampaign {

@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServiceClient } from '@/lib/supabase/server'
 import { getSuperAdminUser } from '@/lib/admin/permissions'
-import { listGrantedAdAccounts } from '@/lib/ads/naver'
+import { findGrantedAccount, listGrantedAdAccounts } from '@/lib/ads/naver'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { HISTORY_DAYS } from '@/lib/ads/sync-window'
 
@@ -42,20 +42,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   }
 
   // 초대를 수락해 퍼널리 키로 실제로 보이는 계정만 승인할 수 있다
-  const granted = (await listGrantedAdAccounts()).find((a) => a.customerId === account.account_id)
+  const granted = findGrantedAccount(await listGrantedAdAccounts(), account.account_id)
   if (!granted) {
     return NextResponse.json({ error: '퍼널리 네이버 계정에서 이 광고계정이 보이지 않습니다. 초대를 먼저 수락해주세요.' }, { status: 409 })
+  }
+
+  // 고객이 광고계정 번호를 넣었어도 API 호출(X-Customer)에 쓰는 CUSTOMER_ID로 바꿔 저장한다
+  const { data: duplicate } = await admin
+    .from('ad_accounts')
+    .select('id')
+    .eq('platform', 'naver')
+    .eq('account_id', granted.customerId)
+    .eq('is_active', true)
+    .neq('id', id)
+  if (duplicate?.length) {
+    return NextResponse.json({ error: '이 광고계정은 이미 다른 연결로 승인돼 있습니다.' }, { status: 409 })
   }
 
   const metadata = { ...account.metadata, approval: 'approved', role: granted.roleName, ad_account_no: granted.adAccountNo, ...reviewed }
   const { error } = await admin
     .from('ad_accounts')
-    .update({ is_active: true, account_name: granted.name || account.account_id, metadata })
+    .update({ account_id: granted.customerId, is_active: true, account_name: granted.name || granted.customerId, metadata })
     .eq('id', id)
   if (error) {
     return NextResponse.json({ error: '승인을 저장하지 못했습니다.' }, { status: 500 })
   }
 
-  const result = await syncNaverAdAccount(admin, { ...account, metadata }, HISTORY_DAYS)
+  const result = await syncNaverAdAccount(admin, { ...account, account_id: granted.customerId, metadata }, HISTORY_DAYS)
   return NextResponse.json({ success: true, sync: result })
 }

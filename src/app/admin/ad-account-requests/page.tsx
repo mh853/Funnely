@@ -1,6 +1,6 @@
 // 네이버 광고계정 연결 요청 목록 - 퍼널리 네이버 계정에서 초대가 보이는지·광고계정 이름을 회사와 대조해 승인·거절한다
 import { createServiceClient } from '@/lib/supabase/server'
-import { fetchAdAccountsRaw, isNaverAdsConfigured, listGrantedAdAccounts, type NaverAdAccount } from '@/lib/ads/naver'
+import { findGrantedAccount, isNaverAdsConfigured, listGrantedAdAccounts, type NaverAdAccount } from '@/lib/ads/naver'
 import RequestActions from './RequestActions'
 
 export const dynamic = 'force-dynamic'
@@ -27,13 +27,6 @@ export default async function AdAccountRequestsPage() {
     }
   } else {
     grantedError = '네이버 검색광고 API 키가 설정되지 않았습니다'
-  }
-  const grantedById = new Map(granted.map((a) => [a.customerId, a]))
-
-  // 진단용(임시): 초대를 수락했는데 '안 보임'으로 나와 네이버 원본 응답을 그대로 본다 - 응답 모양 확인 후 지운다
-  let raw: unknown = null
-  if (isNaverAdsConfigured()) {
-    raw = await fetchAdAccountsRaw().catch((error) => ({ error: error instanceof Error ? error.message : String(error) }))
   }
 
   return (
@@ -67,7 +60,7 @@ export default async function AdAccountRequestsPage() {
               </tr>
             ) : (
               (requests || []).map((r: any) => {
-                const g = grantedById.get(r.account_id)
+                const g = findGrantedAccount(granted, r.account_id)
                 const approval = r.metadata?.approval || 'pending'
                 return (
                   <tr key={r.id}>
@@ -94,13 +87,6 @@ export default async function AdAccountRequestsPage() {
           </tbody>
         </table>
       </div>
-
-      <details className="bg-white rounded-xl border border-gray-200 p-4 text-xs">
-        <summary className="cursor-pointer text-gray-600">
-          네이버 응답 원본(진단용) · 파싱된 계정 {granted.length}개: {granted.map((a) => `${a.name}(${a.customerId || '?'}/${a.adAccountNo ?? '?'} ${a.roleName})`).join(', ') || '없음'}
-        </summary>
-        <pre className="mt-2 whitespace-pre-wrap break-all text-gray-700">{JSON.stringify(raw, null, 2).slice(0, 8000)}</pre>
-      </details>
     </div>
   )
 }

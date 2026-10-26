@@ -261,15 +261,15 @@ export default function AdAccountActions({
                 <li>
                   네이버 ID <span className="font-mono font-semibold">{naverInviteId || '(준비 중)'}</span>를 <b>운영 조회</b> 권한으로 초대합니다.
                 </li>
-                <li>아래에 검색광고 고객 ID(숫자)를 입력하고 연결을 요청합니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.</li>
+                <li>[광고 계정 관리]에서 광고계정 이름 옆 괄호 안 숫자(광고계정 ID)를 아래에 입력하고 연결을 요청합니다. 퍼널리에서 초대를 확인한 뒤 연결해 드립니다.</li>
               </ol>
               <div className="flex flex-wrap gap-2">
                 <input
                   value={naverCustomerId}
                   onChange={(e) => setNaverCustomerId(e.target.value)}
                   inputMode="numeric"
-                  placeholder="검색광고 고객 ID"
-                  aria-label="네이버 검색광고 고객 ID"
+                  placeholder="광고계정 ID(숫자)"
+                  aria-label="네이버 광고계정 ID"
                   className="px-3 py-2 rounded-lg border border-gray-300 w-48"
                 />
                 <button

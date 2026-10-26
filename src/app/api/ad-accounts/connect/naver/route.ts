@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}))
   const customerId = String(body?.customerId ?? '').replace(/[\s-]/g, '')
   if (!/^\d{4,12}$/.test(customerId)) {
-    return NextResponse.json({ error: '검색광고 고객 ID(숫자)를 정확히 입력해주세요.' }, { status: 400 })
+    return NextResponse.json({ error: '광고계정 ID(숫자)를 정확히 입력해주세요.' }, { status: 400 })
   }
 
   const admin = createServiceClient() as any
