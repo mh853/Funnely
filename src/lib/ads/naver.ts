@@ -109,6 +109,11 @@ export async function listGrantedAdAccounts(): Promise<NaverAdAccount[]> {
   return accounts
 }
 
+/** 진단용(임시): /ad-accounts 첫 페이지 원본 응답 - 응답 모양을 실계정으로 확인한 뒤 지운다 */
+export function fetchAdAccountsRaw() {
+  return naverFetch('/ad-accounts', { page: '0', size: '1000' })
+}
+
 export interface NaverCampaign {
   nccCampaignId: string
   name: string
