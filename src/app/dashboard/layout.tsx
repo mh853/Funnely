@@ -6,6 +6,7 @@ import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-
 import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
+import { isKakaoAdsEnabledForCompany } from '@/lib/ads/kakao'
 
 export const metadata: Metadata = {
   robots: {
@@ -91,7 +92,8 @@ export default async function DashboardLayout({
       showAdPerformance={
         isMetaEnabledForCompany(userProfile?.company_id) ||
         isGoogleAdsEnabledForCompany(userProfile?.company_id) ||
-        isNaverAdsEnabledForCompany(userProfile?.company_id)
+        isNaverAdsEnabledForCompany(userProfile?.company_id) ||
+        isKakaoAdsEnabledForCompany(userProfile?.company_id)
       }
     >
       {children}

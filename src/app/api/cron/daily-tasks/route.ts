@@ -29,6 +29,8 @@ import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 import { isNaverAdsConfigured } from '@/lib/ads/naver'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
+import { isKakaoAdsConfigured } from '@/lib/ads/kakao'
+import { syncKakaoAdAccount } from '@/lib/ads/kakao-sync'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 import {
   buildExpiring2dEmail,
@@ -250,8 +252,8 @@ export async function GET(request: NextRequest) {
       })
     }
 
-    // Task 3b: Meta·구글·네이버 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
-    for (const platform of ['meta', 'google', 'naver'] as const) {
+    // Task 3b: Meta·구글·네이버·카카오 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
+    for (const platform of ['meta', 'google', 'naver', 'kakao'] as const) {
       console.log(`[Cron] Running ${platform} ad performance sync`)
       try {
         const adResult = await syncAdPerformance(supabase, platform)
@@ -688,6 +690,7 @@ const AD_SYNC = {
   meta: { configured: isMetaConfigured, sync: syncMetaAdAccount },
   google: { configured: isGoogleAdsConfigured, sync: syncGoogleAdAccount },
   naver: { configured: isNaverAdsConfigured, sync: syncNaverAdAccount },
+  kakao: { configured: isKakaoAdsConfigured, sync: syncKakaoAdAccount },
 }
 
 async function syncAdPerformance(supabase: any, platform: keyof typeof AD_SYNC) {

@@ -1,4 +1,4 @@
-// 광고 계정 연결 시작 - 퍼널리 Meta 앱 로그인 다이얼로그나 Google OAuth 동의 화면으로 보낸다 (카카오는 준비 중)
+// 광고 계정 연결 시작 - 퍼널리 Meta 앱 로그인 다이얼로그, Google OAuth 동의 화면, 카카오 비즈니스 인증 동의 화면으로 보낸다
 import crypto from 'crypto'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
@@ -10,6 +10,12 @@ import {
   isGoogleAdsConfigured,
   isGoogleAdsEnabledForCompany,
 } from '@/lib/ads/google'
+import {
+  KAKAO_ADS_OAUTH_STATE_COOKIE,
+  buildKakaoAdsAuthUrl,
+  isKakaoAdsConfigured,
+  isKakaoAdsEnabledForCompany,
+} from '@/lib/ads/kakao'
 
 function backToPerformance(request: NextRequest, error: string) {
   return NextResponse.redirect(
@@ -32,18 +38,25 @@ const PLATFORMS = {
     authUrl: buildGoogleAdsAuthUrl,
     stateCookie: GOOGLE_ADS_OAUTH_STATE_COOKIE,
   },
+  kakao: {
+    label: '카카오 광고',
+    configured: isKakaoAdsConfigured,
+    enabledFor: isKakaoAdsEnabledForCompany,
+    authUrl: buildKakaoAdsAuthUrl,
+    stateCookie: KAKAO_ADS_OAUTH_STATE_COOKIE,
+  },
 }
 
-// 버튼이 이 주소로 바로 이동(GET)하면 state 쿠키를 심고 Meta/Google로 302 한다.
+// 버튼이 이 주소로 바로 이동(GET)하면 state 쿠키를 심고 Meta/Google/카카오로 302 한다. (네이버는 OAuth가 없어 connect/naver)
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ platform: string }> }
 ) {
   const { platform } = await params
-  if (platform !== 'meta' && platform !== 'google') {
-    return backToPerformance(request, '현재 Meta·구글 광고 계정만 연결할 수 있습니다.')
+  if (!Object.prototype.hasOwnProperty.call(PLATFORMS, platform)) {
+    return backToPerformance(request, '연결할 수 없는 광고 플랫폼입니다.')
   }
-  const config = PLATFORMS[platform]
+  const config = PLATFORMS[platform as keyof typeof PLATFORMS]
   if (!config.configured()) {
     return backToPerformance(request, `${config.label} 연동이 아직 준비되지 않았습니다.`)
   }
@@ -69,7 +82,7 @@ export async function GET(
   }
 
   // CSRF 방지 - 콜백에서 쿼리의 state와 이 쿠키 값이 같은지 확인한다.
-  // Meta·Google에서 돌아오는 요청은 다른 사이트에서 온 최상위 GET이라 sameSite는 lax여야 쿠키가 실린다.
+  // Meta·Google·카카오에서 돌아오는 요청은 다른 사이트에서 온 최상위 GET이라 sameSite는 lax여야 쿠키가 실린다.
   const state = crypto.randomBytes(24).toString('hex')
   const response = NextResponse.redirect(config.authUrl(state))
   response.cookies.set(config.stateCookie, state, {

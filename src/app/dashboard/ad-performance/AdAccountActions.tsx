@@ -1,10 +1,10 @@
 'use client'
-// 광고 성과 화면 상단의 연결 계정 한 줄 요약과, 펼치면 보이는 플랫폼별(Meta·구글·네이버) 계정 목록·연결·동기화·연결 해제
+// 광고 성과 화면 상단의 연결 계정 한 줄 요약과, 펼치면 보이는 플랫폼별(Meta·구글·네이버·카카오) 계정 목록·연결·동기화·연결 해제
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 
-type Platform = 'meta' | 'google' | 'naver'
+type Platform = 'meta' | 'google' | 'naver' | 'kakao'
 
 interface AccountItem {
   id: string
@@ -18,7 +18,7 @@ interface AccountItem {
   approval: 'pending' | 'approved' | 'rejected' | null
 }
 
-const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: '구글', naver: '네이버' }
+const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: '구글', naver: '네이버', kakao: '카카오' }
 
 // 네이버 연결 요청이 승인 전·거절이면 '연결된 계정'으로 세지 않는다
 const isConnected = (a: AccountItem) => a.approval !== 'pending' && a.approval !== 'rejected'

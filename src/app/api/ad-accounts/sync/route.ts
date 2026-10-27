@@ -1,4 +1,4 @@
-// 회사에 연결된 Meta·구글·네이버 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 과거 1년을 아직 안 받은 계정은 1년, 플랫폼별)
+// 회사에 연결된 Meta·구글·네이버·카카오 광고 계정 성과를 지금 바로 다시 가져오는 수동 동기화 (최근 30일, 과거 1년을 아직 안 받은 계정은 1년, 플랫폼별)
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
@@ -9,6 +9,8 @@ import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
 import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
 import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
+import { isKakaoAdsEnabledForCompany } from '@/lib/ads/kakao'
+import { syncKakaoAdAccount } from '@/lib/ads/kakao-sync'
 import { syncDaysFor } from '@/lib/ads/sync-window'
 
 export const maxDuration = 300
@@ -17,6 +19,7 @@ const PLATFORMS = {
   meta: { label: 'Meta', enabledFor: isMetaEnabledForCompany, sync: syncMetaAdAccount },
   google: { label: '구글 광고', enabledFor: isGoogleAdsEnabledForCompany, sync: syncGoogleAdAccount },
   naver: { label: '네이버 광고', enabledFor: isNaverAdsEnabledForCompany, sync: syncNaverAdAccount },
+  kakao: { label: '카카오 광고', enabledFor: isKakaoAdsEnabledForCompany, sync: syncKakaoAdAccount },
 }
 
 export async function POST(request: NextRequest) {

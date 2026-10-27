@@ -8,13 +8,14 @@ import { isMetaEnabledForCompany } from '@/lib/ads/meta'
 import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
 import { getNaverAdsInviteId, isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
 import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
+import { isKakaoAdsEnabledForCompany } from '@/lib/ads/kakao'
 import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { HISTORY_DAYS, syncDaysFor } from '@/lib/ads/sync-window'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
 import { PRESETS, resolvePeriod } from './period'
 
-const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글', naver: '네이버' }
+const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글', naver: '네이버', kakao: '카카오' }
 
 interface CampaignSummary {
   id: string
@@ -61,6 +62,7 @@ export default async function AdPerformancePage({
     ...(isMetaEnabledForCompany(userProfile.company_id) ? ['meta' as const] : []),
     ...(isGoogleAdsEnabledForCompany(userProfile.company_id) ? ['google' as const] : []),
     ...(isNaverAdsEnabledForCompany(userProfile.company_id) ? ['naver' as const] : []),
+    ...(isKakaoAdsEnabledForCompany(userProfile.company_id) ? ['kakao' as const] : []),
   ]
   const configured = enabledPlatforms.length > 0
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -179,7 +181,7 @@ export default async function AdPerformancePage({
       {error && <div className="p-4 rounded-lg bg-red-50 text-sm text-red-700">{error}</div>}
       {connected && (
         <div className="p-4 rounded-lg bg-green-50 text-sm text-green-800">
-          {connectedPlatform === 'google' ? '구글' : 'Meta'} 광고 계정 {connected}개가 연결되었습니다. 최근 1년 성과를 불러왔습니다.
+          {PLATFORM_LABEL[connectedPlatform ?? ''] ?? 'Meta'} 광고 계정 {connected}개가 연결되었습니다. 최근 1년 성과를 불러왔습니다.
         </div>
       )}
 
@@ -330,6 +332,7 @@ export default async function AdPerformancePage({
             광고 계정을 연결할 때 최근 1년 성과를 받아오고, 이후 매일 오전 8시에 최근 7일치를 다시 받아옵니다. 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
             Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
             {enabledPlatforms.includes('naver') && ' 네이버 광고비는 네이버 검색광고가 보고한 VAT 포함 금액입니다.'}
+            {enabledPlatforms.includes('kakao') && ' 카카오 전환은 카카오모먼트 픽셀·SDK의 잠재고객·서비스 신청(7일) 기준이며, 카카오 성과는 어제까지 집계됩니다.'}
           </p>
         </>
       )}
