@@ -68,6 +68,14 @@ const nextConfig = {
   // 압축 활성화
   compress: true,
 
+  // 예전 '고객이 API 키를 직접 넣는' 연동 가이드 페이지는 지금 방식(광고 성과 화면에서 로그인·동의로 연결)과 달라 지웠다.
+  // 검색·북마크로 들어오면 연결 안내가 있는 광고 성과 화면으로 보낸다.
+  async redirects() {
+    return [
+      { source: '/guides/:platform(meta-ads|google-ads|kakao-moment)', destination: '/dashboard/ad-performance', permanent: false },
+    ]
+  },
+
   // HTTP 헤더 최적화
   async headers() {
     return [

@@ -12,9 +12,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     '/terms',
     '/contact',
     '/features/comparison',
-    '/guides/google-ads',
-    '/guides/kakao-moment',
-    '/guides/meta-ads',
   ]
 
   const featureRoutes = getAllFeatureSlugs().map((slug) => `/features/${slug}`)
