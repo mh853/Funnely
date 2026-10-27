@@ -3,6 +3,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ConnectGuide from './ConnectGuide'
 
 type Platform = 'meta' | 'google' | 'naver' | 'kakao'
 
@@ -47,7 +48,8 @@ export default function AdAccountActions({
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
-  const [naverFormOpen, setNaverFormOpen] = useState(false)
+  // 연결 버튼을 누르면 바로 이동하지 않고 그 플랫폼의 초보자용 안내를 먼저 펼친다
+  const [guideFor, setGuideFor] = useState<Platform | null>(null)
   const [naverCustomerId, setNaverCustomerId] = useState('')
   const [naverSubmitting, setNaverSubmitting] = useState(false)
 
@@ -95,7 +97,7 @@ export default function AdAccountActions({
       setMessage({ type: 'error', text: data.error || '연결 요청에 실패했습니다.' })
       return
     }
-    setNaverFormOpen(false)
+    setGuideFor(null)
     setNaverCustomerId('')
     setMessage(
       data.approved
@@ -166,7 +168,7 @@ export default function AdAccountActions({
           {accounts.length === 0 ? (
             <p className="py-4 text-sm text-gray-500">
               {canManage
-                ? '광고 계정을 연결하면 캠페인별 광고비·노출·클릭·전환을 확인할 수 있습니다'
+                ? '광고 계정을 연결하면 캠페인별 광고비·노출·클릭·전환을 확인할 수 있습니다. 아래에서 연결할 광고 버튼을 누르면 방법을 차례로 안내해 드립니다.'
                 : '회사 관리자가 광고 계정을 연결할 수 있습니다'}
             </p>
           ) : (
@@ -221,70 +223,56 @@ export default function AdAccountActions({
 
           {canManage && (
             <div className="pt-3 flex flex-wrap gap-2">
-              {/* 서버 라우트가 state 쿠키를 심고 Meta 로그인·Google 동의 화면으로 바로 보낸다 */}
               {platforms.map((p) => {
                 const platformAccounts = accounts.filter((a) => a.platform === p)
-                // 네이버는 OAuth가 없어 초대 안내와 고객 ID 입력 폼을 펼친다
-                if (p === 'naver') {
-                  return (
-                    <button
-                      key={p}
-                      onClick={() => setNaverFormOpen((v) => !v)}
-                      className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
-                    >
-                      + {platformAccounts.length === 0 ? '네이버 계정 연결' : '네이버 계정 추가'}
-                    </button>
-                  )
-                }
                 const label =
                   platformAccounts.length === 0
                     ? `${PLATFORM_LABEL[p]} 계정 연결`
-                    : platformAccounts.some((a) => a.needsReconnect)
+                    : p !== 'naver' && platformAccounts.some((a) => a.needsReconnect)
                       ? `${PLATFORM_LABEL[p]} 다시 연결`
-                      : `${PLATFORM_LABEL[p]} 계정 추가·다시 연결`
+                      : p === 'naver'
+                        ? '네이버 계정 추가'
+                        : `${PLATFORM_LABEL[p]} 계정 추가·다시 연결`
                 return (
-                  <a
+                  <button
                     key={p}
-                    href={`/api/ad-accounts/connect/${p}`}
-                    className="px-3 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => setGuideFor((v) => (v === p ? null : p))}
+                    aria-expanded={guideFor === p}
+                    className={`px-3 py-2 rounded-lg text-sm font-medium ${
+                      guideFor === p ? 'bg-blue-700 text-white' : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
                   >
                     + {label}
-                  </a>
+                  </button>
                 )
               })}
             </div>
           )}
 
-          {canManage && naverFormOpen && (
-            <div className="mt-3 p-4 rounded-lg bg-gray-50 text-sm space-y-3">
-              <p className="font-medium text-gray-900">네이버 검색광고 계정 연결</p>
-              <ol className="list-decimal pl-5 space-y-1 text-gray-700">
-                <li>
-                  네이버 광고주센터에서 [광고 계정 관리] → 연결할 계정 → [설정] → [권한 관리] → [회원 초대]로 이동합니다.
-                </li>
-                <li>
-                  네이버 ID <span className="font-mono font-semibold">{naverInviteId || '(준비 중)'}</span>를 <b>운영 조회</b> 권한으로 초대합니다.
-                </li>
-                <li>[광고 계정 관리]에서 광고계정 이름 옆 괄호 안 숫자(광고계정 ID)를 아래에 입력하고 연결을 요청합니다. 퍼널리가 초대를 수락하면 자동으로 연결됩니다.</li>
-              </ol>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  value={naverCustomerId}
-                  onChange={(e) => setNaverCustomerId(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="광고계정 ID(숫자)"
-                  aria-label="네이버 광고계정 ID"
-                  className="px-3 py-2 rounded-lg border border-gray-300 w-48"
-                />
-                <button
-                  onClick={handleNaverRequest}
-                  disabled={naverSubmitting || !naverCustomerId.trim()}
-                  className="px-3 py-2 rounded-lg font-medium bg-blue-600 text-white disabled:opacity-50"
-                >
-                  {naverSubmitting ? '요청 중...' : '연결 요청'}
-                </button>
-              </div>
-            </div>
+          {canManage && guideFor && (
+            <ConnectGuide
+              platform={guideFor}
+              naverInviteId={naverInviteId}
+              naverForm={
+                <div className="flex flex-wrap gap-2">
+                  <input
+                    value={naverCustomerId}
+                    onChange={(e) => setNaverCustomerId(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="광고계정 ID(숫자)"
+                    aria-label="네이버 광고계정 ID"
+                    className="px-3 py-2 rounded-lg border border-gray-300 w-48"
+                  />
+                  <button
+                    onClick={handleNaverRequest}
+                    disabled={naverSubmitting || !naverCustomerId.trim()}
+                    className="px-3 py-2 rounded-lg font-medium bg-blue-600 text-white disabled:opacity-50"
+                  >
+                    {naverSubmitting ? '요청 중...' : '연결 요청'}
+                  </button>
+                </div>
+              }
+            />
           )}
         </div>
       )}
