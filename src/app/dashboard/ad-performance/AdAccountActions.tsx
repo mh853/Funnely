@@ -1,7 +1,7 @@
 'use client'
 // 광고 성과 화면 상단의 연결 계정 한 줄 요약과, 펼치면 보이는 플랫폼별(Meta·구글·네이버·카카오) 계정 목록·연결·동기화·연결 해제
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import ConnectGuide from './ConnectGuide'
 
@@ -46,6 +46,8 @@ export default function AdAccountActions({
     connected.length === 0 || reconnectCount > 0 || errorCount > 0 || accounts.some((a) => a.approval === 'pending')
   )
   const [syncing, setSyncing] = useState(false)
+  // router.refresh()로 새 성과가 화면에 그려지는 동안 true
+  const [refreshing, startRefresh] = useTransition()
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [confirmingId, setConfirmingId] = useState<string | null>(null)
   // 연결 버튼을 누르면 바로 이동하지 않고 그 플랫폼의 초보자용 안내를 먼저 펼친다
@@ -75,7 +77,8 @@ export default function AdAccountActions({
           : { type: 'success', text: '최신 성과를 다시 불러왔습니다.' }
       )
       if (failed > 0) setExpanded(true)
-      router.refresh()
+      // 결과 문구는 표·마지막 동기화 시각이 새 값으로 바뀐 뒤에 보인다 (아래 !refreshing)
+      startRefresh(() => router.refresh())
     } catch (error: any) {
       setMessage({ type: 'error', text: error.message })
     } finally {
@@ -139,10 +142,10 @@ export default function AdAccountActions({
           {canManage && connected.length > 0 && (
             <button
               onClick={handleSync}
-              disabled={syncing}
+              disabled={syncing || refreshing}
               className="px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
-              {syncing ? '불러오는 중...' : '지금 동기화'}
+              {syncing || refreshing ? '불러오는 중...' : '지금 동기화'}
             </button>
           )}
           <button
@@ -155,7 +158,7 @@ export default function AdAccountActions({
         </div>
       </div>
 
-      {message && (
+      {message && !refreshing && (
         <div
           className={`mx-4 mb-4 p-3 rounded-lg text-sm ${message.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'}`}
         >
