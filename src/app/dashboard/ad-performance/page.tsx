@@ -332,7 +332,7 @@ export default async function AdPerformancePage({
             광고 계정을 연결할 때 최근 1년 성과를 받아오고, 이후 매일 오전 8시에 최근 7일치를 다시 받아옵니다. 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
             Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
             {enabledPlatforms.includes('naver') && ' 네이버 광고비는 네이버 검색광고가 보고한 VAT 포함 금액입니다.'}
-            {enabledPlatforms.includes('kakao') && ' 카카오 전환은 카카오모먼트 픽셀·SDK의 잠재고객·서비스 신청(7일) 기준이며, 카카오 성과는 어제까지 집계됩니다.'}
+            {enabledPlatforms.includes('kakao') && ' 카카오 전환은 카카오모먼트 픽셀·SDK의 잠재고객·서비스 신청(7일) 기준입니다. 카카오는 성과를 하루 뒤에 넘겨줘서 오늘 성과는 내일부터 보입니다(지금 동기화를 눌러도 같습니다).'}
           </p>
         </>
       )}

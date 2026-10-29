@@ -61,7 +61,8 @@ export default function AdAccountActions({
     try {
       let failed = 0
       // 연결된 계정이 있는 플랫폼만 차례로 동기화한다
-      for (const platform of platforms.filter((p) => connected.some((a) => a.platform === p))) {
+      const targets = platforms.filter((p) => connected.some((a) => a.platform === p))
+      for (const platform of targets) {
         const res = await fetch('/api/ad-accounts/sync', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -74,7 +75,13 @@ export default function AdAccountActions({
       setMessage(
         failed > 0
           ? { type: 'error', text: `${failed}개 계정을 동기화하지 못했습니다. 계정 관리에서 상태를 확인해주세요.` }
-          : { type: 'success', text: '최신 성과를 다시 불러왔습니다.' }
+          : {
+              type: 'success',
+              // 카카오 보고서는 어제까지만 받을 수 있어, 오늘 성과를 기대하고 누른 경우를 위해 덧붙인다
+              text: targets.includes('kakao')
+                ? '최신 성과를 다시 불러왔습니다. 카카오는 성과를 하루 뒤에 넘겨줘서 오늘 성과는 내일부터 보입니다.'
+                : '최신 성과를 다시 불러왔습니다.',
+            }
       )
       if (failed > 0) setExpanded(true)
       // 결과 문구는 표·마지막 동기화 시각이 새 값으로 바뀐 뒤에 보인다 (아래 !refreshing)
