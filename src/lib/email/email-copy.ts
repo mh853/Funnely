@@ -385,24 +385,24 @@ export interface WinbackVars {
 /** 만료 2일 후 / 1개월 후 윈백(10% 할인, 7일 유효) */
 export function buildWinbackEmail(v: WinbackVars): EmailContent {
   const unit = unitWord(v.variant)
-  const title = '다시 시작하실 수 있도록 10% 할인을 드립니다'
+  const title = '다시 시작하실 수 있도록 10% 할인 쿠폰을 드립니다'
   const lead =
     v.timing === '2d'
-      ? `${BRAND} ${unit}은 잘 이용하셨나요? 다시 시작하시는 분께 <strong>7일 동안 10% 할인</strong>을 드립니다.`
-      : `${BRAND} ${unit}이 끝난 지 한 달이 지났습니다. 다시 시작하시는 분께 <strong>7일 동안 10% 할인</strong>을 드립니다.`
-  const how = '아래 버튼을 통해 결제하실 때만 할인이 적용됩니다.'
+      ? `${BRAND} ${unit}은 잘 이용하셨나요? 다시 시작하시는 분께 <strong>7일 동안 쓰실 수 있는 10% 할인 쿠폰</strong>을 드립니다.`
+      : `${BRAND} ${unit}이 끝난 지 한 달이 지났습니다. 다시 시작하시는 분께 <strong>7일 동안 쓰실 수 있는 10% 할인 쿠폰</strong>을 드립니다.`
+  const how = '쿠폰은 아래 버튼을 눌러 결제하시면 자동으로 적용됩니다. 다른 경로로 결제하시면 적용되지 않습니다.'
   const dataNote =
     v.timing === '2d'
-      ? '만료 후 7일이 지나면 저장된 데이터가 삭제됩니다. 할인 기간 안에 결제하시면 데이터도 그대로 유지됩니다.'
+      ? '만료 후 7일이 지나면 저장된 데이터가 삭제됩니다. 쿠폰 사용 기간 안에 결제하시면 데이터도 그대로 유지됩니다.'
       : '만료 후 37일이 지나기 전에 결제하시면 기존 데이터를 그대로 복구해 드립니다.'
   const leadText = lead.replace(/<[^>]+>/g, '')
   return {
     subject: `${SUBJECT_PREFIX} ${title}`,
     html: renderEmailShell({
       title,
-      preheader: '7일 동안 10% 할인, 아래 링크로 결제하실 때만 적용됩니다',
+      preheader: '7일 동안 쓰실 수 있는 10% 할인 쿠폰, 아래 버튼으로 결제하시면 자동 적용됩니다',
       bodyHtml: greeting(v.recipientName) + paragraph(lead) + paragraph(how) + callout(dataNote, 'danger'),
-      cta: { label: '10% 할인받고 다시 시작하기', url: v.discountUrl },
+      cta: { label: '10% 할인 쿠폰으로 다시 시작하기', url: v.discountUrl },
       footerNote: SUBSCRIPTION_FOOTER,
     }),
     text: textLines([
@@ -410,7 +410,7 @@ export function buildWinbackEmail(v: WinbackVars): EmailContent {
       how,
       dataNote,
       '',
-      `할인받고 다시 시작하기: ${v.discountUrl}`,
+      `10% 할인 쿠폰으로 다시 시작하기: ${v.discountUrl}`,
     ]),
   }
 }
