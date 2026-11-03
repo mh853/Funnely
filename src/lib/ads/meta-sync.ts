@@ -158,15 +158,23 @@ export async function syncMetaAdAccount(supabase: any, account: AdAccountRow, da
       last_synced_at: new Date().toISOString(),
       last_sync_error: null,
       needs_reconnect: false,
+      rate_limited: false,
       history_since: mergeHistorySince(metadata.history_since, since),
     })
     return { accountId: account.account_id, status: 'success' as const, campaigns: campaignRows.size, days: metricRows.length }
   } catch (error) {
     const needsReconnect = error instanceof MetaApiError && error.needsReconnect
     const message = error instanceof Error ? error.message : '알 수 없는 오류'
+    // Access Tier 승인 전 임시 안내 (승인되면 rate_limited 분기와 화면의 '잠시 대기' 줄을 지운다)
+    const rateLimited = !needsReconnect && error instanceof MetaApiError && error.isRateLimited
     await saveMetadata({
       needs_reconnect: needsReconnect,
-      last_sync_error: needsReconnect ? '연결이 만료되었거나 권한이 철회되었습니다. 다시 연결해주세요.' : message,
+      rate_limited: rateLimited,
+      last_sync_error: needsReconnect
+        ? '연결이 만료되었거나 권한이 철회되었습니다. 다시 연결해주세요.'
+        : rateLimited
+          ? '캠페인이 많은 계정이라 Meta 호출 한도에 걸려 성과를 다 받지 못했습니다. 1시간쯤 뒤 \'지금 동기화\'를 다시 누르거나, 다음 날 아침 자동 동기화를 기다려 주세요.'
+          : message,
     })
     return { accountId: account.account_id, status: needsReconnect ? ('needs_reconnect' as const) : ('error' as const), error: message }
   }

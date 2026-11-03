@@ -209,6 +209,7 @@ export default async function AdPerformancePage({
               approval: a.metadata?.approval ?? null,
               lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
               lastSyncError: a.metadata?.last_sync_error ?? null,
+              rateLimited: !!a.metadata?.rate_limited,
             }))}
           latestSyncedAt={latestSyncedAt ? formatKSTDateTime(latestSyncedAt) : null}
           naverInviteId={getNaverAdsInviteId()}

@@ -16,6 +16,14 @@ export class MetaApiError extends Error {
   get needsReconnect() {
     return this.code === 190 || this.code === 102
   }
+
+  /**
+   * 호출 한도 초과 - 시간이 지나면 풀린다. 앱이 Marketing API 개발용 등급(Limited Access)이라
+   * 캠페인이 많은 계정의 1년치 받기에서 걸릴 수 있다. Access Tier 승인 후엔 이 안내를 지워도 된다.
+   */
+  get isRateLimited() {
+    return [4, 17, 613, 80000, 80003, 80004, 80014].includes(this.code ?? -1)
+  }
 }
 
 function appId() {

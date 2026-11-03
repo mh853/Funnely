@@ -16,6 +16,8 @@ interface AccountItem {
   needsReconnect: boolean
   lastSyncedAt: string | null
   lastSyncError: string | null
+  /** Meta 호출 한도에 걸린 상태 (Access Tier 승인 전 임시 안내) */
+  rateLimited?: boolean
   approval: 'pending' | 'approved' | 'rejected' | null
 }
 
@@ -199,6 +201,8 @@ export default function AdAccountActions({
                           <span className="text-red-600">연결이 승인되지 않았습니다 — 퍼널리 고객센터로 문의해주세요</span>
                         ) : a.needsReconnect ? (
                           <span className="text-amber-600">재연결 필요 — {a.lastSyncError || '연결이 만료되었습니다'}</span>
+                        ) : a.rateLimited && a.lastSyncError ? (
+                          <span className="text-amber-600">잠시 대기 — {a.lastSyncError}</span>
                         ) : a.lastSyncError ? (
                           <span className="text-red-600">최근 동기화 실패 — {a.lastSyncError}</span>
                         ) : (
