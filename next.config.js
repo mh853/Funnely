@@ -73,6 +73,8 @@ const nextConfig = {
   async redirects() {
     return [
       { source: '/guides/:platform(meta-ads|google-ads|kakao-moment)', destination: '/dashboard/ad-performance', permanent: false },
+      // 같은 이유로 지운 설정 > '광고 플랫폼 API'(고객 키 입력) 페이지
+      { source: '/dashboard/settings/api-credentials', destination: '/dashboard/ad-performance', permanent: false },
     ]
   },
 

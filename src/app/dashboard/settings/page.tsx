@@ -223,22 +223,24 @@ export default async function SettingsPage() {
           </svg>
         </Link>
 
-        {/* API Credentials - 퍼널리 Meta 앱·Google OAuth 앱이 설정되면 고객이 키를 넣을 필요 없이 광고 성과 화면에서 연결한다 */}
-        <Link
-          href={adPerformanceEnabled ? '/dashboard/ad-performance' : '/dashboard/settings/api-credentials'}
-          className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
-        >
-          <div className="flex-shrink-0 bg-blue-100 rounded-lg p-2 group-hover:bg-blue-200 transition-colors">
-            <KeyIcon className="h-5 w-5 text-blue-600" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-medium text-gray-900 truncate">{adPerformanceEnabled ? '광고 계정 연동' : '광고 플랫폼 API'}</h3>
-            <p className="text-xs text-gray-500 truncate">{adPerformanceEnabled ? '광고 성과 조회' : 'Meta, Kakao, Google Ads'}</p>
-          </div>
-          <svg className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </Link>
+        {/* 광고 계정 연동 - 고객이 키를 넣던 옛 '광고 플랫폼 API' 페이지는 지웠고, 광고 성과 화면에서 로그인·동의로 연결한다 */}
+        {adPerformanceEnabled && (
+          <Link
+            href="/dashboard/ad-performance"
+            className="group flex items-center gap-3 bg-white border border-gray-200 hover:border-blue-300 hover:bg-blue-50 rounded-xl px-4 py-3 transition-all shadow-sm hover:shadow"
+          >
+            <div className="flex-shrink-0 bg-blue-100 rounded-lg p-2 group-hover:bg-blue-200 transition-colors">
+              <KeyIcon className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-medium text-gray-900 truncate">광고 계정 연동</h3>
+              <p className="text-xs text-gray-500 truncate">광고 성과 조회</p>
+            </div>
+            <svg className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </Link>
+        )}
 
         {/* Lead Status Settings - Admin Only */}
         {isAdmin && (
