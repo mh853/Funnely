@@ -84,13 +84,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '연결 요청을 저장하지 못했습니다.' }, { status: 500 })
   }
 
-  if (alreadyVisible) {
-    const { data: company } = await admin.from('companies').select('name').eq('id', userProfile.company_id).maybeSingle()
-    // 알림이 실패해도 요청은 저장됐고 관리자 화면에 남는다
-    await sendNaverReviewNeededEmail({ kind: 'review', companyName: company?.name || userProfile.company_id, customerId }).catch((e) =>
-      console.error('[naver connect] review email error:', e)
-    )
-  }
-  // 아직 안 보이는 계정은 퍼널리가 초대를 수락하면 다음 화면 열기·매일 크론에서 자동 연결된다
+  // 이미 보이는 계정은 직접 확인, 아직 안 보이는 계정은 초대 수락 요청 메일. 수락하면 다음 화면 열기·매일 크론에서 자동 연결된다
+  const { data: company } = await admin.from('companies').select('name').eq('id', userProfile.company_id).maybeSingle()
+  // 알림이 실패해도 요청은 저장됐고 관리자 화면에 남는다
+  await sendNaverReviewNeededEmail({
+    kind: alreadyVisible ? 'review' : 'invite',
+    companyName: company?.name || userProfile.company_id,
+    customerId,
+  }).catch((e) => console.error('[naver connect] notification email error:', e))
   return NextResponse.json({ success: true, review: alreadyVisible })
 }

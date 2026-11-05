@@ -1,4 +1,4 @@
-// 네이버 광고계정 연결 요청이 직접 확인(가로채기 방지)으로 들어오거나 자동 연결되면 운영자에게 알림 메일을 보낸다
+// 네이버 광고계정 연결 요청이 들어오거나(초대 수락 필요·직접 확인) 자동 연결되면 운영자에게 알림 메일을 보낸다
 import { Resend } from 'resend'
 import { config } from '@/lib/config'
 import { FROM_ADDRESS } from '@/lib/email/constants'

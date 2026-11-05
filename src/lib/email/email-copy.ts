@@ -658,8 +658,8 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
 }
 
 export interface NaverReviewNeededVars {
-  /** review: 요청 전부터 보이던 계정이라 자동 연결 안 함 / auto_approved: 자동으로 연결됨(이름만 대조) */
-  kind: 'review' | 'auto_approved'
+  /** invite: 새 요청이라 광고주센터에서 초대 수락 필요 / review: 요청 전부터 보이던 계정이라 자동 연결 안 함 / auto_approved: 자동으로 연결됨(이름만 대조) */
+  kind: 'invite' | 'review' | 'auto_approved'
   companyName: string
   customerId: string
   /** 퍼널리 키로 보이는 네이버 광고계정 이름 (자동 연결 때만 있음) */
@@ -667,13 +667,27 @@ export interface NaverReviewNeededVars {
   adminUrl: string
 }
 
-/** 네이버 광고계정 연결 요청이 직접 확인으로 들어왔거나 자동으로 연결됨 → 운영자 */
+const NAVER_EMAIL_COPY: Record<NaverReviewNeededVars['kind'], { subjectLabel: string; title: string; lead: string }> = {
+  invite: {
+    subjectLabel: '초대 수락 필요',
+    title: '네이버 광고계정 연결 요청 — 광고주센터에서 초대를 수락해 주세요',
+    lead: '고객이 퍼널리 네이버 ID(funnely)를 광고계정에 초대하고 연결을 요청했습니다. 네이버 광고주센터(searchad.naver.com)에 funnely 아이디로 로그인해 초대를 수락해 주세요. 수락하면 고객이 광고 성과 화면을 열거나 매일 아침 동기화 때 자동으로 연결됩니다. 네이버 초대는 30일 동안만 유효합니다.',
+  },
+  review: {
+    subjectLabel: '직접 확인',
+    title: '네이버 광고계정 연결 요청 — 직접 확인이 필요합니다',
+    lead: '요청이 들어오기 전에 이미 퍼널리 네이버 ID로 보이던 광고계정이라 자동으로 연결하지 않았습니다. 광고계정 이름이 요청한 회사와 맞으면 승인, 다르면 거절해 주세요.',
+  },
+  auto_approved: {
+    subjectLabel: '자동 연결 확인',
+    title: '네이버 광고계정이 자동으로 연결됐습니다 — 이름을 확인해 주세요',
+    lead: '초대 수락 후 자동으로 연결했습니다. 광고계정 이름이 요청한 회사와 다르면 관리자 화면에서 거절해 주세요. 거절하면 그 회사에서 성과가 더는 보이지 않습니다.',
+  },
+}
+
+/** 네이버 광고계정 연결 요청이 들어왔거나(초대 수락 필요·직접 확인) 자동으로 연결됨 → 운영자 */
 export function buildNaverReviewNeededEmail(v: NaverReviewNeededVars): EmailContent {
-  const review = v.kind === 'review'
-  const title = review ? '네이버 광고계정 연결 요청 — 직접 확인이 필요합니다' : '네이버 광고계정이 자동으로 연결됐습니다 — 이름을 확인해 주세요'
-  const lead = review
-    ? '요청이 들어오기 전에 이미 퍼널리 네이버 ID로 보이던 광고계정이라 자동으로 연결하지 않았습니다. 광고계정 이름이 요청한 회사와 맞으면 승인, 다르면 거절해 주세요.'
-    : '초대 수락 후 자동으로 연결했습니다. 광고계정 이름이 요청한 회사와 다르면 관리자 화면에서 거절해 주세요. 거절하면 그 회사에서 성과가 더는 보이지 않습니다.'
+  const { subjectLabel, title, lead } = NAVER_EMAIL_COPY[v.kind]
   const companyName = v.companyName.replace(/[\r\n]/g, ' ')
   const rows: Array<[string, string]> = [
     ['회사', escapeHtml(companyName)],
@@ -681,7 +695,7 @@ export function buildNaverReviewNeededEmail(v: NaverReviewNeededVars): EmailCont
   ]
   if (v.accountName) rows.push(['네이버 광고계정 이름', escapeHtml(v.accountName)])
   return {
-    subject: `${INTERNAL_PREFIX} 네이버 광고계정 ${review ? '직접 확인' : '자동 연결 확인'} - ${companyName}`,
+    subject: `${INTERNAL_PREFIX} 네이버 광고계정 ${subjectLabel} - ${companyName}`,
     html: renderEmailShell({
       title,
       preheader: `${companyName} · ${v.customerId}`,
