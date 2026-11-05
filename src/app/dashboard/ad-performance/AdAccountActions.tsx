@@ -18,6 +18,8 @@ interface AccountItem {
   lastSyncError: string | null
   /** Meta 호출 한도에 걸린 상태 (Access Tier 승인 전 임시 안내) */
   rateLimited?: boolean
+  /** 연결이 7일 안에 끝나면 남은 일수 (Meta만 해당) */
+  expiresInDays?: number | null
   approval: 'pending' | 'approved' | 'rejected' | null
 }
 
@@ -43,9 +45,14 @@ export default function AdAccountActions({
   const connected = accounts.filter(isConnected)
   const reconnectCount = connected.filter((a) => a.needsReconnect).length
   const errorCount = connected.filter((a) => !a.needsReconnect && a.lastSyncError).length
-  // 연결이 없거나 손볼 계정·승인 대기 요청이 있으면 처음부터 펼쳐 둔다
+  const expiringCount = connected.filter((a) => !a.needsReconnect && a.expiresInDays != null).length
+  // 연결이 없거나 손볼 계정·곧 끝나는 연결·승인 대기 요청이 있으면 처음부터 펼쳐 둔다
   const [expanded, setExpanded] = useState(
-    connected.length === 0 || reconnectCount > 0 || errorCount > 0 || accounts.some((a) => a.approval === 'pending')
+    connected.length === 0 ||
+      reconnectCount > 0 ||
+      errorCount > 0 ||
+      expiringCount > 0 ||
+      accounts.some((a) => a.approval === 'pending')
   )
   const [syncing, setSyncing] = useState(false)
   // router.refresh()로 새 성과가 화면에 그려지는 동안 true
@@ -201,6 +208,11 @@ export default function AdAccountActions({
                           <span className="text-red-600">연결이 승인되지 않았습니다 — 퍼널리 고객센터로 문의해주세요</span>
                         ) : a.needsReconnect ? (
                           <span className="text-amber-600">재연결 필요 — {a.lastSyncError || '연결이 만료되었습니다'}</span>
+                        ) : a.expiresInDays != null ? (
+                          <span className="text-amber-600">
+                            {a.expiresInDays}일 뒤 연결이 끝납니다 — 아래 &apos;{PLATFORM_LABEL[a.platform]} 계정 추가·다시 연결&apos;로 미리 다시
+                            연결해 주세요
+                          </span>
                         ) : a.rateLimited && a.lastSyncError ? (
                           <span className="text-amber-600">잠시 대기 — {a.lastSyncError}</span>
                         ) : a.lastSyncError ? (

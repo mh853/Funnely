@@ -34,6 +34,15 @@ function formatKSTDateTime(dateStr: string) {
   return `${kst.getUTCFullYear()}-${String(kst.getUTCMonth() + 1).padStart(2, '0')}-${String(kst.getUTCDate()).padStart(2, '0')} ${String(kst.getUTCHours()).padStart(2, '0')}:${String(kst.getUTCMinutes()).padStart(2, '0')}`
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000
+// Meta 연결(장기 토큰)은 약 60일 뒤 끝나고 자동 연장이 안 돼, 7일 전부터 미리 다시 연결하라고 알린다.
+// 만료 시각을 저장하는 건 Meta뿐이라(구글·카카오는 null, 네이버는 토큰 없음) 값이 있는 행만 해당된다.
+function daysUntilExpiry(expiresAt: string | null) {
+  if (!expiresAt) return null
+  const left = new Date(expiresAt).getTime() - Date.now()
+  return left > 0 && left <= 7 * DAY_MS ? Math.ceil(left / DAY_MS) : null
+}
+
 export default async function AdPerformancePage({
   searchParams,
 }: {
@@ -210,6 +219,7 @@ export default async function AdPerformancePage({
               lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
               lastSyncError: a.metadata?.last_sync_error ?? null,
               rateLimited: !!a.metadata?.rate_limited,
+              expiresInDays: daysUntilExpiry(a.token_expires_at),
             }))}
           latestSyncedAt={latestSyncedAt ? formatKSTDateTime(latestSyncedAt) : null}
           naverInviteId={getNaverAdsInviteId()}
