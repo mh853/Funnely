@@ -482,6 +482,61 @@ export function buildMetaReconnectEmail(v: MetaReconnectVars): EmailContent {
   }
 }
 
+export interface AdSyncAlertPlatform {
+  platform: string
+  /** 플랫폼 작업 자체가 실패했을 때의 오류 */
+  error?: string | null
+  synced: number
+  failed: number
+  deferred: number
+  needsReconnect: number
+  failedAccounts: Array<{ accountId: string; error: string }>
+}
+
+export interface AdSyncAlertVars {
+  startedAt: string
+  platforms: AdSyncAlertPlatform[]
+}
+
+/** 아침 광고 동기화 크론에서 실패·시간 부족으로 못 받은 계정이 생김 → 운영자 */
+export function buildAdSyncAlertEmail(v: AdSyncAlertVars): EmailContent {
+  const when = formatKstDateTime(v.startedAt)
+  const title = '광고 성과 동기화에 문제가 있습니다'
+  const rows: Array<[string, string]> = v.platforms.map((p) => [
+    escapeHtml(p.platform),
+    p.error ? `작업 실패: ${escapeHtml(p.error.slice(0, 200))}` : `성공 ${p.synced} · 실패 ${p.failed} · 다음 날로 넘김 ${p.deferred} · 재연결 필요 ${p.needsReconnect}`,
+  ])
+  const failedLines = v.platforms.flatMap((p) => p.failedAccounts.map((a) => `${p.platform} ${a.accountId} — ${a.error.slice(0, 200)}`))
+  const deferred = v.platforms.reduce((n, p) => n + p.deferred, 0)
+  const notes = [
+    failedLines.length ? '실패한 계정은 고객 화면에 \'최근 동기화 실패\'로 보이고, 다음 날 아침에 다시 시도합니다.' : null,
+    deferred ? '\'다음 날로 넘김\'은 시간(300초)이 모자라 못 받은 계정입니다. 다음 날 먼저 받지만, 매일 생기면 요금제 상향이나 나눠 돌리기를 검토해야 합니다.' : null,
+    '재연결 필요는 고객 쪽 권한 문제라 이 메일의 발송 조건이 아닙니다(구글·카카오·네이버는 고객에게 따로 안내 메일이 가고, Meta는 만료 7일 전 안내가 갑니다).',
+  ].filter(Boolean) as string[]
+  return {
+    subject: `${INTERNAL_PREFIX} 광고 성과 동기화 문제 - ${when}`,
+    html: renderEmailShell({
+      title,
+      preheader: `${when} 실행`,
+      bodyHtml:
+        paragraph(`${when}에 돈 광고 성과 동기화 결과입니다.`) +
+        infoTable(rows) +
+        (failedLines.length ? paragraph(`실패한 계정<br>${failedLines.map(escapeHtml).join('<br>')}`) : '') +
+        notes.map((n) => paragraph(escapeHtml(n))).join(''),
+      internal: true,
+      footerNote: '운영자에게만 발송되는 내부 알림입니다.',
+    }),
+    text: textLines([
+      title,
+      `${when}에 돈 광고 성과 동기화 결과입니다.`,
+      ...v.platforms.map((p) => `${p.platform}: ${p.error ? `작업 실패 ${p.error}` : `성공 ${p.synced} · 실패 ${p.failed} · 다음 날로 넘김 ${p.deferred} · 재연결 필요 ${p.needsReconnect}`}`),
+      ...(failedLines.length ? ['', '실패한 계정', ...failedLines] : []),
+      '',
+      ...notes,
+    ]),
+  }
+}
+
 // ───────────────────────── 리드·문의 ─────────────────────────
 
 export interface LeadDigestItem {

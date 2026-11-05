@@ -13,6 +13,7 @@ import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
 import { isKakaoAdsConfigured } from '@/lib/ads/kakao'
 import { syncKakaoAdAccount } from '@/lib/ads/kakao-sync'
 import { syncDaysFor } from '@/lib/ads/sync-window'
+import { sendAdSyncAlertIfNeeded } from '@/lib/email/send-ad-sync-alert'
 
 export const maxDuration = 300
 
@@ -119,5 +120,7 @@ export async function GET(request: NextRequest) {
   )
 
   await recordCronRun(supabase, 'ad-sync', startedAt, tasks)
+  // 실패·다음 날로 넘긴 계정이 있으면 운영자에게 알린다 (실행 기록만으로는 아무도 모르고 지나간다)
+  await sendAdSyncAlertIfNeeded(startedAt, tasks)
   return NextResponse.json({ timestamp: startedAt.toISOString(), tasksExecuted: tasks })
 }
