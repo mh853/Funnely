@@ -1,4 +1,7 @@
 // 대시보드 사용 가이드 본문 — /dashboard/guide 전체 페이지와 첫 접속 팝업(GuideModal)이 공유해서 사용
+import AdConnectGuide from './AdConnectGuide'
+import type { AdPlatform } from '@/lib/ads/enabled-platforms'
+
 const TOC = [
   { id: 'signup', label: '회원가입' },
   { id: 'dashboard', label: '대시보드' },
@@ -6,6 +9,7 @@ const TOC = [
   { id: 'leads', label: 'DB 현황' },
   { id: 'calendar', label: 'DB 스케줄' },
   { id: 'reservations', label: '예약 스케줄' },
+  { id: 'ad-performance', label: '광고 성과' },
   { id: 'analytics', label: '트래픽 분석' },
   { id: 'reports', label: 'DB 리포트' },
   { id: 'notifications', label: '알림' },
@@ -62,7 +66,9 @@ function GuideTip({ children }: { children: React.ReactNode }) {
   )
 }
 
-export default function GuideContent({ hero = true }: { hero?: boolean }) {
+export default function GuideContent({ hero = true, adPlatforms = [] }: { hero?: boolean; adPlatforms?: AdPlatform[] }) {
+  // 광고 성과는 회사에 열린 플랫폼이 있을 때만 보여준다
+  const toc = adPlatforms.length > 0 ? TOC : TOC.filter((item) => item.id !== 'ad-performance')
   return (
     <div>
       {hero && (
@@ -76,7 +82,7 @@ export default function GuideContent({ hero = true }: { hero?: boolean }) {
 
       <nav className="sticky top-0 z-10 bg-white border border-gray-200 rounded-xl shadow-sm px-3 py-2.5 mb-6">
         <ol className="flex gap-2 overflow-x-auto">
-          {TOC.map((item) => (
+          {toc.map((item) => (
             <li key={item.id} className="flex-shrink-0">
               <a
                 href={`#${item.id}`}
@@ -173,6 +179,27 @@ export default function GuideContent({ hero = true }: { hero?: boolean }) {
         />
       </GuideSection>
 
+      {adPlatforms.length > 0 && (
+        <GuideSection
+          id="ad-performance"
+          tag="광고"
+          title="광고 성과 · 광고 계정 연결하기"
+          desc="쓰고 있는 광고 계정을 연결하면 캠페인별 광고비·노출·클릭과 퍼널리로 들어온 DB 수를 한 화면에서 봅니다."
+        >
+          <AdConnectGuide platforms={adPlatforms} />
+          <div className="mt-5">
+            <GuideList
+              items={[
+                '연결은 회사 관리자만 할 수 있습니다. 연결하면 최근 1년 성과를 받아오고, 이후 매일 오전 자동으로 새 성과를 받아옵니다.',
+                <>표의 <b className="text-indigo-600">DB · DB당 비용</b>은 광고 링크의 utm_campaign이 캠페인 ID나 캠페인 이름과 같은 DB를 세어 계산합니다.</>,
+                '퍼널리는 광고 성과를 보기만 하고, 광고·예산을 바꾸지 않습니다.',
+              ]}
+            />
+          </div>
+          <GuideTip>Meta 연결은 약 60일마다 다시 해야 합니다. 끝나기 7일 전부터 계정 목록에 안내가 뜨면 &apos;계정 추가·다시 연결&apos;을 한 번 눌러 주세요.</GuideTip>
+        </GuideSection>
+      )}
+
       <GuideSection
         id="analytics"
         tag="분석"
@@ -221,7 +248,7 @@ export default function GuideContent({ hero = true }: { hero?: boolean }) {
         <GuideList
           items={[
             <><b className="text-indigo-600">픽셀 관리</b>: Facebook·Google·Kakao 광고 픽셀을 연동해 전환 이벤트를 추적합니다.</>,
-            <><b className="text-indigo-600">광고 플랫폼 API</b>: Meta·Kakao·Google Ads API를 연동합니다.</>,
+            <><b className="text-indigo-600">광고 계정 연동</b>: 광고 성과 화면으로 이동해 Meta·구글·카카오 등 광고 계정을 연결합니다.</>,
             <><b className="text-indigo-600">DB 상태 관리</b>: &quot;DB 현황&quot;의 결과 드롭다운 항목(상담전/거절/진행중 등)을 회사 상황에 맞게 커스터마이징합니다.</>,
             <><b className="text-indigo-600">Sheets 동기화</b>: 구글 스프레드시트와 리드를 자동으로 동기화합니다.</>,
             '그 외 구독 관리·결제 내역·팀 관리(멤버 초대/권한)·회사 정보(사업자번호 등)도 이 화면에서 관리합니다.',

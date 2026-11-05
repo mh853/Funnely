@@ -3,10 +3,7 @@ import { createClient, getCachedUser, getCachedUserProfile, getCachedCompanySubs
 import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
-import { isMetaEnabledForCompany } from '@/lib/ads/meta'
-import { isGoogleAdsEnabledForCompany } from '@/lib/ads/google'
-import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
-import { isKakaoAdsEnabledForCompany } from '@/lib/ads/kakao'
+import { getEnabledAdPlatforms } from '@/lib/ads/enabled-platforms'
 
 export const metadata: Metadata = {
   robots: {
@@ -80,6 +77,8 @@ export default async function DashboardLayout({
 
   // Note: 구독 기반 접근 권한 체크는 middleware.ts에서 처리됨
 
+  const adPlatforms = getEnabledAdPlatforms(userProfile?.company_id)
+
   return (
     <DashboardLayoutClient
       user={user}
@@ -89,12 +88,8 @@ export default async function DashboardLayout({
       subscriptionStatus={subscriptionStatus}
       currentPlanName={currentPlanName}
       trialDDay={trialDDay}
-      showAdPerformance={
-        isMetaEnabledForCompany(userProfile?.company_id) ||
-        isGoogleAdsEnabledForCompany(userProfile?.company_id) ||
-        isNaverAdsEnabledForCompany(userProfile?.company_id) ||
-        isKakaoAdsEnabledForCompany(userProfile?.company_id)
-      }
+      showAdPerformance={adPlatforms.length > 0}
+      adPlatforms={adPlatforms}
     >
       {children}
     </DashboardLayoutClient>

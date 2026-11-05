@@ -91,7 +91,17 @@ function CopyButton({ text }: { text: string }) {
 function GuideBody({ guide, children }: { guide: Guide; children: ReactNode }) {
   return (
     <div className="mt-3 p-4 rounded-lg bg-gray-50 text-sm space-y-3">
-      <p className="font-semibold text-gray-900">{guide.title}</p>
+      <p className="font-semibold text-gray-900">
+        {guide.title}
+        <a
+          href="/dashboard/guide#ad-performance"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-2 text-xs font-medium text-indigo-600 underline"
+        >
+          화면 그림으로 보기
+        </a>
+      </p>
       <p className="text-gray-700">
         <span className="font-medium text-gray-900">준비물</span> · {guide.prepare}
       </p>

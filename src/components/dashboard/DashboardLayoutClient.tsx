@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import Header from './Header'
 import TrialExpiredModal from './TrialExpiredModal'
 import GuideModal from './GuideModal'
+import type { AdPlatform } from '@/lib/ads/enabled-platforms'
 
 // Toss 결제 리다이렉트 페이지: 자체적으로 전체화면 UI를 그리므로 사이드바/헤더 없이 렌더링
 const FULLSCREEN_PATHS = [
@@ -26,6 +27,8 @@ interface DashboardLayoutClientProps {
   trialDDay?: string | null
   // 퍼널리 Meta 앱 환경변수가 설정된 경우에만 '광고 성과' 메뉴를 보여준다
   showAdPerformance?: boolean
+  /** 이 회사에 열린 광고 연동 플랫폼 - 첫 접속 사용 가이드의 '광고 계정 연결하기' 탭에 쓴다 */
+  adPlatforms?: AdPlatform[]
 }
 
 const SIDEBAR_COLLAPSED_KEY = 'sidebar-collapsed'
@@ -43,6 +46,7 @@ export default function DashboardLayoutClient({
   currentPlanName,
   trialDDay,
   showAdPerformance = false,
+  adPlatforms = [],
 }: DashboardLayoutClientProps) {
   const pathname = usePathname()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -102,7 +106,7 @@ export default function DashboardLayoutClient({
         <TrialExpiredModal onDismiss={() => setTrialModalDismissed(true)} />
       )}
       {showGuideModal && (
-        <GuideModal onClose={closeGuideForSession} onDismissForever={dismissGuideForever} />
+        <GuideModal onClose={closeGuideForSession} onDismissForever={dismissGuideForever} adPlatforms={adPlatforms} />
       )}
       <Sidebar
         userProfile={userProfile}

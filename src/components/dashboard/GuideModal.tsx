@@ -3,13 +3,15 @@
 
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import GuideContent from './guide/GuideContent'
+import type { AdPlatform } from '@/lib/ads/enabled-platforms'
 
 interface GuideModalProps {
   onClose: () => void
   onDismissForever: () => void
+  adPlatforms?: AdPlatform[]
 }
 
-export default function GuideModal({ onClose, onDismissForever }: GuideModalProps) {
+export default function GuideModal({ onClose, onDismissForever, adPlatforms = [] }: GuideModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 py-6">
       <div
@@ -36,7 +38,7 @@ export default function GuideModal({ onClose, onDismissForever }: GuideModalProp
 
         <div className="flex-1 overflow-y-auto">
           <div className="px-6 py-6">
-            <GuideContent hero={false} />
+            <GuideContent hero={false} adPlatforms={adPlatforms} />
           </div>
         </div>
 
