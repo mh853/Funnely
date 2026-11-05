@@ -482,6 +482,62 @@ export function buildMetaReconnectEmail(v: MetaReconnectVars): EmailContent {
   }
 }
 
+export type DisconnectedAdPlatform = 'google' | 'kakao' | 'naver'
+
+export interface AdDisconnectedVars {
+  recipientName?: string | null
+  platform: DisconnectedAdPlatform
+  /** 연결이 끊어진 광고 계정 이름 */
+  accountNames: string[]
+}
+
+const AD_DISCONNECTED_COPY: Record<DisconnectedAdPlatform, { label: string; how: string; why: string; cta: string }> = {
+  google: {
+    label: '구글',
+    how: '광고 성과 화면의 <strong>계정 관리 → 구글 계정 추가·다시 연결</strong>을 눌러 구글에서 다시 허용해 주시면 성과가 다시 자동으로 들어옵니다.',
+    why: '구글 계정에서 퍼널리 접근 권한을 삭제했거나 비밀번호를 바꾸면 연결이 끊어집니다.',
+    cta: '구글 계정 다시 연결하기',
+  },
+  kakao: {
+    label: '카카오',
+    how: '광고 성과 화면의 <strong>계정 관리 → 카카오 계정 추가·다시 연결</strong>을 눌러 카카오에서 다시 동의해 주시면 성과가 다시 자동으로 들어옵니다.',
+    why: '카카오 비즈니스에서 퍼널리 권한을 해제했거나 광고계정 권한이 바뀌면 연결이 끊어집니다.',
+    cta: '카카오 계정 다시 연결하기',
+  },
+  naver: {
+    label: '네이버',
+    how: '네이버 광고주센터에서 광고계정의 <strong>설정 → 권한 관리 → 회원 초대</strong>로 <strong>funnely</strong> 아이디를 <strong>운영 조회</strong> 권한으로 다시 초대해 주세요. 퍼널리가 초대를 수락하면 성과가 다시 자동으로 들어옵니다.',
+    why: '광고계정에서 퍼널리 네이버 아이디의 조회 권한이 해제되면 연결이 끊어집니다.',
+    cta: '광고 성과 화면 열기',
+  },
+}
+
+/** 구글·카카오·네이버 광고 계정 연결이 끊어짐(권한 해제 등) → 회사 관리자. 끊어질 때마다 1번 */
+export function buildAdDisconnectedEmail(v: AdDisconnectedVars): EmailContent {
+  const { label, how, why, cta } = AD_DISCONNECTED_COPY[v.platform]
+  const title = `${label} 광고 계정 연결이 끊어졌습니다`
+  const names = v.accountNames.map(escapeHtml).join(', ')
+  const lead = `퍼널리에 연결된 ${label} 광고 계정(${names})의 연결이 끊어져 새 성과를 받아오지 못하고 있습니다.`
+  const keep = `${why} 지금까지 받은 성과는 지워지지 않습니다.`
+  const stripTags = (html: string) => html.replace(/<[^>]+>/g, '')
+  return {
+    subject: `${SUBJECT_PREFIX} ${title}`,
+    html: renderEmailShell({
+      title,
+      preheader: '다시 연결하면 성과가 다시 들어옵니다',
+      bodyHtml: greeting(v.recipientName ?? null) + paragraph(lead) + paragraph(how) + callout(keep, 'info'),
+      cta: { label: cta, url: AD_PERFORMANCE_URL },
+    }),
+    text: textLines([
+      `${displayName(v.recipientName)}, 퍼널리에 연결된 ${label} 광고 계정(${v.accountNames.join(', ')})의 연결이 끊어져 새 성과를 받아오지 못하고 있습니다.`,
+      stripTags(how),
+      keep,
+      '',
+      `광고 성과 화면: ${AD_PERFORMANCE_URL}`,
+    ]),
+  }
+}
+
 export interface AdSyncAlertPlatform {
   platform: string
   /** 플랫폼 작업 자체가 실패했을 때의 오류 */
@@ -713,8 +769,8 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
 }
 
 export interface NaverReviewNeededVars {
-  /** invite: 새 요청이라 광고주센터에서 이름 대조 후 초대 수락 필요 / review: 요청 전부터 보이던 계정이라 자동 연결 안 함 */
-  kind: 'invite' | 'review'
+  /** invite: 새 요청이라 광고주센터에서 이름 대조 후 초대 수락 필요 / review: 요청 전부터 보이던 계정이라 자동 연결 안 함 / disconnected: 연결된 계정의 퍼널리 권한이 해제됨 */
+  kind: 'invite' | 'review' | 'disconnected'
   companyName: string
   customerId: string
   adminUrl: string
@@ -725,6 +781,11 @@ const NAVER_EMAIL_COPY: Record<NaverReviewNeededVars['kind'], { subjectLabel: st
     subjectLabel: '초대 수락 필요',
     title: '네이버 광고계정 연결 요청 — 광고주센터에서 초대를 수락해 주세요',
     lead: '고객이 퍼널리 네이버 ID(funnely)를 광고계정에 초대하고 연결을 요청했습니다. 네이버 광고주센터(searchad.naver.com)에 funnely 아이디로 로그인해, 초대한 광고계정의 이름·번호가 아래 회사와 맞는지 확인한 뒤 수락해 주세요. 수락하면 고객이 광고 성과 화면을 열거나 매일 아침 동기화 때 자동으로 연결되고, 따로 메일은 더 가지 않습니다. 이름이 다르면 수락하지 말고 관리자 화면에서 거절해 주세요. 네이버 초대는 30일 동안만 유효합니다.',
+  },
+  disconnected: {
+    subjectLabel: '권한 해제됨',
+    title: '네이버 광고계정의 퍼널리 권한이 해제됐습니다',
+    lead: '연결돼 있던 이 회사 광고계정에서 퍼널리 네이버 ID(funnely)의 권한이 해제돼 동기화가 멈췄습니다. 고객에게도 다시 초대해 달라는 안내 메일을 보냈습니다. 고객이 다시 초대하면 네이버 광고주센터에서 이름·번호를 확인하고 수락해 주세요. 수락하면 다음 동기화부터 자동으로 이어집니다.',
   },
   review: {
     subjectLabel: '직접 확인',

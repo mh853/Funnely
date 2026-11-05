@@ -31,11 +31,14 @@ import {
   buildLeadDigestEmail,
   buildAdminDailyReportEmail,
   buildMetaReconnectEmail,
+  buildAdDisconnectedEmail,
+  type DisconnectedAdPlatform,
   SUBSCRIPTION_URL,
   type EmailContent,
   type LifecycleVars,
 } from '@/lib/email/email-copy'
 import { sendPendingPaymentNotifications } from '@/lib/email/payment-notification-sender'
+import { sendNaverReviewNeededEmail } from '@/lib/email/send-naver-review-notification'
 
 /**
  * Unified daily tasks cron job
@@ -257,6 +260,24 @@ export async function GET(request: NextRequest) {
       console.error('[Cron] Meta reconnect notices error:', error)
       results.tasksExecuted.push({
         task: 'meta_reconnect_notices',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+
+    // Task 3d: 구글·카카오·네이버 연결이 끊어진(권한 해제 등) 회사 관리자에게 다시 연결 안내 메일 (끊어질 때마다 1번, 07시 광고 동기화가 표시한 것)
+    console.log('[Cron] Running ad disconnected notices')
+    try {
+      const disconnectedResult = await queueAdDisconnectedEmails(supabase)
+      results.tasksExecuted.push({
+        task: 'ad_disconnected_notices',
+        status: 'success',
+        ...disconnectedResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Ad disconnected notices error:', error)
+      results.tasksExecuted.push({
+        task: 'ad_disconnected_notices',
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
@@ -727,6 +748,82 @@ async function queueMetaReconnectEmails(supabase: any) {
     companies++
   }
   return { queued: companies }
+}
+
+const DISCONNECT_NOTICE_PLATFORMS: DisconnectedAdPlatform[] = ['google', 'kakao', 'naver']
+
+/**
+ * 구글·카카오·네이버 광고 계정이 '재연결 필요'(고객이 권한을 끊음 등)가 되면 회사 관리자에게 한 번 알린다. Meta는 만료 7일 전 안내가 따로 있어 뺀다.
+ * 보낸 연결에는 metadata.disconnect_notice_at을 적고, 다시 연결돼 needs_reconnect가 풀리면 이 작업이 표시를 지워 다음에 끊어질 때 다시 알린다
+ * (구글·카카오는 다시 연결하면 metadata를 새로 쓰지만, 네이버는 다시 초대만 하면 동기화가 이어져 기존 metadata가 남기 때문).
+ * 네이버는 고객이 다시 초대해도 퍼널리가 수락해야 하므로 운영자에게도 같은 때 알린다.
+ */
+async function queueAdDisconnectedEmails(supabase: any) {
+  const { data: accounts, error } = await supabase
+    .from('ad_accounts')
+    .select('id, company_id, platform, account_id, account_name, metadata, companies!inner(name, is_active, withdrawn_at)')
+    .in('platform', DISCONNECT_NOTICE_PLATFORMS)
+    .eq('is_active', true)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+  if (error) throw new Error(`Failed to fetch ad accounts for disconnect notices: ${error.message}`)
+
+  // 다시 연결된 계정은 표시를 지운다
+  let cleared = 0
+  for (const a of accounts || []) {
+    if (a.metadata?.disconnect_notice_at && a.metadata?.needs_reconnect !== true) {
+      const { disconnect_notice_at: _done, ...rest } = a.metadata
+      await supabase.from('ad_accounts').update({ metadata: rest }).eq('id', a.id)
+      cleared++
+    }
+  }
+
+  const due = (accounts || []).filter((a: any) => a.metadata?.needs_reconnect === true && !a.metadata?.disconnect_notice_at)
+  if (due.length === 0) return { queued: 0, cleared }
+
+  const companyIds = Array.from(new Set(due.map((a: any) => a.company_id)))
+  const { data: subRows } = await supabase
+    .from('company_subscriptions')
+    .select('company_id, status, current_period_end, trial_end_date, cancelled_at, grace_period_end')
+    .in('company_id', companyIds)
+    .order('created_at', { ascending: false })
+
+  let queued = 0
+  for (const companyId of companyIds) {
+    // 구독이 끊겨 동기화도 안 하는 회사에는 보내지 않는다 (광고 동기화 크론과 같은 기준)
+    const subs = (subRows || []).filter((r: any) => r.company_id === companyId)
+    if (!hasValidPlanAccess(pickCurrentSubscription(subs))) continue
+    for (const platform of DISCONNECT_NOTICE_PLATFORMS) {
+      const list = due.filter((a: any) => a.company_id === companyId && a.platform === platform)
+      if (list.length === 0) continue
+      const accountNames = list.map((a: any) => a.account_name || a.account_id)
+      await queueLifecycleEmail(
+        supabase,
+        companyId,
+        'ad_reconnect_needed',
+        (recipientName) => buildAdDisconnectedEmail({ recipientName, platform, accountNames }),
+        { platform, ad_account_ids: list.map((a: any) => a.id), reason: 'disconnected' }
+      )
+      if (platform === 'naver') {
+        for (const a of list) {
+          await sendNaverReviewNeededEmail({
+            kind: 'disconnected',
+            companyName: a.companies?.name || companyId,
+            customerId: a.account_id,
+          }).catch((e) => console.error('[Cron] naver disconnected operator email error:', e))
+        }
+      }
+      const noticeAt = new Date().toISOString()
+      for (const a of list) {
+        await supabase
+          .from('ad_accounts')
+          .update({ metadata: { ...(a.metadata || {}), disconnect_notice_at: noticeAt } })
+          .eq('id', a.id)
+      }
+      queued++
+    }
+  }
+  return { queued, cleared }
 }
 
 async function syncGoogleSheets(supabase: any) {
