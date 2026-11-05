@@ -13,6 +13,7 @@ import { isTokenExpired } from '@/lib/ads/meta-sync'
 import { HISTORY_DAYS, syncDaysFor } from '@/lib/ads/sync-window'
 import { toKSTDateStr } from '@/lib/utils/date'
 import AdAccountActions from './AdAccountActions'
+import { matchLeadsToCampaigns } from './lead-match'
 import { PRESETS, resolvePeriod } from './period'
 
 const PLATFORM_LABEL: Record<string, string> = { meta: 'Meta', google: '구글', naver: '네이버', kakao: '카카오' }
@@ -27,6 +28,8 @@ interface CampaignSummary {
   impressions: number
   clicks: number
   conversions: number
+  /** 이 캠페인으로 들어온 퍼널리 DB(리드) 수 - utm_campaign으로 묶는다 */
+  leads: number
 }
 
 function formatKSTDateTime(dateStr: string) {
@@ -125,25 +128,69 @@ export default async function AdPerformancePage({
   }
 
   const byCampaign = new Map<string, CampaignSummary>()
+  const emptyRow = (c: any): CampaignSummary => ({
+    id: c.id,
+    name: c.name,
+    status: c.status,
+    platform: c.ad_accounts?.platform ?? '',
+    accountName: c.ad_accounts?.account_name ?? '',
+    spend: 0,
+    impressions: 0,
+    clicks: 0,
+    conversions: 0,
+    leads: 0,
+  })
   for (const m of metrics) {
     const c = m.campaigns
-    const row = byCampaign.get(c.id) ?? {
-      id: c.id,
-      name: c.name,
-      status: c.status,
-      platform: c.ad_accounts?.platform ?? '',
-      accountName: c.ad_accounts?.account_name ?? '',
-      spend: 0,
-      impressions: 0,
-      clicks: 0,
-      conversions: 0,
-    }
+    const row = byCampaign.get(c.id) ?? emptyRow(c)
     row.spend += Number(m.spend) || 0
     row.impressions += Number(m.impressions) || 0
     row.clicks += Number(m.clicks) || 0
     row.conversions += Number(m.conversions) || 0
     byCampaign.set(c.id, row)
   }
+
+  // 같은 기간에 들어온 퍼널리 DB를 utm_campaign으로 캠페인에 붙여 'DB당 비용'을 보여준다
+  const leadMatch = { matched: 0, unmatched: 0, unmatchedSamples: [] as string[] }
+  if (accounts && accounts.length > 0) {
+    const allCampaigns: any[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data } = await db
+        .from('campaigns')
+        .select('id, name, status, platform_campaign_id, ad_accounts!inner(company_id, platform, account_name)')
+        .eq('ad_accounts.company_id', userProfile.company_id)
+        .in('ad_accounts.platform', enabledPlatforms)
+        .range(from, from + 999)
+      allCampaigns.push(...(data || []))
+      if (!data || data.length < 1000) break
+    }
+    const leadCampaigns: (string | null)[] = []
+    for (let from = 0; ; from += 1000) {
+      const { data } = await db
+        .from('leads')
+        .select('utm_campaign')
+        .eq('company_id', userProfile.company_id)
+        .not('utm_campaign', 'is', null)
+        .gte('created_at', `${since}T00:00:00+09:00`)
+        .lte('created_at', `${until}T23:59:59.999+09:00`)
+        .range(from, from + 999)
+      leadCampaigns.push(...(data || []).map((l: any) => l.utm_campaign))
+      if (!data || data.length < 1000) break
+    }
+    const result = matchLeadsToCampaigns(allCampaigns, leadCampaigns)
+    // 기간 안에 광고비는 없어도 DB가 들어온 캠페인(예: 광고 종료 직후 신청)도 줄을 만든다
+    for (const c of allCampaigns) {
+      const count = result.counts.get(c.id)
+      if (!count) continue
+      const row = byCampaign.get(c.id) ?? emptyRow(c)
+      row.leads = count
+      byCampaign.set(c.id, row)
+    }
+    leadMatch.matched = result.matched
+    leadMatch.unmatched = result.unmatched
+    leadMatch.unmatchedSamples = result.unmatchedSamples
+  }
+
   const campaigns = Array.from(byCampaign.values()).sort((a, b) => b.spend - a.spend)
   const total = campaigns.reduce(
     (acc, c) => ({
@@ -305,12 +352,16 @@ export default async function AdPerformancePage({
                   <th className="px-4 py-3 text-right font-medium">CPC</th>
                   <th className="px-4 py-3 text-right font-medium">전환</th>
                   <th className="px-4 py-3 text-right font-medium">전환당 비용</th>
+                  <th className="px-4 py-3 text-right font-medium" title="퍼널리에 들어온 DB 중 utm_campaign이 이 캠페인과 맞는 건수">
+                    DB
+                  </th>
+                  <th className="px-4 py-3 text-right font-medium">DB당 비용</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {campaigns.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-4 py-10 text-center text-gray-500">
+                    <td colSpan={11} className="px-4 py-10 text-center text-gray-500">
                       선택한 기간({period.label})에 집계된 광고 성과가 없습니다
                     </td>
                   </tr>
@@ -333,15 +384,31 @@ export default async function AdPerformancePage({
                       <td className="px-4 py-3 text-right">{money(ratio(c.spend, c.clicks))}</td>
                       <td className="px-4 py-3 text-right">{num(c.conversions)}</td>
                       <td className="px-4 py-3 text-right">{c.conversions > 0 ? money(c.spend / c.conversions) : '-'}</td>
+                      <td className="px-4 py-3 text-right">{num(c.leads)}</td>
+                      <td className="px-4 py-3 text-right">{c.leads > 0 ? money(c.spend / c.leads) : '-'}</td>
                     </tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
+          {leadMatch.unmatched > 0 && (
+            <div className="p-3 rounded-lg bg-blue-50 text-sm text-blue-900 space-y-1">
+              <p>
+                이 기간 DB 중 <b>{num(leadMatch.unmatched)}건</b>은 utm_campaign 값
+                {leadMatch.unmatchedSamples.length > 0 && `(예: ${leadMatch.unmatchedSamples.join(', ')})`}이 연결된 광고 캠페인의 ID·이름과 맞지
+                않아 위 표의 DB에 넣지 않았습니다.
+              </p>
+              <p className="text-xs text-blue-800">
+                광고에서 온 DB라면, 광고 링크의 utm_campaign에 캠페인 이름을 그대로 쓰거나 캠페인 ID가 자동으로 들어가게 하세요. Meta는{' '}
+                <code className="font-mono">{'{{campaign.id}}'}</code>, 구글은 <code className="font-mono">{'{campaignid}'}</code>를 넣으면 됩니다.
+              </p>
+            </div>
+          )}
           <p className="text-xs text-gray-500">
             광고 계정을 연결할 때 최근 1년 성과를 받아오고, 이후 매일 오전 8시에 최근 7일치를 다시 받아옵니다. 각 광고 관리자와 전환 집계 기준에 따라 수치가 조금 다를 수 있습니다.
             Meta 전환은 Meta가 보고한 신청(리드)·가입 완료 이벤트, 구글 전환은 구글 광고의 &apos;전환&apos; 열(소수점은 반올림) 기준입니다.
+            DB는 이 기간에 퍼널리로 들어온 DB 중 광고 링크의 utm_campaign이 캠페인 ID나 캠페인 이름과 같은 건수이고, DB당 비용은 광고비를 그 수로 나눈 값입니다.
             {enabledPlatforms.includes('naver') && ' 네이버 광고비는 네이버 검색광고가 보고한 VAT 포함 금액입니다.'}
             {enabledPlatforms.includes('kakao') && ' 카카오 전환은 카카오모먼트 픽셀·SDK의 잠재고객·서비스 신청(7일) 기준입니다. 카카오는 성과를 하루 뒤에 넘겨줘서 오늘 성과는 내일부터 보입니다(지금 동기화를 눌러도 같습니다).'}
           </p>
