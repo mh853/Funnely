@@ -14,7 +14,7 @@ interface Step {
   caption: ReactNode
   /** 모형 화면 - 커서가 가리킬 요소는 <Target>으로 감싼다 */
   screen: ReactNode
-  /** 커서가 멈출 위치(모형 화면 기준 %, [가로, 세로]) */
+  /** 누를 요소(<Target>)가 없는 단계에서 커서가 멈출 위치(모형 화면 기준 %, [가로, 세로]) */
   cursor: [number, number]
 }
 
@@ -31,7 +31,7 @@ const PLATFORM_META: Record<Platform, { label: string; color: string; soft: stri
 function Target({ children, className = '' }: { children: ReactNode; className?: string }) {
   const reduce = useReducedMotion()
   return (
-    <span className={`relative inline-block ${className}`}>
+    <span data-guide-target className={`relative inline-block ${className}`}>
       {!reduce && (
         <motion.span
           aria-hidden
@@ -447,6 +447,50 @@ function stepsFor(platform: Platform): Step[] {
   ]
 }
 
+/**
+ * 모형 화면 위 커서 - 그 단계에서 누를 요소(<Target>)의 실제 위치를 재서 그리로 움직인다.
+ * 화면 폭마다 배치가 달라 %로 고정하면 버튼을 벗어나서, 누를 요소가 없는 단계만 fallback(%)을 쓴다.
+ */
+function GuideCursor({ fallback }: { fallback: [number, number] }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [to, setTo] = useState<{ left: string; top: string } | null>(null)
+  useEffect(() => {
+    const layer = ref.current?.parentElement
+    const target = layer?.querySelector('[data-guide-target]')
+    if (!layer || !target) {
+      setTo({ left: `${fallback[0]}%`, top: `${fallback[1]}%` })
+      return
+    }
+    // 들어오는 애니메이션의 이동(transform)은 둘 다 똑같이 받으므로 서로의 차이만 쓴다
+    const a = layer.getBoundingClientRect()
+    const b = target.getBoundingClientRect()
+    setTo({ left: `${b.left - a.left + b.width / 2}px`, top: `${b.top - a.top + b.height / 2}px` })
+    // stepsFor가 렌더마다 새 배열을 만들어 값으로 비교한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fallback[0], fallback[1]])
+  return (
+    <motion.div
+      ref={ref}
+      aria-hidden
+      className="absolute pointer-events-none"
+      initial={{ left: '85%', top: '90%' }}
+      animate={to ?? { left: '85%', top: '90%' }}
+      transition={{ duration: 0.9, delay: 0.3, ease: 'easeInOut' }}
+    >
+      {/* 커서와 클릭 물결 */}
+      <motion.span
+        className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-indigo-400/40"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: [0, 1.6], opacity: [0.8, 0] }}
+        transition={{ duration: 0.6, delay: 1.3 }}
+      />
+      <svg width="18" height="18" viewBox="0 0 24 24" className="drop-shadow">
+        <path d="M4 2l16 9-7 2-3 7z" fill="#111827" stroke="#fff" strokeWidth="1.5" />
+      </svg>
+    </motion.div>
+  )
+}
+
 export default function AdConnectGuide({ platforms }: { platforms: Platform[] }) {
   const [platform, setPlatform] = useState<Platform>(platforms[0] ?? 'meta')
   const [index, setIndex] = useState(0)
@@ -510,26 +554,7 @@ export default function AdConnectGuide({ platforms }: { platforms: Platform[] })
               transition={{ duration: 0.35 }}
             >
               {step.screen}
-              {!reduce && (
-                <motion.div
-                  aria-hidden
-                  className="absolute pointer-events-none"
-                  initial={{ left: '85%', top: '90%' }}
-                  animate={{ left: `${step.cursor[0]}%`, top: `${step.cursor[1]}%` }}
-                  transition={{ duration: 0.9, delay: 0.3, ease: 'easeInOut' }}
-                >
-                  {/* 커서와 클릭 물결 */}
-                  <motion.span
-                    className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-indigo-400/40"
-                    initial={{ scale: 0, opacity: 0 }}
-                    animate={{ scale: [0, 1.6], opacity: [0.8, 0] }}
-                    transition={{ duration: 0.6, delay: 1.3 }}
-                  />
-                  <svg width="18" height="18" viewBox="0 0 24 24" className="drop-shadow">
-                    <path d="M4 2l16 9-7 2-3 7z" fill="#111827" stroke="#fff" strokeWidth="1.5" />
-                  </svg>
-                </motion.div>
-              )}
+              {!reduce && <GuideCursor fallback={step.cursor} />}
             </motion.div>
           </AnimatePresence>
         </div>
