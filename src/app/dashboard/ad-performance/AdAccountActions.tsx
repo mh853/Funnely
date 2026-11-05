@@ -36,24 +36,30 @@ export default function AdAccountActions({
   accounts,
   latestSyncedAt,
   naverInviteId,
+  metaAutoRenew,
 }: {
   platforms: Platform[]
   canManage: boolean
   accounts: AccountItem[]
   latestSyncedAt: string | null
   naverInviteId: string
+  /** Meta 연결 자동 연장 설정 - 아직 묻지 않았으면 null */
+  metaAutoRenew: boolean | null
 }) {
   const router = useRouter()
   const connected = accounts.filter(isConnected)
   const reconnectCount = connected.filter((a) => a.needsReconnect).length
   const errorCount = connected.filter((a) => !a.needsReconnect && a.lastSyncError).length
   const expiringCount = connected.filter((a) => !a.needsReconnect && a.expiresInDays != null).length
+  const hasMeta = connected.some((a) => a.platform === 'meta')
+  const askMetaAutoRenew = canManage && hasMeta && metaAutoRenew === null
   // 연결이 없거나 손볼 계정·곧 끝나는 연결·승인 대기 요청이 있으면 처음부터 펼쳐 둔다
   const [expanded, setExpanded] = useState(
     connected.length === 0 ||
       reconnectCount > 0 ||
       errorCount > 0 ||
       expiringCount > 0 ||
+      askMetaAutoRenew ||
       accounts.some((a) => a.approval === 'pending')
   )
   const [syncing, setSyncing] = useState(false)
@@ -65,6 +71,30 @@ export default function AdAccountActions({
   const [guideFor, setGuideFor] = useState<Platform | null>(null)
   const [naverCustomerId, setNaverCustomerId] = useState('')
   const [naverSubmitting, setNaverSubmitting] = useState(false)
+  const [autoRenewSaving, setAutoRenewSaving] = useState(false)
+
+  const handleMetaAutoRenew = async (enabled: boolean) => {
+    setAutoRenewSaving(true)
+    setMessage(null)
+    const res = await fetch('/api/ad-accounts/meta/auto-renew', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ enabled }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setAutoRenewSaving(false)
+    if (!res.ok) {
+      setMessage({ type: 'error', text: data.error || '설정을 저장하지 못했습니다.' })
+      return
+    }
+    setMessage({
+      type: 'success',
+      text: enabled
+        ? 'Meta 연결 자동 연장을 켰습니다. 끝나기 30일 전부터, 페이스북에 로그인된 브라우저로 퍼널리를 열면 알아서 연장됩니다.'
+        : 'Meta 연결 자동 연장을 껐습니다. 끝나기 7일 전에 화면과 메일로 다시 연결을 안내해 드립니다.',
+    })
+    router.refresh()
+  }
 
   const handleSync = async () => {
     setSyncing(true)
@@ -249,6 +279,50 @@ export default function AdAccountActions({
                 </li>
               ))}
             </ul>
+          )}
+
+          {canManage && hasMeta && (
+            <div className={`mt-3 rounded-lg p-3 text-sm ${askMetaAutoRenew ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50'}`}>
+              {askMetaAutoRenew ? (
+                <>
+                  <p className="font-medium text-gray-900">앞으로 Meta 연결을 자동으로 연장할까요?</p>
+                  <p className="mt-1 text-gray-600">
+                    Meta 연결은 약 60일마다 끝납니다. 켜 두면 끝나기 30일 전부터, 이 연결을 만든 분이 페이스북에 로그인된 브라우저로
+                    퍼널리를 열 때 화면 뒤에서 알아서 연장합니다. 연장이 안 되면(사파리, 페이스북 로그아웃 등) 지금처럼 7일 전에 안내해
+                    드립니다.
+                  </p>
+                  <div className="mt-2 flex gap-2">
+                    <button
+                      onClick={() => handleMetaAutoRenew(true)}
+                      disabled={autoRenewSaving}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white disabled:opacity-50"
+                    >
+                      자동으로 연장하기
+                    </button>
+                    <button
+                      onClick={() => handleMetaAutoRenew(false)}
+                      disabled={autoRenewSaving}
+                      className="px-3 py-1.5 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 disabled:opacity-50"
+                    >
+                      직접 다시 연결할게요
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-gray-600">
+                  <span>
+                    Meta 연결 자동 연장 {metaAutoRenew ? '켜짐 — 페이스북에 로그인된 브라우저로 퍼널리를 열면 끝나기 전에 연장됩니다' : '꺼짐'}
+                  </span>
+                  <button
+                    onClick={() => handleMetaAutoRenew(!metaAutoRenew)}
+                    disabled={autoRenewSaving}
+                    className="text-xs text-blue-600 hover:underline disabled:opacity-50"
+                  >
+                    {metaAutoRenew ? '끄기' : '켜기'}
+                  </button>
+                </div>
+              )}
+            </div>
           )}
 
           {canManage && (

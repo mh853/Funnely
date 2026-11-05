@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { encryptToken } from '@/lib/encryption/credentials'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { META_OAUTH_STATE_COOKIE, exchangeCodeForToken, isMetaConfigured, isMetaEnabledForCompany, listAdAccounts } from '@/lib/ads/meta'
+import { META_OAUTH_STATE_COOKIE, exchangeCodeForToken, getMetaUserId, isMetaConfigured, isMetaEnabledForCompany, listAdAccounts } from '@/lib/ads/meta'
 import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
 import { HISTORY_DAYS } from '@/lib/ads/sync-window'
 
@@ -62,8 +62,18 @@ export async function GET(request: NextRequest) {
       return redirectWith(request, 'error', '이 Meta 계정으로 접근할 수 있는 광고 계정이 없습니다.')
     }
 
+    // 자동 연장 때 같은 사람인지 비교하려고 남긴다 (조회 실패해도 연결은 진행)
+    const fbUserId = await getMetaUserId(token.accessToken).catch(() => null)
+
     // 쓰기는 앱 코드에서 관리자 확인을 마친 뒤 서비스 롤로 한다 (ad_accounts RLS는 옛 role 기준)
     const admin = createServiceClient() as any
+    // 다시 연결해도 회사가 정해 둔 자동 연장 설정은 유지하고, 새로 추가한 계정에도 같은 설정을 쓴다
+    const { data: existingMeta } = await admin
+      .from('ad_accounts')
+      .select('metadata')
+      .eq('company_id', userProfile.company_id)
+      .eq('platform', 'meta')
+    const autoRenew = (existingMeta || []).map((a: any) => a.metadata?.auto_renew).find((v: unknown) => typeof v === 'boolean')
     const { data: saved, error } = await admin
       .from('ad_accounts')
       .upsert(
@@ -84,6 +94,8 @@ export async function GET(request: NextRequest) {
             account_status: account.account_status,
             needs_reconnect: false,
             last_sync_error: null,
+            ...(fbUserId ? { fb_user_id: fbUserId } : {}),
+            ...(typeof autoRenew === 'boolean' ? { auto_renew: autoRenew } : {}),
           },
         })),
         { onConflict: 'company_id,platform,account_id' }

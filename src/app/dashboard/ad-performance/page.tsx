@@ -271,6 +271,12 @@ export default async function AdPerformancePage({
             }))}
           latestSyncedAt={latestSyncedAt ? formatKSTDateTime(latestSyncedAt) : null}
           naverInviteId={getNaverAdsInviteId()}
+          metaAutoRenew={
+            (accounts || [])
+              .filter((a: any) => a.platform === 'meta')
+              .map((a: any) => a.metadata?.auto_renew)
+              .find((v: unknown) => typeof v === 'boolean') ?? null
+          }
         />
       )}
 

@@ -4,6 +4,9 @@ import { redirect } from 'next/navigation'
 import DashboardLayoutClient from '@/components/dashboard/DashboardLayoutClient'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import { getEnabledAdPlatforms } from '@/lib/ads/enabled-platforms'
+import { getMetaAppId } from '@/lib/ads/meta'
+import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
+import MetaAutoRenew from '@/components/dashboard/MetaAutoRenew'
 
 export const metadata: Metadata = {
   robots: {
@@ -79,7 +82,25 @@ export default async function DashboardLayout({
 
   const adPlatforms = getEnabledAdPlatforms(userProfile?.company_id)
 
+  // Meta 자동 연장을 켠 회사의 관리자이고 30일 안에 끝나거나 이미 끊긴 연결이 있을 때만 페이스북 SDK를 띄운다
+  let metaAutoRenew = false
+  if (adPlatforms.includes('meta') && userProfile && isAdminOrLegacyOwner(userProfile)) {
+    const { data: metaAccounts } = await (supabase as any)
+      .from('ad_accounts')
+      .select('token_expires_at, metadata')
+      .eq('company_id', userProfile.company_id)
+      .eq('platform', 'meta')
+    const renewBefore = Date.now() + 30 * 24 * 60 * 60 * 1000
+    metaAutoRenew = (metaAccounts || []).some(
+      (a: any) =>
+        a.metadata?.auto_renew === true &&
+        (a.metadata?.needs_reconnect || (a.token_expires_at && new Date(a.token_expires_at).getTime() < renewBefore))
+    )
+  }
+
   return (
+    <>
+    {metaAutoRenew && <MetaAutoRenew appId={getMetaAppId()} />}
     <DashboardLayoutClient
       user={user}
       userProfile={userProfile}
@@ -93,5 +114,6 @@ export default async function DashboardLayout({
     >
       {children}
     </DashboardLayoutClient>
+    </>
   )
 }

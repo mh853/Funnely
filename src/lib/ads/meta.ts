@@ -120,6 +120,17 @@ function toExpiresAt(expiresIn: unknown): string | null {
   return seconds > 0 ? new Date(Date.now() + seconds * 1000).toISOString() : null
 }
 
+/** 단기 토큰 → 장기 토큰(약 60일). 퍼널리 앱 시크릿으로 교환하므로 다른 앱에서 받은 토큰은 여기서 실패한다. */
+export async function exchangeShortLivedToken(shortToken: string): Promise<MetaToken> {
+  const long = await graphFetch('oauth/access_token', {
+    grant_type: 'fb_exchange_token',
+    client_id: appId(),
+    client_secret: appSecret(),
+    fb_exchange_token: shortToken,
+  })
+  return { accessToken: long.access_token, expiresAt: toExpiresAt(long.expires_in) }
+}
+
 /** 인가 코드 → 단기 토큰 → 장기 토큰(약 60일). 장기 교환이 안 되는 토큰(시스템 사용자 등)은 받은 그대로 쓴다. */
 export async function exchangeCodeForToken(code: string): Promise<MetaToken> {
   const short = await graphFetch('oauth/access_token', {
@@ -129,16 +140,21 @@ export async function exchangeCodeForToken(code: string): Promise<MetaToken> {
     code,
   })
   try {
-    const long = await graphFetch('oauth/access_token', {
-      grant_type: 'fb_exchange_token',
-      client_id: appId(),
-      client_secret: appSecret(),
-      fb_exchange_token: short.access_token,
-    })
-    return { accessToken: long.access_token, expiresAt: toExpiresAt(long.expires_in) }
+    return await exchangeShortLivedToken(short.access_token)
   } catch {
     return { accessToken: short.access_token, expiresAt: toExpiresAt(short.expires_in) }
   }
+}
+
+/** 토큰 주인의 페이스북 사용자 ID (앱마다 다른 값) - 자동 연장 때 처음 연결한 사람과 같은지 비교한다 */
+export async function getMetaUserId(accessToken: string): Promise<string> {
+  const me = await graphFetch('me', { fields: 'id' }, accessToken)
+  return String(me.id)
+}
+
+/** 브라우저 JS SDK(자동 연장)에 넘기는 앱 ID - 공개값이다 */
+export function getMetaAppId() {
+  return appId()
 }
 
 export interface MetaAdAccount {
