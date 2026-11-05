@@ -1,5 +1,6 @@
 // 네이버 광고계정 연결 요청 승인 - 퍼널리 네이버 ID가 초대를 수락해 퍼널리 키로 계정이 보이면 자동으로 연결한다(반자동)
 import { findGrantedAccount, isNaverAdsEnabledForCompany, listGrantedAdAccounts, type NaverAdAccount } from './naver'
+import { sendNaverReviewNeededEmail } from '@/lib/email/send-naver-review-notification'
 
 /**
  * 요청 1건을 승인 상태로 바꾼다(동기화는 하지 않는다). 고객이 광고계정 번호를 넣었어도 API 호출(X-Customer)에 쓰는
@@ -40,7 +41,7 @@ export async function approveNaverAccount(admin: any, account: any, granted: Nav
  * 1년치는 바로 받지 않고, 다음 동기화(지금 동기화·매일 크론)가 history_since가 없는 계정으로 보고 받아온다.
  */
 export async function autoApprovePendingNaver(admin: any, companyId?: string): Promise<string[]> {
-  let query = admin.from('ad_accounts').select('id, company_id, account_id, metadata').eq('platform', 'naver').eq('metadata->>approval', 'pending')
+  let query = admin.from('ad_accounts').select('id, company_id, account_id, metadata, companies(name)').eq('platform', 'naver').eq('metadata->>approval', 'pending')
   if (companyId) query = query.eq('company_id', companyId)
   const { data: pending } = await query
   // manual_review: 요청 전에 이미 보이던 계정 — 가로채기를 막으려고 퍼널리 관리자가 직접 승인한다
@@ -55,7 +56,15 @@ export async function autoApprovePendingNaver(admin: any, companyId?: string): P
     const g = findGrantedAccount(granted, account.account_id)
     if (!g) continue
     const result = await approveNaverAccount(admin, account, g, 'auto')
-    if (!result.error) approved.push(account.id)
+    if (result.error) continue
+    approved.push(account.id)
+    // 초대 수락보다 다른 회사의 번호 입력이 먼저였으면 그 회사로 연결될 수 있어, 자동 연결마다 운영자가 이름을 대조하게 알린다
+    await sendNaverReviewNeededEmail({
+      kind: 'auto_approved',
+      companyName: account.companies?.name || account.company_id,
+      customerId: account.account_id,
+      accountName: g.name,
+    }).catch((e) => console.error('[naver auto-approve] notify error:', e))
   }
   return approved
 }

@@ -35,6 +35,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const reviewed = { reviewed_at: new Date().toISOString(), reviewed_by: adminUser.user.id }
 
   if (action === 'reject') {
+    // 자동 연결된 뒤 거절하는 경우(이름이 회사와 다름) 그 회사 화면에 남은 성과도 지운다 (캠페인 삭제 시 성과는 FK CASCADE)
+    if (account.metadata?.approval === 'approved') {
+      const { error: purgeError } = await admin.from('campaigns').delete().eq('ad_account_id', id)
+      if (purgeError) {
+        return NextResponse.json({ error: '받아 둔 성과를 지우지 못했습니다.' }, { status: 500 })
+      }
+    }
     await admin
       .from('ad_accounts')
       .update({ is_active: false, metadata: { ...account.metadata, approval: 'rejected', ...reviewed } })

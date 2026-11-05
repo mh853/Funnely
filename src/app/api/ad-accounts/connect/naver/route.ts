@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
   if (alreadyVisible) {
     const { data: company } = await admin.from('companies').select('name').eq('id', userProfile.company_id).maybeSingle()
     // 알림이 실패해도 요청은 저장됐고 관리자 화면에 남는다
-    await sendNaverReviewNeededEmail({ companyName: company?.name || userProfile.company_id, customerId }).catch((e) =>
+    await sendNaverReviewNeededEmail({ kind: 'review', companyName: company?.name || userProfile.company_id, customerId }).catch((e) =>
       console.error('[naver connect] review email error:', e)
     )
   }

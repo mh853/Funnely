@@ -89,6 +89,7 @@ export default async function AdAccountRequestsPage() {
                     <td className="px-4 py-3 text-gray-500">{String(r.created_at).slice(0, 10)}</td>
                     <td className="px-4 py-3">
                       {approval === 'pending' && <RequestActions id={r.id} canApprove={!!g} />}
+                      {approval === 'approved' && <RequestActions id={r.id} canApprove={false} rejectOnly />}
                     </td>
                   </tr>
                 )

@@ -658,33 +658,47 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
 }
 
 export interface NaverReviewNeededVars {
+  /** review: 요청 전부터 보이던 계정이라 자동 연결 안 함 / auto_approved: 자동으로 연결됨(이름만 대조) */
+  kind: 'review' | 'auto_approved'
   companyName: string
   customerId: string
+  /** 퍼널리 키로 보이는 네이버 광고계정 이름 (자동 연결 때만 있음) */
+  accountName?: string | null
   adminUrl: string
 }
 
-/** 네이버 광고계정 연결 요청이 자동 연결 대신 직접 확인으로 들어옴 → 운영자 */
+/** 네이버 광고계정 연결 요청이 직접 확인으로 들어왔거나 자동으로 연결됨 → 운영자 */
 export function buildNaverReviewNeededEmail(v: NaverReviewNeededVars): EmailContent {
-  const title = '네이버 광고계정 연결 요청 — 직접 확인이 필요합니다'
-  const lead =
-    '요청이 들어오기 전에 이미 퍼널리 네이버 ID로 보이던 광고계정이라 자동으로 연결하지 않았습니다. 광고계정 이름이 요청한 회사와 맞으면 승인, 다르면 거절해 주세요.'
+  const review = v.kind === 'review'
+  const title = review ? '네이버 광고계정 연결 요청 — 직접 확인이 필요합니다' : '네이버 광고계정이 자동으로 연결됐습니다 — 이름을 확인해 주세요'
+  const lead = review
+    ? '요청이 들어오기 전에 이미 퍼널리 네이버 ID로 보이던 광고계정이라 자동으로 연결하지 않았습니다. 광고계정 이름이 요청한 회사와 맞으면 승인, 다르면 거절해 주세요.'
+    : '초대 수락 후 자동으로 연결했습니다. 광고계정 이름이 요청한 회사와 다르면 관리자 화면에서 거절해 주세요. 거절하면 그 회사에서 성과가 더는 보이지 않습니다.'
   const companyName = v.companyName.replace(/[\r\n]/g, ' ')
+  const rows: Array<[string, string]> = [
+    ['회사', escapeHtml(companyName)],
+    ['입력한 광고계정 ID', escapeHtml(v.customerId)],
+  ]
+  if (v.accountName) rows.push(['네이버 광고계정 이름', escapeHtml(v.accountName)])
   return {
-    subject: `${INTERNAL_PREFIX} 네이버 광고계정 직접 확인 - ${companyName}`,
+    subject: `${INTERNAL_PREFIX} 네이버 광고계정 ${review ? '직접 확인' : '자동 연결 확인'} - ${companyName}`,
     html: renderEmailShell({
       title,
       preheader: `${companyName} · ${v.customerId}`,
-      bodyHtml:
-        paragraph(lead) +
-        infoTable([
-          ['회사', escapeHtml(companyName)],
-          ['입력한 광고계정 ID', escapeHtml(v.customerId)],
-        ]),
+      bodyHtml: paragraph(lead) + infoTable(rows),
       cta: { label: '관리자 화면에서 확인하기', url: v.adminUrl },
       internal: true,
       footerNote: '운영자에게만 발송되는 내부 알림입니다.',
     }),
-    text: textLines([title, lead, `회사: ${companyName}`, `입력한 광고계정 ID: ${v.customerId}`, '', `관리자 화면: ${v.adminUrl}`]),
+    text: textLines([
+      title,
+      lead,
+      `회사: ${companyName}`,
+      `입력한 광고계정 ID: ${v.customerId}`,
+      v.accountName ? `네이버 광고계정 이름: ${v.accountName}` : null,
+      '',
+      `관리자 화면: ${v.adminUrl}`,
+    ]),
   }
 }
 
