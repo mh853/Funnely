@@ -1,6 +1,6 @@
 // 연결된 카카오모먼트 광고계정 1개의 캠페인·일자별 성과를 가져와 campaigns / campaign_metrics에 저장
 import { decryptToken } from '@/lib/encryption/credentials'
-import { KakaoMomentApiError, getCampaignDailyReport, listCampaigns, type KakaoCampaignDay } from './kakao'
+import { KakaoMomentApiError, getCampaignDailyReport, getCampaignStatuses, listCampaigns, type KakaoCampaignDay } from './kakao'
 import { upsertMetricRows, type AdAccountRow } from './meta-sync'
 import { mergeHistorySince, splitRange, syncRange } from './sync-window'
 
@@ -55,6 +55,15 @@ export async function syncKakaoAdAccount(supabase: any, account: AdAccountRow, d
     const campaigns = await listCampaigns(accessToken, adAccountId)
     const campaignRows = new Map<string, { name: string; status: CampaignStatus }>()
     for (const c of campaigns) campaignRows.set(c.id, { name: c.name, status: mapStatus(c.config, c.systemConfig) })
+    // 켜 둔 채 집행 기간이 끝난 캠페인도 목록에선 config=ON이라, 켜진 캠페인만 상세의 status로 '집행 완료'를 가려낸다
+    for (const [id, row] of campaignRows) {
+      if (row.status !== 'active') continue
+      try {
+        if ((await getCampaignStatuses(accessToken, adAccountId, id)).includes('FINISHED')) row.status = 'ended'
+      } catch {
+        // 상태 조회가 실패해도 성과 동기화는 이어간다 (그 캠페인은 '게재 중'으로 남음)
+      }
+    }
 
     const dailyRows: KakaoCampaignDay[] = []
     const chunks = splitRange(since, until, 31)

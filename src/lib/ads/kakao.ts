@@ -164,6 +164,12 @@ export async function listCampaigns(accessToken: string, adAccountId: string): P
   }))
 }
 
+/** 캠페인 상세의 게재 상태 배열 (READY·LIVE·FINISHED(집행 완료)·OFF 등) - 목록 응답에는 없다 */
+export async function getCampaignStatuses(accessToken: string, adAccountId: string, campaignId: string): Promise<string[]> {
+  const json = await kapiFetch(`${MOMENT_BASE}/campaigns/${campaignId}`, accessToken, adAccountId)
+  return Array.isArray(json.status) ? json.status.map(String) : []
+}
+
 export interface KakaoCampaignDay {
   campaignId: string
   date: string // YYYY-MM-DD
