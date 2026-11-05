@@ -444,6 +444,44 @@ export function buildDataDeletedEmail(v: DataDeletedVars): EmailContent {
   }
 }
 
+// ───────────────────────── 광고 계정 연동 ─────────────────────────
+
+export const AD_PERFORMANCE_URL = `${DASHBOARD_URL}/ad-performance`
+
+export interface MetaReconnectVars {
+  recipientName?: string | null
+  /** 곧 연결이 끝나는 Meta 광고 계정 이름 */
+  accountNames: string[]
+  /** 가장 먼저 끝나는 연결의 만료 시각(ISO) */
+  expiresAt: string
+}
+
+/** Meta 광고 계정 연결 만료 7일 전 - 장기 토큰이 약 60일 뒤 자동 연장 없이 끝나서 미리 다시 연결하게 한다 */
+export function buildMetaReconnectEmail(v: MetaReconnectVars): EmailContent {
+  const title = 'Meta 광고 계정 연결이 곧 끝납니다'
+  const when = formatKstDate(v.expiresAt)
+  const names = v.accountNames.map(escapeHtml).join(', ')
+  const lead = `퍼널리에 연결된 Meta 광고 계정(${names})의 연결이 <strong>${when}</strong>에 끝납니다.`
+  const how = `광고 성과 화면의 <strong>계정 관리 → Meta 계정 추가·다시 연결</strong>을 눌러 페이스북에서 한 번 더 확인해 주시면 다시 60일 동안 성과가 자동으로 들어옵니다.`
+  const why = 'Meta가 보안을 위해 연결을 약 60일마다 다시 확인하도록 하고 있습니다. 연결이 끝나도 지금까지 받은 성과는 지워지지 않습니다.'
+  return {
+    subject: `${SUBJECT_PREFIX} ${title}`,
+    html: renderEmailShell({
+      title,
+      preheader: `${when}까지 다시 연결해 주세요`,
+      bodyHtml: greeting(v.recipientName ?? null) + paragraph(lead) + paragraph(how) + callout(why, 'info'),
+      cta: { label: 'Meta 계정 다시 연결하기', url: AD_PERFORMANCE_URL },
+    }),
+    text: textLines([
+      `${displayName(v.recipientName)}, 퍼널리에 연결된 Meta 광고 계정(${v.accountNames.join(', ')})의 연결이 ${when}에 끝납니다.`,
+      '광고 성과 화면의 계정 관리 → Meta 계정 추가·다시 연결을 눌러 페이스북에서 한 번 더 확인해 주시면 다시 60일 동안 성과가 자동으로 들어옵니다.',
+      why,
+      '',
+      `다시 연결하기: ${AD_PERFORMANCE_URL}`,
+    ]),
+  }
+}
+
 // ───────────────────────── 리드·문의 ─────────────────────────
 
 export interface LeadDigestItem {

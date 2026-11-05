@@ -39,6 +39,7 @@ import {
   buildDataDeletedEmail,
   buildLeadDigestEmail,
   buildAdminDailyReportEmail,
+  buildMetaReconnectEmail,
   SUBSCRIPTION_URL,
   type EmailContent,
   type LifecycleVars,
@@ -270,6 +271,24 @@ export async function GET(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error',
         })
       }
+    }
+
+    // Task 3c: Meta 연결이 7일 안에 끝나는 회사 관리자에게 다시 연결 안내 메일 (화면 안내와 같은 기준, 연결마다 1번)
+    console.log('[Cron] Running Meta reconnect notices')
+    try {
+      const reconnectResult = await queueMetaReconnectEmails(supabase)
+      results.tasksExecuted.push({
+        task: 'meta_reconnect_notices',
+        status: 'success',
+        ...reconnectResult,
+      })
+    } catch (error) {
+      console.error('[Cron] Meta reconnect notices error:', error)
+      results.tasksExecuted.push({
+        task: 'meta_reconnect_notices',
+        status: 'error',
+        error: error instanceof Error ? error.message : 'Unknown error',
+      })
     }
 
     // Task 4: Detect Growth Opportunities
@@ -748,6 +767,64 @@ async function syncAdPerformance(supabase: any, platform: keyof typeof AD_SYNC) 
     failed: accountResults.filter((r: any) => r.status === 'error').length,
     accounts: accountResults,
   }
+}
+
+/**
+ * Meta 장기 토큰은 약 60일 뒤 자동 연장 없이 끝나서, 7일 전에 회사 관리자에게 한 번 알린다.
+ * 같은 연결(만료 시각)에 두 번 보내지 않도록 ad_accounts.metadata.reconnect_notice_for에 그 만료 시각을 적어 둔다.
+ * 다시 연결하면 만료 시각이 바뀌어 다음 만료 때 다시 알린다. 메일은 payment_notifications 큐로 보내 아래 발송 작업이 같은 실행에서 보낸다.
+ */
+async function queueMetaReconnectEmails(supabase: any) {
+  if (!isMetaConfigured()) return { message: 'meta app not configured', queued: 0 }
+  const now = Date.now()
+  const { data: accounts, error } = await supabase
+    .from('ad_accounts')
+    .select('id, company_id, account_name, token_expires_at, metadata, companies!inner(is_active, withdrawn_at)')
+    .eq('platform', 'meta')
+    .eq('is_active', true)
+    .eq('companies.is_active', true)
+    .is('companies.withdrawn_at', null)
+    .gt('token_expires_at', new Date(now).toISOString())
+    .lte('token_expires_at', new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString())
+  if (error) throw new Error(`Failed to fetch expiring meta accounts: ${error.message}`)
+
+  const due = (accounts || []).filter(
+    (a: any) => !a.metadata?.needs_reconnect && a.metadata?.reconnect_notice_for !== a.token_expires_at
+  )
+  if (due.length === 0) return { queued: 0 }
+
+  const byCompany = new Map<string, any[]>()
+  for (const a of due) byCompany.set(a.company_id, [...(byCompany.get(a.company_id) ?? []), a])
+
+  const { data: subRows } = await supabase
+    .from('company_subscriptions')
+    .select('company_id, status, current_period_end, trial_end_date, cancelled_at, grace_period_end')
+    .in('company_id', Array.from(byCompany.keys()))
+    .order('created_at', { ascending: false })
+
+  let companies = 0
+  for (const [companyId, list] of byCompany) {
+    // 구독이 끊겨 동기화도 안 하는 회사에는 보내지 않는다 (syncAdPerformance와 같은 기준)
+    const subs = (subRows || []).filter((r: any) => r.company_id === companyId)
+    if (!hasValidPlanAccess(pickCurrentSubscription(subs))) continue
+    const expiresAt = list.map((a: any) => a.token_expires_at as string).sort()[0]
+    const accountNames = list.map((a: any) => a.account_name || 'Meta 광고 계정')
+    await queueLifecycleEmail(
+      supabase,
+      companyId,
+      'ad_reconnect_needed',
+      (recipientName) => buildMetaReconnectEmail({ recipientName, accountNames, expiresAt }),
+      { platform: 'meta', ad_account_ids: list.map((a: any) => a.id), expires_at: expiresAt }
+    )
+    for (const a of list) {
+      await supabase
+        .from('ad_accounts')
+        .update({ metadata: { ...(a.metadata || {}), reconnect_notice_for: a.token_expires_at } })
+        .eq('id', a.id)
+    }
+    companies++
+  }
+  return { queued: companies }
 }
 
 async function syncGoogleSheets(supabase: any) {
