@@ -598,7 +598,7 @@ function MockUI({ type, accentColor }: { type: Feature['mockType']; accentColor:
           {[
             { icon: '🔔', title: '이메일 알림', desc: '리드 유입 알림 수신' },
             { icon: '📊', title: '픽셀 관리', desc: 'Facebook, Google, Kakao' },
-            { icon: '🔗', title: '광고 플랫폼 API', desc: 'Meta, Kakao, Google Ads' },
+            { icon: '🔗', title: '광고 계정 연동', desc: 'Meta, Kakao, Google Ads 성과 조회' },
             { icon: '📋', title: '리드 상태 관리', desc: 'DB현황 결과 상태 설정' },
             { icon: '📈', title: 'Sheets 동기화', desc: 'Google Sheets 자동 연동' },
           ].map((item) => (
