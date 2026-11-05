@@ -21,6 +21,8 @@ interface AccountItem {
   /** 연결이 7일 안에 끝나면 남은 일수 (Meta만 해당) */
   expiresInDays?: number | null
   approval: 'pending' | 'approved' | 'rejected' | null
+  /** 네이버 요청을 퍼널리가 직접 확인한 뒤 연결하는 경우 */
+  manualReview?: boolean
 }
 
 const PLATFORM_LABEL: Record<Platform, string> = { meta: 'Meta', google: '구글', naver: '네이버', kakao: '카카오' }
@@ -119,8 +121,8 @@ export default function AdAccountActions({
     setGuideFor(null)
     setNaverCustomerId('')
     setMessage(
-      data.approved
-        ? { type: 'success', text: "연결됐습니다. '지금 동기화'를 누르면 최근 1년 성과를 받아옵니다." }
+      data.review
+        ? { type: 'success', text: '연결 요청을 받았습니다. 퍼널리가 광고계정을 확인한 뒤 연결해 드립니다.' }
         : { type: 'success', text: '연결 요청을 받았습니다. 퍼널리가 네이버 초대를 수락하면 자동으로 연결됩니다.' }
     )
     router.refresh()
@@ -202,7 +204,9 @@ export default function AdAccountActions({
                         {a.name !== a.accountId && <span className="ml-1 text-xs text-gray-400">({a.accountId})</span>}
                       </p>
                       <p className="text-xs mt-0.5">
-                        {a.approval === 'pending' ? (
+                        {a.approval === 'pending' && a.manualReview ? (
+                          <span className="text-blue-600">연결 대기 — 퍼널리가 광고계정을 확인한 뒤 연결해 드립니다</span>
+                        ) : a.approval === 'pending' ? (
                           <span className="text-blue-600">연결 대기 — 퍼널리가 네이버 초대를 수락하면 자동으로 연결됩니다</span>
                         ) : a.approval === 'rejected' ? (
                           <span className="text-red-600">연결이 승인되지 않았습니다 — 퍼널리 고객센터로 문의해주세요</span>

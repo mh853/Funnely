@@ -2,8 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { isAdminOrLegacyOwner } from '@/lib/auth/permissions'
-import { isNaverAdsEnabledForCompany } from '@/lib/ads/naver'
-import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
+import { findGrantedAccount, isNaverAdsEnabledForCompany, listGrantedAdAccounts } from '@/lib/ads/naver'
+import { sendNaverReviewNeededEmail } from '@/lib/email/send-naver-review-notification'
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient()
@@ -54,6 +54,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '이미 연결했거나 승인을 기다리는 광고계정입니다.' }, { status: 409 })
   }
 
+  // 요청 전에 이미 퍼널리 키로 보이는 계정이면(초대 수락이 먼저 끝난 계정) 번호만 아는 다른 회사가 가로챌 수 있어
+  // 자동 연결하지 않고 퍼널리 관리자가 광고계정 이름과 회사를 대조한 뒤 승인한다. 네이버 조회가 실패해도 같은 이유로 직접 확인으로 둔다.
+  const alreadyVisible = await listGrantedAdAccounts()
+    .then((granted) => !!findGrantedAccount(granted, customerId))
+    .catch(() => true)
+
   const row = {
     company_id: userProfile.company_id,
     platform: 'naver',
@@ -64,7 +70,12 @@ export async function POST(request: NextRequest) {
     access_token: '',
     is_active: false,
     created_by: user.id,
-    metadata: { approval: 'pending', requested_at: new Date().toISOString(), requested_by: user.id },
+    metadata: {
+      approval: 'pending',
+      requested_at: new Date().toISOString(),
+      requested_by: user.id,
+      ...(alreadyVisible ? { manual_review: true } : {}),
+    },
   }
   const { error } = mine
     ? await admin.from('ad_accounts').update(row).eq('id', mine.id)
@@ -73,7 +84,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: '연결 요청을 저장하지 못했습니다.' }, { status: 500 })
   }
 
-  // 퍼널리가 초대를 이미 수락해 둔 계정이면 바로 연결한다. 네이버 조회가 실패해도 요청은 저장됐으니 대기로 둔다.
-  const approved = await autoApprovePendingNaver(admin, userProfile.company_id).catch(() => [])
-  return NextResponse.json({ success: true, approved: approved.length > 0 })
+  if (alreadyVisible) {
+    const { data: company } = await admin.from('companies').select('name').eq('id', userProfile.company_id).maybeSingle()
+    // 알림이 실패해도 요청은 저장됐고 관리자 화면에 남는다
+    await sendNaverReviewNeededEmail({ companyName: company?.name || userProfile.company_id, customerId }).catch((e) =>
+      console.error('[naver connect] review email error:', e)
+    )
+  }
+  // 아직 안 보이는 계정은 퍼널리가 초대를 수락하면 다음 화면 열기·매일 크론에서 자동 연결된다
+  return NextResponse.json({ success: true, review: alreadyVisible })
 }

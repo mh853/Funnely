@@ -263,6 +263,7 @@ export default async function AdPerformancePage({
               needsReconnect: !!a.metadata?.needs_reconnect || isTokenExpired(a),
               // 네이버는 퍼널리 관리자 승인 전까지 pending, 거절되면 rejected (Meta·구글은 값 없음)
               approval: a.metadata?.approval ?? null,
+              manualReview: !!a.metadata?.manual_review,
               lastSyncedAt: a.metadata?.last_synced_at ? formatKSTDateTime(a.metadata.last_synced_at) : null,
               lastSyncError: a.metadata?.last_sync_error ?? null,
               rateLimited: !!a.metadata?.rate_limited,

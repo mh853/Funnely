@@ -657,6 +657,37 @@ export function buildInquiryReceivedEmail(v: InquiryReceivedVars): EmailContent 
   }
 }
 
+export interface NaverReviewNeededVars {
+  companyName: string
+  customerId: string
+  adminUrl: string
+}
+
+/** 네이버 광고계정 연결 요청이 자동 연결 대신 직접 확인으로 들어옴 → 운영자 */
+export function buildNaverReviewNeededEmail(v: NaverReviewNeededVars): EmailContent {
+  const title = '네이버 광고계정 연결 요청 — 직접 확인이 필요합니다'
+  const lead =
+    '요청이 들어오기 전에 이미 퍼널리 네이버 ID로 보이던 광고계정이라 자동으로 연결하지 않았습니다. 광고계정 이름이 요청한 회사와 맞으면 승인, 다르면 거절해 주세요.'
+  const companyName = v.companyName.replace(/[\r\n]/g, ' ')
+  return {
+    subject: `${INTERNAL_PREFIX} 네이버 광고계정 직접 확인 - ${companyName}`,
+    html: renderEmailShell({
+      title,
+      preheader: `${companyName} · ${v.customerId}`,
+      bodyHtml:
+        paragraph(lead) +
+        infoTable([
+          ['회사', escapeHtml(companyName)],
+          ['입력한 광고계정 ID', escapeHtml(v.customerId)],
+        ]),
+      cta: { label: '관리자 화면에서 확인하기', url: v.adminUrl },
+      internal: true,
+      footerNote: '운영자에게만 발송되는 내부 알림입니다.',
+    }),
+    text: textLines([title, lead, `회사: ${companyName}`, `입력한 광고계정 ID: ${v.customerId}`, '', `관리자 화면: ${v.adminUrl}`]),
+  }
+}
+
 export interface TicketCustomerReplyVars {
   companyName: string
   customerName?: string | null

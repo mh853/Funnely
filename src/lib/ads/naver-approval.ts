@@ -36,14 +36,17 @@ export async function approveNaverAccount(admin: any, account: any, granted: Nav
 }
 
 /**
- * 승인 대기 요청 중 퍼널리 키로 보이는(초대를 수락한) 계정을 자동 승인하고 승인한 행 id를 돌려준다.
+ * 승인 대기 요청 중 퍼널리 키로 보이는(초대를 수락한) 계정을 자동 승인하고(직접 확인으로 둔 요청은 빼고) 승인한 행 id를 돌려준다.
  * 1년치는 바로 받지 않고, 다음 동기화(지금 동기화·매일 크론)가 history_since가 없는 계정으로 보고 받아온다.
  */
 export async function autoApprovePendingNaver(admin: any, companyId?: string): Promise<string[]> {
   let query = admin.from('ad_accounts').select('id, company_id, account_id, metadata').eq('platform', 'naver').eq('metadata->>approval', 'pending')
   if (companyId) query = query.eq('company_id', companyId)
   const { data: pending } = await query
-  const candidates = (pending || []).filter((a: any) => isNaverAdsEnabledForCompany(a.company_id))
+  // manual_review: 요청 전에 이미 보이던 계정 — 가로채기를 막으려고 퍼널리 관리자가 직접 승인한다
+  const candidates = (pending || []).filter(
+    (a: any) => isNaverAdsEnabledForCompany(a.company_id) && a.metadata?.manual_review !== true
+  )
   if (candidates.length === 0) return []
 
   const granted = await listGrantedAdAccounts()

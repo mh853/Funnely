@@ -34,7 +34,7 @@ export default async function AdAccountRequestsPage() {
       <div>
         <h1 className="text-xl font-bold text-gray-900">네이버 광고계정 연결 요청</h1>
         <p className="text-sm text-gray-500 mt-1">
-          네이버 광고주센터의 [초대 받은 광고 계정]에서 초대를 수락하면, 고객이 광고 성과 화면을 열거나 다음 자동 동기화 때 자동으로 연결됩니다. 바로 연결하고 1년치까지 받으려면 승인을 누르세요. 광고계정 이름이 요청한 회사와 다르면 거절하세요.
+          네이버 광고주센터의 [초대 받은 광고 계정]에서 초대를 수락하면, 고객이 광고 성과 화면을 열거나 다음 자동 동기화 때 자동으로 연결됩니다. 바로 연결하고 1년치까지 받으려면 승인을 누르세요. 광고계정 이름이 요청한 회사와 다르면 거절하세요. &apos;직접 확인 필요&apos; 요청은 요청 전에 이미 수락해 둔 계정이라(번호만 아는 다른 회사가 넣었을 수 있음) 자동 연결하지 않으니 꼭 대조 후 승인하세요.
         </p>
       </div>
       {grantedError && <div className="p-3 rounded-lg bg-amber-50 text-sm text-amber-800">{grantedError}</div>}
@@ -80,7 +80,12 @@ export default async function AdAccountRequestsPage() {
                         <span className="text-amber-700">아직 안 보임 — 초대 수락 필요</span>
                       )}
                     </td>
-                    <td className="px-4 py-3">{APPROVAL_LABEL[approval] ?? approval}</td>
+                    <td className="px-4 py-3">
+                      {APPROVAL_LABEL[approval] ?? approval}
+                      {approval === 'pending' && r.metadata?.manual_review && (
+                        <span className="block text-xs text-amber-700">직접 확인 필요 — 요청 전부터 보이던 계정이라 자동 연결 안 함</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3 text-gray-500">{String(r.created_at).slice(0, 10)}</td>
                     <td className="px-4 py-3">
                       {approval === 'pending' && <RequestActions id={r.id} canApprove={!!g} />}
