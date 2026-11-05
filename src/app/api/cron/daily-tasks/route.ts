@@ -23,15 +23,6 @@ import {
 import { recordCronRun, purgeOldCronRunLogs } from '@/lib/cron/run-log'
 import { pickCurrentSubscription, hasValidPlanAccess } from '@/lib/subscription-current'
 import { isMetaConfigured } from '@/lib/ads/meta'
-import { syncMetaAdAccount } from '@/lib/ads/meta-sync'
-import { isGoogleAdsConfigured } from '@/lib/ads/google'
-import { syncGoogleAdAccount } from '@/lib/ads/google-sync'
-import { isNaverAdsConfigured } from '@/lib/ads/naver'
-import { syncNaverAdAccount } from '@/lib/ads/naver-sync'
-import { autoApprovePendingNaver } from '@/lib/ads/naver-approval'
-import { isKakaoAdsConfigured } from '@/lib/ads/kakao'
-import { syncKakaoAdAccount } from '@/lib/ads/kakao-sync'
-import { syncDaysFor } from '@/lib/ads/sync-window'
 import {
   buildExpiring2dEmail,
   buildExpiringTodayEmail,
@@ -251,26 +242,6 @@ export async function GET(request: NextRequest) {
         status: 'error',
         error: error instanceof Error ? error.message : 'Unknown error',
       })
-    }
-
-    // Task 3b: Meta·구글·네이버·카카오 광고 성과 동기화 (최근 7일 - 전환 기여가 늦게 잡히는 것을 반영해 매일 다시 받는다)
-    for (const platform of ['meta', 'google', 'naver', 'kakao'] as const) {
-      console.log(`[Cron] Running ${platform} ad performance sync`)
-      try {
-        const adResult = await syncAdPerformance(supabase, platform)
-        results.tasksExecuted.push({
-          task: `${platform}_ads_sync`,
-          status: 'success',
-          ...adResult,
-        })
-      } catch (error) {
-        console.error(`[Cron] ${platform} ads sync error:`, error)
-        results.tasksExecuted.push({
-          task: `${platform}_ads_sync`,
-          status: 'error',
-          error: error instanceof Error ? error.message : 'Unknown error',
-        })
-      }
     }
 
     // Task 3c: Meta 연결이 7일 안에 끝나는 회사 관리자에게 다시 연결 안내 메일 (화면 안내와 같은 기준, 연결마다 1번)
@@ -701,75 +672,6 @@ async function disableSheetSyncAfterRepeatedFailures(supabase: any, config: any)
  * Sync Google Sheets for all active configs
  */
 /**
- * 연결된 Meta·구글·네이버 광고 계정의 최근 7일 성과를 가져온다. 대시보드 접근이 막힌 회사(구독 만료 등)는
- * 시트 동기화와 같은 기준(pickCurrentSubscription + hasValidPlanAccess)으로 건너뛰고,
- * 한 계정의 토큰 만료·오류가 다른 계정 동기화를 막지 않도록 계정별로 결과만 모은다.
- */
-const AD_SYNC = {
-  meta: { configured: isMetaConfigured, sync: syncMetaAdAccount },
-  google: { configured: isGoogleAdsConfigured, sync: syncGoogleAdAccount },
-  naver: { configured: isNaverAdsConfigured, sync: syncNaverAdAccount },
-  kakao: { configured: isKakaoAdsConfigured, sync: syncKakaoAdAccount },
-}
-
-async function syncAdPerformance(supabase: any, platform: keyof typeof AD_SYNC) {
-  if (!AD_SYNC[platform].configured()) {
-    return { message: `${platform} app not configured`, synced: 0 }
-  }
-  // 퍼널리가 초대를 수락한 네이버 대기 요청은 연결하고 이번 동기화에서 1년치를 받는다
-  // (네이버 조회가 실패해도 이미 연결된 계정 동기화는 계속한다)
-  if (platform === 'naver') await autoApprovePendingNaver(supabase).catch((e) => console.error('[Cron] naver auto-approve error:', e))
-
-  const { data: accounts, error } = await supabase
-    .from('ad_accounts')
-    .select('id, company_id, account_id, access_token, refresh_token, token_expires_at, metadata, companies!inner(is_active, withdrawn_at)')
-    .eq('platform', platform)
-    .eq('is_active', true)
-    .eq('companies.is_active', true)
-    .is('companies.withdrawn_at', null)
-  if (error) {
-    throw new Error(`Failed to fetch ad accounts: ${error.message}`)
-  }
-  if (!accounts || accounts.length === 0) {
-    return { message: `No connected ${platform} ad accounts`, synced: 0 }
-  }
-
-  const companyIds = Array.from(new Set(accounts.map((a: any) => a.company_id)))
-  const { data: subRows, error: subError } = await supabase
-    .from('company_subscriptions')
-    .select('company_id, status, current_period_end, trial_end_date, cancelled_at, grace_period_end')
-    .in('company_id', companyIds)
-    .order('created_at', { ascending: false })
-  if (subError) {
-    throw new Error(`Failed to fetch subscriptions for ${platform} ads sync: ${subError.message}`)
-  }
-  const subsByCompany = new Map<string, any[]>()
-  for (const row of subRows || []) {
-    const list = subsByCompany.get(row.company_id) ?? []
-    list.push(row)
-    subsByCompany.set(row.company_id, list)
-  }
-
-  const accountResults = []
-  for (const account of accounts) {
-    if (!hasValidPlanAccess(pickCurrentSubscription(subsByCompany.get(account.company_id) ?? []))) {
-      accountResults.push({ accountId: account.account_id, status: 'skipped_no_access' })
-      continue
-    }
-    // 과거 1년을 아직 안 받은 계정(이 기능 배포 전 연결 등)은 이번에 1년치를 받는다
-    const days = syncDaysFor(account, 7)
-    accountResults.push(await AD_SYNC[platform].sync(supabase, account, days))
-  }
-
-  return {
-    synced: accountResults.filter((r: any) => r.status === 'success').length,
-    needsReconnect: accountResults.filter((r: any) => r.status === 'needs_reconnect').length,
-    failed: accountResults.filter((r: any) => r.status === 'error').length,
-    accounts: accountResults,
-  }
-}
-
-/**
  * Meta 장기 토큰은 약 60일 뒤 자동 연장 없이 끝나서, 7일 전에 회사 관리자에게 한 번 알린다.
  * 같은 연결(만료 시각)에 두 번 보내지 않도록 ad_accounts.metadata.reconnect_notice_for에 그 만료 시각을 적어 둔다.
  * 다시 연결하면 만료 시각이 바뀌어 다음 만료 때 다시 알린다. 메일은 payment_notifications 큐로 보내 아래 발송 작업이 같은 실행에서 보낸다.
@@ -804,7 +706,7 @@ async function queueMetaReconnectEmails(supabase: any) {
 
   let companies = 0
   for (const [companyId, list] of byCompany) {
-    // 구독이 끊겨 동기화도 안 하는 회사에는 보내지 않는다 (syncAdPerformance와 같은 기준)
+    // 구독이 끊겨 동기화도 안 하는 회사에는 보내지 않는다 (광고 동기화 크론 /api/cron/ad-sync와 같은 기준)
     const subs = (subRows || []).filter((r: any) => r.company_id === companyId)
     if (!hasValidPlanAccess(pickCurrentSubscription(subs))) continue
     const expiresAt = list.map((a: any) => a.token_expires_at as string).sort()[0]

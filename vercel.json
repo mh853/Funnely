@@ -1,6 +1,12 @@
 {
-  "regions": ["icn1"],
+  "regions": [
+    "icn1"
+  ],
   "crons": [
+    {
+      "path": "/api/cron/ad-sync",
+      "schedule": "0 22 * * *"
+    },
     {
       "path": "/api/cron/daily-tasks",
       "schedule": "0 23 * * *"
